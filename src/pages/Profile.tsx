@@ -47,6 +47,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Spinner } from '@/components/ui/spinner'
 import { formatActivityProblemTitle } from '@/lib/activity-title'
+import { difficultyBadgeClass } from '@/lib/difficulty'
 import { formatTime, todayYmd } from '@/lib/format'
 import { getPlatformHomeLink, getSubmitLink, OJ_PLATFORMS } from '@/lib/link'
 import { cn } from '@/lib/utils'
@@ -624,7 +625,7 @@ export function Profile() {
                         className="relative py-1.5 text-[13px] leading-snug"
                       >
                         <span className="absolute -left-[0.95rem] top-2.5 size-2 rounded-full border-2 border-sky-500 bg-background" />
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
                           <div className="min-w-0">
                             <p className="min-w-0">
                               在{' '}
@@ -644,6 +645,17 @@ export function Profile() {
                               ) : (
                                 <span className="font-medium">{title}</span>
                               )}
+                              {a.problemDifficulty ? (
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    'ml-1.5 inline-flex h-5 align-middle px-1.5 text-[10px] font-normal',
+                                    difficultyBadgeClass(a.problemDifficulty),
+                                  )}
+                                >
+                                  {a.problemDifficulty}
+                                </Badge>
+                              ) : null}
                               ：
                               {url ? (
                                 <a
@@ -674,7 +686,7 @@ export function Profile() {
                               </div>
                             )}
                           </div>
-                          <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground tabular-nums">
+                          <span className="text-[11px] text-muted-foreground tabular-nums sm:shrink-0 sm:pt-0.5">
                             {formatTime(a.time)}
                           </span>
                         </div>
@@ -711,7 +723,16 @@ export function Profile() {
               {contests.map((c) => (
                 <div
                   key={c.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-sm transition-all duration-200 ease-out hover:bg-muted/40 hover:shadow-sm"
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => navigate(`/contest/${c.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      navigate(`/contest/${c.id}`)
+                    }
+                  }}
+                  className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-sm transition-all duration-200 ease-out hover:bg-muted/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <div className="flex items-center gap-2">
@@ -725,8 +746,11 @@ export function Profile() {
                       {c.rank ? ` · 排名 ${c.rank}` : ''}
                     </span>
                   </div>
-                  <div className="flex shrink-0 gap-1.5">
-                    {c.contestUrl && (
+                  {c.contestUrl && (
+                    <div
+                      className="flex shrink-0 gap-1.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Button size="sm" variant="outline" asChild>
                         <a
                           href={c.contestUrl}
@@ -736,11 +760,8 @@ export function Profile() {
                           比赛主页
                         </a>
                       </Button>
-                    )}
-                    <Button size="sm" variant="secondary" asChild>
-                      <Link to={`/contest/${c.id}`}>站内详情</Link>
-                    </Button>
-                  </div>
+                    </div>
+                  )}
                 </div>
               ))}
               {!contests.length && (

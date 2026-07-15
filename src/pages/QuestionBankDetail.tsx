@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime } from '@/lib/format'
+import { getSubmitLink } from '@/lib/link'
 import { renderMarkdown } from '@/lib/markdown'
 import { num, str } from '@/lib/http'
 import { cn } from '@/lib/utils'
@@ -202,6 +203,12 @@ export function QuestionBankDetail() {
                 const name = str(
                   s.userName || s.name || s.username || (uid ? `用户${uid}` : '-'),
                 )
+                const status = str(s.status)
+                const submitUrl = getSubmitLink(
+                  str(s.platform || problem.platform),
+                  str(s.contest),
+                  str(s.submitId),
+                )
                 return (
                   <TableRow key={i}>
                     <TableCell>
@@ -215,7 +222,21 @@ export function QuestionBankDetail() {
                     </TableCell>
                     <TableCell>{str(s.lang, '-')}</TableCell>
                     <TableCell>
-                      <StatusBadge status={str(s.status)} />
+                      {submitUrl ? (
+                        <StatusBadge status={status} asChild>
+                          <a
+                            href={submitUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:underline"
+                            title="查看原站提交"
+                          >
+                            {status || '-'}
+                          </a>
+                        </StatusBadge>
+                      ) : (
+                        <StatusBadge status={status} />
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
                       {formatTime(s.time || s.submittedAt || s.createdAt)}

@@ -187,6 +187,8 @@ export interface SubmitLogItem {
   problemTitle?: string
   /** 题库 AI 标签，有 problemId 时由后端批量填充 */
   problemTags?: string[]
+  /** 题库难度（简单/中等/困难），有 problemId 时由后端批量填充 */
+  problemDifficulty?: string
 }
 
 export interface HeatmapItem {

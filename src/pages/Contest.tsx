@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ExternalLinkIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { listContests } from '@/api/contest'
@@ -19,11 +19,13 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime } from '@/lib/format'
+import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 10
 
 export function Contest() {
   const { isLogin, user } = useAuth()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const idParam = searchParams.get('id')
   const userMode = Boolean(idParam)
@@ -124,7 +126,23 @@ export function Contest() {
           </Card>
         )}
         {list.map((item) => (
-          <Card key={item.id} className="gap-2 py-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+          <Card
+            key={item.id}
+            role="link"
+            tabIndex={0}
+            onClick={() => navigate(`/contest/${item.id}`)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                navigate(`/contest/${item.id}`)
+              }
+            }}
+            className={cn(
+              'cursor-pointer gap-2 py-3 transition-all duration-200',
+              'hover:shadow-md hover:-translate-y-0.5',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            )}
+          >
             <CardHeader className="flex flex-row items-start justify-between gap-3 px-4 space-y-0">
               <div className="flex min-w-0 flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -135,19 +153,16 @@ export function Contest() {
                 </div>
                 <CardDescription>{formatTime(item.time)}</CardDescription>
               </div>
-              <div className="flex shrink-0 gap-2">
-                {item.contestUrl && (
+              {item.contestUrl && (
+                <div className="flex shrink-0 gap-2" onClick={(e) => e.stopPropagation()}>
                   <Button type="button" size="sm" variant="outline" asChild>
                     <a href={item.contestUrl} target="_blank" rel="noreferrer">
                       <ExternalLinkIcon data-icon="inline-start" />
                       OJ
                     </a>
                   </Button>
-                )}
-                <Button type="button" size="sm" asChild>
-                  <Link to={`/contest/${item.id}`}>详情</Link>
-                </Button>
-              </div>
+                </div>
+              )}
             </CardHeader>
           </Card>
         ))}

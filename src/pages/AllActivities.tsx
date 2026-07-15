@@ -19,9 +19,11 @@ import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/status-badge'
 import { formatActivityProblemTitle } from '@/lib/activity-title'
+import { difficultyBadgeClass } from '@/lib/difficulty'
 import { formatTime } from '@/lib/format'
 import { getSubmitLink } from '@/lib/link'
 import { num } from '@/lib/http'
+import { cn } from '@/lib/utils'
 
 const LIMIT = 50
 
@@ -165,32 +167,47 @@ export function AllActivities() {
                     · {item.platform} · {item.lang || '-'}
                   </span>
                 </CardTitle>
-                <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {item.problemId ? (
-                    <Link
-                      to={`/question-bank/detail/${item.problemId}`}
-                      className="text-foreground hover:underline"
-                    >
-                      {title}
-                    </Link>
-                  ) : (
-                    <span>{title}</span>
-                  )}
-                  {submitUrl ? (
-                    <StatusBadge status={item.status} asChild>
-                      <a
-                        href={submitUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="hover:underline"
+                <CardDescription className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1">
+                  <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    {item.problemId ? (
+                      <Link
+                        to={`/question-bank/detail/${item.problemId}`}
+                        className="text-foreground hover:underline"
                       >
-                        {item.status}
-                      </a>
-                    </StatusBadge>
-                  ) : (
-                    <StatusBadge status={item.status} />
-                  )}
-                  <span>{formatTime(item.time)}</span>
+                        {title}
+                      </Link>
+                    ) : (
+                      <span>{title}</span>
+                    )}
+                    {item.problemDifficulty ? (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'h-5 px-1.5 text-[10px] font-normal',
+                          difficultyBadgeClass(item.problemDifficulty),
+                        )}
+                      >
+                        {item.problemDifficulty}
+                      </Badge>
+                    ) : null}
+                    {submitUrl ? (
+                      <StatusBadge status={item.status} asChild>
+                        <a
+                          href={submitUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="hover:underline"
+                        >
+                          {item.status}
+                        </a>
+                      </StatusBadge>
+                    ) : (
+                      <StatusBadge status={item.status} />
+                    )}
+                  </span>
+                  <span className="text-muted-foreground tabular-nums sm:ml-auto">
+                    {formatTime(item.time)}
+                  </span>
                 </CardDescription>
                 {!!item.problemTags?.length && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
