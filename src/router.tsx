@@ -4,6 +4,7 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { AdminLayout } from '@/layouts/AdminLayout'
 import { RequireCoach } from '@/auth/RequireCoach'
 import { RequireMemberLike } from '@/auth/RequireMemberLike'
+import { RouteErrorFallback } from '@/components/error-boundary'
 import { Spinner } from '@/components/ui/spinner'
 
 const Login = lazy(() =>
@@ -97,6 +98,7 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <AppLayout />,
+    errorElement: <RouteErrorFallback />,
     children: [
       {
         index: true,

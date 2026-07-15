@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { listBulletins } from '@/api/bulletin'
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime } from '@/lib/format'
+import { sanitizeHtml } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 10
@@ -28,22 +29,24 @@ export function Bulletin() {
   const [loading, setLoading] = useState(true)
   const [openIds, setOpenIds] = useState<Set<number>>(new Set())
 
-  const load = useCallback(async (p: number) => {
-    setLoading(true)
-    const res = await listBulletins(p, PAGE_SIZE)
-    setLoading(false)
-    if (!res.success || !res.data) {
-      toast.error(res.message || '加载公告失败')
-      return
-    }
-    setList(res.data.list)
-    setTotal(res.data.total)
-    setPage(res.data.page)
-  }, [])
-
   useEffect(() => {
-    void load(page)
-  }, [load, page])
+    let cancelled = false
+    void (async () => {
+      setLoading(true)
+      const res = await listBulletins(page, PAGE_SIZE)
+      if (cancelled) return
+      setLoading(false)
+      if (!res.success || !res.data) {
+        toast.error(res.message || '加载公告失败')
+        return
+      }
+      setList(res.data.list)
+      setTotal(res.data.total)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [page])
 
   useEffect(() => {
     if (expandId) {
@@ -97,7 +100,7 @@ export function Bulletin() {
                 <CardContent
                   className="prose prose-sm dark:prose-invert max-w-none px-4 text-sm"
                   onClick={(e) => e.stopPropagation()}
-                  dangerouslySetInnerHTML={{ __html: item.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content) }}
                 />
               )}
             </Card>

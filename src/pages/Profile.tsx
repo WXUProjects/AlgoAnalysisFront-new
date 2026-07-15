@@ -182,7 +182,7 @@ export function Profile() {
     return m
   }, [profile])
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: { cancelled: boolean }) => {
     if (!targetId) return
     setLoading(true)
     const end = todayYmd()
@@ -217,6 +217,7 @@ export function Profile() {
       listContests({ userId: targetId, limit: 5, offset: 0 }),
       getProblemUserProfile(targetId),
     ])
+    if (signal?.cancelled) return
     setLoading(false)
 
     if (!pRes.success || !pRes.data) {
@@ -238,7 +239,11 @@ export function Profile() {
   }, [targetId])
 
   useEffect(() => {
-    void load()
+    const signal = { cancelled: false }
+    void load(signal)
+    return () => {
+      signal.cancelled = true
+    }
   }, [load])
 
   async function handleUpdateOj() {

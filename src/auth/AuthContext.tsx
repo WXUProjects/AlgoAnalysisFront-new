@@ -9,6 +9,7 @@ import {
 } from 'react'
 import type { UserProfile } from '@shared/api'
 import { fetchProfileById, login as apiLogin } from '@/api/auth'
+import { setAuthExpiredHandler } from '@/lib/http'
 import { jwt, type JwtPayload } from '@/lib/jwt'
 import {
   isAdminRole,
@@ -57,6 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [ready, setReady] = useState(false)
 
+  const logout = useCallback(() => {
+    jwt.clearToken()
+    setUser(null)
+    setProfile(null)
+  }, [])
+
   const sync = useCallback(async () => {
     if (!jwt.isValid()) {
       setUser(null)
@@ -81,11 +88,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    setAuthExpiredHandler(() => {
+      setUser(null)
+      setProfile(null)
+    })
+    return () => setAuthExpiredHandler(null)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
     void (async () => {
       await sync()
-      setReady(true)
+      if (!cancelled) setReady(true)
     })()
+    return () => {
+      cancelled = true
+    }
   }, [sync])
+
+  // 可见性恢复 / 定时校验 token，避免半登录态
+  useEffect(() => {
+    const check = () => {
+      if (!user) return
+      if (!jwt.isValid()) {
+        logout()
+      }
+    }
+    const onVis = () => {
+      if (document.visibilityState === 'visible') check()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    const t = window.setInterval(check, 60_000)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      window.clearInterval(t)
+    }
+  }, [user, logout])
 
   const login = useCallback(
     async (username: string, password: string) => {
@@ -97,12 +135,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [sync],
   )
-
-  const logout = useCallback(() => {
-    jwt.clearToken()
-    setUser(null)
-    setProfile(null)
-  }, [])
 
   const { isLogin, isAdmin, isCoach, isCaptain, isStaff, isMemberLike } =
     deriveFlags(user)

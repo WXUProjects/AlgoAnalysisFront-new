@@ -109,8 +109,19 @@ export function DashboardProblemProgress() {
 
   useEffect(() => {
     void load()
-    const t = window.setInterval(() => void load(true), 5000)
-    return () => window.clearInterval(t)
+    const tick = () => {
+      if (document.visibilityState === 'hidden') return
+      void load(true)
+    }
+    const t = window.setInterval(tick, 5000)
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void load(true)
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.clearInterval(t)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [load])
 
   async function run(

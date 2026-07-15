@@ -15,8 +15,9 @@ export async function login(
   username: string,
   password: string,
 ): Promise<ApiResult<LoginRes>> {
+  // 已有有效 token 时先清掉，允许重新登录，避免「用户已登录」死锁
   if (jwt.isValid()) {
-    return { success: false, message: '用户已登录', data: null }
+    jwt.clearToken()
   }
 
   const body: LoginReq = {
@@ -57,8 +58,9 @@ export async function register(input: {
   name: string
   email: string
 }): Promise<ApiResult<RegisterRes>> {
+  // 注册前清掉残留 token，避免半登录态干扰
   if (jwt.isValid()) {
-    return { success: false, message: '用户已登录', data: null }
+    jwt.clearToken()
   }
 
   if (!input.username || !input.password || !input.name || !input.email) {

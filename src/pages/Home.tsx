@@ -158,6 +158,8 @@ export function Home() {
   const [mode, setMode] = useState<'submit' | 'ac'>('ac')
 
   useEffect(() => {
+    // 等待鉴权就绪，避免登录态闪烁双请求
+    if (!ready) return
     // 纯教练不加载首页数据
     if (isCoach) return
     let cancelled = false
@@ -210,7 +212,7 @@ export function Home() {
     return () => {
       cancelled = true
     }
-  }, [isLogin, isCoach, user])
+  }, [ready, isLogin, isCoach, user])
 
   const stats: PeriodItem | null = mode === 'ac' ? period?.ac ?? null : period?.submit ?? null
   const modeLabel = mode === 'ac' ? 'AC' : '提交'
