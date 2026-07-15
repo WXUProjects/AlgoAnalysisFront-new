@@ -96,12 +96,12 @@ export function Register() {
                 />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel htmlFor="reg-name">姓名</FieldLabel>
+                <FieldLabel htmlFor="reg-name">昵称</FieldLabel>
                 <Input
                   id="reg-name"
                   value={form.name}
                   onChange={(e) => update('name', e.target.value)}
-                  placeholder="请输入真实姓名"
+                  placeholder="站内展示用，不必填真实姓名"
                   disabled={pending}
                 />
               </Field>

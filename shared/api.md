@@ -38,8 +38,8 @@
 ```json
 { "success": true, "message": "string", "jwtToken": "string" }
 ```
-
 **RegisterReq**
+
 ```json
 {
   "username": "string",
@@ -49,6 +49,8 @@
   "groupId": 0
 }
 ```
+
+`name` = **全局昵称**（非真实姓名；加入校队时另填「组织内名称」）。
 **RegisterRes**
 ```json
 { "success": true, "message": "string" }
@@ -89,14 +91,15 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/user/org/get` | 是 | query: `id`（默认当前组织） |
 | POST | `/user/org/create` | 站点管理员 | `{ name, slug?, adminUserId?, joinMode? }` |
 | POST | `/user/org/update` | 组织/站点管理员 | 品牌/开关/joinMode；间隔仅站点 |
-| POST | `/user/org/delete` | 站点管理员 | `{ id }` 软删除；**公共域不可删**；成员迁回公共域 |
-| POST | `/user/org/switch` | 是 | `{ orgId }` → 新 `jwtToken` |
-| POST | `/user/org/join` | 是 | `{ inviteCode }` 团队识别码 |
-| POST | `/user/org/leave` | 是 | `{ orgId }`；**公共域不可退出** |
-| GET | `/user/org/members` | 成员 | query: `orgId` |
-| POST | `/user/org/members/set-role` | 组织/站点管理员 | `{ orgId, userId, role: member\|coach\|captain\|org_admin }` |
-| POST | `/user/org/members/remove` | 组织/站点管理员 | `{ orgId, userId }`；不可移出公共域 |
-| POST | `/user/org/members/add` | 站点/组织管理员 | `{ orgId, userId?\|username?, role? }` 搜索加入 |
+| POST | `/user/org/delete` | 站点管理员 | `{ id }` 软删除；**公共域不可删**；成员迁回公共域；挂在该组织分组上的用户迁到公共域默认分组；释放 slug/识别码唯一约束 |
+| POST | `/user/org/switch` | 是 | `{ orgId }` → 新 `jwtToken`；**同时写入默认组织**（下次打开自动进入，无需单独设默认） |
+| POST | `/user/org/join` | 是 | `{ inviteCode, orgDisplayName }` 团队识别码 + **组织内名称（必填）**；**不改**默认组织 |
+| POST | `/user/org/leave` | 是 | `{ orgId }`；**公共域不可退出**；若离开的是默认组织则回落公共域 |
+| GET | `/user/org/members` | 成员 | query: `orgId`；返回 `name`（组织内展示）、`nickname`（全局昵称）、`orgDisplayName` |
+| POST | `/user/org/members/set-role` | 组织/站点管理员 | `{ orgId, userId, role: member\|coach\|captain\|org_admin }`；若不在组织则加入并 **设为默认组织** |
+| POST | `/user/org/members/remove` | 组织/站点管理员 | `{ orgId, userId }`；不可移出公共域；若移出默认组织则回落公共域 |
+| POST | `/user/org/members/add` | 站点/组织管理员 | `{ orgId, userId?\|username?, role?, orgDisplayName? }` 搜索加入；**设为默认组织**；组织内名称可填，默认用对方全局昵称 |
+| POST | `/user/org/members/set-display-name` | 本人或组织/站点管理员 | `{ orgId, userId?, orgDisplayName }` 改组织内名称 |
 | GET | `/user/org/member-ids` | 否/登录 | query: `orgId` → `{ userIds }`（core 隔离用） |
 | GET | `/user/profile/ids-by-org` | 否 | query: `orgId` → 组织成员 ids（gRPC/HTTP） |
 | GET | `/user/org/invite` | 组织管理员 | query: `orgId` → 团队识别码 |
@@ -105,7 +108,17 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/user/org/join-requests/review` | 组织管理员 | `{ id, approve }` |
 | POST | `/user/platform/set-site-admin` | 站点管理员 | `{ userId, isSiteAdmin }` |
 
-默认组织：**公共域** `slug=public`，全员自动加入，不可退出。
+默认组织（`users.current_org_id`）：注册时为 **公共域** `slug=public`（全员自动加入，不可退出）。  
+**管理员拉入**某组织后，该组织成为用户默认组织（下次打开自动进入）。用户之后只需 **switch 切换**，切换即记忆，无需刻意「修改默认组织」。
+
+**名称语义**
+
+| 字段 | 含义 | 范围 |
+|------|------|------|
+| `users.name` | 全局昵称 | 全站个人资料等 |
+| `org_members.org_display_name` | 组织内名称 | 仅该组织成员列表/队内展示 |
+
+加入团队（识别码）须填写组织内名称；成员列表的 `name` 优先组织内名称。
 
 **GetByIdRes**
 ```json

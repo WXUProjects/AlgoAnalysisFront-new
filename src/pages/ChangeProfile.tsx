@@ -72,7 +72,7 @@ export function ChangeProfile() {
     e.preventDefault()
     if (!user) return
     if (!name.trim() || !email.trim()) {
-      toast.error('姓名和邮箱不能为空')
+      toast.error('昵称和邮箱不能为空')
       return
     }
     setSaving(true)
@@ -144,7 +144,7 @@ export function ChangeProfile() {
       <Card className="gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>编辑资料</CardTitle>
-          <CardDescription>修改姓名、邮箱与邮件通知</CardDescription>
+          <CardDescription>修改昵称、邮箱与邮件通知</CardDescription>
         </CardHeader>
         <form onSubmit={handleSaveProfile}>
           <CardContent className="px-4">
@@ -187,11 +187,12 @@ export function ChangeProfile() {
                 </div>
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel htmlFor="name">姓名</FieldLabel>
+                <FieldLabel htmlFor="name">昵称</FieldLabel>
                 <Input
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  placeholder="站内展示用"
                   disabled={saving}
                 />
               </Field>

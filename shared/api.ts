@@ -51,6 +51,7 @@ export const endpoints = {
       setRole: `${API_PREFIX}/user/org/members/set-role`,
       removeMember: `${API_PREFIX}/user/org/members/remove`,
       addMember: `${API_PREFIX}/user/org/members/add`,
+      setDisplayName: `${API_PREFIX}/user/org/members/set-display-name`,
       memberIds: `${API_PREFIX}/user/org/member-ids`,
       invite: `${API_PREFIX}/user/org/invite`,
       inviteRotate: `${API_PREFIX}/user/org/invite/rotate`,
@@ -233,7 +234,12 @@ export interface OrgInfo {
 export interface OrgMemberInfo {
   userId: number
   username: string
+  /** 组织内展示名（有组织内名称则用之，否则全局昵称） */
   name: string
+  /** 全局昵称 users.name */
+  nickname?: string
+  /** 组织内名称 org_members.org_display_name */
+  orgDisplayName?: string
   avatar?: string
   role: string
   groupId?: number | null

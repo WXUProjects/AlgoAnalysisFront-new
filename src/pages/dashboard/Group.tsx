@@ -287,7 +287,7 @@ export function DashboardGroup() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="按姓名搜索"
+                placeholder="按昵称或组织内名称搜索"
               />
               {searching && (
                 <p className="text-xs text-muted-foreground">搜索中…</p>
@@ -327,7 +327,7 @@ export function DashboardGroup() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>姓名</TableHead>
+                    <TableHead>名称</TableHead>
                     <TableHead>最后提交</TableHead>
                     <TableHead className="text-right">操作</TableHead>
                   </TableRow>

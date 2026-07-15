@@ -27,6 +27,7 @@ export async function addOrgMember(payload: {
   userId?: number
   username?: string
   role?: string
+  orgDisplayName?: string
 }) {
   const res = await post<{ code?: number; message?: string; userId?: number }>(
     endpoints.user.org.addMember,
@@ -69,10 +70,27 @@ export async function switchOrg(orgId: number) {
   }
 }
 
-export async function joinOrg(inviteCode: string) {
+export async function joinOrg(inviteCode: string, orgDisplayName: string) {
   const res = await post<{ code?: number; message?: string }>(endpoints.user.org.join, {
     inviteCode,
+    orgDisplayName,
   })
+  const body = res.data as { code?: number; message?: string }
+  return {
+    success: res.success && body?.code !== 1,
+    message: body?.message || res.message,
+  }
+}
+
+export async function setOrgDisplayName(payload: {
+  orgId: number
+  userId?: number
+  orgDisplayName: string
+}) {
+  const res = await post<{ code?: number; message?: string }>(
+    endpoints.user.org.setDisplayName,
+    payload,
+  )
   const body = res.data as { code?: number; message?: string }
   return {
     success: res.success && body?.code !== 1,
@@ -101,28 +119,38 @@ export async function createOrg(payload: {
   adminUserId?: number
   joinMode?: string
 }) {
-  const res = await post<{ code?: number; message?: string; data?: OrgInfo }>(
+  const res = await post<OrgInfo | { code?: number; message?: string; data?: OrgInfo }>(
     endpoints.user.org.create,
     payload,
   )
-  const body = res.data as { code?: number; message?: string; data?: OrgInfo }
+  const raw = res.raw as { code?: number; message?: string; data?: OrgInfo } | undefined
+  const data =
+    (raw?.data as OrgInfo | undefined) ??
+    (res.data && typeof res.data === 'object' && 'id' in res.data
+      ? (res.data as OrgInfo)
+      : undefined)
   return {
-    success: res.success && body?.code !== 1,
-    message: body?.message || res.message,
-    data: body?.data,
+    success: res.success && raw?.code !== 1,
+    message: raw?.message || res.message,
+    data,
   }
 }
 
 export async function updateOrg(payload: Record<string, unknown>) {
-  const res = await post<{ code?: number; message?: string; data?: OrgInfo }>(
+  const res = await post<OrgInfo | { code?: number; message?: string; data?: OrgInfo }>(
     endpoints.user.org.update,
     payload,
   )
-  const body = res.data as { code?: number; message?: string; data?: OrgInfo }
+  const raw = res.raw as { code?: number; message?: string; data?: OrgInfo } | undefined
+  const data =
+    (raw?.data as OrgInfo | undefined) ??
+    (res.data && typeof res.data === 'object' && 'id' in res.data
+      ? (res.data as OrgInfo)
+      : undefined)
   return {
-    success: res.success && body?.code !== 1,
-    message: body?.message || res.message,
-    data: body?.data,
+    success: res.success && raw?.code !== 1,
+    message: raw?.message || res.message,
+    data,
   }
 }
 

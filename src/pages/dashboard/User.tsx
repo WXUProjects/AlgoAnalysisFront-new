@@ -202,7 +202,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12" />
-                  <TableHead>姓名</TableHead>
+                  <TableHead>昵称</TableHead>
                   <TableHead>用户名</TableHead>
                   <TableHead>{isSite ? '所属组织' : '分组'}</TableHead>
                   <TableHead className="text-right">操作</TableHead>

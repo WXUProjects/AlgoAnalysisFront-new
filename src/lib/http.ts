@@ -59,11 +59,9 @@ http.interceptors.response.use(
   (res) => res,
   (error: AxiosError) => {
     const status = error.response?.status
-    if (status === 401 || status === 403) {
-      // 仅在曾带 token 时视为会话失效（公开接口 403 不强制登出）
-      if (jwt.token) {
-        fireAuthExpired()
-      }
+    // 仅 401 视为会话失效；业务权限不足用 403 + body.message，不应清登录
+    if (status === 401 && jwt.token) {
+      fireAuthExpired()
     }
     return Promise.reject(error)
   },

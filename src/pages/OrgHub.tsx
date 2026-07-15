@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 export function OrgHub() {
   const { orgs, currentOrg, switchOrg, refreshOrgs, user } = useAuth()
   const [code, setCode] = useState('')
+  const [orgDisplayName, setOrgDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleJoin() {
@@ -18,12 +19,17 @@ export function OrgHub() {
       toast.error('请输入团队识别码')
       return
     }
+    if (!orgDisplayName.trim()) {
+      toast.error('请填写组织内名称')
+      return
+    }
     setLoading(true)
-    const res = await joinOrg(code.trim())
+    const res = await joinOrg(code.trim(), orgDisplayName.trim())
     setLoading(false)
     if (res.success) {
       toast.success(res.message || '操作成功')
       setCode('')
+      setOrgDisplayName('')
       await refreshOrgs()
     } else {
       toast.error(res.message || '加入失败')
@@ -116,10 +122,12 @@ export function OrgHub() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">加入团队</CardTitle>
-          <CardDescription>向团队管理员索取「团队识别码」后在此填写。</CardDescription>
+          <CardDescription>
+            向团队管理员索取「团队识别码」，并填写你在该团队中使用的名称（仅本队可见）。
+          </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1 space-y-2">
+        <CardContent className="flex flex-col gap-3">
+          <div className="space-y-2">
             <Label htmlFor="invite">团队识别码</Label>
             <Input
               id="invite"
@@ -128,7 +136,20 @@ export function OrgHub() {
               placeholder="输入识别码"
             />
           </div>
-          <Button disabled={loading} onClick={() => void handleJoin()}>
+          <div className="space-y-2">
+            <Label htmlFor="org-display-name">组织内名称</Label>
+            <Input
+              id="org-display-name"
+              value={orgDisplayName}
+              onChange={(e) => setOrgDisplayName(e.target.value)}
+              placeholder="在本团队中展示的称呼"
+              maxLength={32}
+            />
+            <p className="text-xs text-muted-foreground">
+              只在该组织内使用，与站内昵称分开。
+            </p>
+          </div>
+          <Button disabled={loading} onClick={() => void handleJoin()} className="sm:w-fit">
             {loading ? '提交中…' : '加入'}
           </Button>
         </CardContent>

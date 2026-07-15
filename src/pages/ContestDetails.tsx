@@ -143,7 +143,7 @@ export function ContestDetails() {
       <Card className="gap-0 py-0 overflow-hidden">
         <CardHeader className="px-4 py-3 border-b">
           <CardTitle className="text-base">站内榜</CardTitle>
-          <CardDescription>点击姓名查看资料</CardDescription>
+          <CardDescription>点击名称查看资料</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (

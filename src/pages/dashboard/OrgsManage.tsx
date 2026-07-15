@@ -159,6 +159,7 @@ export function DashboardOrgsManage() {
                     setNewName('')
                     await load()
                     await refreshOrgs()
+                    if (r.data) setSelected(r.data)
                   } else toast.error(r.message)
                 })
               }
@@ -180,6 +181,9 @@ export function DashboardOrgsManage() {
                   <Spinner />
                 </div>
               )}
+              {!loading && orgs.length === 0 && (
+                <p className="text-sm text-muted-foreground">暂无组织</p>
+              )}
               {!loading &&
                 orgs.map((o) => (
                   <button
@@ -193,7 +197,7 @@ export function DashboardOrgsManage() {
                     <span className="font-medium">
                       {o.name}
                       {o.isSystem ? (
-                        <span className="ml-2 text-xs text-muted-foreground">系统</span>
+                        <span className="ml-2 text-xs text-muted-foreground">系统 · 不可删除</span>
                       ) : null}
                     </span>
                     <span className="text-xs text-muted-foreground">
@@ -205,10 +209,47 @@ export function DashboardOrgsManage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                {selected ? `编辑：${selected.name}` : '选择左侧组织'}
-              </CardTitle>
+            <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
+              <div className="space-y-1.5">
+                <CardTitle className="text-base">
+                  {selected ? `编辑：${selected.name}` : '选择左侧组织'}
+                </CardTitle>
+                {selected?.isSystem ? (
+                  <CardDescription>公共域为系统组织，不可删除。</CardDescription>
+                ) : selected ? (
+                  <CardDescription>修改参数后点保存；删除在右侧。</CardDescription>
+                ) : null}
+              </div>
+              {selected && !selected.isSystem && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="destructive" size="sm" disabled={saving}>
+                      删除组织
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>删除组织「{selected.name}」？</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        删除后成员将回到公共域，组织内分组与加入申请一并清除。此操作不可在本页撤销。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>取消</AlertDialogCancel>
+                      <AlertDialogAction
+                        variant="destructive"
+                        disabled={saving}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          void handleDeleteOrg()
+                        }}
+                      >
+                        确认删除
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               {!selected && (
@@ -286,36 +327,13 @@ export function DashboardOrgsManage() {
                     <Button disabled={saving} onClick={() => void saveSelected()}>
                       {saving ? '保存中…' : '保存参数'}
                     </Button>
-                    {!selected.isSystem && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button type="button" variant="destructive" disabled={saving}>
-                            删除组织
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>删除组织「{selected.name}」？</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              删除后成员将回到公共域，组织内分组与加入申请一并清除。公共域不可删除。此操作不可在本页撤销。
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>取消</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => void handleDeleteOrg()}>
-                              确认删除
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
                   </div>
 
                   <div className="border-t pt-4">
                     <Label className="mb-2 block">搜索用户加入本组织</Label>
                     <div className="flex gap-2">
                       <Input
-                        placeholder="用户名或姓名"
+                        placeholder="用户名或昵称"
                         value={addKeyword}
                         onChange={(e) => setAddKeyword(e.target.value)}
                       />

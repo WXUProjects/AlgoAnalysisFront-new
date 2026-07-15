@@ -3,7 +3,6 @@ import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
 import {
   addOrgMember,
-  createOrg,
   getInvite,
   listJoinRequests,
   listOrgMembers,
@@ -53,7 +52,6 @@ export function DashboardOrgSettings() {
   const [memberKeywordDraft, setMemberKeywordDraft] = useState('')
   const [membersLoading, setMembersLoading] = useState(false)
   const [requests, setRequests] = useState<{ id: number; name: string; username: string }[]>([])
-  const [newOrgName, setNewOrgName] = useState('')
   const [addSearch, setAddSearch] = useState('')
   const [addCandidates, setAddCandidates] = useState<UserProfile[]>([])
   const [addSearching, setAddSearching] = useState(false)
@@ -142,34 +140,6 @@ export function DashboardOrgSettings() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">创建组织</CardTitle>
-            <CardDescription>仅站点管理员可开通新校队/机构。</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1 space-y-2">
-              <Label>组织名称</Label>
-              <Input value={newOrgName} onChange={(e) => setNewOrgName(e.target.value)} />
-            </div>
-            <Button
-              onClick={() =>
-                void createOrg({ name: newOrgName, adminUserId: user?.userId }).then(async (r) => {
-                  if (r.success) {
-                    toast.success('已创建')
-                    setNewOrgName('')
-                    await refreshOrgs()
-                  } else toast.error(r.message)
-                })
-              }
-            >
-              创建
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
       <Card>
         <CardHeader>
           <CardTitle className="text-base">组织品牌与加入方式</CardTitle>
@@ -323,11 +293,11 @@ export function DashboardOrgSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">搜索用户加入本组织</CardTitle>
-          <CardDescription>按姓名或用户名模糊搜索后加入。</CardDescription>
+          <CardDescription>按昵称或用户名模糊搜索后加入。</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           <Input
-            placeholder="姓名或用户名"
+            placeholder="昵称或用户名"
             value={addSearch}
             onChange={(e) => setAddSearch(e.target.value)}
           />
@@ -375,7 +345,7 @@ export function DashboardOrgSettings() {
         <CardContent className="space-y-3">
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
-              placeholder="搜索姓名或用户名"
+              placeholder="搜索昵称、组织内名称或用户名"
               value={memberKeywordDraft}
               onChange={(e) => setMemberKeywordDraft(e.target.value)}
               onKeyDown={(e) => {
