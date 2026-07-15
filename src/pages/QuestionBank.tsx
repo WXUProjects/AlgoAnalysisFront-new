@@ -496,8 +496,8 @@ export function QuestionBank() {
                           p.tags.slice(0, 4).map((t) => (
                             <Badge
                               key={t}
-                              variant="secondary"
-                              className="cursor-pointer"
+                              variant="outline"
+                              className="cursor-pointer border-border/70 bg-muted/50 font-normal text-muted-foreground"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 toggleInList('tags', t)

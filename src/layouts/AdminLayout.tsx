@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
 import { useSiteConfig } from '@/site/SiteConfigContext'
+import { AnimatedTitle } from '@/components/animated-title'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
   Sidebar,
@@ -34,6 +35,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { MotionProvider } from '@/motion/MotionContext'
 
 const titles: Record<string, string> = {
   '/admin': '后台',
@@ -61,6 +63,7 @@ export function AdminLayout() {
   }
 
   return (
+    <MotionProvider>
     <TooltipProvider>
       <SidebarProvider>
         <Sidebar collapsible="icon">
@@ -73,7 +76,7 @@ export function AdminLayout() {
                       <img
                         src={config.siteLogo}
                         alt=""
-                        className="size-8 rounded-lg object-cover"
+                        className="size-8 shrink-0 rounded-lg object-contain"
                       />
                     ) : (
                       <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground text-sm font-bold">
@@ -214,14 +217,15 @@ export function AdminLayout() {
           <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <h1 className="text-sm font-medium">{title}</h1>
+            <AnimatedTitle className="text-sm font-medium">{title}</AnimatedTitle>
           </header>
-          <div className="flex flex-1 flex-col p-4">
+          <div className="flex flex-1 flex-col overflow-auto">
             <Outlet />
           </div>
         </SidebarInset>
         <Toaster />
       </SidebarProvider>
     </TooltipProvider>
+    </MotionProvider>
   )
 }

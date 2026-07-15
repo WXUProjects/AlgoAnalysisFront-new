@@ -10,6 +10,7 @@ import {
 } from '@/api/group'
 import { getProfileByName, moveGroup } from '@/api/profile'
 import type { GroupInfo, UserListItem, UserProfile } from '@shared/api'
+import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import {
   AlertDialog,
@@ -190,7 +191,7 @@ export function DashboardGroup() {
   const members: UserListItem[] = detail?.users || []
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+    <PageShell className="grid gap-4 lg:grid-cols-[280px_1fr]">
       <Card className="gap-2 py-3">
         <CardHeader className="flex flex-row items-center justify-between px-3 space-y-0">
           <CardTitle className="text-base">分组</CardTitle>
@@ -394,6 +395,6 @@ export function DashboardGroup() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   )
 }

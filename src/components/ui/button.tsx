@@ -3,9 +3,10 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { usePress } from "@/hooks/use-press"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 origin-center touch-manipulation select-none items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] duration-150 ease-out outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -43,19 +44,44 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  onPointerDown,
+  onPointerUp,
+  onPointerLeave,
+  onPointerCancel,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
   }) {
   const Comp = asChild ? Slot.Root : "button"
+  const enablePress = variant !== "link"
+  const { ref, pressHandlers } = usePress<HTMLButtonElement>({
+    scale: size === "lg" ? 0.96 : 0.94,
+  })
 
   return (
     <Comp
+      ref={enablePress ? ref : undefined}
       data-slot="button"
       data-variant={variant}
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
+      onPointerDown={(e) => {
+        if (enablePress) pressHandlers.onPointerDown(e)
+        onPointerDown?.(e)
+      }}
+      onPointerUp={(e) => {
+        if (enablePress) pressHandlers.onPointerUp()
+        onPointerUp?.(e)
+      }}
+      onPointerLeave={(e) => {
+        if (enablePress) pressHandlers.onPointerLeave()
+        onPointerLeave?.(e)
+      }}
+      onPointerCancel={(e) => {
+        if (enablePress) pressHandlers.onPointerCancel()
+        onPointerCancel?.(e)
+      }}
       {...props}
     />
   )

@@ -15,6 +15,7 @@ import {
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
 import { useSiteConfig } from '@/site/SiteConfigContext'
+import { AnimatedTitle } from '@/components/animated-title'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
   Sidebar,
@@ -35,6 +36,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { MotionProvider } from '@/motion/MotionContext'
 
 const titles: Record<string, string> = {
   '/': '首页',
@@ -70,6 +72,7 @@ export function AppLayout() {
   }
 
   return (
+    <MotionProvider>
     <TooltipProvider>
       <SidebarProvider>
         <Sidebar collapsible="icon">
@@ -82,7 +85,7 @@ export function AppLayout() {
                       <img
                         src={config.siteLogo}
                         alt=""
-                        className="size-8 rounded-lg object-cover"
+                        className="size-8 shrink-0 rounded-lg object-contain"
                       />
                     ) : (
                       <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground text-sm font-bold">
@@ -262,7 +265,7 @@ export function AppLayout() {
           <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <h1 className="text-base font-semibold">{title}</h1>
+            <AnimatedTitle className="text-base font-semibold">{title}</AnimatedTitle>
           </header>
           <main className="flex flex-1 flex-col overflow-auto">
             <Outlet />
@@ -271,5 +274,6 @@ export function AppLayout() {
         <Toaster richColors position="top-center" />
       </SidebarProvider>
     </TooltipProvider>
+    </MotionProvider>
   )
 }

@@ -7,6 +7,7 @@ import {
   updateBulletin,
 } from '@/api/bulletin'
 import type { BulletinInfo } from '@shared/api'
+import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { RichTextEditor } from '@/components/rich-text-editor'
 import {
@@ -131,7 +132,7 @@ export function DashboardBulletinManage() {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <PageShell className="gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-semibold">公告管理</h3>
@@ -262,6 +263,6 @@ export function DashboardBulletinManage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   )
 }

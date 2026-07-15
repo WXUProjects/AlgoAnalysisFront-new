@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
+import { PageShell } from '@/components/page-shell'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -47,7 +48,7 @@ export function Login() {
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center p-4">
+    <PageShell className="items-center justify-center" stagger={false}>
       <Card className="w-full max-w-sm gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>登录</CardTitle>
@@ -95,6 +96,6 @@ export function Login() {
           </CardFooter>
         </form>
       </Card>
-    </div>
+    </PageShell>
   )
 }

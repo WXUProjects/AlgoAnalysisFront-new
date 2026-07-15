@@ -195,7 +195,7 @@ export function AllActivities() {
                       <Badge
                         key={t}
                         variant="outline"
-                        className="h-5 border-transparent bg-violet-500/15 px-1.5 text-[10px] font-normal text-violet-700 dark:bg-violet-500/20 dark:text-violet-400"
+                        className="h-5 border-border/70 bg-muted/50 px-1.5 text-[10px] font-normal text-muted-foreground"
                       >
                         {t}
                       </Badge>

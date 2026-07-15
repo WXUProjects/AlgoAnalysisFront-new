@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { PageShell } from '@/components/page-shell'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -11,7 +12,7 @@ import {
 
 export function NotFound() {
   return (
-    <div className="flex flex-1 items-center justify-center p-6">
+    <PageShell className="items-center justify-center" stagger={false}>
       <Card className="w-full max-w-md text-center">
         <CardHeader>
           <CardTitle>404</CardTitle>
@@ -28,6 +29,6 @@ export function NotFound() {
           </Button>
         </CardFooter>
       </Card>
-    </div>
+    </PageShell>
   )
 }

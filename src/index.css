@@ -108,6 +108,16 @@
   body {
     @apply bg-background text-foreground m-0;
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 /* 题面 Markdown：1:1 对齐旧版 Detail.vue .content-md */

@@ -6,6 +6,7 @@ import { updateAllSpiders } from '@/api/spider'
 import { getHeatmap, getPeriod } from '@/api/statistic'
 import type { HeatmapItem, PeriodData } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+import { PageShell } from '@/components/page-shell'
 import { TrendChart } from '@/components/charts/trend-chart'
 import {
   AlertDialog,
@@ -123,7 +124,7 @@ export function DashboardStatistics() {
   ]
 
   return (
-    <div className="flex flex-col gap-4">
+    <PageShell>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-semibold">全站统计</h3>
@@ -190,6 +191,6 @@ export function DashboardStatistics() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   )
 }

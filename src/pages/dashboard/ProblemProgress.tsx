@@ -12,6 +12,7 @@ import {
   type ProblemProgressData,
 } from '@/api/problem'
 import { useAuth } from '@/auth/AuthContext'
+import { PageShell } from '@/components/page-shell'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -140,7 +141,7 @@ export function DashboardProblemProgress() {
   )
 
   return (
-    <div className="flex flex-col gap-4">
+    <PageShell>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-semibold">题库识别</h3>
@@ -468,7 +469,7 @@ export function DashboardProblemProgress() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageShell>
   )
 }
 

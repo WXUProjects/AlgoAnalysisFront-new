@@ -1,5 +1,6 @@
-import { useEffect, useRef, type ReactNode } from 'react'
-import gsap from 'gsap'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
+import { useMotion } from '@/motion/MotionContext'
+import { animateEnter, prefersReducedMotion } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 export function PageShell({
@@ -8,23 +9,26 @@ export function PageShell({
 }: {
   children: ReactNode
   className?: string
+  /** @deprecated 已移除错落动画以减轻卡顿 */
+  stagger?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const { pathname } = useMotion()
+  const reduced = prefersReducedMotion()
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (prefersReduced) return
-    gsap.fromTo(
-      el,
-      { opacity: 0, y: 8 },
-      { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out' },
-    )
-  }, [])
+    animateEnter(el)
+  }, [pathname])
 
   return (
-    <div ref={ref} className={cn('flex flex-1 flex-col gap-4 p-4', className)}>
+    <div
+      ref={ref}
+      className={cn('flex flex-1 flex-col gap-4 p-4', className)}
+      data-page-shell=""
+      style={reduced ? undefined : { opacity: 0 }}
+    >
       {children}
     </div>
   )

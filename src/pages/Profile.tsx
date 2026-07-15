@@ -661,7 +661,7 @@ export function Profile() {
                                   <Badge
                                     key={t}
                                     variant="outline"
-                                    className="h-5 border-transparent bg-violet-500/15 px-1.5 text-[10px] font-normal text-violet-700 dark:bg-violet-500/20 dark:text-violet-400"
+                                    className="h-5 border-border/70 bg-muted/50 px-1.5 text-[10px] font-normal text-muted-foreground"
                                   >
                                     {t}
                                   </Badge>
@@ -706,7 +706,7 @@ export function Profile() {
               {contests.map((c) => (
                 <div
                   key={c.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors hover:bg-muted/40"
                 >
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <div className="flex items-center gap-2">

@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { register as registerApi } from '@/api/auth'
 import { useAuth } from '@/auth/AuthContext'
+import { PageShell } from '@/components/page-shell'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -50,7 +51,7 @@ export function Register() {
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center p-4">
+    <PageShell className="items-center justify-center" stagger={false}>
       <Card className="w-full max-w-sm gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>注册</CardTitle>
@@ -132,6 +133,6 @@ export function Register() {
           </CardFooter>
         </form>
       </Card>
-    </div>
+    </PageShell>
   )
 }

@@ -113,7 +113,11 @@ export function QuestionBankDetail() {
           </div>
           <div className="flex flex-wrap gap-1.5">
             {problem.tags.map((t) => (
-              <Badge key={t} variant="secondary">
+              <Badge
+                key={t}
+                variant="outline"
+                className="border-border/70 bg-muted/50 font-normal text-muted-foreground"
+              >
                 {t}
               </Badge>
             ))}

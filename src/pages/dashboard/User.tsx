@@ -11,6 +11,7 @@ import {
 import { listRoles, setUserRole } from '@/api/role'
 import type { GroupInfo, RoleInfo, UserListItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import {
   AlertDialog,
@@ -151,7 +152,7 @@ export function DashboardUser() {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <PageShell className="gap-3">
       <div>
         <h3 className="font-semibold">{isAdmin ? '用户管理' : '队员管理'}</h3>
         <p className="text-sm text-muted-foreground">
@@ -299,6 +300,6 @@ export function DashboardUser() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   )
 }
