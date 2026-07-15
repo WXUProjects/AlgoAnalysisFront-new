@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
 import { staffNavLabel } from '@/lib/roles'
+import { trackPageVisit } from '@/lib/visit-tracker'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
 import { SiteFooter } from '@/components/site-footer'
@@ -113,6 +114,15 @@ export function AppLayout() {
       navigate('/about', { replace: true })
     }
   }, [ready, isLogin, pathname, navigate])
+
+  // 站点访问人次 / 日活上报
+  useEffect(() => {
+    if (!ready) return
+    if (pathname === '/login' || pathname === '/register' || pathname === '/forgot-password') {
+      return
+    }
+    trackPageVisit(pathname)
+  }, [ready, pathname])
 
   function handleLogout() {
     logout()

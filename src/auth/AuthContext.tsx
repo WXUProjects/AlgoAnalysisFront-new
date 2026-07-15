@@ -143,18 +143,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [sync])
 
+  // 有效期内活跃则重签 JWT（滑动 30 天）；过期则登出
   useEffect(() => {
-    const check = () => {
+    let lastRenewAt = 0
+    const RENEW_MIN_INTERVAL_MS = 60 * 60 * 1000 // 续期最多每小时一次
+
+    const renewIfNeeded = async () => {
       if (!user) return
       if (!jwt.isValid()) {
         logout()
+        return
+      }
+      const now = Date.now()
+      if (now - lastRenewAt < RENEW_MIN_INTERVAL_MS) return
+      lastRenewAt = now
+      try {
+        await refreshToken()
+        const payload = jwt.getUserInfo()
+        if (payload) setUser(payload)
+        else logout()
+      } catch {
+        if (!jwt.isValid()) logout()
       }
     }
+
     const onVis = () => {
-      if (document.visibilityState === 'visible') check()
+      if (document.visibilityState === 'visible') void renewIfNeeded()
     }
     document.addEventListener('visibilitychange', onVis)
-    const t = window.setInterval(check, 60_000)
+    // 长开标签页：每小时续期
+    const t = window.setInterval(() => void renewIfNeeded(), 60 * 60 * 1000)
     return () => {
       document.removeEventListener('visibilitychange', onVis)
       window.clearInterval(t)

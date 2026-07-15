@@ -1,7 +1,18 @@
 import { useEffect, useState } from 'react'
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { toast } from 'sonner'
 import { listGroups } from '@/api/group'
 import { listProfiles } from '@/api/profile'
+import { getAccessStats, type AccessStats } from '@/api/site'
 import { updateAllSpiders } from '@/api/spider'
 import { getHeatmap, getPeriod } from '@/api/statistic'
 import type { HeatmapItem, PeriodData } from '@shared/api'
@@ -80,6 +91,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
+  const [access, setAccess] = useState<AccessStats | null>(null)
 
   // period: -1 组织 / -2 全站；heatmap: 0 组织 / -2 全站
   const periodUserId = isSite ? -2 : -1
@@ -94,7 +106,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     async function load() {
       setLoading(true)
       const end = todayYmd()
-      const [p, users, groups, hS, hA] = await Promise.all([
+      const [p, users, groups, hS, hA, acc] = await Promise.all([
         getPeriod(periodUserId),
         listProfiles(1, 1, isSite ? 'site' : 'org'),
         isSite
@@ -112,6 +124,9 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
           isAc: true,
           userId: heatmapUserId,
         }),
+        isSite && isAdmin
+          ? getAccessStats(30)
+          : Promise.resolve({ success: false, data: null, message: '' } as const),
       ])
       if (cancelled) return
       if (p.success) setPeriod(p.data)
@@ -119,6 +134,8 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       if (groups.success && groups.data) setGroupCount(groups.data.total)
       if (hS.success) setSubmitHeat(hS.data || [])
       if (hA.success) setAcHeat(hA.data || [])
+      if (acc.success && acc.data) setAccess(acc.data)
+      else setAccess(null)
       setLoading(false)
     }
     void load()
@@ -171,13 +188,47 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     },
   ]
 
+  const accToday = access?.today
+  const accYday = access?.yesterday
+  const accessCards = isSite
+    ? [
+        {
+          label: '今日访问',
+          value: accToday?.pv ?? (loading ? undefined : 0),
+          delta: delta(accToday?.pv, accYday?.pv),
+        },
+        {
+          label: '今日活跃用户',
+          value: accToday?.dau ?? (loading ? undefined : 0),
+          delta: delta(accToday?.dau, accYday?.dau),
+        },
+        {
+          label: '今日访客',
+          value: accToday?.uv ?? (loading ? undefined : 0),
+          delta: delta(accToday?.uv, accYday?.uv),
+        },
+        {
+          label: '昨日访问',
+          value: accYday?.pv ?? (loading ? undefined : 0),
+        },
+      ]
+    : []
+
+  const accessChartData =
+    access?.series.map((s) => ({
+      date: s.date.slice(5),
+      访问: s.pv,
+      活跃: s.dau,
+      访客: s.uv,
+    })) ?? []
+
   const title = isSite
     ? '站点数据统计'
     : currentOrg?.name
       ? `${currentOrg.name} · 数据统计`
       : '组织数据统计'
   const desc = isSite
-    ? '全站用户提交与 AC 汇总'
+    ? '全站访问、提交与 AC 汇总'
     : '按当前组织成员汇总提交与 AC（切换组织后数据随之变化）'
 
   return (
@@ -212,6 +263,87 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
           </AlertDialog>
         )}
       </div>
+
+      {isSite && (
+        <div className="space-y-2">
+          <div>
+            <h4 className="text-sm font-medium">访问情况</h4>
+            <p className="text-xs text-muted-foreground">
+              今日访问人次、登录活跃用户与独立访客（按页面浏览统计）
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-20" />
+                ))
+              : accessCards.map((c) => (
+                  <Card key={c.label} className="gap-1 py-3">
+                    <CardHeader className="px-3 py-0">
+                      <CardDescription>{c.label}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex items-end gap-2 px-3">
+                      <span className="text-xl font-semibold tabular-nums">
+                        {c.value ?? '-'}
+                      </span>
+                      {'delta' in c && <DeltaText value={c.delta ?? null} />}
+                    </CardContent>
+                  </Card>
+                ))}
+          </div>
+          <Card className="gap-3 py-4">
+            <CardHeader className="px-4">
+              <CardTitle className="text-base">近 30 日访问趋势</CardTitle>
+              <CardDescription>访问人次 · 活跃用户 · 访客</CardDescription>
+            </CardHeader>
+            <CardContent className="px-2">
+              {loading ? (
+                <Skeleton className="h-64 w-full" />
+              ) : accessChartData.length === 0 ? (
+                <p className="px-2 text-sm text-muted-foreground">
+                  暂无访问数据，用户打开页面后会自动累计。
+                </p>
+              ) : (
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={accessChartData}
+                      margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} width={36} />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="访问"
+                        stroke="var(--color-chart-1, #8884d8)"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="活跃"
+                        stroke="var(--color-chart-2, #82ca9d)"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="访客"
+                        stroke="var(--color-chart-3, #ffc658)"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {loading

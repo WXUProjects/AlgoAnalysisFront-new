@@ -138,3 +138,72 @@ export async function testSiteEmail(body: {
     data: ok ? { success: true } : null,
   }
 }
+
+export type AccessDayStat = {
+  date: string
+  pv: number
+  dau: number
+  uv: number
+}
+
+export type AccessStats = {
+  today: AccessDayStat
+  yesterday: AccessDayStat
+  series: AccessDayStat[]
+  clientIpAvailable: boolean
+}
+
+function emptyDay(date = ''): AccessDayStat {
+  return { date, pv: 0, dau: 0, uv: 0 }
+}
+
+function normalizeDay(raw: unknown): AccessDayStat {
+  if (!raw || typeof raw !== 'object') return emptyDay()
+  const d = raw as Record<string, unknown>
+  return {
+    date: str(d.date),
+    pv: num(d.pv, 0) || 0,
+    dau: num(d.dau, 0) || 0,
+    uv: num(d.uv, 0) || 0,
+  }
+}
+
+/** 页面访问上报（公开；有 token 时计入日活） */
+export async function visitPing(path: string, visitorId: string): Promise<ApiResult<{ counted: boolean }>> {
+  const res = await post<Record<string, unknown>>(endpoints.user.site.visitPing, {
+    path,
+    visitorId,
+  })
+  if (!res.success) return { ...res, data: null }
+  const raw = pickRaw(res)
+  return {
+    ...res,
+    data: { counted: Boolean(raw?.counted) },
+  }
+}
+
+/** 站点访问概览（仅站点管理员） */
+export async function getAccessStats(days = 30): Promise<ApiResult<AccessStats>> {
+  const res = await get<Record<string, unknown>>(
+    `${endpoints.user.site.accessStats}?days=${days}`,
+  )
+  if (!res.success) return { ...res, data: null }
+  const raw = pickRaw(res)
+  if (raw && typeof raw.code === 'number' && raw.code !== 0) {
+    return {
+      success: false,
+      message: str(raw.message, '加载失败'),
+      data: null,
+    }
+  }
+  const seriesRaw = Array.isArray(raw?.series) ? raw!.series : []
+  return {
+    ...res,
+    data: {
+      today: normalizeDay(raw?.today),
+      yesterday: normalizeDay(raw?.yesterday),
+      series: seriesRaw.map(normalizeDay),
+      clientIpAvailable: Boolean(raw?.clientIpAvailable),
+    },
+  }
+}

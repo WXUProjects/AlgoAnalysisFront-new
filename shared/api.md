@@ -112,6 +112,20 @@
 | GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI 密钥脱敏） |
 | POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI 模型密钥；密钥空串表示不修改 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
+| POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计日活；服务端解析真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
+| GET | `/user/site/access-stats` | 是(站点管理员) | 访问概览：`?days=30`；返回今日/昨日/序列的 `pv`（人次）、`dau`（登录日活）、`uv`（独立访客） |
+
+**GetAccessStatsRes**
+
+```json
+{
+  "code": 0,
+  "today": { "date": "2026-07-16", "pv": 120, "dau": 18, "uv": 40 },
+  "yesterday": { "date": "2026-07-15", "pv": 90, "dau": 15, "uv": 32 },
+  "series": [{ "date": "2026-07-01", "pv": 50, "dau": 10, "uv": 20 }],
+  "clientIpAvailable": true
+}
+```
 
 **GetConfigRes（公开）**
 

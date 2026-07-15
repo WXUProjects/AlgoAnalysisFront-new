@@ -42,6 +42,8 @@ export const endpoints = {
       config: `${API_PREFIX}/user/site/config`,
       adminConfig: `${API_PREFIX}/user/site/admin-config`,
       testEmail: `${API_PREFIX}/user/site/test-email`,
+      visitPing: `${API_PREFIX}/user/site/visit-ping`,
+      accessStats: `${API_PREFIX}/user/site/access-stats`,
     },
     org: {
       list: `${API_PREFIX}/user/org/list`,
@@ -189,7 +191,9 @@ export interface ResetPasswordRes {
 }
 
 export interface ChangePasswordReq {
+  /** 客户端 SHA256 后的当前密码 */
   oldPassword: string
+  /** 客户端 SHA256 后的新密码 */
   newPassword: string
 }
 
