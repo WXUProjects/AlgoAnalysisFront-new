@@ -90,7 +90,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [saving, setSaving] = useState(false)
 
   const groupName = useCallback(
-    (id: number) => groups.find((g) => g.id === id)?.name || (id ? `分组${id}` : '未分组'),
+    (id: number) => groups.find((g) => g.id === id)?.name || (id ? `分组${id}` : '默认分组'),
     [groups],
   )
 
