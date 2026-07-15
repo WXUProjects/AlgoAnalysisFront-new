@@ -178,6 +178,7 @@ export interface UserListItem {
   username: string
   name: string
   groupId: number
+  groupName?: string
   avatar: string
   lastSubmit: string
   roleId?: number

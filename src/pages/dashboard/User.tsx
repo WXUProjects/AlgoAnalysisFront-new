@@ -90,7 +90,13 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [saving, setSaving] = useState(false)
 
   const groupName = useCallback(
-    (id: number) => groups.find((g) => g.id === id)?.name || (id ? `分组${id}` : '默认分组'),
+    (u: UserListItem) => {
+      if (u.groupName) return u.groupName
+      const fromList = groups.find((g) => g.id === u.groupId)?.name
+      if (fromList) return fromList === '未分组' ? '默认分组' : fromList
+      // 无效 groupId 或列表未加载：不展示「分组11」
+      return '默认分组'
+    },
     [groups],
   )
 
@@ -246,7 +252,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                           )}
                         </div>
                       ) : (
-                        groupName(u.groupId)
+                        groupName(u)
                       )}
                     </TableCell>
                     <TableCell className="text-right">

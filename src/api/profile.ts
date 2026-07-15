@@ -107,6 +107,7 @@ export async function listProfiles(
           username: str(u.username),
           name: str(u.name),
           groupId: num(u.groupId),
+          groupName: str(u.groupName) || undefined,
           avatar: normalizeStaticUrl(str(u.avatar)),
           lastSubmit: str(u.lastSubmit),
           roleId: num(u.roleId),

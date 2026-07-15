@@ -181,6 +181,7 @@ export function DashboardGroup() {
   }
 
   async function handleRemove(userId: number) {
+    // groupId=0：后端归入当前组织「默认分组」
     const res = await moveGroup({ userId, groupId: 0 })
     if (res.success) {
       toast.success('已移出')
