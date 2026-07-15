@@ -74,11 +74,15 @@ function buildRows(
   const n = Math.max(userCount, 1)
   const ave = (v: number | undefined) => (v ?? 0) / n
   const prefix = kind === 'ac' ? 'AC' : '提交'
+  // AC 模式：生涯 = 按题去重后的累计 AC（即累计题数），不再单独列「题数」
+  const careerTitle = kind === 'ac' ? '生涯 AC（题数）' : `总${prefix}`
+  const careerValue = kind === 'ac' ? problemCount : (u?.total ?? 0)
+  const careerAve = kind === 'ac' ? problemCountAve : ave(g?.total)
   return [
     {
-      title: '题数',
-      value: problemCount,
-      ave: problemCountAve,
+      title: careerTitle,
+      value: careerValue,
+      ave: careerAve,
     },
     {
       title: `今日${prefix}`,
@@ -102,11 +106,6 @@ function buildRows(
       value: u?.thisYear ?? 0,
       ave: ave(g?.thisYear),
       grow: (u?.thisYear ?? 0) - (u?.lastYear ?? 0),
-    },
-    {
-      title: `总${prefix}`,
-      value: u?.total ?? 0,
-      ave: ave(g?.total),
     },
     {
       title: 'AC 率',

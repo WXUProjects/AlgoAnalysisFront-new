@@ -309,16 +309,10 @@ export function Home() {
           </Tabs>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-7">
-          <StatCard
-            label="题数"
-            sub="去重后做过的题"
-            value={period?.ac.total ?? '-'}
-            loading={loading}
-          />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <StatCard
             label="生涯"
-            sub={`累计${modeLabel}`}
+            sub={mode === 'ac' ? '累计AC次数/累计题数' : '累计提交'}
             value={stats?.total ?? '-'}
             loading={loading}
           />
