@@ -63,7 +63,8 @@ export function AppLayout() {
   const { config } = useSiteConfig()
   const brand = config.siteTitle || 'Algo-CWUX'
   const title = resolveTitle(pathname, brand)
-  const { isLogin, isAdmin, isCoach, user, logout } = useAuth()
+  const { isLogin, isAdmin, isCaptain, isStaff, isMemberLike, user, logout } =
+    useAuth()
 
   function handleLogout() {
     logout()
@@ -165,7 +166,7 @@ export function AppLayout() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {isLogin && (
+                  {isLogin && isMemberLike && (
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
@@ -180,15 +181,27 @@ export function AppLayout() {
                     </SidebarMenuItem>
                   )}
 
-                  {isLogin && (isAdmin || isCoach) && (
+                  {isLogin && isStaff && (
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        tooltip={isAdmin ? '后台管理' : '教练管理'}
+                        tooltip={
+                          isAdmin
+                            ? '后台管理'
+                            : isCaptain
+                              ? '队长管理'
+                              : '教练管理'
+                        }
                       >
                         <Link to="/admin">
                           <LayoutDashboardIcon />
-                          <span>{isAdmin ? '后台管理' : '教练管理'}</span>
+                          <span>
+                            {isAdmin
+                              ? '后台管理'
+                              : isCaptain
+                                ? '队长管理'
+                                : '教练管理'}
+                          </span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -261,13 +274,13 @@ export function AppLayout() {
           <SidebarRail />
         </Sidebar>
 
-        <SidebarInset>
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+        <SidebarInset className="h-svh min-h-0 overflow-hidden">
+          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
             <AnimatedTitle className="text-base font-semibold">{title}</AnimatedTitle>
           </header>
-          <main className="flex min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none">
+          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none">
             <Outlet />
           </main>
         </SidebarInset>

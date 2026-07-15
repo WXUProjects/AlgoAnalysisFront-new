@@ -2,8 +2,9 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthContext'
 import { Spinner } from '@/components/ui/spinner'
 
+/** 管理端守卫：管理员 / 教练 / 队长 */
 export function RequireCoach({ children }: { children: React.ReactNode }) {
-  const { isLogin, isAdmin, isCoach, ready } = useAuth()
+  const { isLogin, isStaff, ready } = useAuth()
 
   if (!ready) {
     return (
@@ -13,7 +14,7 @@ export function RequireCoach({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!isLogin || (!isAdmin && !isCoach)) {
+  if (!isLogin || !isStaff) {
     return <Navigate to="/" replace />
   }
 

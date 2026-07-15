@@ -50,10 +50,12 @@ const titles: Record<string, string> = {
 export function AdminLayout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { isAdmin, logout } = useAuth()
+  const { isAdmin, isCaptain, logout } = useAuth()
   const { config } = useSiteConfig()
   const brand = config.siteTitle || 'Algo-CWUX'
-  const title = titles[pathname] || (isAdmin ? '后台管理' : '教练管理')
+  const staffLabel = isAdmin ? '后台管理' : isCaptain ? '队长管理' : '教练管理'
+  const staffSub = isAdmin ? '管理后台' : isCaptain ? '队长后台' : '教练后台'
+  const title = titles[pathname] || staffLabel
   const userLabel = isAdmin ? '用户管理' : '队员管理'
 
   function handleLogout() {
@@ -86,7 +88,7 @@ export function AdminLayout() {
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">{brand}</span>
                       <span className="truncate text-xs text-muted-foreground">
-                        {isAdmin ? '管理后台' : '教练后台'}
+                        {staffSub}
                       </span>
                     </div>
                   </Link>
@@ -213,13 +215,13 @@ export function AdminLayout() {
           <SidebarRail />
         </Sidebar>
 
-        <SidebarInset>
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+        <SidebarInset className="h-svh min-h-0 overflow-hidden">
+          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
             <AnimatedTitle className="text-sm font-medium">{title}</AnimatedTitle>
           </header>
-          <div className="flex min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none">
             <Outlet />
           </div>
         </SidebarInset>

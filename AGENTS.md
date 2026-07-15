@@ -137,9 +137,12 @@ npm run build
 
 | roleId | 角色 | 说明 |
 |--------|------|------|
-| 1 | Admin | 后台、改角色、删用户、全局爬虫、题库 AI 运维 |
-| 2 | Coach | 教练管理、改分组、看队员 |
-| 其他 | 用户 | 登录后个人数据、绑 OJ 等 |
+| 0 | 队员 | 交题、个人资料、绑 OJ |
+| 1 | 管理员 | 全部功能：后台、改角色、删用户、全局爬虫、题库运维、站点设置等 |
+| 2 | 教练 | 仅管理端（统计/公告/分组/队员）；**无个人资料流程**；登录直达 `/admin` |
+| 3 | 队长 | **教练管理权限 + 队员交题/资料**（`isStaff` + `isMemberLike`） |
+
+Auth 标志：`isAdmin` / `isCoach`(纯教练) / `isCaptain` / `isStaff`(1\|2\|3) / `isMemberLike`(0\|1\|3)
 
 ### 路由一览
 
@@ -225,10 +228,10 @@ npm run build
 |------|------|
 | JWT | localStorage `jwtToken`；payload：`userId/username/name/roleId/exp` |
 | 密码 | SHA256 客户端哈希 |
-| Auth 状态 | `isLogin` / `isAdmin`(roleId=1) / `isCoach`(roleId=2) / profile |
+| Auth 状态 | `isLogin` / `isAdmin` / `isCoach` / `isCaptain` / `isStaff` / `isMemberLike` / profile；见 `src/lib/roles.ts` |
 | HTTP | 统一客户端；`Authorization: Bearer`；路径用 `@shared/api` |
 | 主题 | 旧 4 套可简化为 light/dark；`data-theme` 或 class |
-| 路由守卫 | 登录页 redirect；Dashboard 需 Admin\|Coach |
+| 路由守卫 | 登录页 redirect；`/admin` 需 `isStaff`；资料页纯教练跳 `/admin` |
 
 ### API 对应（实现页时对齐 shared）
 
@@ -258,7 +261,7 @@ agent.summary:    recent
 
 ### 侧栏导航（启用项）
 
-首页 · 比赛 · 公告 · 动态 · 题库 · 个人资料(登录) · 后台/教练(Admin/Coach) · 论坛(外链) · 主题 · 登录/注册(未登录)
+首页 · 比赛 · 公告 · 动态 · 题库 · 个人资料(队员/队长/管理员) · 后台(管理员/教练/队长) · 论坛(外链) · 主题 · 登录/注册(未登录)
 
 品牌：**Algo-CWUX**（侧栏最上方）
 

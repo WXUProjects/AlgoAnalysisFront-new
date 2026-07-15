@@ -41,14 +41,15 @@
 | 公告 | `/bulletin` | 全部 |
 | 动态 | `/all-activities` | 全部 |
 | 题库 | `/question-bank` | 全部 |
-| 个人资料 | `/profile` | 登录后 |
-| 后台 / 教练管理 | `/dashboard` | Admin / Coach |
+| 个人资料 | `/profile` | 队员 / 队长 / 管理员（纯教练不展示） |
+| 后台 / 教练管理 | `/admin` | 管理员 / 教练 / 队长 |
 | 论坛 | 外链 `http://bbs.algo.zhiyuansofts.cn/` | 全部 |
 | 登录 / 注册 | `/login` `/register` | 未登录 |
 | 主题切换 | （控件，非路由） | 全部 |
 
 - 侧栏最上方固定展示 **Algo-CWUX**
-- 后台入口文案随角色：Admin →「后台管理」，Coach →「教练管理」
+- 后台入口文案：管理员→「后台管理」，队长→「队长管理」，教练→「教练管理」
+- 纯教练登录后直达 `/admin`
 
 ## 右侧主内容区
 

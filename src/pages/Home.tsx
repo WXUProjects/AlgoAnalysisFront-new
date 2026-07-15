@@ -147,7 +147,7 @@ function StatCard({
 }
 
 export function Home() {
-  const { isLogin, user } = useAuth()
+  const { isLogin, isMemberLike, user } = useAuth()
   const [period, setPeriod] = useState<PeriodData | null>(null)
   const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
@@ -265,7 +265,7 @@ export function Home() {
               </div>
             </a>
           ))}
-          {isLogin && (
+          {isLogin && isMemberLike && (
             <Link
               to="/change-profile"
               className="flex items-center justify-center rounded-lg border border-dashed px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted/40"

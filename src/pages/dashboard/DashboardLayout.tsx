@@ -11,15 +11,14 @@ const links = [
 ]
 
 export function DashboardLayout() {
-  const { isAdmin, isCoach } = useAuth()
-  const userLabel = isAdmin ? '用户管理' : isCoach ? '队员管理' : '用户'
+  const { isAdmin, isCaptain } = useAuth()
+  const userLabel = isAdmin ? '用户管理' : '队员管理'
+  const staffLabel = isAdmin ? '后台管理' : isCaptain ? '队长管理' : '教练管理'
 
   return (
     <PageShell className="gap-3">
       <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold">
-          {isAdmin ? '后台管理' : '教练管理'}
-        </h2>
+        <h2 className="text-lg font-semibold">{staffLabel}</h2>
         <p className="text-sm text-muted-foreground">
           数据统计、公告、题库识别、分组与{userLabel}
         </p>

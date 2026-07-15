@@ -2,8 +2,8 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { AppLayout } from '@/layouts/AppLayout'
 import { AdminLayout } from '@/layouts/AdminLayout'
-import { RequireAuth } from '@/auth/RequireAuth'
 import { RequireCoach } from '@/auth/RequireCoach'
+import { RequireMemberLike } from '@/auth/RequireMemberLike'
 import { Spinner } from '@/components/ui/spinner'
 
 const Login = lazy(() =>
@@ -125,21 +125,21 @@ export const router = createBrowserRouter([
       {
         path: 'profile',
         element: (
-          <RequireAuth>
+          <RequireMemberLike>
             <Lazy>
               <Profile />
             </Lazy>
-          </RequireAuth>
+          </RequireMemberLike>
         ),
       },
       {
         path: 'change-profile',
         element: (
-          <RequireAuth>
+          <RequireMemberLike>
             <Lazy>
               <ChangeProfile />
             </Lazy>
-          </RequireAuth>
+          </RequireMemberLike>
         ),
       },
       {

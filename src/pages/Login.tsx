@@ -15,20 +15,29 @@ import {
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
+import { jwt } from '@/lib/jwt'
+import { isCoachOnlyRole } from '@/lib/roles'
+
+function postLoginPath(explicitRedirect: string | null): string {
+  // 纯教练：直接进入教练管理（无个人资料等队员流程）
+  const roleId = jwt.getUserInfo()?.roleId
+  if (isCoachOnlyRole(roleId)) return '/admin'
+  return explicitRedirect || '/'
+}
 
 export function Login() {
-  const { login, isLogin, ready } = useAuth()
+  const { login, isLogin, isCoach, ready } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [pending, setPending] = useState(false)
 
-  if (ready && isLogin) {
-    return <Navigate to="/" replace />
-  }
+  const redirectParam = searchParams.get('redirect')
 
-  const redirectTo = searchParams.get('redirect') || '/'
+  if (ready && isLogin) {
+    return <Navigate to={postLoginPath(isCoach ? null : redirectParam)} replace />
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -41,7 +50,7 @@ export function Login() {
     setPending(false)
     if (res.success) {
       toast.success(res.message || '登录成功')
-      navigate(redirectTo, { replace: true })
+      navigate(postLoginPath(redirectParam), { replace: true })
     } else {
       toast.error(res.message || '登录失败')
     }

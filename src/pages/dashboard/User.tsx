@@ -56,11 +56,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatTime } from '@/lib/format'
+import { roleName as fallbackRoleName } from '@/lib/roles'
 
 const PAGE_SIZE = 10
 
 export function DashboardUser() {
-  const { isAdmin, isCoach } = useAuth()
+  const { isAdmin, isStaff } = useAuth()
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<UserListItem[]>([])
@@ -77,7 +78,8 @@ export function DashboardUser() {
     [groups],
   )
   const roleName = useCallback(
-    (id?: number) => roles.find((r) => r.roleId === id)?.name || `角色${id ?? '-'}`,
+    (id?: number) =>
+      roles.find((r) => r.roleId === id)?.name || fallbackRoleName(id),
     [roles],
   )
 
@@ -202,7 +204,7 @@ export function DashboardUser() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {(isAdmin || isCoach) && (
+                        {isStaff && (
                           <Button
                             type="button"
                             size="sm"
