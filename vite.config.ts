@@ -14,6 +14,29 @@ export default defineConfig({
       '@shared': path.resolve(__dirname, './shared'),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (id.includes('recharts') || id.includes('d3-')) return 'charts'
+          if (id.includes('katex') || id.includes('markdown-it')) return 'markdown'
+          if (id.includes('@tiptap') || id.includes('prosemirror')) return 'editor'
+          if (id.includes('gsap')) return 'gsap'
+          if (
+            id.includes('react-dom') ||
+            id.includes('/react/') ||
+            id.includes('react-router') ||
+            id.includes('scheduler')
+          ) {
+            return 'react-vendor'
+          }
+          return 'vendor'
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {
