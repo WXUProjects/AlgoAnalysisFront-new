@@ -101,7 +101,9 @@ export function AllActivities() {
           <h2 className="text-lg font-semibold">
             {userMode ? `${titleName || '用户'} 的动态` : '全站动态'}
           </h2>
-          <p className="text-sm text-muted-foreground">提交记录时间线</p>
+          <p className="text-sm text-muted-foreground">
+            全站或个人的提交动态
+          </p>
         </div>
         <div className="flex gap-2">
           <Button

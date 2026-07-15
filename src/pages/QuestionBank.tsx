@@ -231,7 +231,7 @@ export function QuestionBank() {
         <div>
           <h2 className="text-lg font-semibold">题库</h2>
           <p className="text-sm text-muted-foreground">
-            筛选 · 按最近提交降序 · 可分享链接
+            按条件筛选题目，默认按最近提交排序
           </p>
         </div>
       </div>

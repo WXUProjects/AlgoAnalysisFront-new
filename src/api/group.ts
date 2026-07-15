@@ -1,5 +1,6 @@
 import { endpoints, type GroupInfo, type UserListItem } from '@shared/api'
 import { get, post, num, str, type ApiResult } from '@/lib/http'
+import { normalizeStaticUrl } from '@/lib/static-url'
 
 export interface GroupListData {
   list: GroupInfo[]
@@ -12,7 +13,7 @@ function normalizeUser(u: Record<string, unknown>): UserListItem {
     username: str(u.username),
     name: str(u.name),
     groupId: num(u.groupId),
-    avatar: str(u.avatar),
+    avatar: normalizeStaticUrl(str(u.avatar)),
     lastSubmit: str(u.lastSubmit),
     roleId: num(u.roleId),
   }

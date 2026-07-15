@@ -72,8 +72,8 @@
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc`，返回 `{ url }`（≤3MB 图片） |
-| GET | `/user/static/*` | 否 | 已上传文件静态访问 |
+| POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc`，返回 `{ url }`（≤3MB 图片）。**对外 url 无图片扩展名**（避免 CDN 按 .png 等劫持静态资源） |
+| GET | `/user/static/*` | 否 | 已上传文件；无后缀时会尝试磁盘上的 `.png/.jpg/...` 旧文件 |
 | GET | `/user/site/config` | 否 | 站点标题/logo/favicon |
 | POST | `/user/site/config` | 是(管理员) | body: `{ siteTitle, siteLogo, favicon }` |
 

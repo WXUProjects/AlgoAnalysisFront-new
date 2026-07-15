@@ -1,5 +1,6 @@
 import { endpoints } from '@shared/api'
 import { get, post, str, type ApiResult } from '@/lib/http'
+import { normalizeStaticUrl } from '@/lib/static-url'
 
 export type SiteConfig = {
   siteTitle: string
@@ -11,8 +12,8 @@ function normalize(raw: Record<string, unknown> | null | undefined): SiteConfig 
   const d = raw || {}
   return {
     siteTitle: str(d.siteTitle, 'Algo-CWUX') || 'Algo-CWUX',
-    siteLogo: str(d.siteLogo),
-    favicon: str(d.favicon),
+    siteLogo: normalizeStaticUrl(str(d.siteLogo)),
+    favicon: normalizeStaticUrl(str(d.favicon)),
   }
 }
 

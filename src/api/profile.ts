@@ -1,5 +1,6 @@
 import { endpoints, type UserProfile, type UserListRes } from '@shared/api'
 import { get, post, num, str, bool, type ApiResult } from '@/lib/http'
+import { normalizeStaticUrl } from '@/lib/static-url'
 
 function normalizeProfile(raw: Record<string, unknown>): UserProfile {
   const spiders = Array.isArray(raw.spiders)
@@ -14,7 +15,7 @@ function normalizeProfile(raw: Record<string, unknown>): UserProfile {
     name: str(raw.name),
     email: str(raw.email),
     groupId: num(raw.groupId),
-    avatar: str(raw.avatar),
+    avatar: normalizeStaticUrl(str(raw.avatar)),
     emailEnabled: bool(raw.emailEnabled),
     roleId: num(raw.roleId),
     spiders,
@@ -102,7 +103,7 @@ export async function listProfiles(
         username: str(u.username),
         name: str(u.name),
         groupId: num(u.groupId),
-        avatar: str(u.avatar),
+        avatar: normalizeStaticUrl(str(u.avatar)),
         lastSubmit: str(u.lastSubmit),
         roleId: num(u.roleId),
       })),

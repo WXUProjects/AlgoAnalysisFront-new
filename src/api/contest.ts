@@ -5,6 +5,7 @@ import {
   type Platform,
 } from '@shared/api'
 import { get, num, str, type ApiResult } from '@/lib/http'
+import { normalizeStaticUrl } from '@/lib/static-url'
 
 export interface ContestListData {
   list: ContestItem[]
@@ -37,7 +38,7 @@ function normalizeRank(r: Record<string, unknown>): ContestRankingItem {
     rank: num(r.rank),
     userId: num(r.userId),
     name: str(r.name),
-    avatar: str(r.avatar),
+    avatar: normalizeStaticUrl(str(r.avatar)),
     score: num(r.score ?? r.acCount),
     acCount: num(r.acCount),
     totalCount: num(r.totalCount),

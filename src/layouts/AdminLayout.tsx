@@ -39,7 +39,7 @@ const titles: Record<string, string> = {
   '/admin': '后台',
   '/admin/statistics': '数据统计',
   '/admin/bulletin': '公告管理',
-  '/admin/problem-progress': '题库流水线',
+  '/admin/problem-progress': '题库识别',
   '/admin/group': '分组管理',
   '/admin/user': '用户管理',
   '/admin/site': '站点设置',
@@ -48,7 +48,7 @@ const titles: Record<string, string> = {
 export function AdminLayout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { isAdmin, isCoach, logout } = useAuth()
+  const { isAdmin, logout } = useAuth()
   const { config } = useSiteConfig()
   const brand = config.siteTitle || 'Algo-CWUX'
   const title = titles[pathname] || (isAdmin ? '后台管理' : '教练管理')
@@ -125,11 +125,11 @@ export function AdminLayout() {
                     <SidebarMenuButton
                       asChild
                       isActive={pathname.startsWith('/admin/problem-progress')}
-                      tooltip="题库流水线"
+                      tooltip="题库识别"
                     >
                       <NavLink to="/admin/problem-progress">
                         <WorkflowIcon />
-                        <span>题库流水线</span>
+                        <span>题库识别</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

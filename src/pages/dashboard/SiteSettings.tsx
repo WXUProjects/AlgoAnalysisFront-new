@@ -78,7 +78,7 @@ export function DashboardSiteSettings() {
         <CardHeader>
           <CardTitle>站点设置</CardTitle>
           <CardDescription>
-            修改全站标题、Logo 与浏览器图标（仅管理员）
+            设置站点名称、Logo 与浏览器图标
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -92,13 +92,13 @@ export function DashboardSiteSettings() {
               />
             </Field>
             <Field>
-              <FieldLabel>Logo URL</FieldLabel>
+              <FieldLabel>站点 Logo</FieldLabel>
               <div className="flex flex-wrap items-center gap-2">
                 <Input
                   className="min-w-0 flex-1"
                   value={logo}
                   onChange={(e) => setLogo(e.target.value)}
-                  placeholder="/api/user/static/..."
+                  placeholder="图片地址，或点击右侧上传"
                 />
                 <Button type="button" variant="outline" size="sm" asChild>
                   <label className="cursor-pointer">
@@ -117,13 +117,13 @@ export function DashboardSiteSettings() {
               ) : null}
             </Field>
             <Field>
-              <FieldLabel>Favicon URL</FieldLabel>
+              <FieldLabel>浏览器图标</FieldLabel>
               <div className="flex flex-wrap items-center gap-2">
                 <Input
                   className="min-w-0 flex-1"
                   value={favicon}
                   onChange={(e) => setFavicon(e.target.value)}
-                  placeholder="/api/user/static/..."
+                  placeholder="图片地址，或点击右侧上传"
                 />
                 <Button type="button" variant="outline" size="sm" asChild>
                   <label className="cursor-pointer">

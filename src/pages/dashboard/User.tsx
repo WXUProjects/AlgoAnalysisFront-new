@@ -140,12 +140,12 @@ export function DashboardUser() {
 
   async function handleDelete(userId: number) {
     if (userId === 2) {
-      toast.error('禁止删除管理员账号 sanenchen')
+      toast.error('该账号受保护，无法删除')
       return
     }
     const res = await deleteUser(userId)
     if (res.success) {
-      toast.success(res.message || '已软删除')
+      toast.success(res.message || '已移除该用户')
       void load()
     } else toast.error(res.message || '删除失败')
   }
@@ -155,7 +155,7 @@ export function DashboardUser() {
       <div>
         <h3 className="font-semibold">{isAdmin ? '用户管理' : '队员管理'}</h3>
         <p className="text-sm text-muted-foreground">
-          {isAdmin ? '改角色 · 软删除' : '改分组'}
+          {isAdmin ? '调整角色或移除用户' : '调整队员所在分组'}
         </p>
       </div>
 
@@ -208,7 +208,7 @@ export function DashboardUser() {
                             variant="outline"
                             onClick={() => void openEdit(u)}
                           >
-                            {isAdmin ? '改角色' : '改分组'}
+                            {isAdmin ? '调整角色' : '调整分组'}
                           </Button>
                         )}
                         <Button type="button" size="sm" variant="ghost" asChild>
@@ -223,9 +223,9 @@ export function DashboardUser() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>软删除用户？</AlertDialogTitle>
+                                <AlertDialogTitle>移除用户？</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  用户 {u.username} 将被软删除，本页无法恢复。
+                                  确认移除用户「{u.username}」？移除后该用户将无法继续使用本站。
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>

@@ -135,7 +135,9 @@ export function DashboardBulletinManage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-semibold">公告管理</h3>
-          <p className="text-sm text-muted-foreground">富文本 · 置顶 · CRUD</p>
+          <p className="text-sm text-muted-foreground">
+            发布、编辑与置顶公告
+          </p>
         </div>
         <Button type="button" size="sm" onClick={openCreate}>
           新建公告

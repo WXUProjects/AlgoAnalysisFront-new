@@ -70,23 +70,23 @@ function ActionTip({
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  PENDING: '待爬取',
-  FETCHING: '爬取中',
+  PENDING: '待获取题面',
+  FETCHING: '获取题面中',
   TAGGING: '待分析',
   COMPLETED: '已完成',
-  FAILED: '失败(可重试)',
+  FAILED: '失败（可重试）',
   FAILED_PERM: '永久失败',
   SKIPPED: '已跳过',
 }
 
 const STATUS_HINT: Record<string, string> = {
-  PENDING: '全量',
-  FETCHING: '全量',
-  TAGGING: '近6月',
-  COMPLETED: '全量',
-  FAILED: '近6月',
-  FAILED_PERM: '近6月',
-  SKIPPED: '近6月',
+  PENDING: '全部',
+  FETCHING: '全部',
+  TAGGING: '近 6 个月',
+  COMPLETED: '全部',
+  FAILED: '近 6 个月',
+  FAILED_PERM: '近 6 个月',
+  SKIPPED: '近 6 个月',
 }
 
 export function DashboardProblemProgress() {
@@ -132,7 +132,7 @@ export function DashboardProblemProgress() {
 
   async function handleToggleFetch() {
     const next = !data?.fetchPaused
-    await run(next ? '暂停爬取' : '恢复爬取', () => toggleFetch(next))
+    await run(next ? '暂停获取' : '恢复获取', () => toggleFetch(next))
   }
 
   const queueMap = Object.fromEntries(
@@ -143,18 +143,18 @@ export function DashboardProblemProgress() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-semibold">题库流水线</h3>
+          <h3 className="font-semibold">题库识别</h3>
           <p className="text-sm text-muted-foreground">
-            5s 自动刷新 · 分析
-            {data?.analyzePaused ? '已暂停' : '运行中'} · 爬取
-            {data?.fetchPaused ? '已暂停' : '运行中'}
+            每 5 秒自动刷新 · AI 分析
+            {data?.analyzePaused ? '已暂停' : '进行中'} · 题面获取
+            {data?.fetchPaused ? '已暂停' : '进行中'}
             <span className="mx-1">·</span>
-            暂停仅停消费，不清队列
+            暂停不会丢失待处理任务
           </p>
         </div>
         {isAdmin && (
           <div className="flex flex-wrap gap-2">
-            <ActionTip tip="立即拉取最新进度与队列状态（页面本身每 5s 自动刷新）">
+            <ActionTip tip="立即刷新当前进度（页面也会每 5 秒自动更新）">
               <Button
                 type="button"
                 size="sm"
@@ -169,8 +169,8 @@ export function DashboardProblemProgress() {
             <ActionTip
               tip={
                 data?.analyzePaused
-                  ? '恢复 AI 分析消费；队列里已有消息会继续处理'
-                  : '暂停 AI 分析消费，队列消息全部保留，不会清空'
+                  ? '继续处理待分析的题目，已排队任务会接着做'
+                  : '暂时停止 AI 分析，已排队的任务会保留，不会清空'
               }
             >
               <AlertDialog>
@@ -185,7 +185,7 @@ export function DashboardProblemProgress() {
                       {data?.analyzePaused ? '恢复 AI 分析？' : '暂停 AI 分析？'}
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                      暂停只停止消费，分析队列消息全部保留，恢复后继续处理。
+                      暂停后只是暂时不再处理新任务，已排队的题目会保留，恢复后继续。
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -201,23 +201,23 @@ export function DashboardProblemProgress() {
             <ActionTip
               tip={
                 data?.fetchPaused
-                  ? '恢复题面爬取消费；队列里已有消息会继续处理'
-                  : '暂停题面爬取消费，队列消息全部保留，不会清空'
+                  ? '继续获取待处理的题面，已排队任务会接着做'
+                  : '暂时停止获取题面，已排队的任务会保留，不会清空'
               }
             >
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button type="button" size="sm" variant="outline" disabled={busy}>
-                    {data?.fetchPaused ? '恢复爬取' : '暂停爬取'}
+                    {data?.fetchPaused ? '恢复获取' : '暂停获取'}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>
-                      {data?.fetchPaused ? '恢复题面爬取？' : '暂停题面爬取？'}
+                      {data?.fetchPaused ? '恢复题面获取？' : '暂停题面获取？'}
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                      暂停只停止消费，爬取队列消息全部保留，恢复后继续处理。
+                      暂停后只是暂时不再获取新题面，已排队的任务会保留，恢复后继续。
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -230,33 +230,33 @@ export function DashboardProblemProgress() {
               </AlertDialog>
             </ActionTip>
 
-            <ActionTip tip="近 6 月提交补缺入队：无题面→爬取，有题面未分析→分析，已完成丢弃。不清空 MQ，与「重置队列」不同">
+            <ActionTip tip="检查近 6 个月的提交，把缺题面或缺分析的题目补进处理列表（不会清空现有任务）">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button type="button" size="sm" variant="outline" disabled={busy}>
-                    回填
+                    补全近期
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>回填近 6 个月提交？</AlertDialogTitle>
+                    <AlertDialogTitle>补全近 6 个月的提交？</AlertDialogTitle>
                     <AlertDialogDescription asChild>
                       <div className="space-y-2 text-sm text-muted-foreground">
-                        <p>扫描近 6 个月提交并入队（不清空现有 MQ）：</p>
+                        <p>会检查近 6 个月的提交记录，并自动补上缺失项：</p>
                         <ul className="list-disc pl-4 space-y-1">
-                          <li>未绑定提交 → 绑定题目</li>
-                          <li>无题面 → 入爬取队列</li>
-                          <li>有题面未分析 → 入分析队列</li>
-                          <li>已分析完成 → 丢弃</li>
+                          <li>尚未关联题目的提交 → 完成关联</li>
+                          <li>还没有题面 → 安排获取题面</li>
+                          <li>有题面但未分析 → 安排 AI 分析</li>
+                          <li>已经分析完成 → 跳过</li>
                         </ul>
-                        <p>与「重置队列」不同：回填不 purge，只补缺。</p>
+                        <p>不会清空当前正在排队的任务，只做补充。</p>
                       </div>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>取消</AlertDialogCancel>
                     <AlertDialogAction
-                      onClick={() => void run('回填', () => backfillProblems(0))}
+                      onClick={() => void run('补全近期', () => backfillProblems(0))}
                     >
                       确认
                     </AlertDialogAction>
@@ -265,25 +265,25 @@ export function DashboardProblemProgress() {
               </AlertDialog>
             </ActionTip>
 
-            <ActionTip tip="清空爬取/分析 MQ，再按 DB 待爬取、待分析重灌。不扫提交、不改 AI 标签；增量爬虫仍最高优先级">
+            <ActionTip tip="清空当前排队任务后，按题目状态重新排队。不会改动已有 AI 标签">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button type="button" size="sm" variant="outline" disabled={busy}>
-                    重置队列
+                    重新排队
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>重置爬取/分析 MQ 队列？</AlertDialogTitle>
+                    <AlertDialogTitle>重新排队待处理题目？</AlertDialogTitle>
                     <AlertDialogDescription asChild>
                       <div className="space-y-2 text-sm text-muted-foreground">
-                        <p>会清空当前 MQ 消息，再按 DB 状态重灌：</p>
+                        <p>会清空当前排队，再按题目状态重新安排：</p>
                         <ul className="list-disc pl-4 space-y-1">
-                          <li>待爬取（PENDING/卡住的 FETCHING）→ 爬取队列</li>
-                          <li>待分析（TAGGING + 近6月）→ 分析队列</li>
+                          <li>待获取 / 获取卡住的题目 → 重新获取题面</li>
+                          <li>近 6 个月待分析的题目 → 重新 AI 分析</li>
                         </ul>
                         <p>
-                          不扫提交、不改 AI 标签。增量爬虫新入队仍最高优先级。
+                          不会扫描提交记录，也不会改动已有 AI 标签。新提交仍会优先处理。
                         </p>
                       </div>
                     </AlertDialogDescription>
@@ -292,35 +292,7 @@ export function DashboardProblemProgress() {
                     <AlertDialogCancel>取消</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() =>
-                        void run('重置队列', () => resetProblemQueues())
-                      }
-                    >
-                      确认重置
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </ActionTip>
-
-            <ActionTip tip="仅重入 FAILED（近 6 月），排除永久失败。有题面→分析，无题面→爬取">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" size="sm" variant="outline" disabled={busy}>
-                    重试失败
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>重试可恢复失败？</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      仅重入 FAILED（近 6 月），排除永久失败黑名单。有题面走分析，无题面走爬取。
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() =>
-                        void run('重试', () => retryFailedProblems(0))
+                        void run('重新排队', () => resetProblemQueues())
                       }
                     >
                       确认
@@ -330,7 +302,35 @@ export function DashboardProblemProgress() {
               </AlertDialog>
             </ActionTip>
 
-            <ActionTip tip="清空全部 AI 标签（难度/标签/解法），保留题面，近 6 月有题面的重新入分析队。影响面大">
+            <ActionTip tip="只重试近 6 个月内可恢复的失败题目，永久失败不会重试">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" size="sm" variant="outline" disabled={busy}>
+                    重试失败
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>重试失败的题目？</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      仅重试近 6 个月内可恢复的失败项。有题面的会重新分析，没有题面的会先获取题面。永久失败不会纳入。
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>取消</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() =>
+                        void run('重试失败', () => retryFailedProblems(0))
+                      }
+                    >
+                      确认
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </ActionTip>
+
+            <ActionTip tip="清空全部 AI 难度、标签与解法，保留题面后重新分析。影响范围很大，请谨慎">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
@@ -345,9 +345,9 @@ export function DashboardProblemProgress() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>重置全部 AI 标签？</AlertDialogTitle>
+                    <AlertDialogTitle>重置全部 AI 结果？</AlertDialogTitle>
                     <AlertDialogDescription>
-                      清空难度/标签/解法并重新入队分析，保留题面。影响面大，请谨慎。
+                      将清空题目的难度、标签与推荐解法，并重新分析；题面本身会保留。影响范围很大，请确认后再操作。
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -402,7 +402,7 @@ export function DashboardProblemProgress() {
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {(['problem_fetch', 'problem_analyze'] as const).map((name) => {
           const q = queueMap[name]
-          const label = name === 'problem_fetch' ? '爬取队列' : '分析队列'
+          const label = name === 'problem_fetch' ? '题面获取' : 'AI 分析'
           return (
             <Card key={name} className="gap-1 py-3">
               <CardHeader className="px-3 py-0">
@@ -410,14 +410,14 @@ export function DashboardProblemProgress() {
               </CardHeader>
               <CardContent className="px-3 text-sm">
                 <p className="tabular-nums">
-                  积压{' '}
+                  待处理{' '}
                   <span className="font-semibold">
                     {q ? num(q.messages) : '-'}
                   </span>
                   <span className="mx-2 text-muted-foreground">·</span>
-                  消费者 {q ? num(q.consumers) : '-'}
+                  工作进程 {q ? num(q.consumers) : '-'}
                   <span className="mx-2 text-muted-foreground">·</span>
-                  并发 {q ? num(q.concurrency) : '-'}
+                  同时处理 {q ? num(q.concurrency) : '-'}
                 </p>
               </CardContent>
             </Card>
@@ -427,25 +427,24 @@ export function DashboardProblemProgress() {
 
       <div className="flex flex-wrap gap-2">
         <Badge variant={data?.analyzePaused ? 'destructive' : 'secondary'}>
-          分析 {data?.analyzePaused ? '暂停' : '运行'}
+          AI 分析 {data?.analyzePaused ? '已暂停' : '进行中'}
         </Badge>
         <Badge variant={data?.fetchPaused ? 'destructive' : 'secondary'}>
-          爬取 {data?.fetchPaused ? '暂停' : '运行'}
+          题面获取 {data?.fetchPaused ? '已暂停' : '进行中'}
         </Badge>
-        <Badge variant="outline">增量入队最高优先级</Badge>
+        <Badge variant="outline">新提交优先处理</Badge>
       </div>
 
       <Card className="gap-0 py-0 overflow-hidden">
         <CardHeader className="px-4 py-3 border-b">
           <CardTitle className="text-base">
-            进行中
+            正在处理
             <span className="ml-2 text-sm font-normal text-muted-foreground">
-              实际在跑 {data?.activeJobs?.length ?? 0}（并发≤12）
+              当前 {data?.activeJobs?.length ?? 0} 题（最多同时 12 题）
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {/* activeJobs=进程内真实消费；inProgress 是 DB 排队 TAGGING，会刷一堆 */}
           <JobTable rows={data?.activeJobs || []} />
         </CardContent>
       </Card>

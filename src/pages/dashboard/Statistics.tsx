@@ -92,8 +92,8 @@ export function DashboardStatistics() {
     setUpdating(true)
     const res = await updateAllSpiders()
     setUpdating(false)
-    if (res.success) toast.success(res.message || '已触发全局更新')
-    else toast.error(res.message || '全局更新失败')
+    if (res.success) toast.success(res.message || '已开始全站同步')
+    else toast.error(res.message || '全站同步失败')
   }
 
   const cards = [
@@ -127,27 +127,29 @@ export function DashboardStatistics() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-semibold">全站统计</h3>
-          <p className="text-sm text-muted-foreground">用户 · 提交 · 趋势</p>
+          <p className="text-sm text-muted-foreground">
+            查看用户、提交与近期趋势
+          </p>
         </div>
         {isAdmin && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button type="button" size="sm" disabled={updating}>
                 {updating ? <Spinner data-icon="inline-start" /> : null}
-                一键全局更新 OJ
+                同步全部 OJ 数据
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>触发全站 OJ 更新？</AlertDialogTitle>
+                <AlertDialogTitle>同步全站 OJ 数据？</AlertDialogTitle>
                 <AlertDialogDescription>
-                  将为所有用户排队更新各平台数据，可能产生较大负载。
+                  将为所有用户同步各平台最新数据，过程可能较久，请确认后继续。
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>取消</AlertDialogCancel>
                 <AlertDialogAction onClick={() => void handleUpdateAll()}>
-                  确认更新
+                  确认同步
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -178,7 +180,7 @@ export function DashboardStatistics() {
       <Card className="gap-3 py-4">
         <CardHeader className="px-4">
           <CardTitle className="text-base">近 30 日趋势</CardTitle>
-          <CardDescription>提交 vs AC</CardDescription>
+          <CardDescription>提交数与 AC 数对比</CardDescription>
         </CardHeader>
         <CardContent className="px-2">
           {loading ? (

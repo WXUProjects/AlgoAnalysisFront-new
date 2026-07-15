@@ -247,7 +247,7 @@ export function Profile() {
     const res = await updateSpider(targetId)
     setUpdating(false)
     if (res.success) {
-      toast.success(res.message || '已触发 OJ 更新')
+      toast.success(res.message || '已开始同步 OJ 数据')
     } else {
       toast.error(res.message || '更新失败')
     }
@@ -360,7 +360,7 @@ export function Profile() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>更新 OJ 数据？</AlertDialogTitle>
                           <AlertDialogDescription>
-                            将触发各平台爬虫拉取最新提交与比赛，可能需要一段时间。
+                            将从各平台同步最新的提交与比赛记录，可能需要一些时间。
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -512,7 +512,7 @@ export function Profile() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>更新 OJ 数据？</AlertDialogTitle>
                     <AlertDialogDescription>
-                      将触发各平台爬虫拉取最新提交与比赛，可能需要一段时间。
+                      将从各平台同步最新的提交与比赛记录，可能需要一些时间。
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -686,7 +686,9 @@ export function Profile() {
           <Card className="gap-3 py-4">
             <CardHeader className="px-4">
               <CardTitle className="text-base">算法画像</CardTitle>
-              <CardDescription>基于题库 AI 打标与 AC 沉淀</CardDescription>
+              <CardDescription>
+                根据已通过题目与 AI 标签生成
+              </CardDescription>
             </CardHeader>
             <CardContent className="px-4">
               <AlgoProfileChart data={algo} />

@@ -384,7 +384,9 @@ export function Home() {
                   <SparklesIcon className="size-4 text-muted-foreground" />
                   <CardTitle className="text-base">算法画像</CardTitle>
                 </div>
-                <CardDescription>基于题库 AI 打标与 AC 沉淀</CardDescription>
+                <CardDescription>
+                  根据已通过题目与 AI 标签生成
+                </CardDescription>
               </CardHeader>
               <CardContent className="px-4">
                 {loading ? (

@@ -21,7 +21,7 @@ export function DashboardLayout() {
           {isAdmin ? '后台管理' : '教练管理'}
         </h2>
         <p className="text-sm text-muted-foreground">
-          统计 · 公告 · 题库流水线 · 分组 · {userLabel}
+          数据统计、公告、题库识别、分组与{userLabel}
         </p>
       </div>
       <nav className="flex flex-wrap gap-1 border-b pb-2">

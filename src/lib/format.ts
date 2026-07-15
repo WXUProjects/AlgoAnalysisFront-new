@@ -27,18 +27,18 @@ export function cleanProblemTitle(title?: string | null, fallback = ''): string 
   return one || fallback
 }
 
-/** 流水线阶段 / 题库 status → 中文 */
+/** 题库处理阶段 status → 中文 */
 export function formatPipelineStage(stage?: string | null): string {
   const s = (stage || '').trim()
   if (!s) return '-'
   const map: Record<string, string> = {
-    fetch: '爬取中',
+    fetch: '获取题面中',
     analyze: '分析中',
-    PENDING: '待爬取',
-    FETCHING: '爬取中',
+    PENDING: '待获取题面',
+    FETCHING: '获取题面中',
     TAGGING: '待分析',
     COMPLETED: '已完成',
-    FAILED: '失败(可重试)',
+    FAILED: '失败（可重试）',
     FAILED_PERM: '永久失败',
     SKIPPED: '已跳过',
   }

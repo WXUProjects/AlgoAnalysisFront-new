@@ -85,7 +85,9 @@ export function Contest() {
           <h2 className="text-lg font-semibold">
             {userMode ? `${titleName || '用户'} 的比赛` : '全部比赛'}
           </h2>
-          <p className="text-sm text-muted-foreground">站内记录与外站链接</p>
+          <p className="text-sm text-muted-foreground">
+            查看比赛记录，可跳转原站或站内详情
+          </p>
         </div>
         <div className="flex gap-2">
           <Button
