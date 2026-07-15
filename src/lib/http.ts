@@ -120,11 +120,23 @@ export async function request<T = unknown>(
       status: res.status,
     }
   } catch (err) {
-    const error = err as AxiosError<{ message?: string }>
+    const error = err as AxiosError<{
+      message?: string
+      reason?: string
+      code?: number | string
+      metadata?: Record<string, string>
+    }>
     const status = error.response?.status
+    const body = error.response?.data
+    // Kratos: { code, reason, message }；网关 404 常只有 HTML/空
     const message =
-      error.response?.data?.message ||
-      error.message ||
+      (typeof body?.message === 'string' && body.message) ||
+      (typeof body?.reason === 'string' && body.reason) ||
+      (status === 404
+        ? '接口不存在或尚未部署，请确认后端已更新'
+        : status === 403
+          ? '权限不足'
+          : error.message) ||
       '网络错误，请稍后重试'
     return { success: false, message, data: null, status }
   }
