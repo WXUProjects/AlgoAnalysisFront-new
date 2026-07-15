@@ -331,6 +331,21 @@ export function ChangeProfile() {
         </form>
       </Card>
 
+      <Card className="gap-4 py-4">
+        <CardHeader className="gap-1 px-4">
+          <CardTitle>账号安全</CardTitle>
+          <CardDescription>修改登录密码，或通过邮箱找回</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2 px-4">
+          <Button type="button" variant="outline" asChild>
+            <Link to="/change-password">修改密码</Link>
+          </Button>
+          <Button type="button" variant="ghost" asChild>
+            <Link to="/forgot-password">忘记密码？去邮箱找回</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="flex justify-end">
         <Button type="button" variant="ghost" onClick={() => navigate('/profile')}>
           返回个人资料

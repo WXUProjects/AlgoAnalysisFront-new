@@ -32,6 +32,7 @@
 | POST | `/user/auth/refresh` | 是 | 按 DB 重签 JWT |
 | POST | `/user/auth/send-code` | 否 | 发送邮箱验证码（注册/找回密码） |
 | POST | `/user/auth/reset-password` | 否 | 邮箱验证码重置密码 |
+| POST | `/user/auth/change-password` | 是 | 登录态改密；body: `{ oldPassword, newPassword }`（均为客户端 SHA256） |
 
 **LoginReq**
 ```json
@@ -99,7 +100,7 @@
 | POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；本人 / 站点管理员 / **当前组织 staff 管理本组织成员**；无组织授权时不可开启日报/周报 |
 | GET | `/user/profile/ids-by-group` | 否 | query: `groupId` |
 | POST | `/user/profile/get-by-ids` | 否 | body: `{ userIds, orgId? }`；`name`=该组织 `org_display_name`（空则 username）；`orgId` 缺省用 JWT 当前组织，再回落公共域 |
-| POST | `/user/profile/delete` | 是(管理员) | 软删除用户 |
+| POST | `/user/profile/delete` | 是(站点管理员) | **硬删除**用户：清空 org 成员/申请/粘贴板 + core 的 OJ 绑定/提交/比赛记录，再删账号；不可删自己与站点管理员 |
 
 ### Upload / Site
 

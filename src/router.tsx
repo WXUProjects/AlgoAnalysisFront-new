@@ -17,6 +17,9 @@ const Register = lazy(() =>
 const ForgotPassword = lazy(() =>
   import('@/pages/ForgotPassword').then((m) => ({ default: m.ForgotPassword })),
 )
+const ChangePassword = lazy(() =>
+  import('@/pages/ChangePassword').then((m) => ({ default: m.ChangePassword })),
+)
 const NotFound = lazy(() =>
   import('@/pages/NotFound').then((m) => ({ default: m.NotFound })),
 )
@@ -174,6 +177,16 @@ export const router = createBrowserRouter([
           <Lazy>
             <ForgotPassword />
           </Lazy>
+        ),
+      },
+      {
+        path: 'change-password',
+        element: (
+          <RequireLogin>
+            <Lazy>
+              <ChangePassword />
+            </Lazy>
+          </RequireLogin>
         ),
       },
       {

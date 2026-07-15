@@ -13,6 +13,7 @@ export const endpoints = {
       refresh: `${API_PREFIX}/user/auth/refresh`,
       sendCode: `${API_PREFIX}/user/auth/send-code`,
       resetPassword: `${API_PREFIX}/user/auth/reset-password`,
+      changePassword: `${API_PREFIX}/user/auth/change-password`,
     },
     profile: {
       getById: `${API_PREFIX}/user/profile/get-by-id`,
@@ -183,6 +184,16 @@ export interface ResetPasswordReq {
 }
 
 export interface ResetPasswordRes {
+  success: boolean
+  message: string
+}
+
+export interface ChangePasswordReq {
+  oldPassword: string
+  newPassword: string
+}
+
+export interface ChangePasswordRes {
   success: boolean
   message: string
 }

@@ -460,10 +460,11 @@ function UserListPage({ scope }: { scope: UserScope }) {
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>移除用户？</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    确认移除用户「{u.username}」？移除后该用户将无法继续使用本站。
-                                  </AlertDialogDescription>
+                                <AlertDialogTitle>彻底删除用户？</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  确认删除用户「{u.username}」？将清空其组织关系、粘贴板、OJ
+                                  绑定、提交与比赛记录，且无法恢复。
+                                </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>取消</AlertDialogCancel>

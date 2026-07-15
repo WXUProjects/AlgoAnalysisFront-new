@@ -37,7 +37,7 @@ export function ForgotPassword() {
   }, [cooldown])
 
   if (ready && isLogin) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/change-password" replace />
   }
 
   function update<K extends keyof typeof form>(key: K, value: string) {

@@ -133,6 +133,39 @@ export async function register(input: {
   }
 }
 
+export async function changePassword(input: {
+  oldPassword: string
+  newPassword: string
+  newPasswordConfirm: string
+}): Promise<ApiResult<{ success: boolean; message: string }>> {
+  if (!input.oldPassword || !input.newPassword) {
+    return { success: false, message: '请填写当前密码和新密码', data: null }
+  }
+  if (input.newPassword !== input.newPasswordConfirm) {
+    return { success: false, message: '两次输入的新密码不一致', data: null }
+  }
+  if (input.oldPassword === input.newPassword) {
+    return { success: false, message: '新密码不能与当前密码相同', data: null }
+  }
+  try {
+    const res = await http.post<{ success: boolean; message: string }>(
+      endpoints.user.auth.changePassword,
+      {
+        oldPassword: hashPassword(input.oldPassword),
+        newPassword: hashPassword(input.newPassword),
+      },
+    )
+    const data = res.data
+    return {
+      success: Boolean(data?.success),
+      message: data?.message || (data?.success ? '密码已更新' : '修改失败'),
+      data: data ?? null,
+    }
+  } catch (err) {
+    return { success: false, message: errMessage(err, '修改失败'), data: null }
+  }
+}
+
 export async function resetPassword(input: {
   email: string
   code: string

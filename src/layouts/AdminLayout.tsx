@@ -5,6 +5,7 @@ import {
   BookOpenIcon,
   BarChart3Icon,
   CalendarIcon,
+  KeyRoundIcon,
   LayoutDashboardIcon,
   LogOutIcon,
   MegaphoneIcon,
@@ -58,7 +59,16 @@ const titles: Record<string, string> = {
 export function AdminLayout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { isAdmin, isOrgAdmin, isStaff, user, logout, currentOrg } = useAuth()
+  const {
+    isAdmin,
+    isOrgAdmin,
+    isStaff,
+    user,
+    orgs,
+    logout,
+    currentOrg,
+    switchOrg,
+  } = useAuth()
   const { config } = useSiteConfig()
   const brand =
     (currentOrg?.brandTitle && currentOrg.brandTitle.trim()) ||
@@ -80,6 +90,13 @@ export function AdminLayout() {
     logout()
     toast.success('已退出登录')
     navigate('/login', { replace: true })
+  }
+
+  async function handleSwitchOrg(orgId: number) {
+    if (!orgId || orgId === user?.orgId) return
+    const res = await switchOrg(orgId)
+    if (res.success) toast.success('已切换组织')
+    else toast.error(res.message || '切换失败')
   }
 
   return (
@@ -273,6 +290,25 @@ export function AdminLayout() {
           </SidebarContent>
 
           <SidebarFooter>
+            {orgs.length > 0 && (
+              <div className="px-2 pb-2">
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  当前组织
+                </label>
+                <select
+                  className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+                  value={user?.orgId || currentOrg?.id || ''}
+                  onChange={(e) => void handleSwitchOrg(Number(e.target.value))}
+                >
+                  {orgs.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                      {o.myRole === 'org_admin' ? ' · 管理' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip={frontLabel}>
@@ -303,6 +339,14 @@ export function AdminLayout() {
                   <Link to="/question-bank">
                     <BookOpenIcon />
                     <span>题库</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="修改密码">
+                  <Link to="/change-password">
+                    <KeyRoundIcon />
+                    <span>修改密码</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

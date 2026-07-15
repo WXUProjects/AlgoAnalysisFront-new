@@ -6,6 +6,7 @@ import {
   CalendarIcon,
   HomeIcon,
   InfoIcon,
+  KeyRoundIcon,
   LayoutDashboardIcon,
   LogInIcon,
   LogOutIcon,
@@ -48,6 +49,7 @@ const titles: Record<string, string> = {
   '/login': '登录',
   '/register': '注册',
   '/forgot-password': '找回密码',
+  '/change-password': '修改密码',
   '/profile': '个人资料',
   '/change-profile': '编辑资料',
   '/all-activities': '动态',
@@ -353,16 +355,30 @@ export function AppLayout() {
                   </SidebarMenuItem>
                 </>
               ) : (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    type="button"
-                    tooltip={user?.name || '退出'}
-                    onClick={handleLogout}
-                  >
-                    <LogOutIcon />
-                    <span>退出登录</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === '/change-password'}
+                      tooltip="修改密码"
+                    >
+                      <NavLink to="/change-password">
+                        <KeyRoundIcon />
+                        <span>修改密码</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      type="button"
+                      tooltip={user?.name || '退出'}
+                      onClick={handleLogout}
+                    >
+                      <LogOutIcon />
+                      <span>退出登录</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
               )}
             </SidebarMenu>
           </SidebarFooter>
