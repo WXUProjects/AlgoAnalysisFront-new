@@ -163,6 +163,9 @@ export interface UserProfile {
   groupId: number
   avatar: string
   emailEnabled?: boolean
+  emailWeeklyEnabled?: boolean
+  emailAllowedByOrg?: boolean
+  emailWeeklyAllowedByOrg?: boolean
   roleId?: number
   spiders: SpiderBinding[]
 }
@@ -218,6 +221,7 @@ export interface OrgInfo {
   inviteCode?: string
   enableAiSummary?: boolean
   enableAiEmail?: boolean
+  enableAiWeeklyEmail?: boolean
   enableSpider?: boolean
   spiderIntervalMin?: number
   aiSummaryIntervalMin?: number

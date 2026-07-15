@@ -58,6 +58,7 @@ export function DashboardOrgsManage() {
   const [joinMode, setJoinMode] = useState('auto')
   const [enableAiSummary, setEnableAiSummary] = useState(true)
   const [enableAiEmail, setEnableAiEmail] = useState(true)
+  const [enableAiWeeklyEmail, setEnableAiWeeklyEmail] = useState(true)
   const [enableSpider, setEnableSpider] = useState(true)
   const [spiderInterval, setSpiderInterval] = useState(60)
   const [aiInterval, setAiInterval] = useState(180)
@@ -82,6 +83,7 @@ export function DashboardOrgsManage() {
     setJoinMode(selected.joinMode || 'auto')
     setEnableAiSummary(selected.enableAiSummary !== false)
     setEnableAiEmail(selected.enableAiEmail !== false)
+    setEnableAiWeeklyEmail(selected.enableAiWeeklyEmail !== false)
     setEnableSpider(selected.enableSpider !== false)
     setSpiderInterval(selected.spiderIntervalMin || 60)
     setAiInterval(selected.aiSummaryIntervalMin || 180)
@@ -107,6 +109,7 @@ export function DashboardOrgsManage() {
       joinMode,
       enableAiSummary,
       enableAiEmail,
+      enableAiWeeklyEmail,
       enableSpider,
       spiderIntervalMin: spiderInterval,
       aiSummaryIntervalMin: aiInterval,
@@ -245,8 +248,15 @@ export function DashboardOrgsManage() {
                     <Switch checked={enableAiSummary} onCheckedChange={setEnableAiSummary} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <Label>AI 邮件</Label>
+                    <Label>日报邮件（组织授权）</Label>
                     <Switch checked={enableAiEmail} onCheckedChange={setEnableAiEmail} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>周报邮件（staff）</Label>
+                    <Switch
+                      checked={enableAiWeeklyEmail}
+                      onCheckedChange={setEnableAiWeeklyEmail}
+                    />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>定时同步</Label>

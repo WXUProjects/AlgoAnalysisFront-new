@@ -64,7 +64,7 @@
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新资料 |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
-| POST | `/user/profile/set-email-enabled` | 是 | 邮箱通知开关 |
+| POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；无组织授权时不可开启日报/周报 |
 | GET | `/user/profile/ids-by-group` | 否 | query: `groupId` |
 | POST | `/user/profile/get-by-ids` | 否 | body: `{ userIds: number[] }` |
 | POST | `/user/profile/delete` | 是(管理员) | 软删除用户 |

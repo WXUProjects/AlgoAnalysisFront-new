@@ -43,7 +43,8 @@ export function ChangeProfile() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [avatar, setAvatar] = useState('')
-  const [emailOn, setEmailOn] = useState(true)
+  const [emailOn, setEmailOn] = useState(false)
+  const [weeklyOn, setWeeklyOn] = useState(false)
   const [platform, setPlatform] = useState<OjPlatform>(preOj || 'AtCoder')
   const [ojUsername, setOjUsername] = useState('')
   const [saving, setSaving] = useState(false)
@@ -56,7 +57,8 @@ export function ChangeProfile() {
       setName(profile.name || '')
       setEmail(profile.email || '')
       setAvatar(profile.avatar || '')
-      setEmailOn(profile.emailEnabled ?? true)
+      setEmailOn(profile.emailEnabled ?? false)
+      setWeeklyOn(profile.emailWeeklyEnabled ?? false)
       const bound = profile.spiders.find((s) => s.platform === (preOj || platform))
       if (bound) setOjUsername(bound.username)
     }
@@ -89,15 +91,28 @@ export function ChangeProfile() {
     }
   }
 
-  async function handleEmailToggle(checked: boolean) {
+  async function handleEmailToggle(checked: boolean, kind: 'daily' | 'weekly') {
     if (!user) return
-    setEmailOn(checked)
-    const res = await setEmailEnabled(user.userId, checked)
+    if (kind === 'daily') {
+      if (checked && profile && profile.emailAllowedByOrg === false) {
+        toast.error('当前没有组织为你开通日报邮件权限')
+        return
+      }
+      setEmailOn(checked)
+    } else {
+      if (checked && profile && profile.emailWeeklyAllowedByOrg === false) {
+        toast.error('当前没有组织为你开通周报权限（需为教练/队长/团队管理员）')
+        return
+      }
+      setWeeklyOn(checked)
+    }
+    const res = await setEmailEnabled(user.userId, checked, kind)
     if (res.success) {
-      toast.success(res.message || '已更新邮件通知')
+      toast.success(res.message || '已更新邮件设置')
       await sync()
     } else {
-      setEmailOn(!checked)
+      if (kind === 'daily') setEmailOn(!checked)
+      else setWeeklyOn(!checked)
       toast.error(res.message || '设置失败')
     }
   }
@@ -190,13 +205,45 @@ export function ChangeProfile() {
                   disabled={saving}
                 />
               </Field>
-              <Field className="flex-row items-center justify-between gap-3">
-                <FieldLabel htmlFor="email-on">邮件通知</FieldLabel>
-                <Switch
-                  id="email-on"
-                  checked={emailOn}
-                  onCheckedChange={(v) => void handleEmailToggle(v)}
-                />
+              <Field className="gap-1.5">
+                <div className="flex items-center justify-between gap-3">
+                  <FieldLabel htmlFor="email-on">日报邮件</FieldLabel>
+                  <Switch
+                    id="email-on"
+                    checked={emailOn}
+                    disabled={profile?.emailAllowedByOrg === false && !emailOn}
+                    onCheckedChange={(v) => void handleEmailToggle(v, 'daily')}
+                  />
+                </div>
+                {profile?.emailAllowedByOrg === false ? (
+                  <p className="text-xs text-muted-foreground">
+                    没有组织开通日报邮件权限时无法开启；权限被关闭后将自动关闭。
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    默认关闭。开启后将按组织策略发送训练日报。
+                  </p>
+                )}
+              </Field>
+              <Field className="gap-1.5">
+                <div className="flex items-center justify-between gap-3">
+                  <FieldLabel htmlFor="weekly-on">周报邮件</FieldLabel>
+                  <Switch
+                    id="weekly-on"
+                    checked={weeklyOn}
+                    disabled={profile?.emailWeeklyAllowedByOrg === false && !weeklyOn}
+                    onCheckedChange={(v) => void handleEmailToggle(v, 'weekly')}
+                  />
+                </div>
+                {profile?.emailWeeklyAllowedByOrg === false ? (
+                  <p className="text-xs text-muted-foreground">
+                    需在组织中为教练 / 队长 / 团队管理员，且组织开启周报，才可接收。
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    与日报独立；周一发送组织维度周报（staff）。
+                  </p>
+                )}
               </Field>
             </FieldGroup>
           </CardContent>

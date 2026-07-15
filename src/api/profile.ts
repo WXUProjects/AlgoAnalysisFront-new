@@ -17,6 +17,9 @@ function normalizeProfile(raw: Record<string, unknown>): UserProfile {
     groupId: num(raw.groupId),
     avatar: normalizeStaticUrl(str(raw.avatar)),
     emailEnabled: bool(raw.emailEnabled),
+    emailWeeklyEnabled: bool(raw.emailWeeklyEnabled),
+    emailAllowedByOrg: bool(raw.emailAllowedByOrg),
+    emailWeeklyAllowedByOrg: bool(raw.emailWeeklyAllowedByOrg),
     roleId: num(raw.roleId),
     spiders,
   }
@@ -57,8 +60,9 @@ export async function updateProfile(body: {
 export async function setEmailEnabled(
   userId: number,
   enabled: boolean,
+  kind: 'daily' | 'weekly' = 'daily',
 ): Promise<ApiResult<unknown>> {
-  return post(endpoints.user.profile.setEmailEnabled, { userId, enabled })
+  return post(endpoints.user.profile.setEmailEnabled, { userId, enabled, kind })
 }
 
 export async function moveGroup(body: {

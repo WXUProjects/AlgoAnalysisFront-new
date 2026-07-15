@@ -40,6 +40,7 @@ export function DashboardOrgSettings() {
   const [joinMode, setJoinMode] = useState('auto')
   const [enableAiSummary, setEnableAiSummary] = useState(true)
   const [enableAiEmail, setEnableAiEmail] = useState(true)
+  const [enableAiWeeklyEmail, setEnableAiWeeklyEmail] = useState(true)
   const [enableSpider, setEnableSpider] = useState(true)
   const [spiderInterval, setSpiderInterval] = useState(60)
   const [aiInterval, setAiInterval] = useState(180)
@@ -79,6 +80,7 @@ export function DashboardOrgSettings() {
     setJoinMode(currentOrg?.joinMode || 'auto')
     setEnableAiSummary(currentOrg?.enableAiSummary !== false)
     setEnableAiEmail(currentOrg?.enableAiEmail !== false)
+    setEnableAiWeeklyEmail(currentOrg?.enableAiWeeklyEmail !== false)
     setEnableSpider(currentOrg?.enableSpider !== false)
     setSpiderInterval(currentOrg?.spiderIntervalMin || 60)
     setAiInterval(currentOrg?.aiSummaryIntervalMin || 180)
@@ -117,6 +119,7 @@ export function DashboardOrgSettings() {
       joinMode,
       enableAiSummary,
       enableAiEmail,
+      enableAiWeeklyEmail,
       enableSpider,
     }
     if (isAdmin) {
@@ -197,8 +200,15 @@ export function DashboardOrgSettings() {
             <Switch checked={enableAiSummary} onCheckedChange={setEnableAiSummary} />
           </div>
           <div className="flex items-center justify-between">
-            <Label>AI 邮件</Label>
+            <Label>日报邮件（组织授权）</Label>
             <Switch checked={enableAiEmail} onCheckedChange={setEnableAiEmail} />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>周报邮件（教练/队长/管理员）</Label>
+            <Switch
+              checked={enableAiWeeklyEmail}
+              onCheckedChange={setEnableAiWeeklyEmail}
+            />
           </div>
           <div className="flex items-center justify-between">
             <Label>定时同步</Label>
