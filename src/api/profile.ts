@@ -116,6 +116,17 @@ export async function listProfiles(
           lastSubmit: str(u.lastSubmit),
           roleId: num(u.roleId),
           isSiteAdmin: bool(u.isSiteAdmin),
+          emailEnabled: bool(u.emailEnabled),
+          emailWeeklyEnabled: bool(u.emailWeeklyEnabled),
+          // 字段缺失时保持 undefined，UI 按「可开」处理（兼容未部署新后端）
+          emailAllowedByOrg:
+            u.emailAllowedByOrg === undefined
+              ? undefined
+              : bool(u.emailAllowedByOrg),
+          emailWeeklyAllowedByOrg:
+            u.emailWeeklyAllowedByOrg === undefined
+              ? undefined
+              : bool(u.emailWeeklyAllowedByOrg),
           orgs: orgsRaw.map((o) => ({
             orgId: num(o.orgId),
             name: str(o.name),

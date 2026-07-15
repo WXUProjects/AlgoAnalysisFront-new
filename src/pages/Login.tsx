@@ -61,24 +61,32 @@ export function Login() {
       <Card className="w-full max-w-sm gap-4 py-4 motion-lift">
         <CardHeader className="gap-1 px-4">
           <CardTitle>登录</CardTitle>
-          <CardDescription>使用账号密码登录 GoAlgo</CardDescription>
+          <CardDescription>使用账号或邮箱登录 GoAlgo</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
               <Field className="gap-1.5">
-                <FieldLabel htmlFor="username">账号</FieldLabel>
+                <FieldLabel htmlFor="username">账号 / 邮箱</FieldLabel>
                 <Input
                   id="username"
                   autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="请输入账号"
+                  placeholder="用户名或邮箱"
                   disabled={pending}
                 />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel htmlFor="password">密码</FieldLabel>
+                <div className="flex items-center justify-between gap-2">
+                  <FieldLabel htmlFor="password">密码</FieldLabel>
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+                  >
+                    忘记密码？
+                  </Link>
+                </div>
                 <Input
                   id="password"
                   type="password"

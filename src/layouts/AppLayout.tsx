@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   BookOpenIcon,
@@ -19,6 +20,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { staffNavLabel } from '@/lib/roles'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
+import { SiteFooter } from '@/components/site-footer'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
   Sidebar,
@@ -45,6 +47,7 @@ const titles: Record<string, string> = {
   '/': '首页',
   '/login': '登录',
   '/register': '注册',
+  '/forgot-password': '找回密码',
   '/profile': '个人资料',
   '/change-profile': '编辑资料',
   '/all-activities': '动态',
@@ -55,6 +58,7 @@ const titles: Record<string, string> = {
   '/org': '我的组织',
   '/tools': '工具',
   '/tools/paste': '粘贴板',
+  '/tools/code-image': '代码转图片',
 }
 
 function resolveTitle(pathname: string, brand: string): string {
@@ -77,6 +81,7 @@ export function AppLayout() {
     user,
     orgs,
     currentOrg,
+    ready,
     logout,
     switchOrg,
   } = useAuth()
@@ -87,13 +92,26 @@ export function AppLayout() {
     'GoAlgo'
   const brandLogo = currentOrg?.brandLogo || config.siteLogo
   const title = resolveTitle(pathname, brand)
-  const homeTo = '/'
+  const homeTo = isLogin ? '/' : '/about'
   const adminLabel = staffNavLabel(user)
   // 公共域（或未登录默认视图）展示「关于我们」
   const showAbout =
     !isLogin ||
     Boolean(currentOrg?.isSystem) ||
     currentOrg?.slug === 'public'
+  const isAuthPage =
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/forgot-password'
+  const showLoginBanner = ready && !isLogin && !isAuthPage
+
+  // 未登录访问首页 → 强制跳到关于我们
+  useEffect(() => {
+    if (!ready || isLogin) return
+    if (pathname === '/') {
+      navigate('/about', { replace: true })
+    }
+  }, [ready, isLogin, pathname, navigate])
 
   function handleLogout() {
     logout()
@@ -145,18 +163,20 @@ export function AppLayout() {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname === '/'}
-                      tooltip="首页"
-                    >
-                      <NavLink to="/" end>
-                        <HomeIcon />
-                        <span>首页</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {isLogin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname === '/'}
+                        tooltip="首页"
+                      >
+                        <NavLink to="/" end>
+                          <HomeIcon />
+                          <span>首页</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -355,8 +375,31 @@ export function AppLayout() {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <AnimatedTitle className="text-base font-semibold">{title}</AnimatedTitle>
           </header>
+          {showLoginBanner && (
+            <div className="shrink-0 border-b bg-muted/50 px-4 py-2.5 text-center text-sm text-muted-foreground">
+              您还没有登录，请{' '}
+              <Link
+                to="/register"
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                注册
+              </Link>
+              {' / '}
+              <Link
+                to="/login"
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                登录
+              </Link>
+            </div>
+          )}
           <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none">
-            <Outlet />
+            <div className="flex min-h-full min-w-0 flex-1 flex-col">
+              <div className="min-w-0 flex-1">
+                <Outlet />
+              </div>
+              <SiteFooter />
+            </div>
           </main>
         </SidebarInset>
         <Toaster richColors position="top-center" />

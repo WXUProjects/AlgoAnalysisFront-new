@@ -60,13 +60,13 @@ const OJ_LINKS = [
   },
   {
     label: 'AtCoder',
-    desc: 'Japanese programming contest',
+    desc: '日本算法竞赛平台',
     href: 'https://atcoder.jp/home',
     icon: 'https://img.atcoder.jp/assets/logo.png',
   },
   {
     label: 'Codeforces',
-    desc: 'Competitive programming',
+    desc: '国际算法竞赛平台',
     href: 'https://codeforces.com/',
     icon: 'https://codeforces.com/codeforces.org/s/52348/android-icon-192x192.png',
   },
@@ -110,7 +110,7 @@ function StatCard({
     <div className="relative overflow-hidden rounded-xl border bg-card p-4 shadow-sm motion-lift hover:bg-muted/30">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+          <p className="text-[11px] font-semibold tracking-wide text-muted-foreground">
             {label}
           </p>
           <p className="text-xs text-muted-foreground">{sub}</p>
@@ -147,7 +147,7 @@ function StatCard({
 }
 
 export function Home() {
-  const { isLogin, isCoach, isMemberLike, ready, user } = useAuth()
+  const { isLogin, isCoach, isMemberLike, ready, user, orgs } = useAuth()
   const [period, setPeriod] = useState<PeriodData | null>(null)
   const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
@@ -156,6 +156,10 @@ export function Home() {
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [mode, setMode] = useState<'submit' | 'ac'>('ac')
+
+  // 所在组织任一开启 AI 总结才展示；未登录保留入口提示
+  const showAiSummary =
+    !isLogin || orgs.some((o) => o.enableAiSummary !== false)
 
   useEffect(() => {
     // 等待鉴权就绪，避免登录态闪烁双请求
@@ -193,10 +197,16 @@ export function Home() {
         }),
       ]
       if (isLogin && user) {
+        if (showAiSummary) {
+          tasks.push(
+            getRecentSummary(user.userId).then((res) => {
+              if (!cancelled && res.success) setSummary(res.data)
+            }),
+          )
+        } else {
+          setSummary(null)
+        }
         tasks.push(
-          getRecentSummary(user.userId).then((res) => {
-            if (!cancelled && res.success) setSummary(res.data)
-          }),
           getProblemUserProfile(user.userId).then((res) => {
             if (!cancelled && res.success) setAlgo(res.data)
           }),
@@ -212,7 +222,7 @@ export function Home() {
     return () => {
       cancelled = true
     }
-  }, [ready, isLogin, isCoach, user])
+  }, [ready, isLogin, isCoach, user, showAiSummary])
 
   const stats: PeriodItem | null = mode === 'ac' ? period?.ac ?? null : period?.submit ?? null
   const modeLabel = mode === 'ac' ? 'AC' : '提交'
@@ -308,47 +318,41 @@ export function Home() {
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <StatCard
-            label="CAREER"
-            sub={`生涯${modeLabel}`}
+            label="生涯"
+            sub={`累计${modeLabel}`}
             value={stats?.total ?? '-'}
-            unit={`${modeLabel} Total`}
             loading={loading}
           />
           <StatCard
-            label="Percentage"
-            sub="AC 率"
+            label="AC 率"
+            sub="通过 / 提交"
             value={acRate === '-' ? '-' : `${acRate}%`}
-            unit="AC Percentage"
             loading={loading}
           />
           <StatCard
-            label="DAILY"
+            label="今日"
             sub={`今日${modeLabel}`}
             value={stats?.today ?? '-'}
-            unit={`Today's ${modeLabel}`}
             loading={loading}
           />
           <StatCard
-            label="YEARLY"
-            sub={`年度${modeLabel}`}
+            label="本年"
+            sub={`本年${modeLabel}`}
             value={stats?.thisYear ?? '-'}
-            unit={`${new Date().getFullYear()} ${modeLabel}`}
             trend={yearTrend}
             loading={loading}
           />
           <StatCard
-            label="MONTHLY"
+            label="本月"
             sub={`本月${modeLabel}`}
             value={stats?.thisMonth ?? '-'}
-            unit={`This Month's ${modeLabel}`}
             trend={monthTrend}
             loading={loading}
           />
           <StatCard
-            label="WEEKLY"
+            label="本周"
             sub={`本周${modeLabel}`}
             value={stats?.thisWeek ?? '-'}
-            unit={`This Week's ${modeLabel}`}
             trend={weekTrend}
             loading={loading}
           />
@@ -459,59 +463,61 @@ export function Home() {
             </CardContent>
           </Card>
 
-          <Card className="gap-3 py-4">
-            <CardHeader className="px-4">
-              <div className="flex items-center gap-2">
-                <SparklesIcon className="size-4 text-muted-foreground" />
-                <CardTitle className="text-base">AI 总结</CardTitle>
-              </div>
-              <CardDescription>
-                {isLogin
-                  ? summary?.updateTime
-                    ? `更新于 ${formatTime(summary.updateTime)}`
-                    : '基于近期训练数据'
-                  : '登录后查看个人 AI 总结'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="px-4">
-              {!isLogin ? (
-                <p className="text-sm text-muted-foreground">
-                  <Link
-                    to="/login"
-                    className="text-foreground underline-offset-4 hover:underline"
-                  >
-                    登录
-                  </Link>
-                  后可查看 AI 总结与算法画像。支持绑定：
-                  {OJ_PLATFORMS.map((p) => p.label).join(' / ')}
-                </p>
-              ) : loading ? (
-                <div className="flex flex-col gap-2">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
+          {showAiSummary && (
+            <Card className="gap-3 py-4">
+              <CardHeader className="px-4">
+                <div className="flex items-center gap-2">
+                  <SparklesIcon className="size-4 text-muted-foreground" />
+                  <CardTitle className="text-base">AI 总结</CardTitle>
                 </div>
-              ) : (
-                <>
-                  <ul className="flex flex-col gap-2 text-sm">
-                    {(summary?.msg || []).map((m, i) => (
-                      <li
-                        key={i}
-                        className="rounded-md border bg-muted/20 px-3 py-2 leading-relaxed"
-                      >
-                        {m}
-                      </li>
-                    ))}
-                    {!summary?.msg?.length && (
-                      <li className="text-muted-foreground">暂无总结</li>
-                    )}
-                  </ul>
-                  <p className="mt-3 text-[11px] text-muted-foreground">
-                    内容由 AI 生成，请仔细甄别。
+                <CardDescription>
+                  {isLogin
+                    ? summary?.updateTime
+                      ? `更新于 ${formatTime(summary.updateTime)}`
+                      : '基于近期训练数据'
+                    : '登录后查看个人 AI 总结'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="px-4">
+                {!isLogin ? (
+                  <p className="text-sm text-muted-foreground">
+                    <Link
+                      to="/login"
+                      className="text-foreground underline-offset-4 hover:underline"
+                    >
+                      登录
+                    </Link>
+                    后可查看 AI 总结与算法画像。支持绑定：
+                    {OJ_PLATFORMS.map((p) => p.label).join(' / ')}
                   </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                ) : loading ? (
+                  <div className="flex flex-col gap-2">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ) : (
+                  <>
+                    <ul className="flex flex-col gap-2 text-sm">
+                      {(summary?.msg || []).map((m, i) => (
+                        <li
+                          key={i}
+                          className="rounded-md border bg-muted/20 px-3 py-2 leading-relaxed"
+                        >
+                          {m}
+                        </li>
+                      ))}
+                      {!summary?.msg?.length && (
+                        <li className="text-muted-foreground">暂无总结</li>
+                      )}
+                    </ul>
+                    <p className="mt-3 text-[11px] text-muted-foreground">
+                      内容由 AI 生成，请仔细甄别。
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="xl:hidden">

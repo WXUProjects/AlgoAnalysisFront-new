@@ -11,6 +11,8 @@ export const endpoints = {
       login: `${API_PREFIX}/user/auth/login`,
       register: `${API_PREFIX}/user/auth/register`,
       refresh: `${API_PREFIX}/user/auth/refresh`,
+      sendCode: `${API_PREFIX}/user/auth/send-code`,
+      resetPassword: `${API_PREFIX}/user/auth/reset-password`,
     },
     profile: {
       getById: `${API_PREFIX}/user/profile/get-by-id`,
@@ -37,6 +39,8 @@ export const endpoints = {
     upload: `${API_PREFIX}/user/upload`,
     site: {
       config: `${API_PREFIX}/user/site/config`,
+      adminConfig: `${API_PREFIX}/user/site/admin-config`,
+      testEmail: `${API_PREFIX}/user/site/test-email`,
     },
     org: {
       list: `${API_PREFIX}/user/org/list`,
@@ -134,6 +138,7 @@ export interface StdResponse<T = unknown> {
 }
 
 export interface LoginReq {
+  /** 用户名或邮箱 */
   username: string
   password: string
 }
@@ -150,9 +155,34 @@ export interface RegisterReq {
   name: string
   email: string
   groupId: number
+  /** 邮箱验证码 */
+  code: string
 }
 
 export interface RegisterRes {
+  success: boolean
+  message: string
+}
+
+/** purpose: register | reset */
+export interface SendCodeReq {
+  email: string
+  purpose: 'register' | 'reset'
+}
+
+export interface SendCodeRes {
+  success: boolean
+  message: string
+}
+
+export interface ResetPasswordReq {
+  email: string
+  code: string
+  /** 客户端 SHA256 后的新密码 */
+  password: string
+}
+
+export interface ResetPasswordRes {
   success: boolean
   message: string
 }
@@ -194,6 +224,14 @@ export interface UserListItem {
   roleId?: number
   isSiteAdmin?: boolean
   orgs?: UserOrgBrief[]
+  /** 个人日报邮件偏好 */
+  emailEnabled?: boolean
+  /** 个人周报邮件偏好 */
+  emailWeeklyEnabled?: boolean
+  /** 是否有组织授权日报（可开启） */
+  emailAllowedByOrg?: boolean
+  /** 是否有组织授权周报且为 staff（可开启） */
+  emailWeeklyAllowedByOrg?: boolean
 }
 
 export interface UserListRes {
@@ -219,6 +257,10 @@ export interface OrgInfo {
   name: string
   slug: string
   plan?: string
+  /** 用户数上限（默认 50）；公共域仅计「只属于公共域」的用户 */
+  seatLimit?: number
+  /** 当前占用席位数（公共域按仅属公共域规则） */
+  memberCount?: number
   status?: string
   isSystem?: boolean
   brandTitle?: string

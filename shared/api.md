@@ -27,13 +27,18 @@
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| POST | `/user/auth/login` | 否 | 登录，返回 jwtToken |
-| POST | `/user/auth/register` | 否 | 注册 |
+| POST | `/user/auth/login` | 否 | 登录（用户名或邮箱 + 密码），返回 jwtToken |
+| POST | `/user/auth/register` | 否 | 邮箱验证码注册 |
+| POST | `/user/auth/refresh` | 是 | 按 DB 重签 JWT |
+| POST | `/user/auth/send-code` | 否 | 发送邮箱验证码（注册/找回密码） |
+| POST | `/user/auth/reset-password` | 否 | 邮箱验证码重置密码 |
 
 **LoginReq**
 ```json
 { "username": "string", "password": "string" }
 ```
+`username` 可为**用户名或邮箱**（含 `@` 时按邮箱匹配，大小写不敏感）。密码为客户端 SHA256 后的 hex。
+
 **LoginRes**
 ```json
 { "success": true, "message": "string", "jwtToken": "string" }
@@ -46,12 +51,37 @@
   "password": "string",
   "name": "string",
   "email": "string",
-  "groupId": 0
+  "groupId": 0,
+  "code": "string"
 }
 ```
 
-`name` = **全局昵称**（非真实姓名；加入校队时另填「组织内名称」）。
+`name` = **全局昵称**（非真实姓名；加入校队时另填「组织内名称」）。  
+`code` = 邮箱验证码（先调 `send-code`，`purpose=register`）。邮箱全局唯一。
+
 **RegisterRes**
+```json
+{ "success": true, "message": "string" }
+```
+
+**SendCodeReq**
+```json
+{ "email": "string", "purpose": "register" }
+```
+`purpose`: `register` | `reset`。验证码 10 分钟有效，同一邮箱 60 秒内不可重复发送。
+
+**SendCodeRes**
+```json
+{ "success": true, "message": "string" }
+```
+
+**ResetPasswordReq**
+```json
+{ "email": "string", "code": "string", "password": "string" }
+```
+`password` 为客户端 SHA256 后的新密码。
+
+**ResetPasswordRes**
 ```json
 { "success": true, "message": "string" }
 ```
@@ -62,11 +92,11 @@
 |--------|------|------|------|
 | GET | `/user/profile/get-by-id` | 否 | query: `userId` |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]` |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开） |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新资料 |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
-| POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；无组织授权时不可开启日报/周报 |
+| POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；本人 / 站点管理员 / **当前组织 staff 管理本组织成员**；无组织授权时不可开启日报/周报 |
 | GET | `/user/profile/ids-by-group` | 否 | query: `groupId` |
 | POST | `/user/profile/get-by-ids` | 否 | body: `{ userIds, orgId? }`；`name`=该组织 `org_display_name`（空则 username）；`orgId` 缺省用 JWT 当前组织，再回落公共域 |
 | POST | `/user/profile/delete` | 是(管理员) | 软删除用户 |
@@ -77,8 +107,53 @@
 |--------|------|------|------|
 | POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc`，返回 `{ url }`（≤3MB 图片）。**url 带真实扩展名**（如 `.png`/`.jpg`） |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
-| GET | `/user/site/config` | 否 | 站点标题/logo/favicon（默认 GoAlgo） |
-| POST | `/user/site/config` | 是(站点管理员) | body: `{ siteTitle, siteLogo, favicon }` |
+| GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo） |
+| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI 密钥脱敏） |
+| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI 模型密钥；密钥空串表示不修改 |
+| POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
+
+**GetConfigRes（公开）**
+
+```json
+{
+  "siteTitle": "GoAlgo",
+  "siteLogo": "",
+  "favicon": "",
+  "footerIcp": "苏ICP备2025217901号"
+}
+```
+
+**GetAdminConfigRes / UpdateConfigReq（业务配置）**
+
+```json
+{
+  "siteTitle": "GoAlgo",
+  "siteLogo": "",
+  "favicon": "",
+  "footerIcp": "苏ICP备2025217901号",
+  "smtpHost": "smtp.163.com",
+  "smtpPort": 465,
+  "smtpUsername": "xxx@163.com",
+  "smtpPassword": "",
+  "smtpPasswordMasked": "••••••••",
+  "smtpPasswordSet": true,
+  "smtpFrom": "xxx@163.com",
+  "clearSmtpPassword": false,
+  "agentModel": "glm-4-7-251222",
+  "agentSecret": "",
+  "agentSecretMasked": "••••••••",
+  "agentSecretSet": true,
+  "clearAgentSecret": false,
+  "aiAnalyzeEndpoint": "http://host/api",
+  "aiAnalyzeModel": "glm-5",
+  "aiAnalyzeSecret": "",
+  "aiAnalyzeSecretMasked": "••••••••",
+  "aiAnalyzeSecretSet": true,
+  "clearAiAnalyzeSecret": false
+}
+```
+
+说明：`smtp` / `agent` / `ai_analyze` 原 yaml 配置已迁入站点设置；服务 yaml 仅作启动兜底。保存后写入 DB 并同步 Redis。`footerIcp` 为空时前端页脚使用默认备案号。
 
 ### Paste（粘贴板 / Pastebin）
 
@@ -115,10 +190,10 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
 | POST | `/user/auth/refresh` | 是 | 按 DB 重签 JWT（任命后 F5 同步权限） |
-| GET | `/user/org/list` | 是 | 我的组织；项含 `myRole`、`orgDisplayName`（我在该组织的称呼）、`isCurrent`；`?all=1` 站点管理员看全部 |
-| GET | `/user/org/get` | 是 | query: `id`（默认当前组织）；若本人是成员则含 `myRole`、`orgDisplayName` |
-| POST | `/user/org/create` | 站点管理员 | `{ name, slug?, adminUserId?, joinMode? }` |
-| POST | `/user/org/update` | 组织/站点管理员 | 品牌/开关/joinMode；间隔仅站点 |
+| GET | `/user/org/list` | 是 | 我的组织；项含 `myRole`、`orgDisplayName`、`isCurrent`、`seatLimit`、`memberCount`；`?all=1` 站点管理员看全部 |
+| GET | `/user/org/get` | 是 | query: `id`（默认当前组织）；含 `seatLimit`、`memberCount`；若本人是成员则含 `myRole`、`orgDisplayName` |
+| POST | `/user/org/create` | 站点管理员 | `{ name, slug?, adminUserId?, joinMode?, seatLimit? }`；默认 `seatLimit=50` |
+| POST | `/user/org/update` | 组织/站点管理员 | 品牌/开关/joinMode；间隔与 **seatLimit（用户数上限）仅站点管理员** |
 | POST | `/user/org/delete` | 站点管理员 | `{ id }` 软删除；**公共域不可删**；成员迁回公共域；挂在该组织分组上的用户迁到公共域默认分组；释放 slug/识别码唯一约束 |
 | POST | `/user/org/switch` | 是 | `{ orgId }` → 新 `jwtToken`；**同时写入默认组织**（下次打开自动进入，无需单独设默认） |
 | POST | `/user/org/join` | 是 | `{ inviteCode, orgDisplayName }` 团队识别码 + **组织内名称（必填）**；**不改**默认组织 |
@@ -138,6 +213,15 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 默认组织（`users.current_org_id`）：注册时为 **公共域** `slug=public`（全员自动加入，不可退出）。  
 **管理员拉入**某组织后，该组织成为用户默认组织（下次打开自动进入）。用户之后只需 **switch 切换**，切换即记忆，无需刻意「修改默认组织」。
+
+**用户数上限（seatLimit）**
+
+| 规则 | 说明 |
+|------|------|
+| 默认 | 每个组织默认 **50** 人；站点管理员可在创建/更新时设置 |
+| 普通组织 | `memberCount` = 组织成员总数；达上限后无法 join / add / 审批通过 / set-role 拉入 |
+| 公共域 | `memberCount` 仅统计 **只属于公共域、未加入其它组织** 的用户；注册占用公共域席位 |
+| 权限 | 仅 **站点管理员** 可改 `seatLimit` |
 
 **名称语义（已合并）**
 
@@ -252,19 +336,21 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| POST | `/core/spider/set` | 是 | 绑定 OJ 账号 |
-| POST | `/core/spider/update` | 是 | 更新单用户爬虫数据 |
-| POST | `/core/spider/update-all` | 是(管理员) | 全量更新 |
+| POST | `/core/spider/set` | 是 | 绑定 OJ 账号（仅全量同步该平台） |
+| POST | `/core/spider/update` | 是(站点管理员) | 手动全量同步单用户全部已绑定平台 |
+| POST | `/core/spider/update-all` | 是(站点管理员) | 全站用户全量更新 |
 
 **SetSpiderReq**
 ```json
 { "platform": "NowCoder|AtCoder|CodeForces|LuoGu|LeetCode|QOJ", "userId": 1, "username": "string" }
 ```
+绑定成功后后台只抓取该 `platform` 的全量提交/比赛，不会重扫用户其它已绑定 OJ。
 
 **UpdateReq**
 ```json
 { "userId": 1 }
 ```
+仅站点管理员可调用；普通用户无手动更新入口，依赖组织定时同步与绑定后自动抓取。
 
 ### Statistic
 
@@ -400,6 +486,12 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 POST   /api/user/auth/login
 POST   /api/user/auth/register
 POST   /api/user/auth/refresh
+POST   /api/user/auth/send-code
+POST   /api/user/auth/reset-password
+GET    /api/user/site/config
+GET    /api/user/site/admin-config
+POST   /api/user/site/config
+POST   /api/user/site/test-email
 GET    /api/user/profile/get-by-id
 GET    /api/user/profile/get-by-name
 GET    /api/user/profile/list

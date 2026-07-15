@@ -158,7 +158,7 @@ export function DashboardBulletinManage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-14">ID</TableHead>
+                  <TableHead className="w-14">编号</TableHead>
                   <TableHead>标题</TableHead>
                   <TableHead>作者</TableHead>
                   <TableHead>置顶</TableHead>

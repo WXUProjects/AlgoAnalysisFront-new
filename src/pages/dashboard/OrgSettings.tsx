@@ -165,7 +165,7 @@ export function DashboardOrgSettings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>组织标题（侧栏覆盖）</Label>
+            <Label>组织名称（显示在侧栏）</Label>
             <Input value={brandTitle} onChange={(e) => setBrandTitle(e.target.value)} />
           </div>
           <ImageUploadTile
@@ -208,7 +208,7 @@ export function DashboardOrgSettings() {
           {isAdmin && (
             <>
               <div className="space-y-2">
-                <Label>爬虫间隔（分钟，仅站点可改）</Label>
+                <Label>数据同步间隔（分钟，仅站点管理员可改）</Label>
                 <Input
                   type="number"
                   value={spiderInterval}
@@ -224,15 +224,22 @@ export function DashboardOrgSettings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>邮件时间（cron）</Label>
-                <Input value={emailSchedule} onChange={(e) => setEmailSchedule(e.target.value)} />
+                <Label>日报发送时间</Label>
+                <Input
+                  value={emailSchedule}
+                  onChange={(e) => setEmailSchedule(e.target.value)}
+                  placeholder="例如 30 7 * * *（每天 7:30）"
+                />
+                <p className="text-xs text-muted-foreground">
+                  填写定时表达式，例如每天 7:30 为 30 7 * * *
+                </p>
               </div>
             </>
           )}
           {!isAdmin && (
             <p className="text-xs text-muted-foreground">
-              间隔由站点管理员配置：爬虫 {spiderInterval} 分钟 · AI {aiInterval} 分钟 · 邮件{' '}
-              {emailSchedule}
+              由站点管理员配置：数据同步每 {spiderInterval} 分钟 · AI 小结每{' '}
+              {aiInterval} 分钟 · 日报发送：{emailSchedule || '—'}
             </p>
           )}
           <Button onClick={() => void save()}>保存设置</Button>

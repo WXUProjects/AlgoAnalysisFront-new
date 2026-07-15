@@ -65,6 +65,50 @@ export function highlightWith(
   }
 }
 
+/** highlight.js 语言名 → 粘贴板 value */
+const HLJS_TO_PASTE: Record<string, string> = {
+  plaintext: 'text',
+  x86asm: 'assembly',
+  armasm: 'assembly',
+  shell: 'bash',
+  sh: 'bash',
+  less: 'css',
+}
+
+/**
+ * 在 subset（粘贴板可选语言 value）内自动识别。
+ * 内容过短或相关度过低时返回 text。
+ */
+export async function detectLanguage(
+  code: string,
+  subset: string[],
+  minRelevance = 5,
+): Promise<string> {
+  const sample = code.trim()
+  if (sample.length < 12) return 'text'
+
+  const hljs = await loadHljs()
+  const allowed = new Set(subset)
+  const hljsToValue = new Map<string, string>()
+  for (const v of subset) {
+    const hl = mapHljsLang(v)
+    if (hl === 'plaintext' || !hljs.getLanguage(hl)) continue
+    if (!hljsToValue.has(hl)) hljsToValue.set(hl, v)
+  }
+  const langs = [...hljsToValue.keys()]
+  if (!langs.length) return 'text'
+
+  try {
+    const result = hljs.highlightAuto(sample.slice(0, 8000), langs)
+    if (!result.language || result.relevance < minRelevance) return 'text'
+    const raw = result.language.toLowerCase()
+    const mapped = hljsToValue.get(raw) || HLJS_TO_PASTE[raw] || raw
+    return allowed.has(mapped) ? mapped : 'text'
+  } catch {
+    return 'text'
+  }
+}
+
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')

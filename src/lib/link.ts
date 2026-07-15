@@ -89,9 +89,9 @@ export const OJ_BIND_GUIDES: Record<
     example: 'https://qoj.ac/user/profile/sanenchen → sanenchen',
   },
   LeetCode: {
-    fieldLabel: '用户 slug',
+    fieldLabel: '用户名',
     placeholder: '例如 sanenchen-o',
-    tip: '填写力扣用户 slug（主页 /u/ 后的一段）。力扣只计入热力图与总做题/提交数，不展示提交明细。',
+    tip: '填写力扣个人主页 /u/ 后面那一段。力扣只计入热力图与总做题/提交数，不展示提交明细。',
     example: 'https://leetcode.cn/u/sanenchen-o/ → sanenchen-o',
   },
 }

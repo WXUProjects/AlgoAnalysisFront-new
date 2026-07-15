@@ -18,7 +18,13 @@ import {
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
-import { PASTE_EXPIRES, PASTE_LANGUAGES, languageLabel } from '@/lib/paste-languages'
+import { detectLanguage } from '@/lib/code-hl'
+import {
+  PASTE_DETECT_SUBSET,
+  PASTE_EXPIRES,
+  PASTE_LANGUAGES,
+  languageLabel,
+} from '@/lib/paste-languages'
 import { formatTime } from '@/lib/format'
 
 export function PasteCreate() {
@@ -26,11 +32,16 @@ export function PasteCreate() {
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [language, setLanguage] = useState('text')
+  /** 下拉选择：auto 表示持续自动识别 */
+  const [language, setLanguage] = useState('auto')
+  /** 自动识别出的语言（仅 language === auto 时有效） */
+  const [detected, setDetected] = useState('text')
   const [expire, setExpire] = useState('1w')
   const [saving, setSaving] = useState(false)
   const [mine, setMine] = useState<PasteInfo[]>([])
   const [mineLoading, setMineLoading] = useState(false)
+
+  const resolvedLanguage = language === 'auto' ? detected : language
 
   async function loadMine() {
     if (!isLogin) return
@@ -44,6 +55,25 @@ export function PasteCreate() {
     void loadMine()
   }, [isLogin])
 
+  useEffect(() => {
+    if (language !== 'auto') return
+    const sample = content.trim()
+    if (sample.length < 12) {
+      setDetected('text')
+      return
+    }
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      void detectLanguage(content, PASTE_DETECT_SUBSET).then((lang) => {
+        if (!cancelled) setDetected(lang)
+      })
+    }, 280)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [content, language])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!content.trim()) {
@@ -51,10 +81,15 @@ export function PasteCreate() {
       return
     }
     setSaving(true)
+    let lang = resolvedLanguage
+    if (language === 'auto') {
+      lang = await detectLanguage(content, PASTE_DETECT_SUBSET)
+      setDetected(lang)
+    }
     const res = await createPaste({
       title: title.trim(),
       content,
-      language,
+      language: lang === 'auto' ? 'text' : lang,
       expire: expire as 'never' | '1h' | '1d' | '1w' | '1m' | '1y',
     })
     setSaving(false)
@@ -109,6 +144,11 @@ export function PasteCreate() {
                       </option>
                     ))}
                   </select>
+                  {language === 'auto' ? (
+                    <p className="text-xs text-muted-foreground">
+                      已识别为 {languageLabel(detected)}
+                    </p>
+                  ) : null}
                 </Field>
                 <Field>
                   <FieldLabel>有效期</FieldLabel>
@@ -130,12 +170,12 @@ export function PasteCreate() {
                 <CodeEditor
                   value={content}
                   onChange={setContent}
-                  language={language}
+                  language={resolvedLanguage}
                   placeholder="在此粘贴代码或文本…"
                   minHeight={320}
                 />
                 <p className="text-xs text-muted-foreground">
-                  边写边高亮 · Tab 缩进两空格 · 最大约 512KB
+                  自动识别语言 · 边写边高亮 · Tab 缩进两空格 · 最大约 512KB
                 </p>
               </Field>
             </FieldGroup>

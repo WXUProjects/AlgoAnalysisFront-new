@@ -1,5 +1,6 @@
 /** 粘贴板可选语言（与 highlight.js 注册名对齐） */
 export const PASTE_LANGUAGES: { value: string; label: string }[] = [
+  { value: 'auto', label: '自动识别' },
   { value: 'text', label: '纯文本' },
   { value: 'c', label: 'C' },
   { value: 'cpp', label: 'C++' },
@@ -64,3 +65,8 @@ export const PASTE_EXPIRES: { value: string; label: string }[] = [
 export function languageLabel(value: string): string {
   return PASTE_LANGUAGES.find((l) => l.value === value)?.label || value || '纯文本'
 }
+
+/** 供 highlightAuto 的语言子集（不含 auto / 纯文本） */
+export const PASTE_DETECT_SUBSET = PASTE_LANGUAGES.map((l) => l.value).filter(
+  (v) => v !== 'auto' && v !== 'text',
+)

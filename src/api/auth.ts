@@ -4,12 +4,25 @@ import {
   type LoginRes,
   type RegisterReq,
   type RegisterRes,
+  type ResetPasswordReq,
+  type ResetPasswordRes,
+  type SendCodeReq,
+  type SendCodeRes,
   type UserProfile,
 } from '@shared/api'
 import { http, type ApiResult } from '@/lib/http'
 import { get } from '@/lib/http'
 import { jwt } from '@/lib/jwt'
 import { hashPassword } from '@/lib/hash'
+
+function errMessage(err: unknown, fallback: string): string {
+  return (
+    (err as { response?: { data?: { message?: string } }; message?: string })
+      .response?.data?.message ||
+    (err as { message?: string }).message ||
+    fallback
+  )
+}
 
 export async function login(
   username: string,
@@ -21,7 +34,7 @@ export async function login(
   }
 
   const body: LoginReq = {
-    username,
+    username: username.trim(),
     password: hashPassword(password),
   }
 
@@ -42,12 +55,28 @@ export async function login(
       data: null,
     }
   } catch (err) {
-    const message =
-      (err as { response?: { data?: { message?: string } }; message?: string })
-        .response?.data?.message ||
-      (err as { message?: string }).message ||
-      '登录失败'
-    return { success: false, message, data: null }
+    return { success: false, message: errMessage(err, '登录失败'), data: null }
+  }
+}
+
+export async function sendCode(
+  email: string,
+  purpose: SendCodeReq['purpose'],
+): Promise<ApiResult<SendCodeRes>> {
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { success: false, message: '请输入有效邮箱', data: null }
+  }
+  const body: SendCodeReq = { email: email.trim(), purpose }
+  try {
+    const res = await http.post<SendCodeRes>(endpoints.user.auth.sendCode, body)
+    const data = res.data
+    return {
+      success: Boolean(data?.success),
+      message: data?.message || (data?.success ? '验证码已发送' : '发送失败'),
+      data: data ?? null,
+    }
+  } catch (err) {
+    return { success: false, message: errMessage(err, '发送失败'), data: null }
   }
 }
 
@@ -57,13 +86,20 @@ export async function register(input: {
   passwordConfirm: string
   name: string
   email: string
+  code: string
 }): Promise<ApiResult<RegisterRes>> {
   // 注册前清掉残留 token，避免半登录态干扰
   if (jwt.isValid()) {
     jwt.clearToken()
   }
 
-  if (!input.username || !input.password || !input.name || !input.email) {
+  if (
+    !input.username ||
+    !input.password ||
+    !input.name ||
+    !input.email ||
+    !input.code
+  ) {
     return { success: false, message: '请填写所有必填项', data: null }
   }
 
@@ -76,11 +112,12 @@ export async function register(input: {
   }
 
   const body: RegisterReq = {
-    username: input.username,
+    username: input.username.trim(),
     password: hashPassword(input.password),
-    name: input.name,
-    email: input.email,
+    name: input.name.trim(),
+    email: input.email.trim(),
     groupId: 0,
+    code: input.code.trim(),
   }
 
   try {
@@ -92,12 +129,46 @@ export async function register(input: {
       data: data ?? null,
     }
   } catch (err) {
-    const message =
-      (err as { response?: { data?: { message?: string } }; message?: string })
-        .response?.data?.message ||
-      (err as { message?: string }).message ||
-      '注册失败'
-    return { success: false, message, data: null }
+    return { success: false, message: errMessage(err, '注册失败'), data: null }
+  }
+}
+
+export async function resetPassword(input: {
+  email: string
+  code: string
+  password: string
+  passwordConfirm: string
+}): Promise<ApiResult<ResetPasswordRes>> {
+  if (!input.email || !input.code || !input.password) {
+    return { success: false, message: '请填写所有必填项', data: null }
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
+    return { success: false, message: '请输入有效邮箱', data: null }
+  }
+  if (input.password !== input.passwordConfirm) {
+    return { success: false, message: '密码不一致', data: null }
+  }
+
+  const body: ResetPasswordReq = {
+    email: input.email.trim(),
+    code: input.code.trim(),
+    password: hashPassword(input.password),
+  }
+
+  try {
+    const res = await http.post<ResetPasswordRes>(
+      endpoints.user.auth.resetPassword,
+      body,
+    )
+    const data = res.data
+    return {
+      success: Boolean(data?.success),
+      message:
+        data?.message || (data?.success ? '密码已重置' : '重置失败'),
+      data: data ?? null,
+    }
+  } catch (err) {
+    return { success: false, message: errMessage(err, '重置失败'), data: null }
   }
 }
 
@@ -129,11 +200,6 @@ export async function refreshToken(): Promise<ApiResult<LoginRes>> {
       data: null,
     }
   } catch (err) {
-    const message =
-      (err as { response?: { data?: { message?: string } }; message?: string })
-        .response?.data?.message ||
-      (err as { message?: string }).message ||
-      '刷新失败'
-    return { success: false, message, data: null }
+    return { success: false, message: errMessage(err, '刷新失败'), data: null }
   }
 }

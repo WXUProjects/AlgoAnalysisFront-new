@@ -114,7 +114,7 @@ export function AllActivities() {
             variant={!userMode ? 'default' : 'outline'}
             onClick={() => setSearchParams({})}
           >
-            大家的
+            全部
           </Button>
           {isLogin && user && (
             <Button

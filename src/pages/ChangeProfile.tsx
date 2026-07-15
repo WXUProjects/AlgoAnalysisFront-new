@@ -246,7 +246,7 @@ export function ChangeProfile() {
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    与日报独立；周一发送组织维度周报（staff）。
+                     与日报分开设置；每周一发送本队训练周报（面向教练、队长与团队管理员）。
                   </p>
                 )}
               </Field>

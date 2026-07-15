@@ -13,6 +13,7 @@ const DEFAULT: SiteConfig = {
   siteTitle: 'GoAlgo',
   siteLogo: '',
   favicon: '',
+  footerIcp: '',
 }
 
 type Ctx = {

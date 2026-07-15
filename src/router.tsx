@@ -14,6 +14,9 @@ const Login = lazy(() =>
 const Register = lazy(() =>
   import('@/pages/Register').then((m) => ({ default: m.Register })),
 )
+const ForgotPassword = lazy(() =>
+  import('@/pages/ForgotPassword').then((m) => ({ default: m.ForgotPassword })),
+)
 const NotFound = lazy(() =>
   import('@/pages/NotFound').then((m) => ({ default: m.NotFound })),
 )
@@ -111,6 +114,9 @@ const PasteCreate = lazy(() =>
 const PasteView = lazy(() =>
   import('@/pages/tools/PasteView').then((m) => ({ default: m.PasteView })),
 )
+const CodeToImage = lazy(() =>
+  import('@/pages/tools/CodeToImage').then((m) => ({ default: m.CodeToImage })),
+)
 
 function PageFallback() {
   return (
@@ -159,6 +165,14 @@ export const router = createBrowserRouter([
         element: (
           <Lazy>
             <Register />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'forgot-password',
+        element: (
+          <Lazy>
+            <ForgotPassword />
           </Lazy>
         ),
       },
@@ -260,6 +274,16 @@ export const router = createBrowserRouter([
           <RequireLogin>
             <Lazy>
               <PasteCreate />
+            </Lazy>
+          </RequireLogin>
+        ),
+      },
+      {
+        path: 'tools/code-image',
+        element: (
+          <RequireLogin>
+            <Lazy>
+              <CodeToImage />
             </Lazy>
           </RequireLogin>
         ),

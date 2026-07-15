@@ -6,8 +6,10 @@ import {
   deleteUser,
   listProfiles,
   moveGroup,
+  setEmailEnabled,
   setSiteAdmin,
 } from '@/api/profile'
+import { updateSpider } from '@/api/spider'
 import type { GroupInfo, UserListItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
@@ -47,6 +49,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -88,13 +91,14 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [editUser, setEditUser] = useState<UserListItem | null>(null)
   const [editValue, setEditValue] = useState('')
   const [saving, setSaving] = useState(false)
+  const [syncingId, setSyncingId] = useState<number | null>(null)
+  const [togglingKey, setTogglingKey] = useState<string | null>(null)
 
   const groupName = useCallback(
     (u: UserListItem) => {
       if (u.groupName) return u.groupName
       const fromList = groups.find((g) => g.id === u.groupId)?.name
       if (fromList) return fromList === '未分组' ? '默认分组' : fromList
-      // 无效 groupId 或列表未加载：不展示「分组11」
       return '默认分组'
     },
     [groups],
@@ -162,7 +166,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
 
   async function handleDelete(userId: number) {
     if (userId === 2) {
-      toast.error('该账号受保护，无法删除')
+      toast.error('该账号为系统保留账号，无法删除')
       return
     }
     const res = await deleteUser(userId)
@@ -172,14 +176,76 @@ function UserListPage({ scope }: { scope: UserScope }) {
     } else toast.error(res.message || '删除失败')
   }
 
+  async function handleSyncOj(userId: number) {
+    setSyncingId(userId)
+    const res = await updateSpider(userId)
+    setSyncingId(null)
+    if (res.success) toast.success(res.message || '已开始同步该用户的 OJ 数据')
+    else toast.error(res.message || '同步失败')
+  }
+
+  async function handleEmailToggle(
+    u: UserListItem,
+    kind: 'daily' | 'weekly',
+    checked: boolean,
+  ) {
+    if (checked) {
+      if (kind === 'daily' && u.emailAllowedByOrg === false) {
+        toast.error('该成员所在组织未开通日报邮件，无法开启')
+        return
+      }
+      if (kind === 'weekly' && u.emailWeeklyAllowedByOrg === false) {
+        toast.error(
+          '该成员需为教练/队长/团队管理员，且组织已开通周报，才可开启',
+        )
+        return
+      }
+    }
+    const key = `${u.userId}:${kind}`
+    setTogglingKey(key)
+    setList((prev) =>
+      prev.map((row) => {
+        if (row.userId !== u.userId) return row
+        return kind === 'daily'
+          ? { ...row, emailEnabled: checked }
+          : { ...row, emailWeeklyEnabled: checked }
+      }),
+    )
+    const res = await setEmailEnabled(u.userId, checked, kind)
+    setTogglingKey(null)
+    if (res.success) {
+      toast.success(
+        res.message ||
+          (kind === 'daily'
+            ? checked
+              ? '已开启日报'
+              : '已关闭日报'
+            : checked
+              ? '已开启周报'
+              : '已关闭周报'),
+      )
+    } else {
+      setList((prev) =>
+        prev.map((row) => {
+          if (row.userId !== u.userId) return row
+          return kind === 'daily'
+            ? { ...row, emailEnabled: !checked }
+            : { ...row, emailWeeklyEnabled: !checked }
+        }),
+      )
+      toast.error(res.message || '设置失败')
+    }
+  }
+
+  const canToggleEmail = isStaff || isAdmin
   const title = isSite
     ? '站点用户'
     : currentOrg?.name
       ? `${currentOrg.name} · 成员`
       : '组织成员'
   const desc = isSite
-    ? '全站用户与所属组织，可任命站点管理员'
-    : '当前组织成员，可调整分组'
+    ? '全站用户与所属组织；可查看日报/周报接收情况，站点管理员可开关'
+    : '当前组织成员；可查看并在权限允许时开关日报/周报接收'
 
   return (
     <PageShell className="gap-3">
@@ -205,113 +271,219 @@ function UserListPage({ scope }: { scope: UserScope }) {
                   <TableHead>{isSite ? '昵称' : '组织内名称'}</TableHead>
                   <TableHead>用户名</TableHead>
                   <TableHead>{isSite ? '所属组织' : '分组'}</TableHead>
+                  <TableHead className="w-[7.5rem]">日报</TableHead>
+                  <TableHead className="w-[7.5rem]">周报</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {list.map((u) => (
-                  <TableRow key={u.userId}>
-                    <TableCell>
-                      <Avatar className="size-8">
-                        <AvatarImage src={u.avatar || undefined} />
-                        <AvatarFallback>
-                          {(u.name || u.username || '?').slice(0, 1)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span>{u.name}</span>
-                        {u.isSiteAdmin && (
-                          <Badge variant="default" className="text-[10px]">
-                            站点管理员
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{u.username}</TableCell>
-                    <TableCell>
-                      {isSite ? (
-                        <div className="flex max-w-xs flex-wrap gap-1">
-                          {(u.orgs || []).map((o) => (
-                            <Badge
-                              key={o.orgId}
-                              variant="secondary"
-                              className="font-normal"
-                            >
-                              {o.name}
-                              {o.role && o.role !== 'member' ? (
-                                <span className="ml-1 text-muted-foreground">
-                                  · {orgRoleName(o.role)}
-                                </span>
-                              ) : null}
+                {list.map((u) => {
+                  const dailyOn = !!u.emailEnabled
+                  const weeklyOn = !!u.emailWeeklyEnabled
+                  const dailyCanOpen = u.emailAllowedByOrg !== false
+                  const weeklyCanOpen = u.emailWeeklyAllowedByOrg !== false
+                  const dailyBusy = togglingKey === `${u.userId}:daily`
+                  const weeklyBusy = togglingKey === `${u.userId}:weekly`
+                  return (
+                    <TableRow key={u.userId}>
+                      <TableCell>
+                        <Avatar className="size-8">
+                          <AvatarImage src={u.avatar || undefined} />
+                          <AvatarFallback>
+                            {(u.name || u.username || '?').slice(0, 1)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span>{u.name}</span>
+                          {u.isSiteAdmin && (
+                            <Badge variant="default" className="text-[10px]">
+                              站点管理员
                             </Badge>
-                          ))}
-                          {!(u.orgs || []).length && (
-                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </div>
-                      ) : (
-                        groupName(u)
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {isSite && isAdmin && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => void handleToggleSiteAdmin(u)}
-                          >
-                            {u.isSiteAdmin ? '取消站管' : '设为站管'}
-                          </Button>
+                      </TableCell>
+                      <TableCell>{u.username}</TableCell>
+                      <TableCell>
+                        {isSite ? (
+                          <div className="flex max-w-xs flex-wrap gap-1">
+                            {(u.orgs || []).map((o) => (
+                              <Badge
+                                key={o.orgId}
+                                variant="secondary"
+                                className="font-normal"
+                              >
+                                {o.name}
+                                {o.role && o.role !== 'member' ? (
+                                  <span className="ml-1 text-muted-foreground">
+                                    · {orgRoleName(o.role)}
+                                  </span>
+                                ) : null}
+                              </Badge>
+                            ))}
+                            {!(u.orgs || []).length && (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        ) : (
+                          groupName(u)
                         )}
-                        {!isSite && isStaff && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openGroupEdit(u)}
-                          >
-                            调整分组
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {canToggleEmail ? (
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={dailyOn}
+                                disabled={dailyBusy || (!dailyCanOpen && !dailyOn)}
+                                onCheckedChange={(v) =>
+                                  void handleEmailToggle(u, 'daily', v)
+                                }
+                                aria-label={`${u.name} 日报`}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {dailyOn ? '接收中' : '已关闭'}
+                              </span>
+                            </div>
+                          ) : (
+                            <Badge
+                              variant={dailyOn ? 'default' : 'secondary'}
+                              className="w-fit font-normal"
+                            >
+                              {dailyOn ? '接收中' : '已关闭'}
+                            </Badge>
+                          )}
+                          {!dailyCanOpen && !dailyOn ? (
+                            <span className="text-[10px] text-muted-foreground">
+                              组织未授权
+                            </span>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {canToggleEmail ? (
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={weeklyOn}
+                                disabled={
+                                  weeklyBusy || (!weeklyCanOpen && !weeklyOn)
+                                }
+                                onCheckedChange={(v) =>
+                                  void handleEmailToggle(u, 'weekly', v)
+                                }
+                                aria-label={`${u.name} 周报`}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {weeklyOn ? '接收中' : '已关闭'}
+                              </span>
+                            </div>
+                          ) : (
+                            <Badge
+                              variant={weeklyOn ? 'default' : 'secondary'}
+                              className="w-fit font-normal"
+                            >
+                              {weeklyOn ? '接收中' : '已关闭'}
+                            </Badge>
+                          )}
+                          {!weeklyCanOpen && !weeklyOn ? (
+                            <span className="text-[10px] text-muted-foreground">
+                              需教练角色
+                            </span>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {isSite && isAdmin && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void handleToggleSiteAdmin(u)}
+                            >
+                              {u.isSiteAdmin ? '取消站点管理员' : '设为站点管理员'}
+                            </Button>
+                          )}
+                          {!isSite && isStaff && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openGroupEdit(u)}
+                            >
+                              调整分组
+                            </Button>
+                          )}
+                          <Button type="button" size="sm" variant="ghost" asChild>
+                            <Link to={`/profile?id=${u.userId}`}>资料</Link>
                           </Button>
-                        )}
-                        <Button type="button" size="sm" variant="ghost" asChild>
-                          <Link to={`/profile?id=${u.userId}`}>资料</Link>
-                        </Button>
-                        {isSite && isAdmin && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button type="button" size="sm" variant="destructive">
-                                删除
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>移除用户？</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  确认移除用户「{u.username}」？移除后该用户将无法继续使用本站。
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>取消</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => void handleDelete(u.userId)}
+                          {isAdmin && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={syncingId === u.userId}
                                 >
-                                  确认删除
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                                  同步 OJ
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    同步「{u.name || u.username}」的 OJ 数据？
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    将从该用户已绑定的各平台重新同步提交与比赛记录，可能需要一些时间。
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>取消</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => void handleSyncOj(u.userId)}
+                                  >
+                                    确认同步
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                          {isSite && isAdmin && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button type="button" size="sm" variant="destructive">
+                                  删除
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>移除用户？</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    确认移除用户「{u.username}」？移除后该用户将无法继续使用本站。
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>取消</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => void handleDelete(u.userId)}
+                                  >
+                                    确认删除
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
                 {!list.length && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       暂无用户
                     </TableCell>
                   </TableRow>

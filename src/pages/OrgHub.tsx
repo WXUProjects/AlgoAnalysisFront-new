@@ -124,7 +124,7 @@ export function OrgHub() {
                 <div className="font-medium">
                   {o.name}
                   {o.isSystem ? (
-                    <span className="ml-2 text-xs text-muted-foreground">系统</span>
+                    <span className="ml-2 text-xs text-muted-foreground">公共域</span>
                   ) : null}
                   {o.id === user?.orgId ? (
                     <span className="ml-2 text-xs text-primary">当前</span>

@@ -388,7 +388,7 @@ export function DashboardProblemProgress() {
               <Card key={item.status} className="gap-1 py-3">
                 <CardHeader className="px-3 py-0">
                   <CardDescription>
-                    {STATUS_LABEL[item.status] || item.status}
+                    {STATUS_LABEL[item.status] || '未知状态'}
                     {STATUS_HINT[item.status] ? (
                       <span className="ml-1 text-[10px] opacity-70">
                         ({STATUS_HINT[item.status]})
@@ -427,9 +427,9 @@ export function DashboardProblemProgress() {
                     {q ? num(q.messages) : '-'}
                   </span>
                   <span className="mx-2 text-muted-foreground">·</span>
-                  工作进程 {q ? num(q.consumers) : '-'}
+                  处理服务 {q ? num(q.consumers) : '-'}
                   <span className="mx-2 text-muted-foreground">·</span>
-                  同时处理 {q ? num(q.concurrency) : '-'}
+                  同时分析 {q ? num(q.concurrency) : '-'}
                 </p>
               </CardContent>
             </Card>

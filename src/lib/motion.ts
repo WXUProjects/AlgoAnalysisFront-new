@@ -40,7 +40,8 @@ export function routeDepth(pathname: string): number {
     pathname.startsWith('/question-bank') ||
     pathname.startsWith('/profile') ||
     pathname === '/login' ||
-    pathname === '/register'
+    pathname === '/register' ||
+    pathname === '/forgot-password'
   ) {
     return 2
   }

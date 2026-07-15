@@ -51,6 +51,7 @@ export function DashboardOrgsManage() {
   const [selected, setSelected] = useState<OrgInfo | null>(null)
   const [members, setMembers] = useState<OrgMemberInfo[]>([])
   const [newName, setNewName] = useState('')
+  const [newSeatLimit, setNewSeatLimit] = useState(50)
   const [addKeyword, setAddKeyword] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -64,6 +65,7 @@ export function DashboardOrgsManage() {
   const [aiInterval, setAiInterval] = useState(180)
   const [emailSchedule, setEmailSchedule] = useState('30 7 * * *')
   const [status, setStatus] = useState('active')
+  const [seatLimit, setSeatLimit] = useState(50)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -89,6 +91,7 @@ export function DashboardOrgsManage() {
     setAiInterval(selected.aiSummaryIntervalMin || 180)
     setEmailSchedule(selected.aiEmailSchedule || '30 7 * * *')
     setStatus(selected.status || 'active')
+    setSeatLimit(selected.seatLimit && selected.seatLimit > 0 ? selected.seatLimit : 50)
     void listOrgMembers(selected.id).then((r) => setMembers(r.list))
   }, [selected])
 
@@ -116,6 +119,7 @@ export function DashboardOrgsManage() {
       aiEmailSchedule: emailSchedule,
       status,
       name: selected.name,
+      seatLimit: Math.max(1, seatLimit || 50),
     })
     setSaving(false)
     if (res.success) {
@@ -151,12 +155,26 @@ export function DashboardOrgsManage() {
               <Label>组织名称</Label>
               <Input value={newName} onChange={(e) => setNewName(e.target.value)} />
             </div>
+            <div className="w-full space-y-2 sm:w-36">
+              <Label>用户数上限</Label>
+              <Input
+                type="number"
+                min={1}
+                value={newSeatLimit}
+                onChange={(e) => setNewSeatLimit(Number(e.target.value) || 50)}
+              />
+            </div>
             <Button
               onClick={() =>
-                void createOrg({ name: newName, adminUserId: user?.userId }).then(async (r) => {
+                void createOrg({
+                  name: newName,
+                  adminUserId: user?.userId,
+                  seatLimit: Math.max(1, newSeatLimit || 50),
+                }).then(async (r) => {
                   if (r.success) {
                     toast.success('已创建')
                     setNewName('')
+                    setNewSeatLimit(50)
                     await load()
                     await refreshOrgs()
                     if (r.data) setSelected(r.data)
@@ -197,11 +215,18 @@ export function DashboardOrgsManage() {
                     <span className="font-medium">
                       {o.name}
                       {o.isSystem ? (
-                        <span className="ml-2 text-xs text-muted-foreground">系统 · 不可删除</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          默认公共域 · 不可删除
+                        </span>
                       ) : null}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {o.status || 'active'} · {o.joinMode || 'auto'} · slug={o.slug}
+                      {o.status === 'suspended' ? '停用' : '正常'} ·{' '}
+                      {o.joinMode === 'review' ? '需审批加入' : '识别码自动加入'} · 席位{' '}
+                      {o.memberCount ?? '—'}
+                      {' / '}
+                      {o.seatLimit && o.seatLimit > 0 ? o.seatLimit : 50}
+                      {o.isSystem ? '（仅计只属公共域）' : ''}
                     </span>
                   </button>
                 ))}
@@ -215,7 +240,7 @@ export function DashboardOrgsManage() {
                   {selected ? `编辑：${selected.name}` : '选择左侧组织'}
                 </CardTitle>
                 {selected?.isSystem ? (
-                  <CardDescription>公共域为系统组织，不可删除。</CardDescription>
+                  <CardDescription>公共域为默认组织，不可删除。</CardDescription>
                 ) : selected ? (
                   <CardDescription>修改参数后点保存；删除在右侧。</CardDescription>
                 ) : null}
@@ -284,6 +309,22 @@ export function DashboardOrgsManage() {
                       <option value="review">需审批</option>
                     </select>
                   </div>
+                  <div className="space-y-2">
+                    <Label>用户数上限</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={seatLimit}
+                      onChange={(e) => setSeatLimit(Number(e.target.value) || 50)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      当前占用 {selected.memberCount ?? '—'} /{' '}
+                      {seatLimit && seatLimit > 0 ? seatLimit : 50}
+                      {selected.isSystem
+                        ? '。公共域只统计「未加入其它组织」的用户。'
+                        : '。达上限后无法再加入成员。'}
+                    </p>
+                  </div>
                   <div className="flex items-center justify-between">
                     <Label>AI 总结</Label>
                     <Switch checked={enableAiSummary} onCheckedChange={setEnableAiSummary} />
@@ -293,7 +334,7 @@ export function DashboardOrgsManage() {
                     <Switch checked={enableAiEmail} onCheckedChange={setEnableAiEmail} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <Label>周报邮件（staff）</Label>
+                    <Label>周报邮件（教练/队长/管理员）</Label>
                     <Switch
                       checked={enableAiWeeklyEmail}
                       onCheckedChange={setEnableAiWeeklyEmail}
@@ -304,7 +345,7 @@ export function DashboardOrgsManage() {
                     <Switch checked={enableSpider} onCheckedChange={setEnableSpider} />
                   </div>
                   <div className="space-y-2">
-                    <Label>爬虫间隔（分钟）</Label>
+                    <Label>数据同步间隔（分钟）</Label>
                     <Input
                       type="number"
                       value={spiderInterval}
@@ -320,8 +361,12 @@ export function DashboardOrgsManage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>邮件 cron</Label>
-                    <Input value={emailSchedule} onChange={(e) => setEmailSchedule(e.target.value)} />
+                    <Label>日报发送时间</Label>
+                    <Input
+                      value={emailSchedule}
+                      onChange={(e) => setEmailSchedule(e.target.value)}
+                      placeholder="例如 30 7 * * *（每天 7:30）"
+                    />
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button disabled={saving} onClick={() => void saveSelected()}>

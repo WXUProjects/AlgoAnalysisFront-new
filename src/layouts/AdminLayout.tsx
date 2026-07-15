@@ -17,6 +17,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { staffNavLabel } from '@/lib/roles'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
+import { SiteFooter } from '@/components/site-footer'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
   Sidebar,
@@ -328,7 +329,12 @@ export function AdminLayout() {
             <AnimatedTitle className="text-sm font-medium">{title}</AnimatedTitle>
           </header>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none">
-            <Outlet />
+            <div className="flex min-h-full min-w-0 flex-1 flex-col">
+              <div className="min-w-0 flex-1">
+                <Outlet />
+              </div>
+              <SiteFooter />
+            </div>
           </div>
         </SidebarInset>
         <Toaster />

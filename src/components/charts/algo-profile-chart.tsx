@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Bar,
   BarChart,
-  Cell,
-  Pie,
-  PieChart,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -12,15 +14,13 @@ import {
 } from 'recharts'
 import type { ProblemUserProfile } from '@shared/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Tooltip as UiTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-
-const COLORS = [
-  'var(--color-chart-1, #8884d8)',
-  'var(--color-chart-2, #82ca9d)',
-  'var(--color-chart-3, #ffc658)',
-  'var(--color-chart-4, #ff7c7c)',
-  'var(--color-chart-5, #8dd1e1)',
-]
 
 const CLOUD_COLORS = [
   'text-sky-600 dark:text-sky-400',
@@ -56,52 +56,47 @@ function shortLabel(name: string, max = 12): string {
 }
 
 function TagWordCloud({ items }: { items: { name: string; count: number }[] }) {
-  const [hover, setHover] = useState<string | null>(null)
-
   if (!items.length) {
     return <p className="px-2 text-sm text-muted-foreground">暂无标签</p>
   }
   const max = Math.max(...items.map((i) => i.count), 1)
-  const ordered = [...items].sort((a, b) => b.count - a.count).slice(0, 40)
+  const ordered = [...items].sort((a, b) => b.count - a.count).slice(0, 36)
 
   return (
-    <div className="relative flex h-full min-h-0 flex-wrap content-center items-center justify-center gap-x-2.5 gap-y-2 px-2 py-1">
-      {ordered.map((item, i) => {
-        const w = item.count / max
-        const size = 0.72 + w * 0.7
-        const weight = w > 0.55 ? 700 : w > 0.3 ? 600 : 500
-        const active = hover === item.name
-        return (
-          <span
-            key={item.name}
-            onMouseEnter={() => setHover(item.name)}
-            onMouseLeave={() => setHover(null)}
-            className={cn(
-              'inline-flex cursor-default select-none items-center gap-1 leading-tight',
-              'transition-all duration-200 ease-out',
-              'animate-in fade-in zoom-in-95',
-              CLOUD_COLORS[i % CLOUD_COLORS.length],
-              active && 'z-10 scale-110 drop-shadow-sm',
-              !active && hover && 'opacity-40',
-            )}
-            style={{
-              fontSize: `${size}rem`,
-              fontWeight: weight,
-              opacity: active ? 1 : 0.55 + w * 0.45,
-              animationDelay: `${Math.min(i, 20) * 25}ms`,
-              animationFillMode: 'both',
-            }}
-          >
-            {item.name}
-            {active && (
-              <span className="rounded-full bg-sky-600/15 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-400/20 dark:text-sky-300">
-                已 AC {item.count}
-              </span>
-            )}
-          </span>
-        )
-      })}
-    </div>
+    <TooltipProvider delayDuration={200}>
+      <div className="flex h-full min-h-0 flex-wrap content-center items-center justify-center gap-x-3 gap-y-2.5 px-3 py-2">
+        {ordered.map((item, i) => {
+          const w = item.count / max
+          const size = 0.75 + w * 0.65
+          const weight = w > 0.55 ? 700 : w > 0.3 ? 600 : 500
+          return (
+            <UiTooltip key={item.name}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'cursor-default select-none rounded-md px-0.5 leading-tight',
+                    'transition-opacity duration-150 hover:opacity-100',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    CLOUD_COLORS[i % CLOUD_COLORS.length],
+                  )}
+                  style={{
+                    fontSize: `${size}rem`,
+                    fontWeight: weight,
+                    opacity: 0.55 + w * 0.45,
+                  }}
+                >
+                  {item.name}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="tabular-nums">
+                {item.name} · 已 AC {item.count}
+              </TooltipContent>
+            </UiTooltip>
+          )
+        })}
+      </div>
+    </TooltipProvider>
   )
 }
 
@@ -137,7 +132,7 @@ function ProfilePanels({
 
   return (
     <>
-      {/* 桌面：两行 — 第一行平台/难度，第二行词云/Top */}
+      {/* 桌面：两行 — 第一行雷达/难度，第二行词云/Top */}
       <div className="hidden flex-col gap-3 lg:flex">
         <div className="grid gap-3 lg:grid-cols-2">
           {row1.map((p) => (
@@ -273,10 +268,17 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
       name: r.tag.trim(),
       short: shortLabel(r.tag.trim(), 12),
       count: r.acCount,
+      score: typeof r.score === 'number' ? r.score : 0,
     }))
-  const platforms = data.platforms
-    .filter((p) => p.name?.trim() && !isJunkLabel(p.name))
-    .map((p) => ({ name: p.name.trim(), value: p.count }))
+  const radarChart = [...radarAll]
+    .sort((a, b) => b.score - a.score || b.count - a.count)
+    .slice(0, 8)
+    .map((r) => ({
+      subject: shortLabel(r.name, 6),
+      fullName: r.name,
+      score: Math.max(0, Math.min(100, r.score)),
+      acCount: r.count,
+    }))
   const diffs = data.difficulties
     .filter((d) => d.name?.trim() && !isJunkLabel(d.name))
     .map((d) => ({ name: d.name.trim(), value: d.count }))
@@ -286,19 +288,41 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
 
   const row1: Panel[] = [
     {
-      key: 'platform',
-      title: '平台分布',
+      key: 'radar',
+      title: '能力雷达',
       hint: `总 AC ${data.totalAc}`,
-      body: platforms.length ? (
+      body: radarChart.length ? (
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={platforms} dataKey="value" nameKey="name" outerRadius={64}>
-              {platforms.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-          </PieChart>
+          <RadarChart data={radarChart} cx="50%" cy="52%" outerRadius="68%">
+            <PolarGrid stroke="var(--border)" />
+            <PolarAngleAxis
+              dataKey="subject"
+              tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+            />
+            <PolarRadiusAxis
+              angle={90}
+              domain={[0, 100]}
+              tick={{ fontSize: 9, fill: 'var(--muted-foreground)' }}
+              tickCount={5}
+            />
+            <Radar
+              name="掌握度"
+              dataKey="score"
+              stroke="var(--color-chart-1, #8884d8)"
+              fill="var(--color-chart-1, #8884d8)"
+              fillOpacity={0.35}
+            />
+            <Tooltip
+              formatter={(value) => [`${value}`, '掌握度']}
+              labelFormatter={(_, payload) => {
+                const row = payload?.[0]?.payload as
+                  | { fullName?: string; acCount?: number }
+                  | undefined
+                if (!row?.fullName) return ''
+                return `${row.fullName}${row.acCount != null ? ` · 已 AC ${row.acCount}` : ''}`
+              }}
+            />
+          </RadarChart>
         </ResponsiveContainer>
       ) : (
         <p className="px-2 text-sm text-muted-foreground">暂无</p>

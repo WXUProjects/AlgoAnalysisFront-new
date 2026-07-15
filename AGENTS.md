@@ -179,7 +179,7 @@ Auth 标志：`isAdmin` / `isCoach`(纯教练) / `isCaptain` / `isStaff`(1\|2\|3
 | **Home** | period 统计卡片（AC/提交切换、生涯/今/年/月/周）；提交/AC 双热力图；登录后算法画像 + AI 总结；OJ 快捷入口；首页公告摘要 |
 | **Login** | 用户名+密码；客户端 SHA256；JWT；跳转 `redirect` 或 `/` |
 | **Register** | 账号/密码/确认/姓名/邮箱；`groupId` 默认 0；成功去登录 |
-| **Profile** | `?id=` 看他人；头像/OJ 绑定与外链；本人：更新 OJ、编辑资料、退出；AC/提交对比；热力图；近期动态；算法画像；最近比赛 |
+| **Profile** | `?id=` 看他人；头像/OJ 绑定与外链；本人：编辑资料、退出；**Admin**：同步该用户 OJ；AC/提交对比；热力图；近期动态；算法画像；最近比赛 |
 | **ChangeProfile** | 改姓名/邮箱；邮件通知开关；绑定 OJ（AtCoder/洛谷/牛客/CF/QOJ/力扣）；`?oj=` 预选平台 |
 | **AllActivities** | 全站或单用户提交流；cursor 无限滚动；链到资料/题库 |
 | **Bulletin** | 分页列表；展开 HTML；置顶；`?expand=` 自动展开 |
@@ -196,7 +196,7 @@ Auth 标志：`isAdmin` / `isCoach`(纯教练) / `isCaptain` / `isStaff`(1\|2\|3
 | **Dashboard 壳** | 子导航：统计 / 公告 / 题库识别 / 组 / 用户 |
 | **Statistics** | 用户数、组数、AC/提交时段；趋势图；**Admin**：一键全局更新 OJ |
 | **Group** | 组 CRUD；成员列表；搜用户加组/移出；跳转资料 |
-| **User** | 列表分页；**Admin** 改角色/软删；**Coach** 改分组 |
+| **User** | 列表分页；**Admin** 改角色/软删/同步单人 OJ；**Coach** 改分组 |
 | **BulletinManage** | 公告 CRUD；HTML 编辑；置顶 |
 | **ProblemProgress** | 状态计数、队列、进行中/失败列表；**Admin**：暂停/恢复分析与爬取、重置、回填、重试失败 |
 

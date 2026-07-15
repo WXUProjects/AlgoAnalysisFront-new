@@ -118,6 +118,7 @@ export async function createOrg(payload: {
   slug?: string
   adminUserId?: number
   joinMode?: string
+  seatLimit?: number
 }) {
   const res = await post<OrgInfo | { code?: number; message?: string; data?: OrgInfo }>(
     endpoints.user.org.create,
