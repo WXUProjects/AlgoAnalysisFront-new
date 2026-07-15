@@ -7,75 +7,95 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { UserProfile } from '@shared/api'
+import type { OrgInfo, UserProfile } from '@shared/api'
 import { fetchProfileById, login as apiLogin } from '@/api/auth'
+import { listMyOrgs, switchOrg as apiSwitchOrg } from '@/api/org'
 import { setAuthExpiredHandler } from '@/lib/http'
 import { jwt, type JwtPayload } from '@/lib/jwt'
 import {
-  isAdminRole,
-  isCaptainRole,
   isCoachOnlyRole,
   isMemberLikeRole,
-  isStaffRole,
+  isOrgAdminFromPayload,
+  isSiteAdminFromPayload,
+  isStaffFromPayload,
 } from '@/lib/roles'
 
 interface AuthState {
   isLogin: boolean
-  /** 管理员：全部功能 */
+  /** 站点管理员 */
   isAdmin: boolean
-  /** 纯教练：管理端，无队员资料流程 */
+  isSiteAdmin: boolean
+  /** 当前组织管理员 */
+  isOrgAdmin: boolean
+  /** 兼容：旧纯教练 */
   isCoach: boolean
-  /** 队长：教练管理 + 队员交题/资料 */
   isCaptain: boolean
-  /** 管理端入口（管理员 / 教练 / 队长） */
+  /** 管理端入口：站点管理员或组织管理员 */
   isStaff: boolean
-  /** 队员侧（资料/交题）：队员 / 队长 / 管理员 */
   isMemberLike: boolean
   user: JwtPayload | null
   profile: UserProfile | null
+  orgs: OrgInfo[]
+  currentOrg: OrgInfo | null
   ready: boolean
   login: (username: string, password: string) => Promise<{ success: boolean; message: string }>
   logout: () => void
   sync: () => Promise<void>
+  switchOrg: (orgId: number) => Promise<{ success: boolean; message: string }>
+  refreshOrgs: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
 
 function deriveFlags(payload: JwtPayload | null) {
-  const roleId = payload?.roleId
   return {
     isLogin: Boolean(payload),
-    isAdmin: isAdminRole(roleId),
-    isCoach: isCoachOnlyRole(roleId),
-    isCaptain: isCaptainRole(roleId),
-    isStaff: isStaffRole(roleId),
-    isMemberLike: isMemberLikeRole(roleId),
+    isAdmin: isSiteAdminFromPayload(payload),
+    isSiteAdmin: isSiteAdminFromPayload(payload),
+    isOrgAdmin: isOrgAdminFromPayload(payload),
+    isCoach: isCoachOnlyRole(payload?.roleId),
+    isCaptain: false,
+    isStaff: isStaffFromPayload(payload),
+    isMemberLike: isMemberLikeRole(payload?.roleId) || Boolean(payload),
   }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<JwtPayload | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [orgs, setOrgs] = useState<OrgInfo[]>([])
   const [ready, setReady] = useState(false)
 
   const logout = useCallback(() => {
     jwt.clearToken()
     setUser(null)
     setProfile(null)
+    setOrgs([])
+  }, [])
+
+  const refreshOrgs = useCallback(async () => {
+    if (!jwt.isValid()) {
+      setOrgs([])
+      return
+    }
+    const res = await listMyOrgs()
+    if (res.success) setOrgs(res.list)
   }, [])
 
   const sync = useCallback(async () => {
     if (!jwt.isValid()) {
       setUser(null)
       setProfile(null)
+      setOrgs([])
       return
     }
 
     const payload = jwt.getUserInfo()
-    if (!payload || payload.roleId === undefined) {
+    if (!payload) {
       jwt.clearToken()
       setUser(null)
       setProfile(null)
+      setOrgs([])
       return
     }
 
@@ -85,12 +105,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (res.success && res.data) {
       setProfile(res.data)
     }
-  }, [])
+    await refreshOrgs()
+  }, [refreshOrgs])
 
   useEffect(() => {
     setAuthExpiredHandler(() => {
       setUser(null)
       setProfile(null)
+      setOrgs([])
     })
     return () => setAuthExpiredHandler(null)
   }, [])
@@ -106,7 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [sync])
 
-  // 可见性恢复 / 定时校验 token，避免半登录态
   useEffect(() => {
     const check = () => {
       if (!user) return
@@ -136,38 +157,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [sync],
   )
 
-  const { isLogin, isAdmin, isCoach, isCaptain, isStaff, isMemberLike } =
-    deriveFlags(user)
+  const switchOrg = useCallback(
+    async (orgId: number) => {
+      const res = await apiSwitchOrg(orgId)
+      if (res.success) {
+        await sync()
+      }
+      return { success: res.success, message: res.message }
+    },
+    [sync],
+  )
+
+  const flags = deriveFlags(user)
+  const currentOrg = useMemo(() => {
+    if (!user?.orgId) return orgs.find((o) => o.isCurrent) || orgs[0] || null
+    return orgs.find((o) => o.id === user.orgId) || orgs.find((o) => o.isCurrent) || null
+  }, [user, orgs])
 
   const value = useMemo<AuthState>(
     () => ({
-      isLogin,
-      isAdmin,
-      isCoach,
-      isCaptain,
-      isStaff,
-      isMemberLike,
+      ...flags,
       user,
       profile,
+      orgs,
+      currentOrg,
       ready,
       login,
       logout,
       sync,
+      switchOrg,
+      refreshOrgs,
     }),
-    [
-      isLogin,
-      isAdmin,
-      isCoach,
-      isCaptain,
-      isStaff,
-      isMemberLike,
-      user,
-      profile,
-      ready,
-      login,
-      logout,
-      sync,
-    ],
+    [flags, user, profile, orgs, currentOrg, ready, login, logout, sync, switchOrg, refreshOrgs],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

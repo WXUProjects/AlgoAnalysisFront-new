@@ -109,7 +109,7 @@ export function DashboardSiteSettings() {
   const [uploading, setUploading] = useState<'logo' | 'favicon' | null>(null)
 
   useEffect(() => {
-    setTitle(config.siteTitle || 'Algo-CWUX')
+    setTitle(config.siteTitle || 'GoAlgo')
     setLogo(config.siteLogo || '')
     setFavicon(config.favicon || '')
   }, [config])
@@ -168,7 +168,7 @@ export function DashboardSiteSettings() {
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Algo-CWUX"
+                  placeholder="GoAlgo"
                 />
               </Field>
               <Field>

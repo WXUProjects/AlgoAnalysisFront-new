@@ -7,6 +7,9 @@ export interface JwtPayload {
   username: string
   name: string
   roleId: number
+  isSiteAdmin?: boolean
+  orgId?: number
+  orgRole?: string
 }
 
 const TOKEN_KEY = 'jwtToken'

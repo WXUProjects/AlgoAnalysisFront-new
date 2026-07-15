@@ -74,8 +74,32 @@
 |--------|------|------|------|
 | POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc`，返回 `{ url }`（≤3MB 图片）。**url 带真实扩展名**（如 `.png`/`.jpg`） |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
-| GET | `/user/site/config` | 否 | 站点标题/logo/favicon |
-| POST | `/user/site/config` | 是(管理员) | body: `{ siteTitle, siteLogo, favicon }` |
+| GET | `/user/site/config` | 否 | 站点标题/logo/favicon（默认 GoAlgo） |
+| POST | `/user/site/config` | 是(站点管理员) | body: `{ siteTitle, siteLogo, favicon }` |
+
+### Org（GoAlgo 多租户）
+
+HTTP 手写路由（非 proto），需登录。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`。
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| GET | `/user/org/list` | 是 | 我的组织；`?all=1` 站点管理员看全部 |
+| GET | `/user/org/get` | 是 | query: `id`（默认当前组织） |
+| POST | `/user/org/create` | 站点管理员 | `{ name, slug?, adminUserId?, joinMode? }` |
+| POST | `/user/org/update` | 组织/站点管理员 | 品牌/开关/joinMode；间隔仅站点 |
+| POST | `/user/org/switch` | 是 | `{ orgId }` → 新 `jwtToken` |
+| POST | `/user/org/join` | 是 | `{ inviteCode }` 团队识别码 |
+| POST | `/user/org/leave` | 是 | `{ orgId }`；**公共域不可退出** |
+| GET | `/user/org/members` | 成员 | query: `orgId` |
+| POST | `/user/org/members/set-role` | 组织/站点管理员 | `{ orgId, userId, role: member\|org_admin }` |
+| POST | `/user/org/members/remove` | 组织/站点管理员 | `{ orgId, userId }`；不可移出公共域 |
+| GET | `/user/org/invite` | 组织管理员 | query: `orgId` → 团队识别码 |
+| POST | `/user/org/invite/rotate` | 组织管理员 | `{ orgId }` 更换识别码 |
+| GET | `/user/org/join-requests` | 组织管理员 | 待审批列表 |
+| POST | `/user/org/join-requests/review` | 组织管理员 | `{ id, approve }` |
+| POST | `/user/platform/set-site-admin` | 站点管理员 | `{ userId, isSiteAdmin }` |
+
+默认组织：**公共域** `slug=public`，全员自动加入，不可退出。
 
 **GetByIdRes**
 ```json
@@ -340,6 +364,21 @@ GET    /api/user/group/get
 GET    /api/user/group/list
 GET    /api/user/role/list
 POST   /api/user/role/set-user-role
+GET    /api/user/org/list
+GET    /api/user/org/get
+POST   /api/user/org/create
+POST   /api/user/org/update
+POST   /api/user/org/switch
+POST   /api/user/org/join
+POST   /api/user/org/leave
+GET    /api/user/org/members
+POST   /api/user/org/members/set-role
+POST   /api/user/org/members/remove
+GET    /api/user/org/invite
+POST   /api/user/org/invite/rotate
+GET    /api/user/org/join-requests
+POST   /api/user/org/join-requests/review
+POST   /api/user/platform/set-site-admin
 GET    /api/core/submit-log/get-by-id
 POST   /api/core/spider/set
 POST   /api/core/spider/update

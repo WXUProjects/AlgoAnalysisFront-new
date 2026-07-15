@@ -47,21 +47,24 @@ const titles: Record<string, string> = {
   '/admin/group': '分组管理',
   '/admin/user': '用户管理',
   '/admin/site': '站点设置',
+  '/admin/org': '组织设置',
 }
 
 export function AdminLayout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { isAdmin, isCoach, isCaptain, logout } = useAuth()
+  const { isAdmin, isOrgAdmin, logout, currentOrg } = useAuth()
   const { config } = useSiteConfig()
-  const brand = config.siteTitle || 'Algo-CWUX'
-  const staffLabel = isAdmin ? '后台管理' : isCaptain ? '队长管理' : '教练管理'
-  const staffSub = isAdmin ? '管理后台' : isCaptain ? '队长后台' : '教练后台'
+  const brand =
+    (currentOrg?.brandTitle && currentOrg.brandTitle.trim()) ||
+    config.siteTitle ||
+    'GoAlgo'
+  const staffLabel = isAdmin ? '站点管理' : '团队管理'
+  const staffSub = isAdmin ? '站点后台' : currentOrg?.name || '团队后台'
   const title = titles[pathname] || staffLabel
-  const userLabel = isAdmin ? '用户管理' : '队员管理'
-  // 纯教练无首页；返回前台落到比赛列表
-  const frontTo = isCoach ? '/contest' : '/'
-  const frontLabel = isCoach ? '浏览前台' : '返回前台'
+  const userLabel = isAdmin ? '用户管理' : '成员管理'
+  const frontTo = '/'
+  const frontLabel = '返回前台'
 
   function handleLogout() {
     logout()
@@ -131,30 +134,34 @@ export function AdminLayout() {
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname.startsWith('/admin/problem-progress')}
-                      tooltip="题库识别"
-                    >
-                      <NavLink to="/admin/problem-progress">
-                        <WorkflowIcon />
-                        <span>题库识别</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname.startsWith('/admin/group')}
-                      tooltip="分组"
-                    >
-                      <NavLink to="/admin/group">
-                        <UsersIcon />
-                        <span>分组管理</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {isAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/admin/problem-progress')}
+                        tooltip="题库识别"
+                      >
+                        <NavLink to="/admin/problem-progress">
+                          <WorkflowIcon />
+                          <span>题库识别</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {(isAdmin || isOrgAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/admin/group')}
+                        tooltip="分组"
+                      >
+                        <NavLink to="/admin/group">
+                          <UsersIcon />
+                          <span>分组管理</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -167,6 +174,20 @@ export function AdminLayout() {
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  {(isAdmin || isOrgAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/admin/org')}
+                        tooltip="组织设置"
+                      >
+                        <NavLink to="/admin/org">
+                          <SettingsIcon />
+                          <span>组织设置</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   {isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton

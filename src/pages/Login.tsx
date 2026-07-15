@@ -61,7 +61,7 @@ export function Login() {
       <Card className="w-full max-w-sm gap-4 py-4 motion-lift">
         <CardHeader className="gap-1 px-4">
           <CardTitle>登录</CardTitle>
-          <CardDescription>使用账号密码登录 Algo-CWUX</CardDescription>
+          <CardDescription>使用账号密码登录 GoAlgo</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <CardContent className="px-4">

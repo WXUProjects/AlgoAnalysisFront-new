@@ -10,7 +10,7 @@ import {
 import { getSiteConfig, type SiteConfig } from '@/api/site'
 
 const DEFAULT: SiteConfig = {
-  siteTitle: 'Algo-CWUX',
+  siteTitle: 'GoAlgo',
   siteLogo: '',
   favicon: '',
 }
@@ -28,7 +28,7 @@ const SiteConfigContext = createContext<Ctx>({
 })
 
 function applyBrand(cfg: SiteConfig) {
-  const title = cfg.siteTitle || 'Algo-CWUX'
+  const title = cfg.siteTitle || 'GoAlgo'
   document.title = title
 
   const fav = cfg.favicon || '/favicon.svg'

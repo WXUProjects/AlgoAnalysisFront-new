@@ -11,7 +11,7 @@ export type SiteConfig = {
 function normalize(raw: Record<string, unknown> | null | undefined): SiteConfig {
   const d = raw || {}
   return {
-    siteTitle: str(d.siteTitle, 'Algo-CWUX') || 'Algo-CWUX',
+    siteTitle: str(d.siteTitle, 'GoAlgo') || 'GoAlgo',
     siteLogo: normalizeStaticUrl(str(d.siteLogo)),
     favicon: normalizeStaticUrl(str(d.favicon)),
   }

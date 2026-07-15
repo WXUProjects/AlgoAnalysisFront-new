@@ -73,6 +73,14 @@ const DashboardSiteSettings = lazy(() =>
     default: m.DashboardSiteSettings,
   })),
 )
+const DashboardOrgSettings = lazy(() =>
+  import('@/pages/dashboard/OrgSettings').then((m) => ({
+    default: m.DashboardOrgSettings,
+  })),
+)
+const OrgHub = lazy(() =>
+  import('@/pages/OrgHub').then((m) => ({ default: m.OrgHub })),
+)
 
 function PageFallback() {
   return (
@@ -192,6 +200,14 @@ export const router = createBrowserRouter([
           </Lazy>
         ),
       },
+      {
+        path: 'org',
+        element: (
+          <Lazy>
+            <OrgHub />
+          </Lazy>
+        ),
+      },
       { path: 'problem', element: <Navigate to="/question-bank" replace /> },
       { path: 'dashboard', element: <Navigate to="/admin" replace /> },
       { path: 'dashboard/*', element: <Navigate to="/admin" replace /> },
@@ -258,6 +274,14 @@ export const router = createBrowserRouter([
             element: (
               <Lazy>
                 <DashboardSiteSettings />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'org',
+            element: (
+              <Lazy>
+                <DashboardOrgSettings />
               </Lazy>
             ),
           },

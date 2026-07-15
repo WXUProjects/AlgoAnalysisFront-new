@@ -37,6 +37,25 @@ export const endpoints = {
     site: {
       config: `${API_PREFIX}/user/site/config`,
     },
+    org: {
+      list: `${API_PREFIX}/user/org/list`,
+      get: `${API_PREFIX}/user/org/get`,
+      create: `${API_PREFIX}/user/org/create`,
+      update: `${API_PREFIX}/user/org/update`,
+      switch: `${API_PREFIX}/user/org/switch`,
+      join: `${API_PREFIX}/user/org/join`,
+      leave: `${API_PREFIX}/user/org/leave`,
+      members: `${API_PREFIX}/user/org/members`,
+      setRole: `${API_PREFIX}/user/org/members/set-role`,
+      removeMember: `${API_PREFIX}/user/org/members/remove`,
+      invite: `${API_PREFIX}/user/org/invite`,
+      inviteRotate: `${API_PREFIX}/user/org/invite/rotate`,
+      joinRequests: `${API_PREFIX}/user/org/join-requests`,
+      joinReview: `${API_PREFIX}/user/org/join-requests/review`,
+    },
+    platform: {
+      setSiteAdmin: `${API_PREFIX}/user/platform/set-site-admin`,
+    },
   },
   core: {
     submitLog: {
@@ -168,6 +187,39 @@ export interface GroupInfo {
 export interface RoleInfo {
   roleId: number
   name: string
+}
+
+/** 组织（GoAlgo 多租户） */
+export interface OrgInfo {
+  id: number
+  name: string
+  slug: string
+  plan?: string
+  status?: string
+  isSystem?: boolean
+  brandTitle?: string
+  brandLogo?: string
+  brandFavicon?: string
+  joinMode?: 'auto' | 'review' | string
+  inviteCode?: string
+  enableAiSummary?: boolean
+  enableAiEmail?: boolean
+  enableSpider?: boolean
+  spiderIntervalMin?: number
+  aiSummaryIntervalMin?: number
+  aiEmailSchedule?: string
+  myRole?: 'member' | 'org_admin' | string
+  isCurrent?: boolean
+}
+
+export interface OrgMemberInfo {
+  userId: number
+  username: string
+  name: string
+  avatar?: string
+  role: string
+  groupId?: number | null
+  joinedAt?: number
 }
 
 export interface SubmitLogItem {

@@ -1,8 +1,8 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   BookOpenIcon,
+  Building2Icon,
   CalendarIcon,
-  ExternalLinkIcon,
   HomeIcon,
   LayoutDashboardIcon,
   LogInIcon,
@@ -61,26 +61,37 @@ export function AppLayout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { config } = useSiteConfig()
-  const brand = config.siteTitle || 'Algo-CWUX'
-  const title = resolveTitle(pathname, brand)
   const {
     isLogin,
     isAdmin,
-    isCoach,
-    isCaptain,
     isStaff,
     isMemberLike,
     user,
+    orgs,
+    currentOrg,
     logout,
+    switchOrg,
   } = useAuth()
 
-  // 纯教练无首页/个人资料；品牌与默认入口走管理端
-  const homeTo = isCoach ? '/admin' : '/'
+  const brand =
+    (currentOrg?.brandTitle && currentOrg.brandTitle.trim()) ||
+    config.siteTitle ||
+    'GoAlgo'
+  const brandLogo = currentOrg?.brandLogo || config.siteLogo
+  const title = resolveTitle(pathname, brand)
+  const homeTo = '/'
 
   function handleLogout() {
     logout()
     toast.success('已退出登录')
     navigate('/login', { replace: true })
+  }
+
+  async function handleSwitchOrg(orgId: number) {
+    if (!orgId || orgId === user?.orgId) return
+    const res = await switchOrg(orgId)
+    if (res.success) toast.success('已切换组织')
+    else toast.error(res.message || '切换失败')
   }
 
   return (
@@ -93,21 +104,21 @@ export function AppLayout() {
               <SidebarMenuItem>
                 <SidebarMenuButton size="lg" asChild>
                   <Link to={homeTo}>
-                    {config.siteLogo ? (
+                    {brandLogo ? (
                       <img
-                        src={config.siteLogo}
+                        src={brandLogo}
                         alt=""
                         className="size-8 shrink-0 rounded-lg object-contain"
                       />
                     ) : (
                       <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground text-sm font-bold">
-                        {(brand[0] || 'A').toUpperCase()}
+                        {(brand[0] || 'G').toUpperCase()}
                       </div>
                     )}
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">{brand}</span>
                       <span className="truncate text-xs text-muted-foreground">
-                        算法协会
+                        {currentOrg?.name || 'GoAlgo'}
                       </span>
                     </div>
                   </Link>
@@ -120,20 +131,18 @@ export function AppLayout() {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {!isCoach && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={pathname === '/'}
-                        tooltip="首页"
-                      >
-                        <NavLink to="/" end>
-                          <HomeIcon />
-                          <span>首页</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === '/'}
+                      tooltip="首页"
+                    >
+                      <NavLink to="/" end>
+                        <HomeIcon />
+                        <span>首页</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -202,40 +211,30 @@ export function AppLayout() {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        tooltip={
-                          isAdmin
-                            ? '后台管理'
-                            : isCaptain
-                              ? '队长管理'
-                              : '教练管理'
-                        }
+                        tooltip={isAdmin ? '站点管理' : '团队管理'}
                       >
                         <Link to="/admin">
                           <LayoutDashboardIcon />
-                          <span>
-                            {isAdmin
-                              ? '后台管理'
-                              : isCaptain
-                                ? '队长管理'
-                                : '教练管理'}
-                          </span>
+                          <span>{isAdmin ? '站点管理' : '团队管理'}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="论坛">
-                      <a
-                        href="http://bbs.algo.zhiyuansofts.cn/"
-                        target="_blank"
-                        rel="noreferrer"
+                  {isLogin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/org')}
+                        tooltip="我的组织"
                       >
-                        <ExternalLinkIcon />
-                        <span>论坛</span>
-                      </a>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                        <NavLink to="/org">
+                          <Building2Icon />
+                          <span>我的组织</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -243,6 +242,25 @@ export function AppLayout() {
 
           <SidebarFooter>
             <SidebarSeparator />
+            {isLogin && orgs.length > 0 && (
+              <div className="px-2 pb-2">
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  当前组织
+                </label>
+                <select
+                  className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+                  value={user?.orgId || currentOrg?.id || ''}
+                  onChange={(e) => void handleSwitchOrg(Number(e.target.value))}
+                >
+                  {orgs.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                      {o.myRole === 'org_admin' ? ' · 管理' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <SidebarMenu>
               <SidebarMenuItem>
                 <ThemeToggle />
