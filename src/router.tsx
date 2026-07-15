@@ -87,6 +87,11 @@ const DashboardBulletinManage = lazy(() =>
     default: m.DashboardBulletinManage,
   })),
 )
+const DashboardEmergencyManage = lazy(() =>
+  import('@/pages/dashboard/EmergencyManage').then((m) => ({
+    default: m.DashboardEmergencyManage,
+  })),
+)
 const DashboardProblemProgress = lazy(() =>
   import('@/pages/dashboard/ProblemProgress').then((m) => ({
     default: m.DashboardProblemProgress,
@@ -388,6 +393,14 @@ export const router = createBrowserRouter([
             element: (
               <Lazy>
                 <DashboardBulletinManage />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'emergency',
+            element: (
+              <Lazy>
+                <DashboardEmergencyManage />
               </Lazy>
             ),
           },

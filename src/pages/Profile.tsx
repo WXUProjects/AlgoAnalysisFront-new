@@ -66,6 +66,8 @@ function buildRows(
   kind: 'ac' | 'submit',
   acRate: number,
   globalAcRate: number,
+  problemCount: number,
+  problemCountAve: number,
 ): StatRow[] {
   const u = user
   const g = global
@@ -73,6 +75,11 @@ function buildRows(
   const ave = (v: number | undefined) => (v ?? 0) / n
   const prefix = kind === 'ac' ? 'AC' : '提交'
   return [
+    {
+      title: '题数',
+      value: problemCount,
+      ave: problemCountAve,
+    },
     {
       title: `今日${prefix}`,
       value: u?.today ?? 0,
@@ -277,6 +284,9 @@ export function Profile() {
       : 0
 
   const statRows = useMemo(() => {
+    const n = Math.max(userCount, 1)
+    const problemCount = period?.ac.total ?? 0
+    const problemCountAve = (globalPeriod?.ac.total ?? 0) / n
     if (mode === 'ac') {
       return buildRows(
         period?.ac,
@@ -285,6 +295,8 @@ export function Profile() {
         'ac',
         acRate,
         globalAcRate,
+        problemCount,
+        problemCountAve,
       )
     }
     return buildRows(
@@ -294,6 +306,8 @@ export function Profile() {
       'submit',
       acRate,
       globalAcRate,
+      problemCount,
+      problemCountAve,
     )
   }, [mode, period, globalPeriod, userCount, acRate, globalAcRate])
 

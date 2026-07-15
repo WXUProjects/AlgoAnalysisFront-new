@@ -100,6 +100,7 @@
 | POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；本人 / 站点管理员 / **当前组织 staff 管理本组织成员**；无组织授权时不可开启日报/周报 |
 | GET | `/user/profile/ids-by-group` | 否 | query: `groupId` |
 | POST | `/user/profile/get-by-ids` | 否 | body: `{ userIds, orgId? }`；`name`=该组织 `org_display_name`（空则 username）；`orgId` 缺省用 JWT 当前组织，再回落公共域 |
+| GET | `/user/profile/non-public-org-user-ids` | 否（内部） | 至少属于一个非公共域组织的 userIds（core 题面 AI 闸门） |
 | POST | `/user/profile/delete` | 是(站点管理员) | **硬删除**用户：清空 org 成员/申请/粘贴板 + core 的 OJ 绑定/提交/比赛记录，再删账号；不可删自己与站点管理员 |
 
 ### Upload / Site
@@ -247,6 +248,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/user/org/members/set-display-name` | 本人或组织/站点管理员 | `{ orgId, userId?, orgDisplayName }` 改组织内名称 |
 | GET | `/user/org/member-ids` | 否/登录 | query: `orgId` → `{ userIds }`（core 隔离用） |
 | GET | `/user/profile/ids-by-org` | 否 | query: `orgId` → 组织成员 ids（gRPC/HTTP） |
+| GET | `/user/profile/non-public-org-user-ids` | 否（内部） | 非公共域组织用户 ids（题面 AI：仅这些用户的提交触发分析） |
 | GET | `/user/org/invite` | 组织管理员 | query: `orgId` → 团队识别码 |
 | POST | `/user/org/invite/rotate` | 组织管理员 | `{ orgId }` 更换识别码 |
 | GET | `/user/org/join-requests` | 组织管理员 | 待审批列表 |
@@ -447,6 +449,39 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 }
 ```
 
+### Emergency（紧急弹窗）
+
+全站紧急通知；用户端强制弹窗，本地 localStorage 记录已确认的最大 id。仅站点管理员可管理。
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| POST | `/core/emergency/create` | 是(站点管理员) | 创建 |
+| POST | `/core/emergency/update` | 是(站点管理员) | 更新 |
+| DELETE | `/core/emergency/delete` | 是(站点管理员) | query: `id` |
+| GET | `/core/emergency/list` | 是(站点管理员) | query: `page`, `pageSize` |
+| GET | `/core/emergency/active` | 否 | 当前生效列表（`enabled=true`，按 sortOrder） |
+
+**CreateReq / UpdateReq**
+```json
+{ "id": 1, "title": "string", "content": "string", "enabled": true, "sortOrder": 0 }
+```
+（Create 无 `id`）
+
+**EmergencyInfo**
+```json
+{
+  "id": 1,
+  "title": "string",
+  "content": "string",
+  "enabled": true,
+  "sortOrder": 0,
+  "authorId": 1,
+  "authorName": "string",
+  "createdAt": 1710000000,
+  "updatedAt": 1710000000
+}
+```
+
 ### Problem
 
 | Method | Path | Auth | 说明 |
@@ -457,7 +492,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/core/problem/submissions` | 否 | query: `problemId`, `page`, `pageSize`, `userId?` |
 | GET | `/core/problem/user-profile` | 否 | query: `userId` 做题画像 |
 | GET | `/core/problem/progress` | 是(管理员) | 爬取/分析进度 |
-| POST | `/core/problem/backfill` | 是(管理员) | 近6月提交回填入队；body: `{ limit }` |
+| POST | `/core/problem/backfill` | 是(管理员) | 近6月提交回填入队；body: `{ limit }`；无题面一律补爬；题面 AI 仅当近窗有组织用户（非纯公共域）提交 |
 | POST | `/core/problem/emergency-stop` | 是(管理员) | 暂停分析（队列保留） |
 | POST | `/core/problem/reset-all` | 是(管理员) | 重置 AI 标签；body: `{ requeue, requeueSet }` |
 | POST | `/core/problem/reset-queues` | 是(管理员) | purge MQ 后按 DB 待爬/待分析重灌 |

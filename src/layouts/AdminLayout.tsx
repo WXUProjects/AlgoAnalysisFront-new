@@ -10,6 +10,7 @@ import {
   LogOutIcon,
   MegaphoneIcon,
   SettingsIcon,
+  SirenIcon,
   UsersIcon,
   WorkflowIcon,
 } from 'lucide-react'
@@ -18,6 +19,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { staffNavLabel } from '@/lib/roles'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
+import { EmergencyDialogHost } from '@/components/emergency-dialog'
 import { SiteFooter } from '@/components/site-footer'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
@@ -48,6 +50,7 @@ const titles: Record<string, string> = {
   '/admin/site-statistics': '站点数据统计',
   '/admin/access': '访问统计',
   '/admin/bulletin': '公告管理',
+  '/admin/emergency': '紧急通知',
   '/admin/problem-progress': '题库识别',
   '/admin/group': '分组管理',
   '/admin/user': '组织成员',
@@ -281,6 +284,18 @@ export function AdminLayout() {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
+                        isActive={pathname.startsWith('/admin/emergency')}
+                        tooltip="紧急通知"
+                      >
+                        <NavLink to="/admin/emergency">
+                          <SirenIcon />
+                          <span>紧急通知</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
                         isActive={
                           pathname === '/admin/site' ||
                           pathname.startsWith('/admin/site/')
@@ -399,6 +414,7 @@ export function AdminLayout() {
           </div>
         </SidebarInset>
         <Toaster />
+        <EmergencyDialogHost />
       </SidebarProvider>
     </TooltipProvider>
     </MotionProvider>

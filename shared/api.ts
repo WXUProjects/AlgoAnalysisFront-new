@@ -24,6 +24,7 @@ export const endpoints = {
       setEmailEnabled: `${API_PREFIX}/user/profile/set-email-enabled`,
       idsByGroup: `${API_PREFIX}/user/profile/ids-by-group`,
       getByIds: `${API_PREFIX}/user/profile/get-by-ids`,
+      nonPublicOrgUserIds: `${API_PREFIX}/user/profile/non-public-org-user-ids`,
       delete: `${API_PREFIX}/user/profile/delete`,
     },
     group: {
@@ -101,6 +102,13 @@ export const endpoints = {
       delete: `${API_PREFIX}/core/bulletin/delete`,
       get: `${API_PREFIX}/core/bulletin/get`,
       list: `${API_PREFIX}/core/bulletin/list`,
+    },
+    emergency: {
+      create: `${API_PREFIX}/core/emergency/create`,
+      update: `${API_PREFIX}/core/emergency/update`,
+      delete: `${API_PREFIX}/core/emergency/delete`,
+      list: `${API_PREFIX}/core/emergency/list`,
+      active: `${API_PREFIX}/core/emergency/active`,
     },
     problem: {
       list: `${API_PREFIX}/core/problem/list`,
@@ -381,6 +389,18 @@ export interface BulletinInfo {
   authorId: number
   authorName: string
   isPinned: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+export interface EmergencyInfo {
+  id: number
+  title: string
+  content: string
+  enabled: boolean
+  sortOrder: number
+  authorId: number
+  authorName: string
   createdAt: number
   updatedAt: number
 }

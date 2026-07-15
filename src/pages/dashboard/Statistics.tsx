@@ -145,6 +145,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   const cards = [
     { label: isSite ? '全站用户' : '组织成员', value: userCount },
     ...(isSite ? [] : [{ label: '分组数', value: groupCount }]),
+    { label: '题数', value: period?.ac.total },
     { label: '总 AC', value: period?.ac.total },
     { label: '总提交', value: period?.submit.total },
     {

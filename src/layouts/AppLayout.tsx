@@ -21,6 +21,7 @@ import { staffNavLabel } from '@/lib/roles'
 import { trackPageVisit } from '@/lib/visit-tracker'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
+import { EmergencyDialogHost } from '@/components/emergency-dialog'
 import { SiteFooter } from '@/components/site-footer'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
@@ -414,6 +415,7 @@ export function AppLayout() {
           </main>
         </SidebarInset>
         <Toaster richColors position="top-center" />
+        <EmergencyDialogHost />
       </SidebarProvider>
     </TooltipProvider>
     </MotionProvider>

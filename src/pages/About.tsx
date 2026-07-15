@@ -92,6 +92,10 @@ export function About() {
         <p className="mt-1 text-sm text-muted-foreground">
           GoAlgo · 给刷题的人和带队的人用的训练与数据平台
         </p>
+        <p className="mt-2 text-sm text-foreground">
+          欢迎加入 GoAlgo 用户交流群 QQ 群{' '}
+          <span className="font-medium tabular-nums">925338346</span>
+        </p>
       </div>
 
       <Card>
