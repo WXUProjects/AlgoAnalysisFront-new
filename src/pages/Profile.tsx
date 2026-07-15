@@ -55,6 +55,8 @@ type StatRow = {
   value: number
   ave: number
   grow?: number
+  /** 覆盖主数值展示（如生涯 AC 的「次数 / 题数」） */
+  display?: string
 }
 
 function buildRows(
@@ -72,15 +74,14 @@ function buildRows(
   const n = Math.max(userCount, 1)
   const ave = (v: number | undefined) => (v ?? 0) / n
   const prefix = kind === 'ac' ? 'AC' : '提交'
-  // AC 模式：生涯 = 按题去重后的累计 AC（即累计题数），不再单独列「题数」
-  const careerTitle = kind === 'ac' ? '生涯 AC（题数）' : `总${prefix}`
-  const careerValue = kind === 'ac' ? problemCount : (u?.total ?? 0)
-  const careerAve = kind === 'ac' ? problemCountAve : ave(g?.total)
+  const acRaw = u?.totalRaw ?? problemCount
+  const acRawAve = g?.totalRaw != null ? ave(g.totalRaw) : problemCountAve
   return [
     {
-      title: careerTitle,
-      value: careerValue,
-      ave: careerAve,
+      title: kind === 'ac' ? '生涯 AC' : `总${prefix}`,
+      value: kind === 'ac' ? acRaw : (u?.total ?? 0),
+      ave: kind === 'ac' ? acRawAve : ave(g?.total),
+      display: kind === 'ac' ? `${acRaw} / ${problemCount}` : undefined,
     },
     {
       title: `今日${prefix}`,
@@ -118,7 +119,11 @@ function StatBarRow({ row }: { row: StatRow }) {
   const pct = denom > 0 ? Math.min(100, (row.value / denom) * 100) : 0
   const avePct = denom > 0 ? Math.min(100, (row.ave / denom) * 100) : 0
   const isRate = row.title === 'AC 率'
-  const display = isRate ? `${row.value.toFixed(2)}%` : String(row.value)
+  const display = row.display
+    ? row.display
+    : isRate
+      ? `${row.value.toFixed(2)}%`
+      : String(row.value)
   const aveDisplay = isRate ? `${row.ave.toFixed(2)}%` : row.ave.toFixed(2)
 
   const growClass = cn(

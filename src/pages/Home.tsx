@@ -312,8 +312,14 @@ export function Home() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <StatCard
             label="生涯"
-            sub={mode === 'ac' ? '累计AC次数/累计题数' : '累计提交'}
-            value={stats?.total ?? '-'}
+            sub={mode === 'ac' ? '累计AC次数 / 累计题数' : '累计提交'}
+            value={
+              mode === 'ac'
+                ? period
+                  ? `${period.ac.totalRaw ?? period.ac.total} / ${period.ac.total}`
+                  : '-'
+                : (stats?.total ?? '-')
+            }
             loading={loading}
           />
           <StatCard

@@ -145,7 +145,12 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   const cards = [
     { label: isSite ? '全站用户' : '组织成员', value: userCount },
     ...(isSite ? [] : [{ label: '分组数', value: groupCount }]),
-    { label: '生涯 AC（题数）', value: period?.ac.total },
+    {
+      label: '生涯 AC',
+      value: period
+        ? `${period.ac.totalRaw ?? period.ac.total} / ${period.ac.total}`
+        : undefined,
+    },
     { label: '总提交', value: period?.submit.total },
     {
       label: '今日 AC / 提交',

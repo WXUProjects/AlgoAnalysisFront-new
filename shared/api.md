@@ -407,10 +407,13 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 **PeriodRes.data**
 ```json
 {
-  "ac": { "today": 0, "thisWeek": 0, "lastWeek": 0, "thisMonth": 0, "lastMonth": 0, "thisYear": 0, "lastYear": 0, "total": 0 },
+  "ac": { "today": 0, "thisWeek": 0, "lastWeek": 0, "thisMonth": 0, "lastMonth": 0, "thisYear": 0, "lastYear": 0, "total": 0, "totalRaw": 0 },
   "submit": { "today": 0, "thisWeek": 0, "lastWeek": 0, "thisMonth": 0, "lastMonth": 0, "thisYear": 0, "lastYear": 0, "total": 0 }
 }
 ```
+- `ac.total`：累计**题数**（按题去重）
+- `ac.totalRaw`：累计 **AC 次数**（不去重）
+- 时段字段（today…thisYear）均为去重题数
 
 ### Contest
 

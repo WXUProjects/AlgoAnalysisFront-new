@@ -351,7 +351,10 @@ export interface PeriodItem {
   lastMonth: number
   thisYear: number
   lastYear: number
+  /** 去重：累计题数（AC）或累计提交（submit） */
   total: number
+  /** 仅 AC：累计 AC 次数（不去重）；submit 无此字段 */
+  totalRaw?: number
 }
 
 export interface PeriodData {

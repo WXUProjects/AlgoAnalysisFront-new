@@ -8,6 +8,9 @@ import { get, num, str, type ApiResult } from '@/lib/http'
 
 function normalizePeriodItem(raw: Record<string, unknown> | undefined): PeriodItem {
   const r = raw ?? {}
+  const total = num(r.total)
+  const totalRaw =
+    r.totalRaw !== undefined && r.totalRaw !== null ? num(r.totalRaw) : undefined
   return {
     today: num(r.today),
     thisWeek: num(r.thisWeek),
@@ -16,7 +19,8 @@ function normalizePeriodItem(raw: Record<string, unknown> | undefined): PeriodIt
     lastMonth: num(r.lastMonth),
     thisYear: num(r.thisYear),
     lastYear: num(r.lastYear),
-    total: num(r.total),
+    total,
+    ...(totalRaw !== undefined ? { totalRaw } : {}),
   }
 }
 
