@@ -13,7 +13,7 @@ import {
 export function NotFound() {
   return (
     <PageShell className="items-center justify-center" stagger={false}>
-      <Card className="w-full max-w-md text-center">
+      <Card className="w-full max-w-md text-center motion-lift">
         <CardHeader>
           <CardTitle>404</CardTitle>
           <CardDescription>页面不存在</CardDescription>

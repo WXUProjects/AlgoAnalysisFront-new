@@ -52,7 +52,7 @@ export function Register() {
 
   return (
     <PageShell className="items-center justify-center" stagger={false}>
-      <Card className="w-full max-w-sm gap-4 py-4">
+      <Card className="w-full max-w-sm gap-4 py-4 motion-lift">
         <CardHeader className="gap-1 px-4">
           <CardTitle>注册</CardTitle>
           <CardDescription>创建 Algo-CWUX 账号</CardDescription>

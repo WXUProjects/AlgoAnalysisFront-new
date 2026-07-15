@@ -1,18 +1,36 @@
-import type { ReactNode } from 'react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
+import { useMotion } from '@/motion/MotionContext'
+import { animateStagger } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
-/** 保留 API，不再做 JS 动画（避免列表卡顿） */
+/** 子项依次入场；子节点需可直接作为 DOM 子元素 */
 export function Stagger({
   children,
   className,
+  ready = true,
+  stagger = 0.05,
 }: {
   children: ReactNode
   className?: string
   ready?: boolean
   stagger?: number
 }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const { direction, pathname } = useMotion()
+
+  useLayoutEffect(() => {
+    if (!ready) return
+    const root = ref.current
+    if (!root) return
+    const items = root.querySelectorAll<HTMLElement>(
+      ':scope > [data-stagger-item]',
+    )
+    if (!items.length) return
+    animateStagger(items, direction, { stagger })
+  }, [ready, direction, pathname, stagger, children])
+
   return (
-    <div className={cn(className)} data-stagger-root="">
+    <div ref={ref} className={cn(className)} data-stagger-root="">
       {children}
     </div>
   )

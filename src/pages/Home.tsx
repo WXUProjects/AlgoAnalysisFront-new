@@ -107,7 +107,7 @@ function StatCard({
   loading?: boolean
 }) {
   return (
-    <div className="relative overflow-hidden rounded-xl border bg-card p-4 shadow-sm transition-colors hover:bg-muted/30">
+    <div className="relative overflow-hidden rounded-xl border bg-card p-4 shadow-sm motion-lift hover:bg-muted/30">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
@@ -246,7 +246,7 @@ export function Home() {
               href={o.href}
               target="_blank"
               rel="noreferrer"
-              className="group flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-muted/40"
+              className="group flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/40 hover:shadow-sm"
             >
               <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background p-1">
                 <img
@@ -427,7 +427,7 @@ export function Home() {
                     <Link
                       key={b.id}
                       to={`/bulletin?expand=${b.id}`}
-                      className="flex items-start justify-between gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-muted/40"
+                      className="flex items-start justify-between gap-2 rounded-md border px-3 py-2 text-sm transition-all duration-200 ease-out hover:bg-muted/40 hover:shadow-sm"
                     >
                       <span className="flex min-w-0 items-start gap-2">
                         {b.isPinned && (

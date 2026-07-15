@@ -706,7 +706,7 @@ export function Profile() {
               {contests.map((c) => (
                 <div
                   key={c.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors hover:bg-muted/40"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-sm transition-all duration-200 ease-out hover:bg-muted/40 hover:shadow-sm"
                 >
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <div className="flex items-center gap-2">

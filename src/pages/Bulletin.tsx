@@ -79,7 +79,9 @@ export function Bulletin() {
           return (
             <Card
               key={item.id}
-              className={cn('gap-2 py-3 cursor-pointer transition-colors hover:bg-muted/40')}
+              className={cn(
+                'gap-2 py-3 cursor-pointer transition-all duration-200 ease-out hover:bg-muted/40 hover:shadow-sm',
+              )}
               onClick={() => toggle(item.id)}
             >
               <CardHeader className="gap-1 px-4">

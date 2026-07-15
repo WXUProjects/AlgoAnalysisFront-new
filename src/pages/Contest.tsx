@@ -124,7 +124,7 @@ export function Contest() {
           </Card>
         )}
         {list.map((item) => (
-          <Card key={item.id} className="gap-2 py-3">
+          <Card key={item.id} className="gap-2 py-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <CardHeader className="flex flex-row items-start justify-between gap-3 px-4 space-y-0">
               <div className="flex min-w-0 flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">

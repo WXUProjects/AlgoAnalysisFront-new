@@ -182,8 +182,41 @@ function TabsContent({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Content>) {
+  const ref = React.useRef<HTMLDivElement>(null)
+  const wasActive = React.useRef(false)
+
+  React.useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const play = () => {
+      const active = el.getAttribute("data-state") === "active"
+      if (active && !wasActive.current && !prefersReducedMotion()) {
+        gsap.fromTo(
+          el,
+          { opacity: 0, y: 8 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.28,
+            ease: "power2.out",
+            overwrite: true,
+            clearProps: "transform",
+          },
+        )
+      }
+      wasActive.current = active
+    }
+
+    play()
+    const mo = new MutationObserver(play)
+    mo.observe(el, { attributes: true, attributeFilter: ["data-state"] })
+    return () => mo.disconnect()
+  }, [])
+
   return (
     <TabsPrimitive.Content
+      ref={ref}
       data-slot="tabs-content"
       className={cn("flex-1 outline-none", className)}
       {...props}

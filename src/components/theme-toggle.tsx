@@ -14,7 +14,17 @@ export function ThemeToggle() {
       className="w-full justify-start"
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
     >
-      {isDark ? <SunIcon data-icon="inline-start" /> : <MoonIcon data-icon="inline-start" />}
+      {isDark ? (
+        <SunIcon
+          data-icon="inline-start"
+          className="transition-transform duration-300 ease-out group-hover:rotate-45"
+        />
+      ) : (
+        <MoonIcon
+          data-icon="inline-start"
+          className="transition-transform duration-300 ease-out"
+        />
+      )}
       {isDark ? '浅色主题' : '深色主题'}
     </Button>
   )

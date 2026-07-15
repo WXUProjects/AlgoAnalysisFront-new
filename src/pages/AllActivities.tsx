@@ -148,7 +148,10 @@ export function AllActivities() {
           )
           const displayName = item.userName || `用户${item.userId}`
           return (
-            <Card key={`${item.id}-${item.submitId}`} className="gap-1 py-3">
+            <Card
+              key={`${item.id}-${item.submitId}`}
+              className="gap-1 py-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+            >
               <CardHeader className="gap-1 px-4">
                 <CardTitle className="text-sm font-medium">
                   <Link

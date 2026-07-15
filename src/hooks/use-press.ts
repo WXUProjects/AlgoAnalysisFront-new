@@ -43,8 +43,8 @@ export function usePress<T extends HTMLElement = HTMLElement>(
     gsap.to(el, {
       scale: 1,
       filter: 'brightness(1)',
-      duration: 0.28,
-      ease: 'back.out(2.2)',
+      duration: 0.32,
+      ease: 'back.out(2.4)',
       overwrite: true,
       clearProps: 'transform,filter',
     })

@@ -1,26 +1,40 @@
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { useMotion } from '@/motion/MotionContext'
-import { animateEnter, prefersReducedMotion } from '@/lib/motion'
+import {
+  animateEnter,
+  animateStagger,
+  prefersReducedMotion,
+} from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 export function PageShell({
   children,
   className,
+  stagger = true,
 }: {
   children: ReactNode
   className?: string
-  /** @deprecated 已移除错落动画以减轻卡顿 */
+  /** 自动对直接子元素做轻微错落入场 */
   stagger?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const { pathname } = useMotion()
+  const { direction, pathname } = useMotion()
   const reduced = prefersReducedMotion()
 
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    animateEnter(el)
-  }, [pathname])
+
+    animateEnter(el, direction)
+
+    if (!stagger) return
+    const items = el.querySelectorAll<HTMLElement>(
+      ':scope > [data-stagger-item], :scope > section, :scope > [data-slot="card"]',
+    )
+    if (items.length > 1) {
+      animateStagger(items, direction, { delay: 0.06, stagger: 0.05 })
+    }
+  }, [direction, pathname, stagger])
 
   return (
     <div

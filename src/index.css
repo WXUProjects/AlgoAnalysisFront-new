@@ -99,6 +99,10 @@
     @apply border-border outline-ring/50;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   html,
   body,
   #root {
@@ -107,16 +111,28 @@
 
   body {
     @apply bg-background text-foreground m-0;
+    transition: background-color 0.28s ease, color 0.28s ease;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
+    html {
+      scroll-behavior: auto;
     }
+
+    body {
+      transition: none;
+    }
+  }
+}
+
+/* 列表 / 可点行 / 卡片轻抬 */
+@layer utilities {
+  .motion-row {
+    @apply transition-colors duration-150 ease-out hover:bg-muted/50;
+  }
+
+  .motion-lift {
+    @apply transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md;
   }
 }
 
