@@ -63,8 +63,19 @@ export function AppLayout() {
   const { config } = useSiteConfig()
   const brand = config.siteTitle || 'Algo-CWUX'
   const title = resolveTitle(pathname, brand)
-  const { isLogin, isAdmin, isCaptain, isStaff, isMemberLike, user, logout } =
-    useAuth()
+  const {
+    isLogin,
+    isAdmin,
+    isCoach,
+    isCaptain,
+    isStaff,
+    isMemberLike,
+    user,
+    logout,
+  } = useAuth()
+
+  // 纯教练无首页/个人资料；品牌与默认入口走管理端
+  const homeTo = isCoach ? '/admin' : '/'
 
   function handleLogout() {
     logout()
@@ -81,7 +92,7 @@ export function AppLayout() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton size="lg" asChild>
-                  <Link to="/">
+                  <Link to={homeTo}>
                     {config.siteLogo ? (
                       <img
                         src={config.siteLogo}
@@ -109,14 +120,20 @@ export function AppLayout() {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname === '/'} tooltip="首页">
-                      <NavLink to="/" end>
-                        <HomeIcon />
-                        <span>首页</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {!isCoach && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname === '/'}
+                        tooltip="首页"
+                      >
+                        <NavLink to="/" end>
+                          <HomeIcon />
+                          <span>首页</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild

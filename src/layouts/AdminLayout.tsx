@@ -1,8 +1,10 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
+  ActivityIcon,
   ArrowLeftIcon,
   BookOpenIcon,
   BarChart3Icon,
+  CalendarIcon,
   LayoutDashboardIcon,
   LogOutIcon,
   MegaphoneIcon,
@@ -50,13 +52,16 @@ const titles: Record<string, string> = {
 export function AdminLayout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { isAdmin, isCaptain, logout } = useAuth()
+  const { isAdmin, isCoach, isCaptain, logout } = useAuth()
   const { config } = useSiteConfig()
   const brand = config.siteTitle || 'Algo-CWUX'
   const staffLabel = isAdmin ? '后台管理' : isCaptain ? '队长管理' : '教练管理'
   const staffSub = isAdmin ? '管理后台' : isCaptain ? '队长后台' : '教练后台'
   const title = titles[pathname] || staffLabel
   const userLabel = isAdmin ? '用户管理' : '队员管理'
+  // 纯教练无首页；返回前台落到比赛列表
+  const frontTo = isCoach ? '/contest' : '/'
+  const frontLabel = isCoach ? '浏览前台' : '返回前台'
 
   function handleLogout() {
     logout()
@@ -184,10 +189,26 @@ export function AdminLayout() {
           <SidebarFooter>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="返回前台">
-                  <Link to="/">
+                <SidebarMenuButton asChild tooltip={frontLabel}>
+                  <Link to={frontTo}>
                     <ArrowLeftIcon />
-                    <span>返回前台</span>
+                    <span>{frontLabel}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="比赛">
+                  <Link to="/contest">
+                    <CalendarIcon />
+                    <span>比赛</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="动态">
+                  <Link to="/all-activities">
+                    <ActivityIcon />
+                    <span>动态</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

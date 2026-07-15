@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import {
   BookOpenIcon,
   CalendarDaysIcon,
@@ -147,7 +147,7 @@ function StatCard({
 }
 
 export function Home() {
-  const { isLogin, isMemberLike, user } = useAuth()
+  const { isLogin, isCoach, isMemberLike, ready, user } = useAuth()
   const [period, setPeriod] = useState<PeriodData | null>(null)
   const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
@@ -158,6 +158,8 @@ export function Home() {
   const [mode, setMode] = useState<'submit' | 'ac'>('ac')
 
   useEffect(() => {
+    // 纯教练不加载首页数据
+    if (isCoach) return
     let cancelled = false
     async function load() {
       setLoading(true)
@@ -208,7 +210,7 @@ export function Home() {
     return () => {
       cancelled = true
     }
-  }, [isLogin, user])
+  }, [isLogin, isCoach, user])
 
   const stats: PeriodItem | null = mode === 'ac' ? period?.ac ?? null : period?.submit ?? null
   const modeLabel = mode === 'ac' ? 'AC' : '提交'
@@ -229,6 +231,11 @@ export function Home() {
     () => (stats ? trendOf(stats.thisWeek, stats.lastWeek) : undefined),
     [stats],
   )
+
+  // 纯教练：首页是队员视图，直接进管理端
+  if (ready && isCoach) {
+    return <Navigate to="/admin" replace />
+  }
 
   function QuickLinks() {
     return (

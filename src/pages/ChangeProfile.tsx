@@ -16,7 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -27,7 +27,12 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
-import { OJ_PLATFORMS, normalizeOjQuery, type OjPlatform } from '@/lib/link'
+import {
+  getOjBindGuide,
+  OJ_PLATFORMS,
+  normalizeOjQuery,
+  type OjPlatform,
+} from '@/lib/link'
 
 export function ChangeProfile() {
   const { user, profile, sync } = useAuth()
@@ -44,6 +49,7 @@ export function ChangeProfile() {
   const [saving, setSaving] = useState(false)
   const [binding, setBinding] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const ojGuide = getOjBindGuide(platform)
 
   useEffect(() => {
     if (profile) {
@@ -209,7 +215,9 @@ export function ChangeProfile() {
       <Card className="gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>绑定 OJ</CardTitle>
-          <CardDescription>绑定后可同步提交与比赛数据</CardDescription>
+          <CardDescription>
+            绑定 AtCoder / 洛谷 / 牛客 / Codeforces / QOJ / 力扣后，可同步提交与比赛数据
+          </CardDescription>
         </CardHeader>
         <form onSubmit={handleBindOj}>
           <CardContent className="px-4">
@@ -237,15 +245,28 @@ export function ChangeProfile() {
                   </SelectContent>
                 </Select>
               </Field>
+              <div className="rounded-lg border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">如何填写？</p>
+                <p className="mt-1 leading-relaxed">{ojGuide.tip}</p>
+                {ojGuide.example ? (
+                  <p className="mt-1 break-all font-mono text-xs leading-relaxed">
+                    {ojGuide.example}
+                  </p>
+                ) : null}
+              </div>
               <Field className="gap-1.5">
-                <FieldLabel htmlFor="oj-username">用户名 / ID</FieldLabel>
+                <FieldLabel htmlFor="oj-username">{ojGuide.fieldLabel}</FieldLabel>
                 <Input
                   id="oj-username"
                   value={ojUsername}
                   onChange={(e) => setOjUsername(e.target.value)}
-                  placeholder="填写对应平台用户名"
+                  placeholder={ojGuide.placeholder}
                   disabled={binding}
+                  autoComplete="off"
                 />
+                <FieldDescription>
+                  填错会导致无法同步数据，请对照上方示例从个人主页复制。
+                </FieldDescription>
               </Field>
             </FieldGroup>
           </CardContent>
