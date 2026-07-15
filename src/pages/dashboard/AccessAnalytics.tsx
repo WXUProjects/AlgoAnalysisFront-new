@@ -383,10 +383,13 @@ export function DashboardAccessAnalytics() {
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} width={36} />
                     <Tooltip
-                      formatter={(v: number, _n, item) => {
-                        const share = (item?.payload as { share?: number })?.share
+                      formatter={(value, _name, item) => {
+                        const n = typeof value === 'number' ? value : Number(value) || 0
+                        const share = (
+                          item as { payload?: { share?: number } } | undefined
+                        )?.payload?.share
                         return [
-                          `${v.toLocaleString('zh-CN')}${share != null ? `（${share.toFixed(1)}%）` : ''}`,
+                          `${n.toLocaleString('zh-CN')}${share != null ? `（${share.toFixed(1)}%）` : ''}`,
                           'PV',
                         ]
                       }}
