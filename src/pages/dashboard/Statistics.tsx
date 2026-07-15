@@ -53,8 +53,26 @@ function DeltaText({ value }: { value: number | null }) {
   )
 }
 
+type StatsScope = 'org' | 'site'
+
+/** 组织数据统计：当前组织成员汇总 */
+export function DashboardOrgStatistics() {
+  return <StatisticsPage scope="org" />
+}
+
+/** 站点数据统计：全站汇总（仅站点管理员） */
+export function DashboardSiteStatistics() {
+  return <StatisticsPage scope="site" />
+}
+
+/** @deprecated 兼容旧 import */
 export function DashboardStatistics() {
+  return <StatisticsPage scope="org" />
+}
+
+function StatisticsPage({ scope }: { scope: StatsScope }) {
   const { isAdmin, currentOrg } = useAuth()
+  const isSite = scope === 'site'
   const [period, setPeriod] = useState<PeriodData | null>(null)
   const [userCount, setUserCount] = useState(0)
   const [groupCount, setGroupCount] = useState(0)
@@ -63,18 +81,37 @@ export function DashboardStatistics() {
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
 
+  // period: -1 组织 / -2 全站；heatmap: 0 组织 / -2 全站
+  const periodUserId = isSite ? -2 : -1
+  const heatmapUserId = isSite ? -2 : 0
+
   useEffect(() => {
+    if (isSite && !isAdmin) {
+      setLoading(false)
+      return
+    }
     let cancelled = false
     async function load() {
       setLoading(true)
       const end = todayYmd()
-      // userId=-1 / heatmap userId=0：后端按 JWT 当前组织成员聚合
       const [p, users, groups, hS, hA] = await Promise.all([
-        getPeriod(-1),
-        listProfiles(1, 1),
-        listGroups(1, 1),
-        getHeatmap({ startDate: '20230101', endDate: end, isAc: false }),
-        getHeatmap({ startDate: '20230101', endDate: end, isAc: true }),
+        getPeriod(periodUserId),
+        listProfiles(1, 1, isSite ? 'site' : 'org'),
+        isSite
+          ? Promise.resolve({ success: true, data: { total: 0, list: [] } as const })
+          : listGroups(1, 1),
+        getHeatmap({
+          startDate: '20230101',
+          endDate: end,
+          isAc: false,
+          userId: heatmapUserId,
+        }),
+        getHeatmap({
+          startDate: '20230101',
+          endDate: end,
+          isAc: true,
+          userId: heatmapUserId,
+        }),
       ])
       if (cancelled) return
       if (p.success) setPeriod(p.data)
@@ -88,7 +125,15 @@ export function DashboardStatistics() {
     return () => {
       cancelled = true
     }
-  }, [currentOrg?.id])
+  }, [isSite, isAdmin, currentOrg?.id, periodUserId, heatmapUserId])
+
+  if (isSite && !isAdmin) {
+    return (
+      <PageShell>
+        <p className="text-sm text-muted-foreground">仅站点管理员可查看全站统计。</p>
+      </PageShell>
+    )
+  }
 
   async function handleUpdateAll() {
     setUpdating(true)
@@ -99,8 +144,10 @@ export function DashboardStatistics() {
   }
 
   const cards = [
-    { label: '用户数', value: userCount },
-    { label: '组数', value: groupCount },
+    { label: isSite ? '全站用户' : '组织成员', value: userCount },
+    ...(isSite
+      ? []
+      : [{ label: '分组数', value: groupCount }]),
     { label: '总 AC', value: period?.ac.total },
     { label: '总提交', value: period?.submit.total },
     {
@@ -124,18 +171,23 @@ export function DashboardStatistics() {
     },
   ]
 
+  const title = isSite
+    ? '站点数据统计'
+    : currentOrg?.name
+      ? `${currentOrg.name} · 数据统计`
+      : '组织数据统计'
+  const desc = isSite
+    ? '全站用户提交与 AC 汇总'
+    : '按当前组织成员汇总提交与 AC（切换组织后数据随之变化）'
+
   return (
     <PageShell>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-semibold">
-            {currentOrg?.name ? `${currentOrg.name} · 数据统计` : '数据统计'}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            按当前组织成员汇总提交与 AC（切换组织后数据随之变化）
-          </p>
+          <h3 className="font-semibold">{title}</h3>
+          <p className="text-sm text-muted-foreground">{desc}</p>
         </div>
-        {isAdmin && (
+        {isSite && isAdmin && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button type="button" size="sm" disabled={updating}>

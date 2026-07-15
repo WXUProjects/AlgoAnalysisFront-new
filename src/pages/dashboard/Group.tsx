@@ -140,7 +140,7 @@ export function DashboardGroup() {
 
   async function handleSave() {
     if (!formName.trim()) {
-      toast.error('组名不能为空')
+      toast.error('分组名称不能为空')
       return
     }
     setSaving(true)
@@ -257,7 +257,7 @@ export function DashboardGroup() {
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>删除该组？</AlertDialogTitle>
+                      <AlertDialogTitle>删除该分组？</AlertDialogTitle>
                       <AlertDialogDescription>
                         成员将移至「未分组」。此操作不可在本页撤销。
                       </AlertDialogDescription>

@@ -42,11 +42,13 @@ import { MotionProvider } from '@/motion/MotionContext'
 
 const titles: Record<string, string> = {
   '/admin': '后台',
-  '/admin/statistics': '数据统计',
+  '/admin/statistics': '组织数据统计',
+  '/admin/site-statistics': '站点数据统计',
   '/admin/bulletin': '公告管理',
   '/admin/problem-progress': '题库识别',
   '/admin/group': '分组管理',
-  '/admin/user': '用户管理',
+  '/admin/user': '组织成员',
+  '/admin/site-users': '站点用户',
   '/admin/site': '站点设置',
   '/admin/org': '组织设置',
   '/admin/orgs': '组织管理',
@@ -62,9 +64,12 @@ export function AdminLayout() {
     config.siteTitle ||
     'GoAlgo'
   const staffLabel = staffNavLabel(user)
-  const staffSub = isAdmin ? '站点后台' : currentOrg?.name || '团队后台'
+  const staffSub = isAdmin
+    ? '站点后台'
+    : currentOrg?.name
+      ? `${currentOrg.name} · 组织后台`
+      : '组织后台'
   const title = titles[pathname] || staffLabel
-  const userLabel = isAdmin ? '用户管理' : '成员管理'
   const canOrgSettings = isAdmin || isOrgAdmin
   const showTeamNav = isStaff
   const frontTo = '/'
@@ -112,14 +117,19 @@ export function AdminLayout() {
           <SidebarContent>
             {showTeamNav && (
               <SidebarGroup>
-                <SidebarGroupLabel>团队（当前组织）</SidebarGroupLabel>
+                <SidebarGroupLabel>
+                  {currentOrg?.name ? `组织 · ${currentOrg.name}` : '组织'}
+                </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        isActive={pathname.startsWith('/admin/statistics')}
-                        tooltip="数据统计"
+                        isActive={
+                          pathname === '/admin/statistics' ||
+                          pathname.startsWith('/admin/statistics/')
+                        }
+                        tooltip="组织数据统计"
                       >
                         <NavLink to="/admin/statistics">
                           <BarChart3Icon />
@@ -143,7 +153,7 @@ export function AdminLayout() {
                       <SidebarMenuButton
                         asChild
                         isActive={pathname.startsWith('/admin/group')}
-                        tooltip="分组"
+                        tooltip="分组管理"
                       >
                         <NavLink to="/admin/group">
                           <UsersIcon />
@@ -154,12 +164,15 @@ export function AdminLayout() {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        isActive={pathname.startsWith('/admin/user')}
-                        tooltip={userLabel}
+                        isActive={
+                          pathname === '/admin/user' ||
+                          pathname.startsWith('/admin/user/')
+                        }
+                        tooltip="组织成员"
                       >
                         <NavLink to="/admin/user">
                           <LayoutDashboardIcon />
-                          <span>{userLabel}</span>
+                          <span>成员管理</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -192,6 +205,30 @@ export function AdminLayout() {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
+                        isActive={pathname.startsWith('/admin/site-statistics')}
+                        tooltip="站点数据统计"
+                      >
+                        <NavLink to="/admin/site-statistics">
+                          <BarChart3Icon />
+                          <span>数据统计</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/admin/site-users')}
+                        tooltip="站点用户"
+                      >
+                        <NavLink to="/admin/site-users">
+                          <LayoutDashboardIcon />
+                          <span>用户管理</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
                         isActive={pathname.startsWith('/admin/orgs')}
                         tooltip="组织管理"
                       >
@@ -216,7 +253,10 @@ export function AdminLayout() {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        isActive={pathname.startsWith('/admin/site')}
+                        isActive={
+                          pathname === '/admin/site' ||
+                          pathname.startsWith('/admin/site/')
+                        }
                         tooltip="站点设置"
                       >
                         <NavLink to="/admin/site">

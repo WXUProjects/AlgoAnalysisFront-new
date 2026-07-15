@@ -45,9 +45,14 @@ const QuestionBankDetail = lazy(() =>
     default: m.QuestionBankDetail,
   })),
 )
-const DashboardStatistics = lazy(() =>
+const DashboardOrgStatistics = lazy(() =>
   import('@/pages/dashboard/Statistics').then((m) => ({
-    default: m.DashboardStatistics,
+    default: m.DashboardOrgStatistics,
+  })),
+)
+const DashboardSiteStatistics = lazy(() =>
+  import('@/pages/dashboard/Statistics').then((m) => ({
+    default: m.DashboardSiteStatistics,
   })),
 )
 const DashboardGroup = lazy(() =>
@@ -55,8 +60,15 @@ const DashboardGroup = lazy(() =>
     default: m.DashboardGroup,
   })),
 )
-const DashboardUser = lazy(() =>
-  import('@/pages/dashboard/User').then((m) => ({ default: m.DashboardUser })),
+const DashboardOrgUser = lazy(() =>
+  import('@/pages/dashboard/User').then((m) => ({
+    default: m.DashboardOrgUser,
+  })),
+)
+const DashboardSiteUser = lazy(() =>
+  import('@/pages/dashboard/User').then((m) => ({
+    default: m.DashboardSiteUser,
+  })),
 )
 const DashboardBulletinManage = lazy(() =>
   import('@/pages/dashboard/BulletinManage').then((m) => ({
@@ -238,7 +250,15 @@ export const router = createBrowserRouter([
             path: 'statistics',
             element: (
               <Lazy>
-                <DashboardStatistics />
+                <DashboardOrgStatistics />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'site-statistics',
+            element: (
+              <Lazy>
+                <DashboardSiteStatistics />
               </Lazy>
             ),
           },
@@ -254,7 +274,15 @@ export const router = createBrowserRouter([
             path: 'user',
             element: (
               <Lazy>
-                <DashboardUser />
+                <DashboardOrgUser />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'site-users',
+            element: (
+              <Lazy>
+                <DashboardSiteUser />
               </Lazy>
             ),
           },

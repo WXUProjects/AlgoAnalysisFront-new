@@ -60,7 +60,7 @@
 |--------|------|------|------|
 | GET | `/user/profile/get-by-id` | 否 | query: `userId` |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]` |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]` |
 | POST | `/user/profile/update` | 是 | 更新资料 |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
 | POST | `/user/profile/set-email-enabled` | 是 | 邮箱通知开关 |
@@ -223,8 +223,8 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| GET | `/core/statistic/heatmap` | 否 | query: `startDate`, `endDate`, `isAc`, `userId?` |
-| GET | `/core/statistic/period` | 否 | query: `userId` |
+| GET | `/core/statistic/heatmap` | 否 | query: `startDate`, `endDate`, `isAc`, `userId?`（个人>0；`0`=当前组织；`-2`=全站仅站管） |
+| GET | `/core/statistic/period` | 否 | query: `userId`（个人>0；`-1`=当前组织；`-2`=全站仅站管） |
 | GET | `/core/statistic/rank` | 否 | 排行榜 |
 
 **PeriodRes.data**

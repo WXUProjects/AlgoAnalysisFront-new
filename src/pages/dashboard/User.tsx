@@ -59,8 +59,26 @@ import { orgRoleName } from '@/lib/roles'
 
 const PAGE_SIZE = 10
 
+type UserScope = 'org' | 'site'
+
+/** 组织成员管理：当前组织 */
+export function DashboardOrgUser() {
+  return <UserListPage scope="org" />
+}
+
+/** 站点用户管理：全站（仅站点管理员） */
+export function DashboardSiteUser() {
+  return <UserListPage scope="site" />
+}
+
+/** @deprecated 兼容旧 import */
 export function DashboardUser() {
-  const { isAdmin, isStaff } = useAuth()
+  return <UserListPage scope="org" />
+}
+
+function UserListPage({ scope }: { scope: UserScope }) {
+  const { isAdmin, isStaff, currentOrg } = useAuth()
+  const isSite = scope === 'site'
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<UserListItem[]>([])
@@ -72,13 +90,13 @@ export function DashboardUser() {
   const [saving, setSaving] = useState(false)
 
   const groupName = useCallback(
-    (id: number) => groups.find((g) => g.id === id)?.name || `组${id}`,
+    (id: number) => groups.find((g) => g.id === id)?.name || (id ? `分组${id}` : '未分组'),
     [groups],
   )
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await listProfiles(page, PAGE_SIZE)
+    const res = await listProfiles(page, PAGE_SIZE, scope)
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '加载用户失败')
@@ -86,18 +104,26 @@ export function DashboardUser() {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page])
+  }, [page, scope])
 
   useEffect(() => {
     void load()
   }, [load])
 
   useEffect(() => {
-    if (isAdmin) return
+    if (isSite) return
     void listGroups(1, 100).then((r) => {
       if (r.success && r.data) setGroups(r.data.list)
     })
-  }, [isAdmin])
+  }, [isSite, currentOrg?.id])
+
+  if (isSite && !isAdmin) {
+    return (
+      <PageShell>
+        <p className="text-sm text-muted-foreground">仅站点管理员可查看全站用户。</p>
+      </PageShell>
+    )
+  }
 
   function openGroupEdit(u: UserListItem) {
     setEditUser(u)
@@ -140,20 +166,25 @@ export function DashboardUser() {
     } else toast.error(res.message || '删除失败')
   }
 
+  const title = isSite
+    ? '站点用户'
+    : currentOrg?.name
+      ? `${currentOrg.name} · 成员`
+      : '组织成员'
+  const desc = isSite
+    ? '全站用户与所属组织，可任命站点管理员'
+    : '当前组织成员，可调整分组'
+
   return (
     <PageShell className="gap-3">
       <div>
-        <h3 className="font-semibold">{isAdmin ? '用户管理' : '成员管理'}</h3>
-        <p className="text-sm text-muted-foreground">
-          {isAdmin
-            ? '查看全站用户、所属团队，可任命站点管理员'
-            : '查看当前组织成员，可调整分组'}
-        </p>
+        <h3 className="font-semibold">{title}</h3>
+        <p className="text-sm text-muted-foreground">{desc}</p>
       </div>
 
       <Card className="gap-0 py-0 overflow-hidden">
         <CardHeader className="px-4 py-3 border-b">
-          <CardTitle className="text-base">用户列表</CardTitle>
+          <CardTitle className="text-base">{isSite ? '用户列表' : '成员列表'}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -167,7 +198,7 @@ export function DashboardUser() {
                   <TableHead className="w-12" />
                   <TableHead>姓名</TableHead>
                   <TableHead>用户名</TableHead>
-                  <TableHead>{isAdmin ? '所属团队' : '分组'}</TableHead>
+                  <TableHead>{isSite ? '所属组织' : '分组'}</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -194,7 +225,7 @@ export function DashboardUser() {
                     </TableCell>
                     <TableCell>{u.username}</TableCell>
                     <TableCell>
-                      {isAdmin ? (
+                      {isSite ? (
                         <div className="flex max-w-xs flex-wrap gap-1">
                           {(u.orgs || []).map((o) => (
                             <Badge
@@ -220,7 +251,7 @@ export function DashboardUser() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {isAdmin && (
+                        {isSite && isAdmin && (
                           <Button
                             type="button"
                             size="sm"
@@ -230,7 +261,7 @@ export function DashboardUser() {
                             {u.isSiteAdmin ? '取消站管' : '设为站管'}
                           </Button>
                         )}
-                        {isStaff && !isAdmin && (
+                        {!isSite && isStaff && (
                           <Button
                             type="button"
                             size="sm"
@@ -243,7 +274,7 @@ export function DashboardUser() {
                         <Button type="button" size="sm" variant="ghost" asChild>
                           <Link to={`/profile?id=${u.userId}`}>资料</Link>
                         </Button>
-                        {isAdmin && (
+                        {isSite && isAdmin && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button type="button" size="sm" variant="destructive">

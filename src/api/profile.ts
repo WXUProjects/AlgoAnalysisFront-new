@@ -75,10 +75,12 @@ export async function deleteUser(userId: number): Promise<ApiResult<unknown>> {
 export async function listProfiles(
   pageNum = 1,
   pageSize = 10,
+  scope?: 'org' | 'site',
 ): Promise<ApiResult<UserListRes>> {
   const res = await get<Record<string, unknown>>(endpoints.user.profile.list, {
     pageNum,
     pageSize,
+    ...(scope ? { scope } : {}),
   })
   // list 可能无 success 字段，裸 { list, total }
   const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
