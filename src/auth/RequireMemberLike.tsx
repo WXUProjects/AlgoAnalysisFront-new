@@ -1,16 +1,14 @@
-import { Navigate, useLocation, useSearchParams } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthContext'
 import { Spinner } from '@/components/ui/spinner'
 
 /**
- * 队员侧页面守卫：
- * - 需登录
- * - 纯教练：不进自己的资料/编辑页，直接去管理端；看他人资料 (?id=) 仍允许
+ * 需登录即可访问（个人资料 / 编辑资料等）。
+ * 教练与队员均可使用前台资料流程，不再强制跳转管理端。
  */
 export function RequireMemberLike({ children }: { children: React.ReactNode }) {
-  const { isLogin, isCoach, user, ready } = useAuth()
+  const { isLogin, ready } = useAuth()
   const location = useLocation()
-  const [params] = useSearchParams()
 
   if (!ready) {
     return (
@@ -28,19 +26,6 @@ export function RequireMemberLike({ children }: { children: React.ReactNode }) {
         replace
       />
     )
-  }
-
-  if (isCoach) {
-    const viewId = params.get('id')
-    const viewingOther =
-      location.pathname === '/profile' &&
-      viewId &&
-      user &&
-      Number(viewId) !== user.userId
-
-    if (!viewingOther) {
-      return <Navigate to="/admin" replace />
-    }
   }
 
   return children

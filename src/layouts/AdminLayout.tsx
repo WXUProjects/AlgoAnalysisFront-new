@@ -63,7 +63,6 @@ export function AdminLayout() {
     isAdmin,
     isOrgAdmin,
     isStaff,
-    isCoach,
     user,
     orgs,
     logout,
@@ -84,9 +83,6 @@ export function AdminLayout() {
   const title = titles[pathname] || staffLabel
   const canOrgSettings = isAdmin || isOrgAdmin
   const showTeamNav = isStaff
-  // 纯教练无个人资料/前台首页，不展示「返回前台」
-  const showFrontLink = !isCoach
-
   function handleLogout() {
     logout()
     toast.success('已退出登录')
@@ -342,16 +338,14 @@ export function AdminLayout() {
               </div>
             )}
             <SidebarMenu>
-              {showFrontLink && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="返回前台">
-                    <Link to="/">
-                      <ArrowLeftIcon />
-                      <span>返回前台</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="返回前台">
+                  <Link to="/">
+                    <ArrowLeftIcon />
+                    <span>返回前台</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="修改密码">
                   <Link to="/change-password">

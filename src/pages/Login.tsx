@@ -15,18 +15,12 @@ import {
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
-import { jwt } from '@/lib/jwt'
-import { isCoachOnlyRole } from '@/lib/roles'
-
 function postLoginPath(explicitRedirect: string | null): string {
-  // 纯教练：直接进入教练管理（无个人资料等队员流程）
-  const roleId = jwt.getUserInfo()?.roleId
-  if (isCoachOnlyRole(roleId)) return '/admin'
   return explicitRedirect || '/'
 }
 
 export function Login() {
-  const { login, isLogin, isCoach, ready } = useAuth()
+  const { login, isLogin, ready } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [username, setUsername] = useState('')
@@ -36,7 +30,7 @@ export function Login() {
   const redirectParam = searchParams.get('redirect')
 
   if (ready && isLogin) {
-    return <Navigate to={postLoginPath(isCoach ? null : redirectParam)} replace />
+    return <Navigate to={postLoginPath(redirectParam)} replace />
   }
 
   async function handleSubmit(e: React.FormEvent) {
