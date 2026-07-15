@@ -145,11 +145,8 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   const cards = [
     { label: isSite ? '全站用户' : '组织成员', value: userCount },
     ...(isSite ? [] : [{ label: '分组数', value: groupCount }]),
-    {
-      label: '生涯 AC',
-      // 组织汇总只展示不去重次数，避免 DISTINCT 题数展示与额外成本
-      value: period?.ac.totalRaw ?? period?.ac.total,
-    },
+    // 站点/组织：后端 period 已按 AC 条数统计（不去重）
+    { label: '生涯 AC', value: period?.ac.total },
     { label: '总提交', value: period?.submit.total },
     {
       label: '今日 AC / 提交',

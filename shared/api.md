@@ -411,9 +411,8 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
   "submit": { "today": 0, "thisWeek": 0, "lastWeek": 0, "thisMonth": 0, "lastMonth": 0, "thisYear": 0, "lastYear": 0, "total": 0 }
 }
 ```
-- `ac.total`：累计**题数**（按题去重）
-- `ac.totalRaw`：累计 **AC 次数**（不去重）
-- 时段字段（today…thisYear）均为去重题数
+- 个人 `userId>0`：`ac.total`=累计题数（去重）；`ac.totalRaw`=累计 AC 次数；时段字段为去重题数
+- 组织/全站 `userId=-1/-2`：`ac` 全部为 AC 条数（status 含 AC/正确/OK，不去重）
 
 ### Contest
 
