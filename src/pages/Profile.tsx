@@ -620,40 +620,55 @@ export function Profile() {
                       >
                         <span className="absolute -left-[0.95rem] top-2.5 size-2 rounded-full border-2 border-sky-500 bg-background" />
                         <div className="flex items-start justify-between gap-2">
-                          <p className="min-w-0">
-                            在{' '}
-                            <span className="font-medium">{a.platform}</span>{' '}
-                            使用{' '}
-                            <span className="font-medium">
-                              {a.lang || '-'}
-                            </span>{' '}
-                            解决了{' '}
-                            {a.problemId ? (
-                              <Link
-                                to={`/question-bank/detail/${a.problemId}`}
-                                className="font-medium text-sky-600 hover:underline dark:text-sky-400"
-                              >
-                                {title}
-                              </Link>
-                            ) : (
-                              <span className="font-medium">{title}</span>
+                          <div className="min-w-0">
+                            <p className="min-w-0">
+                              在{' '}
+                              <span className="font-medium">{a.platform}</span>{' '}
+                              使用{' '}
+                              <span className="font-medium">
+                                {a.lang || '-'}
+                              </span>{' '}
+                              解决了{' '}
+                              {a.problemId ? (
+                                <Link
+                                  to={`/question-bank/detail/${a.problemId}`}
+                                  className="font-medium text-sky-600 hover:underline dark:text-sky-400"
+                                >
+                                  {title}
+                                </Link>
+                              ) : (
+                                <span className="font-medium">{title}</span>
+                              )}
+                              ：
+                              {url ? (
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="ml-1 inline-flex align-middle"
+                                >
+                                  <StatusBadge status={a.status} />
+                                </a>
+                              ) : (
+                                <span className="ml-1 inline-flex align-middle">
+                                  <StatusBadge status={a.status} />
+                                </span>
+                              )}
+                            </p>
+                            {!!a.problemTags?.length && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {a.problemTags.slice(0, 5).map((t) => (
+                                  <Badge
+                                    key={t}
+                                    variant="outline"
+                                    className="h-5 border-transparent bg-violet-500/15 px-1.5 text-[10px] font-normal text-violet-700 dark:bg-violet-500/20 dark:text-violet-400"
+                                  >
+                                    {t}
+                                  </Badge>
+                                ))}
+                              </div>
                             )}
-                            ：
-                            {url ? (
-                              <a
-                                href={url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="ml-1 inline-flex align-middle"
-                              >
-                                <StatusBadge status={a.status} />
-                              </a>
-                            ) : (
-                              <span className="ml-1 inline-flex align-middle">
-                                <StatusBadge status={a.status} />
-                              </span>
-                            )}
-                          </p>
+                          </div>
                           <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground tabular-nums">
                             {formatTime(a.time)}
                           </span>

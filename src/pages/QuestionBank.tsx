@@ -65,6 +65,8 @@ export function QuestionBank() {
 
   const [keywordInput, setKeywordInput] = useState(keyword)
   const [tagInput, setTagInput] = useState('')
+  /** 中文 IME 组字中：勿响应 Enter / 勿因组字中间态打断输入 */
+  const [tagComposing, setTagComposing] = useState(false)
   const [list, setList] = useState<ProblemInfo[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -86,19 +88,25 @@ export function QuestionBank() {
     }
   }, [])
 
-  // 有搜索词时自动展开，方便点选
+  // 有搜索词时自动展开，方便点选（组字中不触发，避免 IME 抖动）
   useEffect(() => {
+    if (tagComposing) return
     if (tagInput.trim()) setTagsExpanded(true)
-  }, [tagInput])
+  }, [tagInput, tagComposing])
 
   const filteredTagOptions = useMemo(() => {
-    const q = tagInput.trim().toLowerCase()
+    // 组字过程中仍可用当前缓冲过滤；匹配用 includes，中文不 toLowerCase 丢信息
+    const q = tagInput.trim()
+    const qLower = q.toLowerCase()
     // 已选标签优先置顶
     const selected = allTags.filter((t) => tags.includes(t.tag))
     const rest = allTags.filter((t) => !tags.includes(t.tag))
     const ordered = [...selected, ...rest]
     if (!q) return ordered
-    return ordered.filter((t) => t.tag.toLowerCase().includes(q))
+    return ordered.filter((t) => {
+      const name = t.tag
+      return name.includes(q) || name.toLowerCase().includes(qLower)
+    })
   }, [allTags, tagInput, tags])
 
   const visibleTagOptions = useMemo(() => {
@@ -294,21 +302,24 @@ export function QuestionBank() {
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 placeholder="搜索标签 / 回车添加"
-                list="problem-tag-suggestions"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                onCompositionStart={() => setTagComposing(true)}
+                onCompositionEnd={(e) => {
+                  setTagComposing(false)
+                  // 部分浏览器 compositionend 时 value 才最终确定
+                  setTagInput((e.target as HTMLInputElement).value)
+                }}
                 onKeyDown={(e) => {
+                  // 中文 IME 组字时 Enter 是「上屏」，不能当成添加
                   if (e.key === 'Enter') {
+                    if (tagComposing || e.nativeEvent.isComposing) return
                     e.preventDefault()
                     addTag()
                   }
                 }}
               />
-              <datalist id="problem-tag-suggestions">
-                {allTags.slice(0, 80).map((t) => (
-                  <option key={t.tag} value={t.tag}>
-                    {t.tag} ({t.count})
-                  </option>
-                ))}
-              </datalist>
               <Button type="button" size="sm" variant="secondary" onClick={addTag}>
                 添加
               </Button>

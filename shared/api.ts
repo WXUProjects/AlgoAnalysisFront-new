@@ -181,6 +181,8 @@ export interface SubmitLogItem {
   userName?: string
   /** 题库标题，有 problemId 时由后端批量填充 */
   problemTitle?: string
+  /** 题库 AI 标签，有 problemId 时由后端批量填充 */
+  problemTags?: string[]
 }
 
 export interface HeatmapItem {

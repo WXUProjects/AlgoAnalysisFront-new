@@ -15,6 +15,9 @@ function normalizeItem(raw: Record<string, unknown>): SubmitLogItem {
     problemId: raw.problemId != null ? num(raw.problemId) : undefined,
     userName: str(raw.userName) || undefined,
     problemTitle: str(raw.problemTitle) || undefined,
+    problemTags: Array.isArray(raw.problemTags)
+      ? (raw.problemTags as unknown[]).map((t) => str(t)).filter(Boolean)
+      : undefined,
   }
 }
 

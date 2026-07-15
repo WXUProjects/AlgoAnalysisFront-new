@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
+import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/status-badge'
 import { formatActivityProblemTitle } from '@/lib/activity-title'
 import { formatTime } from '@/lib/format'
@@ -159,7 +160,7 @@ export function AllActivities() {
                     · {item.platform} · {item.lang || '-'}
                   </span>
                 </CardTitle>
-                <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
+                <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   {item.problemId ? (
                     <Link
                       to={`/question-bank/detail/${item.problemId}`}
@@ -186,6 +187,19 @@ export function AllActivities() {
                   )}
                   <span>{formatTime(item.time)}</span>
                 </CardDescription>
+                {!!item.problemTags?.length && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {item.problemTags.slice(0, 6).map((t) => (
+                      <Badge
+                        key={t}
+                        variant="outline"
+                        className="h-5 border-transparent bg-violet-500/15 px-1.5 text-[10px] font-normal text-violet-700 dark:bg-violet-500/20 dark:text-violet-400"
+                      >
+                        {t}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </CardHeader>
             </Card>
           )

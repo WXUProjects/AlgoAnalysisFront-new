@@ -152,6 +152,7 @@
 | `id` / `platform` / `userId` / `submitId` / `contest` / `problem` / `lang` / `status` / `time` / `problemId` | 原有 |
 | `userName` | 展示姓名（user 服务 `GetByIds` 一次批量） |
 | `problemTitle` | 题库标题（本库 `problems` 一次 `IN` 查询；无 `problemId` 时为空） |
+| `problemTags` | 题库 AI 标签（同次批量查询，最多 6 个；无 `problemId` 时为空） |
 
 ### Spider
 
