@@ -33,6 +33,10 @@ export const endpoints = {
       list: `${API_PREFIX}/user/role/list`,
       setUserRole: `${API_PREFIX}/user/role/set-user-role`,
     },
+    upload: `${API_PREFIX}/user/upload`,
+    site: {
+      config: `${API_PREFIX}/user/site/config`,
+    },
   },
   core: {
     submitLog: {

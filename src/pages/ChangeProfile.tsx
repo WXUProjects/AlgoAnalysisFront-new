@@ -3,8 +3,10 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { setEmailEnabled, updateProfile } from '@/api/profile'
 import { setSpider } from '@/api/spider'
+import { uploadImage } from '@/api/upload'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -35,16 +37,19 @@ export function ChangeProfile() {
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [avatar, setAvatar] = useState('')
   const [emailOn, setEmailOn] = useState(true)
   const [platform, setPlatform] = useState<OjPlatform>(preOj || 'AtCoder')
   const [ojUsername, setOjUsername] = useState('')
   const [saving, setSaving] = useState(false)
   const [binding, setBinding] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     if (profile) {
       setName(profile.name || '')
       setEmail(profile.email || '')
+      setAvatar(profile.avatar || '')
       setEmailOn(profile.emailEnabled ?? true)
       const bound = profile.spiders.find((s) => s.platform === (preOj || platform))
       if (bound) setOjUsername(bound.username)
@@ -67,7 +72,7 @@ export function ChangeProfile() {
       userId: user.userId,
       name: name.trim(),
       email: email.trim(),
-      avatar: profile?.avatar || '',
+      avatar: avatar || '',
     })
     setSaving(false)
     if (res.success) {
@@ -123,6 +128,43 @@ export function ChangeProfile() {
         <form onSubmit={handleSaveProfile}>
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
+              <Field className="gap-1.5">
+                <FieldLabel>头像</FieldLabel>
+                <div className="flex items-center gap-3">
+                  <Avatar className="size-14 border">
+                    <AvatarImage src={avatar || '/images/defaultAvatar.png'} alt="" />
+                    <AvatarFallback>{(name || 'U').slice(0, 1)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col gap-1.5">
+                    <Button type="button" size="sm" variant="outline" asChild disabled={uploading}>
+                      <label className="cursor-pointer">
+                        {uploading ? <Spinner data-icon="inline-start" /> : null}
+                        上传图片
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            e.target.value = ''
+                            if (!file) return
+                            setUploading(true)
+                            const res = await uploadImage(file, 'avatar')
+                            setUploading(false)
+                            if (!res.success || !res.data?.url) {
+                              toast.error(res.message || '上传失败')
+                              return
+                            }
+                            setAvatar(res.data.url)
+                            toast.success('头像已上传，请点保存资料')
+                          }}
+                        />
+                      </label>
+                    </Button>
+                    <p className="text-xs text-muted-foreground">jpg/png/webp，≤3MB</p>
+                  </div>
+                </div>
+              </Field>
               <Field className="gap-1.5">
                 <FieldLabel htmlFor="name">姓名</FieldLabel>
                 <Input

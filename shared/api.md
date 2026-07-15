@@ -68,6 +68,15 @@
 | POST | `/user/profile/get-by-ids` | 否 | body: `{ userIds: number[] }` |
 | POST | `/user/profile/delete` | 是(管理员) | 软删除用户 |
 
+### Upload / Site
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc`，返回 `{ url }`（≤3MB 图片） |
+| GET | `/user/static/*` | 否 | 已上传文件静态访问 |
+| GET | `/user/site/config` | 否 | 站点标题/logo/favicon |
+| POST | `/user/site/config` | 是(管理员) | body: `{ siteTitle, siteLogo, favicon }` |
+
 **GetByIdRes**
 ```json
 {

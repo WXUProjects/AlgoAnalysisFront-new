@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
+import { useSiteConfig } from '@/site/SiteConfigContext'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
   Sidebar,
@@ -45,26 +46,21 @@ const titles: Record<string, string> = {
   '/bulletin': '公告',
   '/contest': '比赛',
   '/question-bank': '题库',
-  '/dashboard': '后台',
-  '/dashboard/statistics': '数据统计',
-  '/dashboard/group': '分组管理',
-  '/dashboard/user': '用户管理',
-  '/dashboard/bulletin': '公告管理',
-  '/dashboard/problem-progress': '题库流水线',
 }
 
-function resolveTitle(pathname: string): string {
+function resolveTitle(pathname: string, brand: string): string {
   if (titles[pathname]) return titles[pathname]
   if (pathname.startsWith('/contest/')) return '比赛详情'
   if (pathname.startsWith('/question-bank/detail/')) return '题目详情'
-  if (pathname.startsWith('/dashboard')) return '后台'
-  return 'Algo-CWUX'
+  return brand
 }
 
 export function AppLayout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const title = resolveTitle(pathname)
+  const { config } = useSiteConfig()
+  const brand = config.siteTitle || 'Algo-CWUX'
+  const title = resolveTitle(pathname, brand)
   const { isLogin, isAdmin, isCoach, user, logout } = useAuth()
 
   function handleLogout() {
@@ -82,11 +78,19 @@ export function AppLayout() {
               <SidebarMenuItem>
                 <SidebarMenuButton size="lg" asChild>
                   <Link to="/">
-                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground text-sm font-bold">
-                      A
-                    </div>
+                    {config.siteLogo ? (
+                      <img
+                        src={config.siteLogo}
+                        alt=""
+                        className="size-8 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground text-sm font-bold">
+                        {(brand[0] || 'A').toUpperCase()}
+                      </div>
+                    )}
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">Algo-CWUX</span>
+                      <span className="truncate font-semibold">{brand}</span>
                       <span className="truncate text-xs text-muted-foreground">
                         算法协会
                       </span>
@@ -177,13 +181,12 @@ export function AppLayout() {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        isActive={pathname.startsWith('/dashboard')}
                         tooltip={isAdmin ? '后台管理' : '教练管理'}
                       >
-                        <NavLink to="/dashboard">
+                        <Link to="/admin">
                           <LayoutDashboardIcon />
                           <span>{isAdmin ? '后台管理' : '教练管理'}</span>
-                        </NavLink>
+                        </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}

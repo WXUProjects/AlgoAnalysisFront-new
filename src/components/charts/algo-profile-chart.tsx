@@ -276,7 +276,7 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
     .map((d) => ({ name: d.name.trim(), value: d.count }))
     .sort((a, b) => (DIFF_ORDER[a.name] ?? 99) - (DIFF_ORDER[b.name] ?? 99))
 
-  const barChartH = Math.max(radarAll.length * 30, 140)
+  const maxAc = Math.max(...radarAll.map((r) => r.count), 1)
 
   const row1: Panel[] = [
     {
@@ -331,41 +331,24 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
       title: '标签 AC Top',
       hint: `${radarAll.length} 项 · 可滚动`,
       body: radarAll.length ? (
-        <div className="h-full overflow-y-auto overscroll-contain pr-1">
-          {/* 左对齐：margin left 给足 Y 轴标签空间，不用居中 */}
-          <div className="w-full" style={{ height: barChartH, minHeight: barChartH }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={radarAll}
-                layout="vertical"
-                margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
-              >
-                <XAxis type="number" hide domain={[0, 'dataMax']} />
-                <YAxis
-                  type="category"
-                  dataKey="short"
-                  width={110}
-                  interval={0}
-                  tick={{ fontSize: 11, textAnchor: 'end' }}
-                  tickLine={false}
-                  axisLine={false}
-                  orientation="left"
-                />
-                <Tooltip
-                  formatter={(v) => [v, '已 AC']}
-                  labelFormatter={(_, payload) => {
-                    const row = payload?.[0]?.payload as { name?: string } | undefined
-                    return row?.name || ''
-                  }}
-                />
-                <Bar
-                  dataKey="count"
-                  fill="var(--color-chart-1, #8884d8)"
-                  radius={[0, 4, 4, 0]}
-                  background={{ fill: 'transparent' }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="h-full overflow-y-auto overscroll-contain">
+          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2 gap-y-1.5 py-0.5 pl-2">
+            {radarAll.map((row) => (
+              <div key={row.name} className="contents" title={`${row.name} · 已 AC ${row.count}`}>
+                <span className="max-w-[6rem] truncate text-left text-[11px] text-muted-foreground">
+                  {row.short}
+                </span>
+                <div className="h-4 min-w-0 rounded-sm bg-muted/40">
+                  <div
+                    className="h-full rounded-sm bg-[var(--color-chart-1,#8884d8)]"
+                    style={{ width: `${(row.count / maxAc) * 100}%` }}
+                  />
+                </div>
+                <span className="min-w-[1.25rem] text-right text-[11px] tabular-nums text-muted-foreground">
+                  {row.count}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       ) : (
