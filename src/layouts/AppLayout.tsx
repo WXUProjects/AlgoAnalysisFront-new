@@ -4,6 +4,7 @@ import {
   Building2Icon,
   CalendarIcon,
   HomeIcon,
+  InfoIcon,
   LayoutDashboardIcon,
   LogInIcon,
   LogOutIcon,
@@ -49,6 +50,8 @@ const titles: Record<string, string> = {
   '/bulletin': '公告',
   '/contest': '比赛',
   '/question-bank': '题库',
+  '/about': '关于我们',
+  '/org': '我的组织',
 }
 
 function resolveTitle(pathname: string, brand: string): string {
@@ -81,6 +84,11 @@ export function AppLayout() {
   const title = resolveTitle(pathname, brand)
   const homeTo = '/'
   const adminLabel = staffNavLabel(user)
+  // 公共域（或未登录默认视图）展示「关于我们」
+  const showAbout =
+    !isLogin ||
+    Boolean(currentOrg?.isSystem) ||
+    currentOrg?.slug === 'public'
 
   function handleLogout() {
     logout()
@@ -229,6 +237,21 @@ export function AppLayout() {
                         <NavLink to="/org">
                           <Building2Icon />
                           <span>我的组织</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {showAbout && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/about')}
+                        tooltip="关于我们"
+                      >
+                        <NavLink to="/about">
+                          <InfoIcon />
+                          <span>关于我们</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

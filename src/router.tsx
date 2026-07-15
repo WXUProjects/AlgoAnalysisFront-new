@@ -98,6 +98,9 @@ const DashboardOrgsManage = lazy(() =>
 const OrgHub = lazy(() =>
   import('@/pages/OrgHub').then((m) => ({ default: m.OrgHub })),
 )
+const About = lazy(() =>
+  import('@/pages/About').then((m) => ({ default: m.About })),
+)
 
 function PageFallback() {
   return (
@@ -222,6 +225,14 @@ export const router = createBrowserRouter([
         element: (
           <Lazy>
             <OrgHub />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'about',
+        element: (
+          <Lazy>
+            <About />
           </Lazy>
         ),
       },
