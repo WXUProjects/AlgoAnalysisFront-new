@@ -167,11 +167,11 @@ function ProfilePanels({
         </div>
       </div>
 
-      {/* 移动端：堆叠滑动 */}
+      {/* 移动端：牌叠滑动 — 内边距 + 缩放制造堆叠，位移不溢出视口 */}
       <div className="lg:hidden">
         <div
-          className="relative mx-auto w-full max-w-md select-none"
-          style={{ height: 280 }}
+          className="relative mx-auto w-full max-w-md select-none overflow-hidden touch-pan-y overscroll-x-none px-5"
+          style={{ height: 300 }}
           onTouchStart={(e) => {
             touchX.current = e.touches[0]?.clientX ?? null
           }}
@@ -193,16 +193,22 @@ function ProfilePanels({
             const abs = Math.abs(offset)
             if (abs > 2) return null
             const active = offset === 0
+            // 侧卡用固定 px 位移 + 更大缩放差，堆叠感强但不撑破容器
+            const xPx = offset * 22
+            const yPx = abs * 10
+            const scale = 1 - abs * 0.08
             return (
               <Card
                 key={p.key}
                 className={cn(
-                  'absolute inset-x-0 top-0 gap-2 py-3 transition-all duration-300 ease-out',
-                  active ? 'pointer-events-auto' : 'pointer-events-none',
+                  'absolute inset-x-5 top-0 gap-2 py-3 transition-[transform,opacity,box-shadow] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform',
+                  active
+                    ? 'pointer-events-auto shadow-lg ring-1 ring-border/50'
+                    : 'pointer-events-none shadow-md',
                 )}
                 style={{
-                  transform: `translateX(${offset * 12}%) scale(${1 - abs * 0.06})`,
-                  opacity: abs === 0 ? 1 : abs === 1 ? 0.55 : 0.25,
+                  transform: `translate3d(${xPx}px, ${yPx}px, 0) scale(${scale})`,
+                  opacity: abs === 0 ? 1 : abs === 1 ? 0.72 : 0.4,
                   zIndex: 10 - abs,
                 }}
               >

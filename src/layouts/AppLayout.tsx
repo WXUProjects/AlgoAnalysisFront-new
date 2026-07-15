@@ -267,7 +267,7 @@ export function AppLayout() {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <AnimatedTitle className="text-base font-semibold">{title}</AnimatedTitle>
           </header>
-          <main className="flex flex-1 flex-col overflow-auto">
+          <main className="flex min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none">
             <Outlet />
           </main>
         </SidebarInset>

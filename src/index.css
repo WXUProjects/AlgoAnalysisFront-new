@@ -101,6 +101,7 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: clip;
   }
 
   html,
@@ -111,7 +112,14 @@
 
   body {
     @apply bg-background text-foreground m-0;
+    overflow-x: clip;
+    overscroll-behavior-x: none;
     transition: background-color 0.28s ease, color 0.28s ease;
+  }
+
+  #root {
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   @media (prefers-reduced-motion: reduce) {

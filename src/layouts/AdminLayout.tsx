@@ -219,7 +219,7 @@ export function AdminLayout() {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <AnimatedTitle className="text-sm font-medium">{title}</AnimatedTitle>
           </header>
-          <div className="flex flex-1 flex-col overflow-auto">
+          <div className="flex min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none">
             <Outlet />
           </div>
         </SidebarInset>
