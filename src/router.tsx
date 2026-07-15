@@ -62,6 +62,11 @@ const DashboardSiteStatistics = lazy(() =>
     default: m.DashboardSiteStatistics,
   })),
 )
+const DashboardAccessAnalytics = lazy(() =>
+  import('@/pages/dashboard/AccessAnalytics').then((m) => ({
+    default: m.DashboardAccessAnalytics,
+  })),
+)
 const DashboardGroup = lazy(() =>
   import('@/pages/dashboard/Group').then((m) => ({
     default: m.DashboardGroup,
@@ -343,6 +348,14 @@ export const router = createBrowserRouter([
             element: (
               <Lazy>
                 <DashboardSiteStatistics />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'access',
+            element: (
+              <Lazy>
+                <DashboardAccessAnalytics />
               </Lazy>
             ),
           },

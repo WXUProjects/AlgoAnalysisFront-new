@@ -46,6 +46,7 @@ const titles: Record<string, string> = {
   '/admin': '后台',
   '/admin/statistics': '组织数据统计',
   '/admin/site-statistics': '站点数据统计',
+  '/admin/access': '访问统计',
   '/admin/bulletin': '公告管理',
   '/admin/problem-progress': '题库识别',
   '/admin/group': '分组管理',
@@ -226,6 +227,18 @@ export function AdminLayout() {
                         <NavLink to="/admin/site-statistics">
                           <BarChart3Icon />
                           <span>数据统计</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/admin/access')}
+                        tooltip="访问统计"
+                      >
+                        <NavLink to="/admin/access">
+                          <ActivityIcon />
+                          <span>访问统计</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

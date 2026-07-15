@@ -112,20 +112,47 @@
 | GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI 密钥脱敏） |
 | POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI 模型密钥；密钥空串表示不修改 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
-| POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计日活；服务端解析真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
-| GET | `/user/site/access-stats` | 是(站点管理员) | 访问概览：`?days=30`；返回今日/昨日/序列的 `pv`（人次）、`dau`（登录日活）、`uv`（独立访客） |
+| POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
+| GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |
 
-**GetAccessStatsRes**
+**GetAccessStatsRes（审核/运营看板）**
 
 ```json
 {
   "code": 0,
-  "today": { "date": "2026-07-16", "pv": 120, "dau": 18, "uv": 40 },
-  "yesterday": { "date": "2026-07-15", "pv": 90, "dau": 15, "uv": 32 },
-  "series": [{ "date": "2026-07-01", "pv": 50, "dau": 10, "uv": 20 }],
-  "clientIpAvailable": true
+  "registeredUsers": 1200,
+  "mau": 86,
+  "today": { "date": "2026-07-16", "pv": 120, "dau": 18, "uv": 40, "uniqueIp": 35 },
+  "yesterday": { "date": "2026-07-15", "pv": 90, "dau": 15, "uv": 32, "uniqueIp": 28 },
+  "series": [{ "date": "2026-07-01", "pv": 50, "dau": 10, "uv": 20, "uniqueIp": 15 }],
+  "totalPv": 3000,
+  "totalDauSum": 400,
+  "topPaths": [{ "path": "/", "category": "首页", "pv": 50, "share": 41.6 }],
+  "categories": [{ "category": "题库", "pv": 30, "share": 25 }],
+  "ips": [{ "ip": "1.2.3.4", "pv": 5, "lastPath": "/contest", "lastSeen": 1721000000 }],
+  "apiRequestsToday": 15000,
+  "apiPeakConcurrent": 42,
+  "apiInflight": 3,
+  "spiderEnqueuedToday": 200,
+  "spiderOkToday": 180,
+  "spiderFailToday": 5,
+  "spiderRowsToday": 3200,
+  "clientIpAvailable": true,
+  "metricNote": "..."
 }
 ```
+
+指标说明：
+
+| 字段 | 含义 |
+|------|------|
+| `registeredUsers` | 注册用户总数 |
+| `today.dau` / `mau` | 日活 / 月活（登录用户访问去重） |
+| `today.pv` | 页面浏览量 PV（同 path 约 30s 节流） |
+| `today.uniqueIp` / `ips[]` | 独立 IP 数与明细列表 |
+| `categories` / `topPaths` | 服务模块使用分布与热门页面 |
+| `apiRequestsToday` / `apiPeakConcurrent` | 今日 API 请求量 / 并发峰值 |
+| `spider*Today` / `spiderRowsToday` | 爬虫入队/成功/失败 / 新写入提交条数 |
 
 **GetConfigRes（公开）**
 
