@@ -147,9 +147,8 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     ...(isSite ? [] : [{ label: '分组数', value: groupCount }]),
     {
       label: '生涯 AC',
-      value: period
-        ? `${period.ac.totalRaw ?? period.ac.total} / ${period.ac.total}`
-        : undefined,
+      // 组织汇总只展示不去重次数，避免 DISTINCT 题数展示与额外成本
+      value: period?.ac.totalRaw ?? period?.ac.total,
     },
     { label: '总提交', value: period?.submit.total },
     {
