@@ -268,7 +268,7 @@ export function ChangeProfile() {
         <CardHeader className="gap-1 px-4">
           <CardTitle>绑定 OJ</CardTitle>
           <CardDescription>
-            绑定 AtCoder / 洛谷 / 牛客 / Codeforces / QOJ / 力扣后，可同步提交与比赛数据
+            绑定 AtCoder / 洛谷 / 牛客 / Codeforces / QOJ / 力扣后，系统会按计划自动同步提交与比赛数据
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleBindOj}>

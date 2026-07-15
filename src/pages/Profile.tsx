@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ExternalLinkIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { listProfiles, getProfileById } from '@/api/profile'
-import { updateSpider } from '@/api/spider'
 import { getHeatmap, getPeriod } from '@/api/statistic'
 import { getSubmitLogs } from '@/api/submitLog'
 import { listContests } from '@/api/contest'
@@ -45,7 +44,6 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Spinner } from '@/components/ui/spinner'
 import { formatActivityProblemTitle } from '@/lib/activity-title'
 import { difficultyBadgeClass } from '@/lib/difficulty'
 import { formatTime, todayYmd } from '@/lib/format'
@@ -163,14 +161,12 @@ function StatBarRow({ row }: { row: StatRow }) {
 }
 
 export function Profile() {
-  const { user, isLogin, isAdmin, logout } = useAuth()
+  const { user, isLogin, logout } = useAuth()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const queryId = searchParams.get('id')
   const targetId = queryId ? Number(queryId) : user?.userId || 0
   const isSelf = Boolean(isLogin && user && targetId === user.userId)
-  // 仅站点管理员可手动触发同步；普通用户依赖定时任务与绑定后自动抓取
-  const canSyncOj = Boolean(isAdmin && targetId > 0)
 
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [period, setPeriod] = useState<PeriodData | null>(null)
@@ -182,7 +178,6 @@ export function Profile() {
   const [contests, setContests] = useState<ContestItem[]>([])
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState(false)
   const [mode, setMode] = useState<'submit' | 'ac'>('ac')
 
   const spiderMap = useMemo(() => {
@@ -254,18 +249,6 @@ export function Profile() {
       signal.cancelled = true
     }
   }, [load])
-
-  async function handleUpdateOj() {
-    if (!targetId || !canSyncOj) return
-    setUpdating(true)
-    const res = await updateSpider(targetId)
-    setUpdating(false)
-    if (res.success) {
-      toast.success(res.message || '已开始同步该用户的 OJ 数据')
-    } else {
-      toast.error(res.message || '同步失败')
-    }
-  }
 
   function handleLogout() {
     logout()
@@ -360,75 +343,37 @@ export function Profile() {
                 <p className="truncate text-xs text-muted-foreground sm:text-sm">
                   @{profile.username}
                 </p>
-                {(isSelf || canSyncOj) && (
+                {isSelf && (
                   <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
-                    {canSyncOj && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-xs"
-                            disabled={updating}
-                          >
-                            {updating ? (
-                              <Spinner data-icon="inline-start" />
-                            ) : null}
-                            同步 OJ
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>同步该用户的 OJ 数据？</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              将从该用户已绑定的各平台重新同步提交与比赛记录，可能需要一些时间。
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>取消</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => void handleUpdateOj()}
-                            >
-                              确认同步
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                    {isSelf && (
-                      <>
-                        <Button type="button" size="sm" className="h-7 px-2 text-xs" asChild>
-                          <Link to="/change-profile">编辑</Link>
+                    <Button type="button" size="sm" className="h-7 px-2 text-xs" asChild>
+                      <Link to="/change-profile">编辑</Link>
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                        >
+                          退出
                         </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 px-2 text-xs"
-                            >
-                              退出
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>确认退出？</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                退出后需要重新登录才能访问个人相关功能。
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>取消</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleLogout}>
-                                退出
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </>
-                    )}
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>确认退出？</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            退出后需要重新登录才能访问个人相关功能。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>取消</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleLogout}>
+                            退出
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 )}
               </div>
@@ -526,60 +471,32 @@ export function Profile() {
             </CardContent>
           </Card>
 
-          {(isSelf || canSyncOj) && (
+          {isSelf && (
             <div className="hidden flex-col gap-2 lg:flex">
-              {canSyncOj && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button type="button" variant="outline" disabled={updating}>
-                      {updating ? <Spinner data-icon="inline-start" /> : null}
-                      同步 OJ 数据
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>同步该用户的 OJ 数据？</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        将从该用户已绑定的各平台重新同步提交与比赛记录，可能需要一些时间。
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>取消</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => void handleUpdateOj()}>
-                        确认同步
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-              {isSelf && (
-                <Button type="button" asChild>
-                  <Link to="/change-profile">编辑个人资料</Link>
-                </Button>
-              )}
-              {isSelf && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button type="button" variant="ghost">
-                      退出登录
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>确认退出？</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        退出后需要重新登录才能访问个人相关功能。
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>取消</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleLogout}>
-                        退出
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
+              <Button type="button" asChild>
+                <Link to="/change-profile">编辑个人资料</Link>
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="ghost">
+                    退出登录
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>确认退出？</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      退出后需要重新登录才能访问个人相关功能。
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>取消</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleLogout}>
+                      退出
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           )}
         </aside>
