@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
 import { joinOrg, leaveOrg } from '@/api/org'
+import { orgRoleName } from '@/lib/roles'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -58,7 +59,7 @@ export function OrgHub() {
           <CardTitle className="text-base">当前组织</CardTitle>
           <CardDescription>
             {currentOrg?.name || '未选择'} ·{' '}
-            {user?.orgRole === 'org_admin' ? '团队管理员' : '成员'}
+            {orgRoleName(user?.orgRole)}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

@@ -98,16 +98,32 @@ export async function listProfiles(
     message: res.message || 'ok',
     data: {
       total: num(raw.total, listRaw.length),
-      list: listRaw.map((u) => ({
-        userId: num(u.userId),
-        username: str(u.username),
-        name: str(u.name),
-        groupId: num(u.groupId),
-        avatar: normalizeStaticUrl(str(u.avatar)),
-        lastSubmit: str(u.lastSubmit),
-        roleId: num(u.roleId),
-      })),
+      list: listRaw.map((u) => {
+        const orgsRaw = Array.isArray(u.orgs) ? (u.orgs as Record<string, unknown>[]) : []
+        return {
+          userId: num(u.userId),
+          username: str(u.username),
+          name: str(u.name),
+          groupId: num(u.groupId),
+          avatar: normalizeStaticUrl(str(u.avatar)),
+          lastSubmit: str(u.lastSubmit),
+          roleId: num(u.roleId),
+          isSiteAdmin: bool(u.isSiteAdmin),
+          orgs: orgsRaw.map((o) => ({
+            orgId: num(o.orgId),
+            name: str(o.name),
+            role: str(o.role),
+          })),
+        }
+      }),
     },
     raw: res.raw,
   }
+}
+
+export async function setSiteAdmin(
+  userId: number,
+  isSiteAdmin: boolean,
+): Promise<ApiResult<unknown>> {
+  return post(endpoints.user.platform.setSiteAdmin, { userId, isSiteAdmin })
 }

@@ -60,7 +60,7 @@
 |--------|------|------|------|
 | GET | `/user/profile/get-by-id` | 否 | query: `userId` |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize` |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]` |
 | POST | `/user/profile/update` | 是 | 更新资料 |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
 | POST | `/user/profile/set-email-enabled` | 是 | 邮箱通知开关 |
@@ -79,10 +79,11 @@
 
 ### Org（GoAlgo 多租户）
 
-HTTP 手写路由（非 proto），需登录。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`。
+HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`（`member|coach|captain|org_admin`）。
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
+| POST | `/user/auth/refresh` | 是 | 按 DB 重签 JWT（任命后 F5 同步权限） |
 | GET | `/user/org/list` | 是 | 我的组织；`?all=1` 站点管理员看全部 |
 | GET | `/user/org/get` | 是 | query: `id`（默认当前组织） |
 | POST | `/user/org/create` | 站点管理员 | `{ name, slug?, adminUserId?, joinMode? }` |
@@ -91,7 +92,7 @@ HTTP 手写路由（非 proto），需登录。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/user/org/join` | 是 | `{ inviteCode }` 团队识别码 |
 | POST | `/user/org/leave` | 是 | `{ orgId }`；**公共域不可退出** |
 | GET | `/user/org/members` | 成员 | query: `orgId` |
-| POST | `/user/org/members/set-role` | 组织/站点管理员 | `{ orgId, userId, role: member\|org_admin }` |
+| POST | `/user/org/members/set-role` | 组织/站点管理员 | `{ orgId, userId, role: member\|coach\|captain\|org_admin }` |
 | POST | `/user/org/members/remove` | 组织/站点管理员 | `{ orgId, userId }`；不可移出公共域 |
 | POST | `/user/org/members/add` | 站点/组织管理员 | `{ orgId, userId?\|username?, role? }` 搜索加入 |
 | GET | `/user/org/member-ids` | 否/登录 | query: `orgId` → `{ userIds }`（core 隔离用） |
@@ -351,6 +352,7 @@ HTTP 手写路由（非 proto），需登录。JWT 含 `isSiteAdmin` / `orgId` /
 ```
 POST   /api/user/auth/login
 POST   /api/user/auth/register
+POST   /api/user/auth/refresh
 GET    /api/user/profile/get-by-id
 GET    /api/user/profile/get-by-name
 GET    /api/user/profile/list

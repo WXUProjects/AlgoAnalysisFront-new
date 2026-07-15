@@ -10,6 +10,7 @@ export const endpoints = {
     auth: {
       login: `${API_PREFIX}/user/auth/login`,
       register: `${API_PREFIX}/user/auth/register`,
+      refresh: `${API_PREFIX}/user/auth/refresh`,
     },
     profile: {
       getById: `${API_PREFIX}/user/profile/get-by-id`,
@@ -165,6 +166,12 @@ export interface UserProfile {
   spiders: SpiderBinding[]
 }
 
+export interface UserOrgBrief {
+  orgId: number
+  name: string
+  role: string
+}
+
 export interface UserListItem {
   userId: number
   username: string
@@ -173,6 +180,8 @@ export interface UserListItem {
   avatar: string
   lastSubmit: string
   roleId?: number
+  isSiteAdmin?: boolean
+  orgs?: UserOrgBrief[]
 }
 
 export interface UserListRes {
@@ -211,7 +220,7 @@ export interface OrgInfo {
   spiderIntervalMin?: number
   aiSummaryIntervalMin?: number
   aiEmailSchedule?: string
-  myRole?: 'member' | 'org_admin' | string
+  myRole?: 'member' | 'coach' | 'captain' | 'org_admin' | string
   isCurrent?: boolean
 }
 

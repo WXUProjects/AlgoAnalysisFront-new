@@ -8,12 +8,13 @@ import {
   type ReactNode,
 } from 'react'
 import type { OrgInfo, UserProfile } from '@shared/api'
-import { fetchProfileById, login as apiLogin } from '@/api/auth'
+import { fetchProfileById, login as apiLogin, refreshToken } from '@/api/auth'
 import { listMyOrgs, switchOrg as apiSwitchOrg } from '@/api/org'
 import { setAuthExpiredHandler } from '@/lib/http'
 import { jwt, type JwtPayload } from '@/lib/jwt'
 import {
-  isCoachOnlyRole,
+  isCaptainFromPayload,
+  isCoachFromPayload,
   isMemberLikeRole,
   isOrgAdminFromPayload,
   isSiteAdminFromPayload,
@@ -53,8 +54,8 @@ function deriveFlags(payload: JwtPayload | null) {
     isAdmin: isSiteAdminFromPayload(payload),
     isSiteAdmin: isSiteAdminFromPayload(payload),
     isOrgAdmin: isOrgAdminFromPayload(payload),
-    isCoach: isCoachOnlyRole(payload?.roleId),
-    isCaptain: false,
+    isCoach: isCoachFromPayload(payload),
+    isCaptain: isCaptainFromPayload(payload),
     isStaff: isStaffFromPayload(payload),
     isMemberLike: isMemberLikeRole(payload?.roleId) || Boolean(payload),
   }
@@ -83,6 +84,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const sync = useCallback(async () => {
+    if (!jwt.isValid()) {
+      setUser(null)
+      setProfile(null)
+      setOrgs([])
+      return
+    }
+
+    // 启动/刷新时重签 JWT（后端未部署时静默跳过）
+    try {
+      await refreshToken()
+    } catch {
+      /* ignore */
+    }
+
     if (!jwt.isValid()) {
       setUser(null)
       setProfile(null)

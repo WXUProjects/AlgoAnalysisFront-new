@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
+import { staffNavLabel } from '@/lib/roles'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -63,7 +64,6 @@ export function AppLayout() {
   const { config } = useSiteConfig()
   const {
     isLogin,
-    isAdmin,
     isStaff,
     isMemberLike,
     user,
@@ -80,6 +80,7 @@ export function AppLayout() {
   const brandLogo = currentOrg?.brandLogo || config.siteLogo
   const title = resolveTitle(pathname, brand)
   const homeTo = '/'
+  const adminLabel = staffNavLabel(user)
 
   function handleLogout() {
     logout()
@@ -209,13 +210,10 @@ export function AppLayout() {
 
                   {isLogin && isStaff && (
                     <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        tooltip={isAdmin ? '站点管理' : '团队管理'}
-                      >
+                      <SidebarMenuButton asChild tooltip={adminLabel}>
                         <Link to="/admin">
                           <LayoutDashboardIcon />
-                          <span>{isAdmin ? '站点管理' : '团队管理'}</span>
+                          <span>{adminLabel}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

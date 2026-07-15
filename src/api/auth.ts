@@ -106,3 +106,34 @@ export async function fetchProfileById(
 ): Promise<ApiResult<UserProfile>> {
   return get<UserProfile>(endpoints.user.profile.getById, { userId })
 }
+
+/** 根据当前登录态重签 JWT（任命后刷新页面可同步权限） */
+export async function refreshToken(): Promise<ApiResult<LoginRes>> {
+  if (!jwt.isValid()) {
+    return { success: false, message: '未登录', data: null }
+  }
+  try {
+    const res = await http.post<LoginRes>(endpoints.user.auth.refresh, {})
+    const data = res.data
+    if (data?.success && data.jwtToken) {
+      jwt.setNewToken(data.jwtToken)
+      return {
+        success: true,
+        message: data.message || '已刷新',
+        data,
+      }
+    }
+    return {
+      success: false,
+      message: data?.message || '刷新失败',
+      data: null,
+    }
+  } catch (err) {
+    const message =
+      (err as { response?: { data?: { message?: string } }; message?: string })
+        .response?.data?.message ||
+      (err as { message?: string }).message ||
+      '刷新失败'
+    return { success: false, message, data: null }
+  }
+}

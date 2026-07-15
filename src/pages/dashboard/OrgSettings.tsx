@@ -15,7 +15,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { orgRoleName } from '@/lib/roles'
 
 export function DashboardOrgSettings() {
   const { isAdmin, isOrgAdmin, currentOrg, user, refreshOrgs } = useAuth()
@@ -260,26 +268,24 @@ export function DashboardOrgSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">成员与管理员</CardTitle>
+          <CardTitle className="text-base">成员与角色</CardTitle>
+          <CardDescription>
+            可设为成员、教练、队长或团队管理员。教练与队长可进入管理页；团队管理员可改组织设置与任命。
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {members.map((m) => (
-            <div key={m.userId} className="flex items-center justify-between rounded border p-2">
-              <div className="text-sm">
-                {m.name || m.username}
+            <div key={m.userId} className="flex items-center justify-between gap-2 rounded border p-2">
+              <div className="min-w-0 text-sm">
+                <span className="truncate">{m.name || m.username}</span>
                 <span className="ml-2 text-xs text-muted-foreground">
-                  {m.role === 'org_admin' ? '团队管理员' : '成员'}
+                  {orgRoleName(m.role)}
                 </span>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  void setOrgMemberRole(
-                    orgId,
-                    m.userId,
-                    m.role === 'org_admin' ? 'member' : 'org_admin',
-                  ).then(async (r) => {
+              <Select
+                value={m.role || 'member'}
+                onValueChange={(role) =>
+                  void setOrgMemberRole(orgId, m.userId, role).then(async (r) => {
                     if (r.success) {
                       toast.success('已更新角色')
                       const list = await listOrgMembers(orgId)
@@ -288,8 +294,16 @@ export function DashboardOrgSettings() {
                   })
                 }
               >
-                {m.role === 'org_admin' ? '降为成员' : '设为管理员'}
-              </Button>
+                <SelectTrigger className="w-36 shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">成员</SelectItem>
+                  <SelectItem value="coach">教练</SelectItem>
+                  <SelectItem value="captain">队长</SelectItem>
+                  <SelectItem value="org_admin">团队管理员</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           ))}
         </CardContent>

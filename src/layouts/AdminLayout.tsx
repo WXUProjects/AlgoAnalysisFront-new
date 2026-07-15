@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
+import { staffNavLabel } from '@/lib/roles'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -54,16 +55,18 @@ const titles: Record<string, string> = {
 export function AdminLayout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { isAdmin, isOrgAdmin, logout, currentOrg } = useAuth()
+  const { isAdmin, isOrgAdmin, isStaff, user, logout, currentOrg } = useAuth()
   const { config } = useSiteConfig()
   const brand =
     (currentOrg?.brandTitle && currentOrg.brandTitle.trim()) ||
     config.siteTitle ||
     'GoAlgo'
-  const staffLabel = isAdmin ? '站点管理' : '团队管理'
+  const staffLabel = staffNavLabel(user)
   const staffSub = isAdmin ? '站点后台' : currentOrg?.name || '团队后台'
   const title = titles[pathname] || staffLabel
   const userLabel = isAdmin ? '用户管理' : '成员管理'
+  const canOrgSettings = isAdmin || isOrgAdmin
+  const showTeamNav = isStaff
   const frontTo = '/'
   const frontLabel = '返回前台'
 
@@ -107,7 +110,7 @@ export function AdminLayout() {
           </SidebarHeader>
 
           <SidebarContent>
-            {(isAdmin || isOrgAdmin) && (
+            {showTeamNav && (
               <SidebarGroup>
                 <SidebarGroupLabel>团队（当前组织）</SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -160,21 +163,23 @@ export function AdminLayout() {
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={
-                          pathname.startsWith('/admin/org') &&
-                          !pathname.startsWith('/admin/orgs')
-                        }
-                        tooltip="组织设置"
-                      >
-                        <NavLink to="/admin/org">
-                          <SettingsIcon />
-                          <span>组织设置</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    {canOrgSettings && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={
+                            pathname.startsWith('/admin/org') &&
+                            !pathname.startsWith('/admin/orgs')
+                          }
+                          tooltip="组织设置"
+                        >
+                          <NavLink to="/admin/org">
+                            <SettingsIcon />
+                            <span>组织设置</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>

@@ -20,8 +20,16 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
+import { orgRoleName } from '@/lib/roles'
 
 /** 站点管理员：集中管理所有组织，无需切换当前组织 */
 export function DashboardOrgsManage() {
@@ -273,37 +281,42 @@ export function DashboardOrgsManage() {
                   </div>
 
                   <div className="space-y-2 border-t pt-4">
-                    <Label>成员</Label>
+                    <Label>成员与角色</Label>
                     {members.map((m) => (
                       <div
                         key={m.userId}
-                        className="flex items-center justify-between rounded border p-2 text-sm"
+                        className="flex items-center justify-between gap-2 rounded border p-2 text-sm"
                       >
-                        <span>
+                        <span className="min-w-0 truncate">
                           {m.name || m.username}
                           <span className="ml-2 text-xs text-muted-foreground">
-                            {m.role === 'org_admin' ? '团队管理员' : '成员'}
+                            {orgRoleName(m.role)}
                           </span>
                         </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            void setOrgMemberRole(
-                              selected.id,
-                              m.userId,
-                              m.role === 'org_admin' ? 'member' : 'org_admin',
-                            ).then(async (r) => {
-                              if (r.success) {
-                                toast.success('已更新')
-                                const list = await listOrgMembers(selected.id)
-                                setMembers(list.list)
-                              } else toast.error(r.message)
-                            })
+                        <Select
+                          value={m.role || 'member'}
+                          onValueChange={(role) =>
+                            void setOrgMemberRole(selected.id, m.userId, role).then(
+                              async (r) => {
+                                if (r.success) {
+                                  toast.success('已更新')
+                                  const list = await listOrgMembers(selected.id)
+                                  setMembers(list.list)
+                                } else toast.error(r.message)
+                              },
+                            )
                           }
                         >
-                          {m.role === 'org_admin' ? '降为成员' : '设为管理员'}
-                        </Button>
+                          <SelectTrigger className="w-36 shrink-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="member">成员</SelectItem>
+                            <SelectItem value="coach">教练</SelectItem>
+                            <SelectItem value="captain">队长</SelectItem>
+                            <SelectItem value="org_admin">团队管理员</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     ))}
                   </div>

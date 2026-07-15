@@ -1,4 +1,4 @@
-/** 角色：兼容旧 roleId + GoAlgo isSiteAdmin / orgRole */
+/** 角色：GoAlgo isSiteAdmin + 组织内 orgRole；兼容旧 roleId */
 
 export const Role = {
   Member: 0,
@@ -8,6 +8,23 @@ export const Role = {
 } as const
 
 export type RoleId = (typeof Role)[keyof typeof Role]
+
+/** 组织内角色 */
+export const OrgRole = {
+  Member: 'member',
+  Coach: 'coach',
+  Captain: 'captain',
+  OrgAdmin: 'org_admin',
+} as const
+
+export type OrgRoleValue = (typeof OrgRole)[keyof typeof OrgRole]
+
+export const OrgRoleLabel: Record<string, string> = {
+  member: '成员',
+  coach: '教练',
+  captain: '队长',
+  org_admin: '团队管理员',
+}
 
 export const RoleLabel: Record<number, string> = {
   [Role.Member]: '队员',
@@ -31,7 +48,34 @@ export function isOrgAdminFromPayload(p?: {
 } | null) {
   if (!p) return false
   if (isSiteAdminFromPayload(p)) return true
-  return p.orgRole === 'org_admin'
+  return p.orgRole === OrgRole.OrgAdmin
+}
+
+export function isCoachFromPayload(p?: {
+  orgRole?: string
+  roleId?: number | null
+} | null) {
+  if (!p) return false
+  if (p.orgRole === OrgRole.Coach) return true
+  return p.roleId === Role.Coach
+}
+
+export function isCaptainFromPayload(p?: {
+  orgRole?: string
+  roleId?: number | null
+} | null) {
+  if (!p) return false
+  if (p.orgRole === OrgRole.Captain) return true
+  return p.roleId === Role.Captain
+}
+
+/** 组织内可进管理端：教练 / 队长 / 团队管理员 */
+export function isOrgStaffRole(orgRole?: string | null) {
+  return (
+    orgRole === OrgRole.Coach ||
+    orgRole === OrgRole.Captain ||
+    orgRole === OrgRole.OrgAdmin
+  )
 }
 
 /** @deprecated 用 isSiteAdminFromPayload */
@@ -47,14 +91,14 @@ export function isCaptainRole(roleId?: number | null) {
   return roleId === Role.Captain
 }
 
-/** 管理端：站点管理员或当前组织管理员（兼容旧 staff） */
+/** 管理端：站点管理员或当前组织教练/队长/管理员（兼容旧 staff） */
 export function isStaffFromPayload(p?: {
   isSiteAdmin?: boolean
   orgRole?: string
   roleId?: number | null
 } | null) {
   if (!p) return false
-  if (isSiteAdminFromPayload(p) || p.orgRole === 'org_admin') return true
+  if (isSiteAdminFromPayload(p) || isOrgStaffRole(p.orgRole)) return true
   return (
     p.roleId === Role.Admin || p.roleId === Role.Coach || p.roleId === Role.Captain
   )
@@ -66,7 +110,7 @@ export function isStaffRole(roleId?: number | null) {
   )
 }
 
-/** 队员侧：所有登录用户均可（不再排除纯教练） */
+/** 队员侧：所有登录用户均可 */
 export function isMemberLikeRole(roleId?: number | null) {
   return (
     roleId === Role.Member ||
@@ -81,4 +125,24 @@ export function isMemberLikeRole(roleId?: number | null) {
 export function roleName(roleId?: number | null) {
   if (roleId === undefined || roleId === null) return '未知'
   return RoleLabel[roleId] ?? `角色${roleId}`
+}
+
+export function orgRoleName(role?: string | null) {
+  if (!role) return '成员'
+  return OrgRoleLabel[role] ?? role
+}
+
+/** 侧栏管理入口文案 */
+export function staffNavLabel(p?: {
+  isSiteAdmin?: boolean
+  orgRole?: string
+  roleId?: number | null
+} | null) {
+  if (isSiteAdminFromPayload(p)) return '站点管理'
+  if (p?.orgRole === OrgRole.OrgAdmin) return '团队管理'
+  if (p?.orgRole === OrgRole.Captain) return '队长管理'
+  if (p?.orgRole === OrgRole.Coach) return '教练管理'
+  if (p?.roleId === Role.Captain) return '队长管理'
+  if (p?.roleId === Role.Coach) return '教练管理'
+  return '团队管理'
 }

@@ -4,12 +4,11 @@ import { toast } from 'sonner'
 import { listGroups } from '@/api/group'
 import {
   deleteUser,
-  getProfileById,
   listProfiles,
   moveGroup,
+  setSiteAdmin,
 } from '@/api/profile'
-import { listRoles, setUserRole } from '@/api/role'
-import type { GroupInfo, RoleInfo, UserListItem } from '@shared/api'
+import type { GroupInfo, UserListItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
@@ -25,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -55,8 +55,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formatTime } from '@/lib/format'
-import { roleName as fallbackRoleName } from '@/lib/roles'
+import { orgRoleName } from '@/lib/roles'
 
 const PAGE_SIZE = 10
 
@@ -65,7 +64,6 @@ export function DashboardUser() {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<UserListItem[]>([])
-  const [roles, setRoles] = useState<RoleInfo[]>([])
   const [groups, setGroups] = useState<GroupInfo[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -76,11 +74,6 @@ export function DashboardUser() {
   const groupName = useCallback(
     (id: number) => groups.find((g) => g.id === id)?.name || `组${id}`,
     [groups],
-  )
-  const roleName = useCallback(
-    (id?: number) =>
-      roles.find((r) => r.roleId === id)?.name || fallbackRoleName(id),
-    [roles],
   )
 
   const load = useCallback(async () => {
@@ -100,45 +93,39 @@ export function DashboardUser() {
   }, [load])
 
   useEffect(() => {
-    void listRoles().then((r) => {
-      if (r.success && r.data) setRoles(r.data)
-    })
+    if (isAdmin) return
     void listGroups(1, 100).then((r) => {
       if (r.success && r.data) setGroups(r.data.list)
     })
-  }, [])
+  }, [isAdmin])
 
-  async function openEdit(u: UserListItem) {
+  function openGroupEdit(u: UserListItem) {
     setEditUser(u)
-    if (isAdmin) {
-      const full = await getProfileById(u.userId)
-      setEditValue(String(full.data?.roleId ?? u.roleId ?? 0))
-    } else {
-      setEditValue(String(u.groupId))
-    }
+    setEditValue(String(u.groupId))
   }
 
-  async function handleSaveEdit() {
+  async function handleSaveGroup() {
     if (!editUser) return
     setSaving(true)
-    let res
-    if (isAdmin) {
-      res = await setUserRole({
-        userId: editUser.userId,
-        roleId: Number(editValue),
-      })
-    } else {
-      res = await moveGroup({
-        userId: editUser.userId,
-        groupId: Number(editValue),
-      })
-    }
+    const res = await moveGroup({
+      userId: editUser.userId,
+      groupId: Number(editValue),
+    })
     setSaving(false)
     if (res.success) {
-      toast.success(res.message || '已更新')
+      toast.success(res.message || '已更新分组')
       setEditUser(null)
       void load()
     } else toast.error(res.message || '更新失败')
+  }
+
+  async function handleToggleSiteAdmin(u: UserListItem) {
+    const next = !u.isSiteAdmin
+    const res = await setSiteAdmin(u.userId, next)
+    if (res.success) {
+      toast.success(next ? '已设为站点管理员' : '已取消站点管理员')
+      void load()
+    } else toast.error(res.message || '操作失败')
   }
 
   async function handleDelete(userId: number) {
@@ -156,9 +143,11 @@ export function DashboardUser() {
   return (
     <PageShell className="gap-3">
       <div>
-        <h3 className="font-semibold">{isAdmin ? '用户管理' : '队员管理'}</h3>
+        <h3 className="font-semibold">{isAdmin ? '用户管理' : '成员管理'}</h3>
         <p className="text-sm text-muted-foreground">
-          {isAdmin ? '调整角色或移除用户' : '调整队员所在分组'}
+          {isAdmin
+            ? '查看全站用户、所属团队，可任命站点管理员'
+            : '查看当前组织成员，可调整分组'}
         </p>
       </div>
 
@@ -178,8 +167,7 @@ export function DashboardUser() {
                   <TableHead className="w-12" />
                   <TableHead>姓名</TableHead>
                   <TableHead>用户名</TableHead>
-                  <TableHead>{isAdmin ? '角色' : '分组'}</TableHead>
-                  <TableHead>最后提交</TableHead>
+                  <TableHead>{isAdmin ? '所属团队' : '分组'}</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -194,24 +182,62 @@ export function DashboardUser() {
                         </AvatarFallback>
                       </Avatar>
                     </TableCell>
-                    <TableCell>{u.name}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span>{u.name}</span>
+                        {u.isSiteAdmin && (
+                          <Badge variant="default" className="text-[10px]">
+                            站点管理员
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{u.username}</TableCell>
                     <TableCell>
-                      {isAdmin ? roleName(u.roleId) : groupName(u.groupId)}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {u.lastSubmit ? formatTime(u.lastSubmit) : '-'}
+                      {isAdmin ? (
+                        <div className="flex max-w-xs flex-wrap gap-1">
+                          {(u.orgs || []).map((o) => (
+                            <Badge
+                              key={o.orgId}
+                              variant="secondary"
+                              className="font-normal"
+                            >
+                              {o.name}
+                              {o.role && o.role !== 'member' ? (
+                                <span className="ml-1 text-muted-foreground">
+                                  · {orgRoleName(o.role)}
+                                </span>
+                              ) : null}
+                            </Badge>
+                          ))}
+                          {!(u.orgs || []).length && (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </div>
+                      ) : (
+                        groupName(u.groupId)
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {isStaff && (
+                        {isAdmin && (
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            onClick={() => void openEdit(u)}
+                            onClick={() => void handleToggleSiteAdmin(u)}
                           >
-                            {isAdmin ? '调整角色' : '调整分组'}
+                            {u.isSiteAdmin ? '取消站管' : '设为站管'}
+                          </Button>
+                        )}
+                        {isStaff && !isAdmin && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openGroupEdit(u)}
+                          >
+                            调整分组
                           </Button>
                         )}
                         <Button type="button" size="sm" variant="ghost" asChild>
@@ -248,7 +274,7 @@ export function DashboardUser() {
                 ))}
                 {!list.length && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                       暂无用户
                     </TableCell>
                   </TableRow>
@@ -270,33 +296,25 @@ export function DashboardUser() {
       <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {isAdmin ? '修改角色' : '修改分组'} · {editUser?.name}
-            </DialogTitle>
+            <DialogTitle>修改分组 · {editUser?.name}</DialogTitle>
           </DialogHeader>
           <Select value={editValue} onValueChange={setEditValue}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {isAdmin
-                ? roles.map((r) => (
-                    <SelectItem key={r.roleId} value={String(r.roleId)}>
-                      {r.name}
-                    </SelectItem>
-                  ))
-                : groups.map((g) => (
-                    <SelectItem key={g.id} value={String(g.id)}>
-                      {g.name}
-                    </SelectItem>
-                  ))}
+              {groups.map((g) => (
+                <SelectItem key={g.id} value={String(g.id)}>
+                  {g.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setEditUser(null)}>
               取消
             </Button>
-            <Button type="button" disabled={saving} onClick={() => void handleSaveEdit()}>
+            <Button type="button" disabled={saving} onClick={() => void handleSaveGroup()}>
               保存
             </Button>
           </DialogFooter>
