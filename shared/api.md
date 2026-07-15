@@ -93,6 +93,9 @@ HTTP 手写路由（非 proto），需登录。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/user/org/members` | 成员 | query: `orgId` |
 | POST | `/user/org/members/set-role` | 组织/站点管理员 | `{ orgId, userId, role: member\|org_admin }` |
 | POST | `/user/org/members/remove` | 组织/站点管理员 | `{ orgId, userId }`；不可移出公共域 |
+| POST | `/user/org/members/add` | 站点/组织管理员 | `{ orgId, userId?\|username?, role? }` 搜索加入 |
+| GET | `/user/org/member-ids` | 否/登录 | query: `orgId` → `{ userIds }`（core 隔离用） |
+| GET | `/user/profile/ids-by-org` | 否 | query: `orgId` → 组织成员 ids（gRPC/HTTP） |
 | GET | `/user/org/invite` | 组织管理员 | query: `orgId` → 团队识别码 |
 | POST | `/user/org/invite/rotate` | 组织管理员 | `{ orgId }` 更换识别码 |
 | GET | `/user/org/join-requests` | 组织管理员 | 待审批列表 |

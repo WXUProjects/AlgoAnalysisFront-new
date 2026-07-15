@@ -54,7 +54,7 @@ function DeltaText({ value }: { value: number | null }) {
 }
 
 export function DashboardStatistics() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, currentOrg } = useAuth()
   const [period, setPeriod] = useState<PeriodData | null>(null)
   const [userCount, setUserCount] = useState(0)
   const [groupCount, setGroupCount] = useState(0)
@@ -68,6 +68,7 @@ export function DashboardStatistics() {
     async function load() {
       setLoading(true)
       const end = todayYmd()
+      // userId=-1 / heatmap userId=0：后端按 JWT 当前组织成员聚合
       const [p, users, groups, hS, hA] = await Promise.all([
         getPeriod(-1),
         listProfiles(1, 1),
@@ -87,7 +88,7 @@ export function DashboardStatistics() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [currentOrg?.id])
 
   async function handleUpdateAll() {
     setUpdating(true)
@@ -127,9 +128,11 @@ export function DashboardStatistics() {
     <PageShell>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-semibold">全站统计</h3>
+          <h3 className="font-semibold">
+            {currentOrg?.name ? `${currentOrg.name} · 数据统计` : '数据统计'}
+          </h3>
           <p className="text-sm text-muted-foreground">
-            查看用户、提交与近期趋势
+            按当前组织成员汇总提交与 AC（切换组织后数据随之变化）
           </p>
         </div>
         {isAdmin && (

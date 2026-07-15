@@ -10,14 +10,33 @@ function asList<T>(raw: unknown): T[] {
   return []
 }
 
-export async function listMyOrgs() {
+export async function listMyOrgs(opts?: { all?: boolean }) {
   const res = await get<{ code?: number; message?: string; list?: OrgInfo[] }>(
     endpoints.user.org.list,
+    opts?.all ? { all: '1' } : undefined,
   )
   return {
     success: res.success && (res.data as { code?: number })?.code !== 1,
     message: (res.data as { message?: string })?.message || res.message,
     list: asList<OrgInfo>((res.data as { list?: OrgInfo[] }) ?? res.data),
+  }
+}
+
+export async function addOrgMember(payload: {
+  orgId: number
+  userId?: number
+  username?: string
+  role?: string
+}) {
+  const res = await post<{ code?: number; message?: string; userId?: number }>(
+    endpoints.user.org.addMember,
+    payload,
+  )
+  const body = res.data as { code?: number; message?: string; userId?: number }
+  return {
+    success: res.success && body?.code !== 1,
+    message: body?.message || res.message,
+    userId: body?.userId,
   }
 }
 

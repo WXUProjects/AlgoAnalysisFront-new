@@ -48,6 +48,7 @@ const titles: Record<string, string> = {
   '/admin/user': '用户管理',
   '/admin/site': '站点设置',
   '/admin/org': '组织设置',
+  '/admin/orgs': '组织管理',
 }
 
 export function AdminLayout() {
@@ -106,49 +107,35 @@ export function AdminLayout() {
           </SidebarHeader>
 
           <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>管理</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname.startsWith('/admin/statistics')}
-                      tooltip="数据统计"
-                    >
-                      <NavLink to="/admin/statistics">
-                        <BarChart3Icon />
-                        <span>数据统计</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname.startsWith('/admin/bulletin')}
-                      tooltip="公告管理"
-                    >
-                      <NavLink to="/admin/bulletin">
-                        <MegaphoneIcon />
-                        <span>公告管理</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  {isAdmin && (
+            {(isAdmin || isOrgAdmin) && (
+              <SidebarGroup>
+                <SidebarGroupLabel>团队（当前组织）</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        isActive={pathname.startsWith('/admin/problem-progress')}
-                        tooltip="题库识别"
+                        isActive={pathname.startsWith('/admin/statistics')}
+                        tooltip="数据统计"
                       >
-                        <NavLink to="/admin/problem-progress">
-                          <WorkflowIcon />
-                          <span>题库识别</span>
+                        <NavLink to="/admin/statistics">
+                          <BarChart3Icon />
+                          <span>数据统计</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  )}
-                  {(isAdmin || isOrgAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/admin/bulletin')}
+                        tooltip="公告管理"
+                      >
+                        <NavLink to="/admin/bulletin">
+                          <MegaphoneIcon />
+                          <span>公告管理</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
@@ -161,24 +148,25 @@ export function AdminLayout() {
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  )}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname.startsWith('/admin/user')}
-                      tooltip={userLabel}
-                    >
-                      <NavLink to="/admin/user">
-                        <LayoutDashboardIcon />
-                        <span>{userLabel}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  {(isAdmin || isOrgAdmin) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        isActive={pathname.startsWith('/admin/org')}
+                        isActive={pathname.startsWith('/admin/user')}
+                        tooltip={userLabel}
+                      >
+                        <NavLink to="/admin/user">
+                          <LayoutDashboardIcon />
+                          <span>{userLabel}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={
+                          pathname.startsWith('/admin/org') &&
+                          !pathname.startsWith('/admin/orgs')
+                        }
                         tooltip="组织设置"
                       >
                         <NavLink to="/admin/org">
@@ -187,8 +175,39 @@ export function AdminLayout() {
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  )}
-                  {isAdmin && (
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+            {isAdmin && (
+              <SidebarGroup>
+                <SidebarGroupLabel>站点</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/admin/orgs')}
+                        tooltip="组织管理"
+                      >
+                        <NavLink to="/admin/orgs">
+                          <UsersIcon />
+                          <span>组织管理</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/admin/problem-progress')}
+                        tooltip="题库识别"
+                      >
+                        <NavLink to="/admin/problem-progress">
+                          <WorkflowIcon />
+                          <span>题库识别</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
@@ -201,10 +220,10 @@ export function AdminLayout() {
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
           </SidebarContent>
 
           <SidebarFooter>

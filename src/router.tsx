@@ -78,6 +78,11 @@ const DashboardOrgSettings = lazy(() =>
     default: m.DashboardOrgSettings,
   })),
 )
+const DashboardOrgsManage = lazy(() =>
+  import('@/pages/dashboard/OrgsManage').then((m) => ({
+    default: m.DashboardOrgsManage,
+  })),
+)
 const OrgHub = lazy(() =>
   import('@/pages/OrgHub').then((m) => ({ default: m.OrgHub })),
 )
@@ -282,6 +287,14 @@ export const router = createBrowserRouter([
             element: (
               <Lazy>
                 <DashboardOrgSettings />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'orgs',
+            element: (
+              <Lazy>
+                <DashboardOrgsManage />
               </Lazy>
             ),
           },
