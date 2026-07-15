@@ -101,9 +101,13 @@ export function Register() {
                   id="reg-name"
                   value={form.name}
                   onChange={(e) => update('name', e.target.value)}
-                  placeholder="站内展示用，不必填真实姓名"
+                  placeholder="站内展示用"
                   disabled={pending}
+                  maxLength={32}
                 />
+                <p className="text-xs text-muted-foreground">
+                  注册后会自动加入「公共域」，此昵称即你在公共域中的对外称呼。加入其他校队时，可再单独设置队内名称。
+                </p>
               </Field>
               <Field className="gap-1.5">
                 <FieldLabel htmlFor="reg-email">邮箱</FieldLabel>

@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { AppLayout } from '@/layouts/AppLayout'
 import { AdminLayout } from '@/layouts/AdminLayout'
 import { RequireCoach } from '@/auth/RequireCoach'
+import { RequireLogin } from '@/auth/RequireLogin'
 import { RequireMemberLike } from '@/auth/RequireMemberLike'
 import { RouteErrorFallback } from '@/components/error-boundary'
 import { Spinner } from '@/components/ui/spinner'
@@ -100,6 +101,15 @@ const OrgHub = lazy(() =>
 )
 const About = lazy(() =>
   import('@/pages/About').then((m) => ({ default: m.About })),
+)
+const ToolsHub = lazy(() =>
+  import('@/pages/tools/ToolsHub').then((m) => ({ default: m.ToolsHub })),
+)
+const PasteCreate = lazy(() =>
+  import('@/pages/tools/PasteCreate').then((m) => ({ default: m.PasteCreate })),
+)
+const PasteView = lazy(() =>
+  import('@/pages/tools/PasteView').then((m) => ({ default: m.PasteView })),
 )
 
 function PageFallback() {
@@ -233,6 +243,32 @@ export const router = createBrowserRouter([
         element: (
           <Lazy>
             <About />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'tools',
+        element: (
+          <Lazy>
+            <ToolsHub />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'tools/paste',
+        element: (
+          <RequireLogin>
+            <Lazy>
+              <PasteCreate />
+            </Lazy>
+          </RequireLogin>
+        ),
+      },
+      {
+        path: 'p/:slug',
+        element: (
+          <Lazy>
+            <PasteView />
           </Lazy>
         ),
       },

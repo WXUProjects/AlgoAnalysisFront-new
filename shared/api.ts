@@ -62,6 +62,12 @@ export const endpoints = {
     platform: {
       setSiteAdmin: `${API_PREFIX}/user/platform/set-site-admin`,
     },
+    paste: {
+      create: `${API_PREFIX}/user/paste/create`,
+      get: `${API_PREFIX}/user/paste/get`,
+      mine: `${API_PREFIX}/user/paste/mine`,
+      delete: `${API_PREFIX}/user/paste/delete`,
+    },
   },
   core: {
     submitLog: {
@@ -228,16 +234,16 @@ export interface OrgInfo {
   aiSummaryIntervalMin?: number
   aiEmailSchedule?: string
   myRole?: 'member' | 'coach' | 'captain' | 'org_admin' | string
+  /** 我在该组织内的对外称呼（org_members.org_display_name） */
+  orgDisplayName?: string
   isCurrent?: boolean
 }
 
 export interface OrgMemberInfo {
   userId: number
   username: string
-  /** 组织内展示名（有组织内名称则用之，否则全局昵称） */
+  /** 组织内展示名（org_display_name，空则 username） */
   name: string
-  /** 全局昵称 users.name */
-  nickname?: string
   /** 组织内名称 org_members.org_display_name */
   orgDisplayName?: string
   avatar?: string
@@ -363,4 +369,25 @@ export interface ProblemUserProfile {
 export interface AgentSummaryData {
   msg: string[]
   updateTime: string
+}
+
+/** Pastebin 粘贴板 */
+export type PasteExpire = 'never' | '1h' | '1d' | '1w' | '1m' | '1y'
+
+export interface PasteInfo {
+  id: number
+  slug: string
+  title: string
+  content?: string
+  language: string
+  userId: number
+  createdAt: number
+  expireAt?: number | null
+}
+
+export interface PasteCreateReq {
+  title?: string
+  content: string
+  language?: string
+  expire?: PasteExpire
 }

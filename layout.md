@@ -41,6 +41,7 @@
 | 公告 | `/bulletin` | 全部 |
 | 动态 | `/all-activities` | 全部 |
 | 题库 | `/question-bank` | 全部 |
+| 工具 | `/tools` | 全部（粘贴板创建需登录） |
 | 个人资料 | `/profile` | 队员 / 队长 / 管理员（纯教练不展示） |
 | 后台 / 教练管理 | `/admin` | 管理员 / 教练 / 队长 |
 | 论坛 | 外链 `http://bbs.algo.zhiyuansofts.cn/` | 全部 |

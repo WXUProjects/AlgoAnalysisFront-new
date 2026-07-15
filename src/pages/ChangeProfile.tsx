@@ -144,7 +144,7 @@ export function ChangeProfile() {
       <Card className="gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>编辑资料</CardTitle>
-          <CardDescription>修改昵称、邮箱与邮件通知</CardDescription>
+          <CardDescription>修改昵称（公共域称呼）、邮箱与邮件通知</CardDescription>
         </CardHeader>
         <form onSubmit={handleSaveProfile}>
           <CardContent className="px-4">
@@ -192,9 +192,13 @@ export function ChangeProfile() {
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="站内展示用"
+                  placeholder="站内与公共域展示用"
                   disabled={saving}
+                  maxLength={32}
                 />
+                <p className="text-xs text-muted-foreground">
+                  与「公共域」组织内称呼同步；其他校队的称呼请在「我的组织」中分别修改。
+                </p>
               </Field>
               <Field className="gap-1.5">
                 <FieldLabel htmlFor="email">邮箱</FieldLabel>

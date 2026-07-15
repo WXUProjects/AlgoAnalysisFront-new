@@ -12,6 +12,7 @@ import {
   ActivityIcon,
   UserIcon,
   UserPlusIcon,
+  WrenchIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
@@ -52,12 +53,16 @@ const titles: Record<string, string> = {
   '/question-bank': '题库',
   '/about': '关于我们',
   '/org': '我的组织',
+  '/tools': '工具',
+  '/tools/paste': '粘贴板',
 }
 
 function resolveTitle(pathname: string, brand: string): string {
   if (titles[pathname]) return titles[pathname]
   if (pathname.startsWith('/contest/')) return '比赛详情'
   if (pathname.startsWith('/question-bank/detail/')) return '题目详情'
+  if (pathname.startsWith('/p/')) return '粘贴板'
+  if (pathname.startsWith('/tools')) return '工具'
   return brand
 }
 
@@ -197,6 +202,20 @@ export function AppLayout() {
                       <NavLink to="/question-bank">
                         <BookOpenIcon />
                         <span>题库</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={
+                        pathname.startsWith('/tools') || pathname.startsWith('/p/')
+                      }
+                      tooltip="工具"
+                    >
+                      <NavLink to="/tools">
+                        <WrenchIcon />
+                        <span>工具</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

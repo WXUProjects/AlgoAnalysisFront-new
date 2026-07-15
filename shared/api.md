@@ -62,13 +62,13 @@
 |--------|------|------|------|
 | GET | `/user/profile/get-by-id` | 否 | query: `userId` |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]` |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]` |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新资料 |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
 | POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；无组织授权时不可开启日报/周报 |
 | GET | `/user/profile/ids-by-group` | 否 | query: `groupId` |
-| POST | `/user/profile/get-by-ids` | 否 | body: `{ userIds: number[] }` |
+| POST | `/user/profile/get-by-ids` | 否 | body: `{ userIds, orgId? }`；`name`=该组织 `org_display_name`（空则 username）；`orgId` 缺省用 JWT 当前组织，再回落公共域 |
 | POST | `/user/profile/delete` | 是(管理员) | 软删除用户 |
 
 ### Upload / Site
@@ -80,6 +80,34 @@
 | GET | `/user/site/config` | 否 | 站点标题/logo/favicon（默认 GoAlgo） |
 | POST | `/user/site/config` | 是(站点管理员) | body: `{ siteTitle, siteLogo, favicon }` |
 
+### Paste（粘贴板 / Pastebin）
+
+HTTP 手写路由。创建需登录；公开查看不需登录。
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| POST | `/user/paste/create` | 是 | body: `{ title?, content, language?, expire? }`；`expire`=`never\|1h\|1d\|1w\|1m\|1y`；内容 ≤512KB；返回 `{ data: Paste }` |
+| GET | `/user/paste/get` | 否 | query: `slug`；过期返回 404 |
+| GET | `/user/paste/mine` | 是 | 我创建的最近 50 条（不含正文） |
+| POST | `/user/paste/delete` | 是 | body: `{ slug }`；本人或站点管理员 |
+
+**Paste**
+
+```json
+{
+  "id": 1,
+  "slug": "aB3xY9kLmN",
+  "title": "string",
+  "content": "string",
+  "language": "go",
+  "userId": 1,
+  "createdAt": 1710000000,
+  "expireAt": null
+}
+```
+
+前端路由：`/tools` 工具入口；`/tools/paste` 创建；`/p/:slug` 公开查看。
+
 ### Org（GoAlgo 多租户）
 
 HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`（`member|coach|captain|org_admin`）。
@@ -87,15 +115,15 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
 | POST | `/user/auth/refresh` | 是 | 按 DB 重签 JWT（任命后 F5 同步权限） |
-| GET | `/user/org/list` | 是 | 我的组织；`?all=1` 站点管理员看全部 |
-| GET | `/user/org/get` | 是 | query: `id`（默认当前组织） |
+| GET | `/user/org/list` | 是 | 我的组织；项含 `myRole`、`orgDisplayName`（我在该组织的称呼）、`isCurrent`；`?all=1` 站点管理员看全部 |
+| GET | `/user/org/get` | 是 | query: `id`（默认当前组织）；若本人是成员则含 `myRole`、`orgDisplayName` |
 | POST | `/user/org/create` | 站点管理员 | `{ name, slug?, adminUserId?, joinMode? }` |
 | POST | `/user/org/update` | 组织/站点管理员 | 品牌/开关/joinMode；间隔仅站点 |
 | POST | `/user/org/delete` | 站点管理员 | `{ id }` 软删除；**公共域不可删**；成员迁回公共域；挂在该组织分组上的用户迁到公共域默认分组；释放 slug/识别码唯一约束 |
 | POST | `/user/org/switch` | 是 | `{ orgId }` → 新 `jwtToken`；**同时写入默认组织**（下次打开自动进入，无需单独设默认） |
 | POST | `/user/org/join` | 是 | `{ inviteCode, orgDisplayName }` 团队识别码 + **组织内名称（必填）**；**不改**默认组织 |
 | POST | `/user/org/leave` | 是 | `{ orgId }`；**公共域不可退出**；若离开的是默认组织则回落公共域 |
-| GET | `/user/org/members` | 成员 | query: `orgId`；返回 `name`（组织内展示）、`nickname`（全局昵称）、`orgDisplayName` |
+| GET | `/user/org/members` | 成员 | query: `orgId`；返回 `name`（组织内名称，空则 username）、`orgDisplayName`（原始字段，**不再返回 nickname**） |
 | POST | `/user/org/members/set-role` | 组织/站点管理员 | `{ orgId, userId, role: member\|coach\|captain\|org_admin }`；若不在组织则加入并 **设为默认组织** |
 | POST | `/user/org/members/remove` | 组织/站点管理员 | `{ orgId, userId }`；不可移出公共域；若移出默认组织则回落公共域 |
 | POST | `/user/org/members/add` | 站点/组织管理员 | `{ orgId, userId?\|username?, role?, orgDisplayName? }` 搜索加入；**设为默认组织**；组织内名称可填，默认用对方全局昵称 |
@@ -111,14 +139,18 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 默认组织（`users.current_org_id`）：注册时为 **公共域** `slug=public`（全员自动加入，不可退出）。  
 **管理员拉入**某组织后，该组织成为用户默认组织（下次打开自动进入）。用户之后只需 **switch 切换**，切换即记忆，无需刻意「修改默认组织」。
 
-**名称语义**
+**名称语义（已合并）**
 
 | 字段 | 含义 | 范围 |
 |------|------|------|
-| `users.name` | 全局昵称 | 全站个人资料等 |
-| `org_members.org_display_name` | 组织内名称 | 仅该组织成员列表/队内展示 |
+| `users.name` | **昵称** | 全站个人资料；**与公共域组织内称呼同步** |
+| `org_members.org_display_name` | **组织内名称 / 对外称呼** | 仅该组织成员列表/队内展示；公共域与昵称双向同步 |
 
-加入团队（识别码）须填写组织内名称；成员列表的 `name` 优先组织内名称。
+- 注册：填写昵称 → 写入 `users.name` **并**写入公共域 `org_display_name`
+- 改资料昵称 → 同步更新公共域称呼
+- 改公共域组织内称呼 → 同步更新 `users.name`
+- 其他组织称呼独立，互不影响
+- 加入团队（识别码）须填写该组织内名称；成员列表 `name` 仅用组织内名称（空则 username）
 
 **GetByIdRes**
 ```json
@@ -211,7 +243,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | 字段 | 说明 |
 |------|------|
 | `id` / `platform` / `userId` / `submitId` / `contest` / `problem` / `lang` / `status` / `time` / `problemId` | 原有 |
-| `userName` | 展示姓名（user 服务 `GetByIds` 一次批量） |
+| `userName` | 当前组织对外称呼（`GetByIds` 按 org 解析） |
 | `problemTitle` | 题库标题（本库 `problems` 一次 `IN` 查询；无 `problemId` 时为空） |
 | `problemTags` | 题库 AI 标签（同次批量查询，最多 6 个；无 `problemId` 时为空） |
 | `problemDifficulty` | 题库难度（同次批量查询；无 `problemId` 时为空） |

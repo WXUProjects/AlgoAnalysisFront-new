@@ -12,7 +12,9 @@ import {
   updateOrg,
 } from '@/api/org'
 import { getProfileByName } from '@/api/profile'
+import { uploadImage } from '@/api/upload'
 import type { OrgMemberInfo, UserProfile } from '@shared/api'
+import { ImageUploadTile } from '@/components/image-upload-tile'
 import { Pagination } from '@/components/pagination'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -36,6 +38,7 @@ export function DashboardOrgSettings() {
 
   const [brandTitle, setBrandTitle] = useState('')
   const [brandLogo, setBrandLogo] = useState('')
+  const [logoUploading, setLogoUploading] = useState(false)
   const [joinMode, setJoinMode] = useState('auto')
   const [enableAiSummary, setEnableAiSummary] = useState(true)
   const [enableAiEmail, setEnableAiEmail] = useState(true)
@@ -51,7 +54,9 @@ export function DashboardOrgSettings() {
   const [memberKeyword, setMemberKeyword] = useState('')
   const [memberKeywordDraft, setMemberKeywordDraft] = useState('')
   const [membersLoading, setMembersLoading] = useState(false)
-  const [requests, setRequests] = useState<{ id: number; name: string; username: string }[]>([])
+  const [requests, setRequests] = useState<
+    { id: number; name: string; username: string; orgDisplayName?: string }[]
+  >([])
   const [addSearch, setAddSearch] = useState('')
   const [addCandidates, setAddCandidates] = useState<UserProfile[]>([])
   const [addSearching, setAddSearching] = useState(false)
@@ -107,6 +112,19 @@ export function DashboardOrgSettings() {
     return () => window.clearTimeout(t)
   }, [addSearch])
 
+  async function onLogoUpload(file: File | null) {
+    if (!file) return
+    setLogoUploading(true)
+    const res = await uploadImage(file, 'site')
+    setLogoUploading(false)
+    if (!res.success || !res.data?.url) {
+      toast.error(res.message || '上传失败')
+      return
+    }
+    setBrandLogo(res.data.url)
+    toast.success('上传成功，请点保存')
+  }
+
   async function save() {
     if (!orgId) return
     const payload: Record<string, unknown> = {
@@ -150,10 +168,13 @@ export function DashboardOrgSettings() {
             <Label>组织标题（侧栏覆盖）</Label>
             <Input value={brandTitle} onChange={(e) => setBrandTitle(e.target.value)} />
           </div>
-          <div className="space-y-2">
-            <Label>Logo URL</Label>
-            <Input value={brandLogo} onChange={(e) => setBrandLogo(e.target.value)} />
-          </div>
+          <ImageUploadTile
+            label="组织 Logo"
+            value={brandLogo}
+            uploading={logoUploading}
+            sizeClass="size-28"
+            onFile={(file) => void onLogoUpload(file)}
+          />
           <div className="space-y-2">
             <Label>加入方式</Label>
             <select
@@ -250,7 +271,7 @@ export function DashboardOrgSettings() {
             {requests.map((r) => (
               <div key={r.id} className="flex items-center justify-between rounded border p-2">
                 <span className="text-sm">
-                  {r.name || r.username}
+                  {r.orgDisplayName || r.name || r.username}
                 </span>
                 <div className="flex gap-2">
                   <Button
@@ -293,11 +314,11 @@ export function DashboardOrgSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">搜索用户加入本组织</CardTitle>
-          <CardDescription>按昵称或用户名模糊搜索后加入。</CardDescription>
+          <CardDescription>按站内昵称或用户名搜索后加入本组织。</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           <Input
-            placeholder="昵称或用户名"
+            placeholder="站内昵称或用户名"
             value={addSearch}
             onChange={(e) => setAddSearch(e.target.value)}
           />
@@ -345,7 +366,7 @@ export function DashboardOrgSettings() {
         <CardContent className="space-y-3">
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
-              placeholder="搜索昵称、组织内名称或用户名"
+              placeholder="搜索组织内名称或用户名"
               value={memberKeywordDraft}
               onChange={(e) => setMemberKeywordDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -386,12 +407,7 @@ export function DashboardOrgSettings() {
                 className="flex items-center justify-between gap-2 rounded border p-2"
               >
                 <div className="min-w-0 text-sm">
-                  <span className="truncate">{m.name || m.username}</span>
-                  {m.username ? (
-                    <span className="ml-1 text-xs text-muted-foreground">
-                      @{m.username}
-                    </span>
-                  ) : null}
+                  <span className="truncate">{m.name || m.orgDisplayName || m.username}</span>
                   <span className="ml-2 text-xs text-muted-foreground">
                     {orgRoleName(m.role)}
                   </span>

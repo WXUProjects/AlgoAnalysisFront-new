@@ -1,18 +1,31 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
-import { joinOrg, leaveOrg } from '@/api/org'
+import { joinOrg, leaveOrg, setOrgDisplayName } from '@/api/org'
+import type { OrgInfo } from '@shared/api'
 import { orgRoleName } from '@/lib/roles'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export function OrgHub() {
   const { orgs, currentOrg, switchOrg, refreshOrgs, user } = useAuth()
   const [code, setCode] = useState('')
-  const [orgDisplayName, setOrgDisplayName] = useState('')
+  const [orgDisplayName, setOrgDisplayNameInput] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const [editOrg, setEditOrg] = useState<OrgInfo | null>(null)
+  const [editName, setEditName] = useState('')
+  const [savingName, setSavingName] = useState(false)
 
   async function handleJoin() {
     if (!code.trim()) {
@@ -29,7 +42,7 @@ export function OrgHub() {
     if (res.success) {
       toast.success(res.message || '操作成功')
       setCode('')
-      setOrgDisplayName('')
+      setOrgDisplayNameInput('')
       await refreshOrgs()
     } else {
       toast.error(res.message || '加入失败')
@@ -51,12 +64,43 @@ export function OrgHub() {
     }
   }
 
+  function openEditDisplayName(o: OrgInfo) {
+    setEditOrg(o)
+    setEditName((o.orgDisplayName || '').trim())
+  }
+
+  async function handleSaveDisplayName() {
+    if (!editOrg) return
+    const name = editName.trim()
+    if (!name) {
+      toast.error('请填写组织内名称')
+      return
+    }
+    if ([...name].length > 32) {
+      toast.error('组织内名称最多 32 字')
+      return
+    }
+    setSavingName(true)
+    const res = await setOrgDisplayName({
+      orgId: editOrg.id,
+      orgDisplayName: name,
+    })
+    setSavingName(false)
+    if (res.success) {
+      toast.success(res.message || '已更新组织内名称')
+      setEditOrg(null)
+      await refreshOrgs()
+    } else {
+      toast.error(res.message || '更新失败')
+    }
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
       <div>
         <h1 className="text-xl font-semibold">我的组织</h1>
         <p className="text-sm text-muted-foreground">
-          默认加入公共域。可用团队识别码加入其他校队，并切换当前组织。
+          默认加入公共域。可用团队识别码加入其他校队，并切换当前组织。公共域的称呼与站内昵称同步，其他组织可单独设置。
         </p>
       </div>
 
@@ -64,8 +108,7 @@ export function OrgHub() {
         <CardHeader>
           <CardTitle className="text-base">当前组织</CardTitle>
           <CardDescription>
-            {currentOrg?.name || '未选择'} ·{' '}
-            {orgRoleName(user?.orgRole)}
+            {currentOrg?.name || '未选择'} · {orgRoleName(user?.orgRole)}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -77,7 +120,7 @@ export function OrgHub() {
               key={o.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
             >
-              <div>
+              <div className="min-w-0">
                 <div className="font-medium">
                   {o.name}
                   {o.isSystem ? (
@@ -88,18 +131,28 @@ export function OrgHub() {
                   ) : null}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {o.myRole === 'org_admin' ? '团队管理员' : '成员'}
+                  {orgRoleName(o.myRole)}
+                  {o.orgDisplayName ? (
+                    <span className="ml-2">· 对外称呼：{o.orgDisplayName}</span>
+                  ) : (
+                    <span className="ml-2">· 未设置组织内名称</span>
+                  )}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => openEditDisplayName(o)}>
+                  修改称呼
+                </Button>
                 {o.id !== user?.orgId && (
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => void switchOrg(o.id).then((r) => {
-                      if (r.success) toast.success('已切换')
-                      else toast.error(r.message)
-                    })}
+                    onClick={() =>
+                      void switchOrg(o.id).then((r) => {
+                        if (r.success) toast.success('已切换')
+                        else toast.error(r.message)
+                      })
+                    }
                   >
                     切换
                   </Button>
@@ -141,12 +194,12 @@ export function OrgHub() {
             <Input
               id="org-display-name"
               value={orgDisplayName}
-              onChange={(e) => setOrgDisplayName(e.target.value)}
+              onChange={(e) => setOrgDisplayNameInput(e.target.value)}
               placeholder="在本团队中展示的称呼"
               maxLength={32}
             />
             <p className="text-xs text-muted-foreground">
-              只在该组织内使用，与站内昵称分开。
+              仅在该团队内展示；与公共域/站内昵称独立。加入后也可在上方列表中修改。
             </p>
           </div>
           <Button disabled={loading} onClick={() => void handleJoin()} className="sm:w-fit">
@@ -154,6 +207,48 @@ export function OrgHub() {
           </Button>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!editOrg}
+        onOpenChange={(open) => {
+          if (!open) setEditOrg(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>修改组织内称呼</DialogTitle>
+            <DialogDescription>
+              {editOrg
+                ? `在「${editOrg.name}」中展示的名称，仅该组织成员可见。`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="edit-org-display-name">组织内名称</Label>
+            <Input
+              id="edit-org-display-name"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="例如：真实姓名或队内常用名"
+              maxLength={32}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void handleSaveDisplayName()
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              最多 32 字。修改公共域称呼会同步更新站内昵称；其他组织仅在该组织内生效。
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOrg(null)} disabled={savingName}>
+              取消
+            </Button>
+            <Button disabled={savingName} onClick={() => void handleSaveDisplayName()}>
+              {savingName ? '保存中…' : '保存'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

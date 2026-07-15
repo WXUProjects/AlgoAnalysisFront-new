@@ -1,0 +1,200 @@
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
+import { createPaste, listMyPastes, deletePaste } from '@/api/paste'
+import type { PasteInfo } from '@shared/api'
+import { useAuth } from '@/auth/AuthContext'
+import { CodeEditor } from '@/components/code-editor'
+import { PageShell } from '@/components/page-shell'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Spinner } from '@/components/ui/spinner'
+import { PASTE_EXPIRES, PASTE_LANGUAGES, languageLabel } from '@/lib/paste-languages'
+import { formatTime } from '@/lib/format'
+
+export function PasteCreate() {
+  const { isLogin } = useAuth()
+  const navigate = useNavigate()
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [language, setLanguage] = useState('text')
+  const [expire, setExpire] = useState('1w')
+  const [saving, setSaving] = useState(false)
+  const [mine, setMine] = useState<PasteInfo[]>([])
+  const [mineLoading, setMineLoading] = useState(false)
+
+  async function loadMine() {
+    if (!isLogin) return
+    setMineLoading(true)
+    const res = await listMyPastes()
+    setMineLoading(false)
+    if (res.success && res.data) setMine(res.data)
+  }
+
+  useEffect(() => {
+    void loadMine()
+  }, [isLogin])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!content.trim()) {
+      toast.error('请先粘贴要分享的内容')
+      return
+    }
+    setSaving(true)
+    const res = await createPaste({
+      title: title.trim(),
+      content,
+      language,
+      expire: expire as 'never' | '1h' | '1d' | '1w' | '1m' | '1y',
+    })
+    setSaving(false)
+    if (!res.success || !res.data?.slug) {
+      toast.error(res.message || '发布失败')
+      return
+    }
+    toast.success('已生成分享链接')
+    navigate(`/p/${res.data.slug}`)
+  }
+
+  async function handleDelete(slug: string) {
+    const res = await deletePaste(slug)
+    if (res.success) {
+      toast.success('已删除')
+      void loadMine()
+    } else toast.error(res.message || '删除失败')
+  }
+
+  return (
+    <PageShell className="mx-auto w-full max-w-3xl gap-6 p-6">
+      <form onSubmit={(e) => void handleSubmit(e)}>
+        <Card>
+          <CardHeader>
+            <CardTitle>粘贴板</CardTitle>
+            <CardDescription>
+              把代码、报错日志或配置贴进来，生成链接分享。支持语法高亮，可设置有效期。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup>
+              <Field>
+                <FieldLabel>标题（可选）</FieldLabel>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="例如：比赛题解草稿"
+                  maxLength={200}
+                />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel>语言</FieldLabel>
+                  <select
+                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                  >
+                    {PASTE_LANGUAGES.map((l) => (
+                      <option key={l.value} value={l.value}>
+                        {l.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field>
+                  <FieldLabel>有效期</FieldLabel>
+                  <select
+                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    value={expire}
+                    onChange={(e) => setExpire(e.target.value)}
+                  >
+                    {PASTE_EXPIRES.map((x) => (
+                      <option key={x.value} value={x.value}>
+                        {x.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <Field>
+                <FieldLabel>内容</FieldLabel>
+                <CodeEditor
+                  value={content}
+                  onChange={setContent}
+                  language={language}
+                  placeholder="在此粘贴代码或文本…"
+                  minHeight={320}
+                />
+                <p className="text-xs text-muted-foreground">
+                  边写边高亮 · Tab 缩进两空格 · 最大约 512KB
+                </p>
+              </Field>
+            </FieldGroup>
+          </CardContent>
+          <CardFooter className="justify-between gap-2">
+            <Button type="button" variant="outline" asChild>
+              <Link to="/tools">返回工具</Link>
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? <Spinner data-icon="inline-start" /> : null}
+              生成链接
+            </Button>
+          </CardFooter>
+        </Card>
+      </form>
+
+      {isLogin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">我最近发布的</CardTitle>
+            <CardDescription>仅本人可见列表；他人只能通过链接打开。</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {mineLoading ? (
+              <p className="text-sm text-muted-foreground">加载中…</p>
+            ) : !mine.length ? (
+              <p className="text-sm text-muted-foreground">还没有发布过</p>
+            ) : (
+              mine.map((p) => (
+                <div
+                  key={p.slug}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      to={`/p/${p.slug}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {p.title || p.slug}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">
+                      {languageLabel(p.language)}
+                      {p.createdAt ? ` · ${formatTime(String(p.createdAt))}` : ''}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void handleDelete(p.slug)}
+                  >
+                    删除
+                  </Button>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </PageShell>
+  )
+}
