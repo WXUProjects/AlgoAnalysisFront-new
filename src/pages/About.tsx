@@ -116,6 +116,38 @@ export function About() {
             上建立独立的组织（校队域）、配置品牌与成员管理、按需开通同步与
             AI 策略，欢迎与我们取得联系。
           </p>
+          <div>
+            <p className="font-medium text-foreground">合作后可获得</p>
+            <ul className="mt-2 list-disc space-y-1.5 pl-5">
+              <li>
+                <span className="text-foreground">独立校队域</span>
+                ：成员、分组、公告与队内统计与本校绑定，与公共域及其他校队隔离。
+              </li>
+              <li>
+                <span className="text-foreground">品牌可定制</span>
+                ：侧栏标题、Logo
+                等可按校队配置，队员进入后即有「自己的训练站」感。
+              </li>
+              <li>
+                <span className="text-foreground">管理省心</span>
+                ：团队识别码加入 / 审批、教练与队长角色、分组与公告，无需自建整套系统。
+              </li>
+              <li>
+                <span className="text-foreground">数据一站汇总</span>
+                ：多 OJ
+                自动同步，热力图与提交动态便于教练跟进训练，减少手工统计。
+              </li>
+              <li>
+                <span className="text-foreground">策略可调</span>
+                ：爬虫与 AI
+                总结等按组织开关与间隔配置，在成本与体验之间平衡。
+              </li>
+              <li>
+                <span className="text-foreground">持续演进</span>
+                ：共享平台能力升级（题库、比赛、稳定性与新功能），校队侧专注训练本身。
+              </li>
+            </ul>
+          </div>
           <div className="rounded-lg border bg-muted/40 px-4 py-3 text-foreground">
             <p>
               <span className="text-muted-foreground">微信</span>
