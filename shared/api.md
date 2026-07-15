@@ -61,6 +61,7 @@
 | GET | `/user/profile/get-by-id` | 否 | query: `userId` |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` |
 | GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]` |
+| POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新资料 |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
 | POST | `/user/profile/set-email-enabled` | 是 | 邮箱通知开关 |
