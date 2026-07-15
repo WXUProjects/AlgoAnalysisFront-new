@@ -63,6 +63,7 @@ export function AdminLayout() {
     isAdmin,
     isOrgAdmin,
     isStaff,
+    isCoach,
     user,
     orgs,
     logout,
@@ -83,8 +84,8 @@ export function AdminLayout() {
   const title = titles[pathname] || staffLabel
   const canOrgSettings = isAdmin || isOrgAdmin
   const showTeamNav = isStaff
-  const frontTo = '/'
-  const frontLabel = '返回前台'
+  // 纯教练无个人资料/前台首页，不展示「返回前台」
+  const showFrontLink = !isCoach
 
   function handleLogout() {
     logout()
@@ -287,6 +288,37 @@ export function AdminLayout() {
                 </SidebarGroupContent>
               </SidebarGroup>
             )}
+            <SidebarGroup>
+              <SidebarGroupLabel>浏览</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="比赛">
+                      <Link to="/contest">
+                        <CalendarIcon />
+                        <span>比赛</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="动态">
+                      <Link to="/all-activities">
+                        <ActivityIcon />
+                        <span>动态</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="题库">
+                      <Link to="/question-bank">
+                        <BookOpenIcon />
+                        <span>题库</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           </SidebarContent>
 
           <SidebarFooter>
@@ -310,38 +342,16 @@ export function AdminLayout() {
               </div>
             )}
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip={frontLabel}>
-                  <Link to={frontTo}>
-                    <ArrowLeftIcon />
-                    <span>{frontLabel}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="比赛">
-                  <Link to="/contest">
-                    <CalendarIcon />
-                    <span>比赛</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="动态">
-                  <Link to="/all-activities">
-                    <ActivityIcon />
-                    <span>动态</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="题库">
-                  <Link to="/question-bank">
-                    <BookOpenIcon />
-                    <span>题库</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {showFrontLink && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="返回前台">
+                    <Link to="/">
+                      <ArrowLeftIcon />
+                      <span>返回前台</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="修改密码">
                   <Link to="/change-password">

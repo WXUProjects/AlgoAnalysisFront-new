@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ExternalLinkIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { getProblem, getProblemSubmissions } from '@/api/problem'
 import type { ProblemInfo } from '@shared/api'
+import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,7 +27,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime } from '@/lib/format'
 import { getSubmitLink } from '@/lib/link'
-import { renderMarkdown } from '@/lib/markdown'
 import { num, str } from '@/lib/http'
 import { cn } from '@/lib/utils'
 
@@ -60,11 +60,6 @@ export function QuestionBankDetail() {
       cancelled = true
     }
   }, [id])
-
-  const html = useMemo(
-    () => (problem?.contentMd ? renderMarkdown(problem.contentMd) : ''),
-    [problem?.contentMd],
-  )
 
   if (loading) {
     return (
@@ -152,14 +147,11 @@ export function QuestionBankDetail() {
           <CardTitle className="text-base">题面</CardTitle>
         </CardHeader>
         <CardContent className="px-4">
-          {html ? (
-            <div
-              className="markdown-body content-md"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground">题面准备中，请稍后刷新</p>
-          )}
+          <MarkdownBody
+            content={problem.contentMd || ''}
+            mode="markdown"
+            emptyText="题面准备中，请稍后刷新"
+          />
         </CardContent>
       </Card>
 
