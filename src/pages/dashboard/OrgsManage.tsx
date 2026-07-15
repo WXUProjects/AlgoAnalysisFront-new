@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import {
   addOrgMember,
   createOrg,
+  deleteOrg,
   listMyOrgs,
   listOrgMembers,
   setOrgMemberRole,
@@ -10,6 +11,17 @@ import {
 } from '@/api/org'
 import type { OrgInfo, OrgMemberInfo } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -109,6 +121,19 @@ export function DashboardOrgsManage() {
       await refreshOrgs()
       if (res.data) setSelected(res.data)
     } else toast.error(res.message || '保存失败')
+  }
+
+  async function handleDeleteOrg() {
+    if (!selected || selected.isSystem) return
+    setSaving(true)
+    const res = await deleteOrg(selected.id)
+    setSaving(false)
+    if (res.success) {
+      toast.success(res.message || '已删除组织')
+      setSelected(null)
+      await load()
+      await refreshOrgs()
+    } else toast.error(res.message || '删除失败')
   }
 
   return (
@@ -247,9 +272,34 @@ export function DashboardOrgsManage() {
                     <Label>邮件 cron</Label>
                     <Input value={emailSchedule} onChange={(e) => setEmailSchedule(e.target.value)} />
                   </div>
-                  <Button disabled={saving} onClick={() => void saveSelected()}>
-                    {saving ? '保存中…' : '保存参数'}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button disabled={saving} onClick={() => void saveSelected()}>
+                      {saving ? '保存中…' : '保存参数'}
+                    </Button>
+                    {!selected.isSystem && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button type="button" variant="destructive" disabled={saving}>
+                            删除组织
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>删除组织「{selected.name}」？</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              删除后成员将回到公共域，组织内分组与加入申请一并清除。公共域不可删除。此操作不可在本页撤销。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => void handleDeleteOrg()}>
+                              确认删除
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
 
                   <div className="border-t pt-4">
                     <Label className="mb-2 block">搜索用户加入本组织</Label>

@@ -126,14 +126,47 @@ export async function updateOrg(payload: Record<string, unknown>) {
   }
 }
 
-export async function listOrgMembers(orgId?: number) {
-  const res = await get<{ code?: number; list?: OrgMemberInfo[] }>(
-    endpoints.user.org.members,
-    orgId ? { orgId } : undefined,
+export async function deleteOrg(id: number) {
+  const res = await post<{ code?: number; message?: string }>(
+    endpoints.user.org.delete,
+    { id },
   )
+  const body = res.data as { code?: number; message?: string }
+  return {
+    success: res.success && body?.code !== 1,
+    message: body?.message || res.message,
+  }
+}
+
+export async function listOrgMembers(
+  orgId?: number,
+  opts?: { page?: number; pageSize?: number; keyword?: string },
+) {
+  const params: Record<string, string | number> = {}
+  if (orgId) params.orgId = orgId
+  if (opts?.page) params.page = opts.page
+  if (opts?.pageSize) params.pageSize = opts.pageSize
+  if (opts?.keyword?.trim()) params.keyword = opts.keyword.trim()
+  const res = await get<{
+    code?: number
+    list?: OrgMemberInfo[]
+    total?: number
+    page?: number
+    pageSize?: number
+  }>(endpoints.user.org.members, Object.keys(params).length ? params : undefined)
+  const body = (res.data ?? res.raw ?? {}) as {
+    list?: OrgMemberInfo[]
+    total?: number
+    page?: number
+    pageSize?: number
+  }
+  const list = asList<OrgMemberInfo>(body.list ?? res.data)
   return {
     success: res.success,
-    list: asList<OrgMemberInfo>((res.data as { list?: OrgMemberInfo[] }) ?? res.data),
+    list,
+    total: Number(body.total ?? list.length) || 0,
+    page: Number(body.page ?? opts?.page ?? 1) || 1,
+    pageSize: Number(body.pageSize ?? opts?.pageSize ?? 20) || 20,
   }
 }
 

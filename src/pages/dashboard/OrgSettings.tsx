@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
 import {
+  addOrgMember,
   createOrg,
   getInvite,
   listJoinRequests,
@@ -11,6 +12,9 @@ import {
   setOrgMemberRole,
   updateOrg,
 } from '@/api/org'
+import { getProfileByName } from '@/api/profile'
+import type { OrgMemberInfo, UserProfile } from '@shared/api'
+import { Pagination } from '@/components/pagination'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -24,6 +28,8 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { orgRoleName } from '@/lib/roles'
+
+const MEMBER_PAGE_SIZE = 10
 
 export function DashboardOrgSettings() {
   const { isAdmin, isOrgAdmin, currentOrg, user, refreshOrgs } = useAuth()
@@ -39,11 +45,32 @@ export function DashboardOrgSettings() {
   const [aiInterval, setAiInterval] = useState(180)
   const [emailSchedule, setEmailSchedule] = useState('30 7 * * *')
   const [inviteCode, setInviteCode] = useState('')
-  const [members, setMembers] = useState<
-    { userId: number; name: string; username: string; role: string }[]
-  >([])
+  const [members, setMembers] = useState<OrgMemberInfo[]>([])
+  const [memberTotal, setMemberTotal] = useState(0)
+  const [memberPage, setMemberPage] = useState(1)
+  const [memberKeyword, setMemberKeyword] = useState('')
+  const [memberKeywordDraft, setMemberKeywordDraft] = useState('')
+  const [membersLoading, setMembersLoading] = useState(false)
   const [requests, setRequests] = useState<{ id: number; name: string; username: string }[]>([])
   const [newOrgName, setNewOrgName] = useState('')
+  const [addSearch, setAddSearch] = useState('')
+  const [addCandidates, setAddCandidates] = useState<UserProfile[]>([])
+  const [addSearching, setAddSearching] = useState(false)
+
+  const loadMembers = useCallback(async () => {
+    if (!orgId) return
+    setMembersLoading(true)
+    const r = await listOrgMembers(orgId, {
+      page: memberPage,
+      pageSize: MEMBER_PAGE_SIZE,
+      keyword: memberKeyword,
+    })
+    setMembersLoading(false)
+    if (r.success) {
+      setMembers(r.list)
+      setMemberTotal(r.total)
+    }
+  }, [orgId, memberPage, memberKeyword])
 
   useEffect(() => {
     if (!orgId) return
@@ -59,9 +86,26 @@ export function DashboardOrgSettings() {
     void getInvite(orgId).then((r) => {
       if (r.inviteCode) setInviteCode(r.inviteCode)
     })
-    void listOrgMembers(orgId).then((r) => setMembers(r.list as typeof members))
     void listJoinRequests(orgId).then((r) => setRequests(r.list as typeof requests))
   }, [orgId, currentOrg])
+
+  useEffect(() => {
+    void loadMembers()
+  }, [loadMembers])
+
+  useEffect(() => {
+    if (!addSearch.trim()) {
+      setAddCandidates([])
+      return
+    }
+    const t = window.setTimeout(async () => {
+      setAddSearching(true)
+      const res = await getProfileByName(addSearch.trim())
+      setAddSearching(false)
+      if (res.success) setAddCandidates(res.data || [])
+    }, 350)
+    return () => window.clearTimeout(t)
+  }, [addSearch])
 
   async function save() {
     if (!orgId) return
@@ -237,7 +281,7 @@ export function DashboardOrgSettings() {
                           toast.success('已通过')
                           const list = await listJoinRequests(orgId)
                           setRequests(list.list as typeof requests)
-                          await listOrgMembers(orgId).then((m) => setMembers(m.list as typeof members))
+                          await loadMembers()
                         }
                       })
                     }
@@ -268,44 +312,144 @@ export function DashboardOrgSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">成员与角色</CardTitle>
-          <CardDescription>
-            可设为成员、教练、队长或团队管理员。教练与队长可进入管理页；团队管理员可改组织设置与任命。
-          </CardDescription>
+          <CardTitle className="text-base">搜索用户加入本组织</CardTitle>
+          <CardDescription>按姓名或用户名模糊搜索后加入。</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          {members.map((m) => (
-            <div key={m.userId} className="flex items-center justify-between gap-2 rounded border p-2">
-              <div className="min-w-0 text-sm">
-                <span className="truncate">{m.name || m.username}</span>
-                <span className="ml-2 text-xs text-muted-foreground">
-                  {orgRoleName(m.role)}
-                </span>
-              </div>
-              <Select
-                value={m.role || 'member'}
-                onValueChange={(role) =>
-                  void setOrgMemberRole(orgId, m.userId, role).then(async (r) => {
+          <Input
+            placeholder="姓名或用户名"
+            value={addSearch}
+            onChange={(e) => setAddSearch(e.target.value)}
+          />
+          {addSearching && (
+            <p className="text-xs text-muted-foreground">搜索中…</p>
+          )}
+          {addCandidates.map((c) => (
+            <div
+              key={c.userId}
+              className="flex items-center justify-between rounded border px-3 py-2 text-sm"
+            >
+              <span>
+                {c.name}
+                {c.username ? (
+                  <span className="ml-1 text-muted-foreground">@{c.username}</span>
+                ) : null}
+              </span>
+              <Button
+                size="sm"
+                onClick={() =>
+                  void addOrgMember({ orgId, userId: c.userId }).then(async (r) => {
                     if (r.success) {
-                      toast.success('已更新角色')
-                      const list = await listOrgMembers(orgId)
-                      setMembers(list.list as typeof members)
+                      toast.success(r.message || '已加入')
+                      setAddSearch('')
+                      setAddCandidates([])
+                      await loadMembers()
                     } else toast.error(r.message)
                   })
                 }
               >
-                <SelectTrigger className="w-36 shrink-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="member">成员</SelectItem>
-                  <SelectItem value="coach">教练</SelectItem>
-                  <SelectItem value="captain">队长</SelectItem>
-                  <SelectItem value="org_admin">团队管理员</SelectItem>
-                </SelectContent>
-              </Select>
+                加入
+              </Button>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">成员与角色</CardTitle>
+          <CardDescription>
+            可设为成员、教练、队长或团队管理员。支持分页与模糊搜索。
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              placeholder="搜索姓名或用户名"
+              value={memberKeywordDraft}
+              onChange={(e) => setMemberKeywordDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setMemberPage(1)
+                  setMemberKeyword(memberKeywordDraft.trim())
+                }
+              }}
+            />
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setMemberPage(1)
+                setMemberKeyword(memberKeywordDraft.trim())
+              }}
+            >
+              搜索
+            </Button>
+            {(memberKeyword || memberKeywordDraft) && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setMemberKeywordDraft('')
+                  setMemberKeyword('')
+                  setMemberPage(1)
+                }}
+              >
+                清空
+              </Button>
+            )}
+          </div>
+          {membersLoading ? (
+            <p className="text-sm text-muted-foreground">加载中…</p>
+          ) : (
+            members.map((m) => (
+              <div
+                key={m.userId}
+                className="flex items-center justify-between gap-2 rounded border p-2"
+              >
+                <div className="min-w-0 text-sm">
+                  <span className="truncate">{m.name || m.username}</span>
+                  {m.username ? (
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      @{m.username}
+                    </span>
+                  ) : null}
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {orgRoleName(m.role)}
+                  </span>
+                </div>
+                <Select
+                  value={m.role || 'member'}
+                  onValueChange={(role) =>
+                    void setOrgMemberRole(orgId, m.userId, role).then(async (r) => {
+                      if (r.success) {
+                        toast.success('已更新角色')
+                        await loadMembers()
+                      } else toast.error(r.message)
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-36 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="member">成员</SelectItem>
+                    <SelectItem value="coach">教练</SelectItem>
+                    <SelectItem value="captain">队长</SelectItem>
+                    <SelectItem value="org_admin">团队管理员</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ))
+          )}
+          {!membersLoading && !members.length && (
+            <p className="text-sm text-muted-foreground">暂无成员</p>
+          )}
+          <Pagination
+            page={memberPage}
+            total={memberTotal}
+            pageSize={MEMBER_PAGE_SIZE}
+            onChange={setMemberPage}
+            disabled={membersLoading}
+          />
         </CardContent>
       </Card>
     </div>

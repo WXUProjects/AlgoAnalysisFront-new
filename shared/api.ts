@@ -43,6 +43,7 @@ export const endpoints = {
       get: `${API_PREFIX}/user/org/get`,
       create: `${API_PREFIX}/user/org/create`,
       update: `${API_PREFIX}/user/org/update`,
+      delete: `${API_PREFIX}/user/org/delete`,
       switch: `${API_PREFIX}/user/org/switch`,
       join: `${API_PREFIX}/user/org/join`,
       leave: `${API_PREFIX}/user/org/leave`,

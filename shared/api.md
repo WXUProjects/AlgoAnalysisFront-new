@@ -89,6 +89,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/user/org/get` | 是 | query: `id`（默认当前组织） |
 | POST | `/user/org/create` | 站点管理员 | `{ name, slug?, adminUserId?, joinMode? }` |
 | POST | `/user/org/update` | 组织/站点管理员 | 品牌/开关/joinMode；间隔仅站点 |
+| POST | `/user/org/delete` | 站点管理员 | `{ id }` 软删除；**公共域不可删**；成员迁回公共域 |
 | POST | `/user/org/switch` | 是 | `{ orgId }` → 新 `jwtToken` |
 | POST | `/user/org/join` | 是 | `{ inviteCode }` 团队识别码 |
 | POST | `/user/org/leave` | 是 | `{ orgId }`；**公共域不可退出** |
