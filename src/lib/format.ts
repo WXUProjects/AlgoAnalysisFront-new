@@ -1,5 +1,26 @@
 import { num } from '@/lib/http'
 
+/**
+ * 后台统计用紧凑数字：≤1000 原样；超过 1000 为 1.xk / 1.xM（一位小数）。
+ * 后台看板不需要精确到个位，避免大数撑破卡片。
+ */
+export function formatCompactNumber(value: unknown): string {
+  if (value === undefined || value === null || value === '') return '-'
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(n)) return '-'
+  const sign = n < 0 ? '-' : ''
+  const abs = Math.abs(n)
+  if (abs <= 1000) {
+    return sign + String(Math.round(abs))
+  }
+  if (abs < 1_000_000) {
+    const k = Math.round((abs / 1000) * 10) / 10
+    return `${sign}${k.toFixed(1)}k`
+  }
+  const m = Math.round((abs / 1_000_000) * 10) / 10
+  return `${sign}${m.toFixed(1)}M`
+}
+
 /** unix 秒或毫秒 → 本地时间字符串 */
 export function formatTime(value: unknown): string {
   const n = num(value, 0)

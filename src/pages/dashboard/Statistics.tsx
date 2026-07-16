@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
-import { daysAgoYmd, todayYmd } from '@/lib/format'
+import { daysAgoYmd, formatCompactNumber, todayYmd } from '@/lib/format'
 
 const TREND_DAYS = 30
 
@@ -48,11 +48,16 @@ function DeltaText({ value }: { value: number | null }) {
         ? 'text-destructive'
         : 'text-muted-foreground'
   return (
-    <span className={`text-xs ${cls}`}>
+    <span className={`text-xs tabular-nums ${cls}`} title={String(value)}>
       {sign}
-      {value}
+      {formatCompactNumber(value)}
     </span>
   )
+}
+
+function fmtStat(n?: number | null) {
+  if (n === undefined || n === null) return '-'
+  return formatCompactNumber(n)
 }
 
 type StatsScope = 'org' | 'site'
@@ -145,29 +150,51 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     else toast.error(res.message || '全站同步失败')
   }
 
-  const cards = [
-    { label: isSite ? '全站用户' : '组织成员', value: userCount },
-    ...(isSite ? [] : [{ label: '分组数', value: groupCount }]),
+  const cards: {
+    label: string
+    value: string
+    raw?: number
+    delta?: number | null
+  }[] = [
+    {
+      label: isSite ? '全站用户' : '组织成员',
+      value: fmtStat(userCount),
+      raw: userCount,
+    },
+    ...(isSite
+      ? []
+      : [{ label: '分组数', value: fmtStat(groupCount), raw: groupCount }]),
     // 站点/组织：后端 period 已按 AC 条数统计（不去重）
-    { label: '生涯 AC', value: period?.ac.total },
-    { label: '总提交', value: period?.submit.total },
+    {
+      label: '生涯 AC',
+      value: fmtStat(period?.ac.total),
+      raw: period?.ac.total,
+    },
+    {
+      label: '总提交',
+      value: fmtStat(period?.submit.total),
+      raw: period?.submit.total,
+    },
     {
       label: '今日 AC / 提交',
-      value: `${period?.ac.today ?? '-'} / ${period?.submit.today ?? '-'}`,
+      value: `${fmtStat(period?.ac.today)} / ${fmtStat(period?.submit.today)}`,
     },
     {
       label: '本周 AC',
-      value: period?.ac.thisWeek,
+      value: fmtStat(period?.ac.thisWeek),
+      raw: period?.ac.thisWeek,
       delta: delta(period?.ac.thisWeek, period?.ac.lastWeek),
     },
     {
       label: '本月 AC',
-      value: period?.ac.thisMonth,
+      value: fmtStat(period?.ac.thisMonth),
+      raw: period?.ac.thisMonth,
       delta: delta(period?.ac.thisMonth, period?.ac.lastMonth),
     },
     {
       label: '本年 AC',
-      value: period?.ac.thisYear,
+      value: fmtStat(period?.ac.thisYear),
+      raw: period?.ac.thisYear,
       delta: delta(period?.ac.thisYear, period?.ac.lastYear),
     },
   ]
@@ -225,10 +252,13 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
                   <CardDescription>{c.label}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex items-end gap-2 px-3">
-                  <span className="text-xl font-semibold tabular-nums">
-                    {c.value ?? '-'}
+                  <span
+                    className="text-xl font-semibold tabular-nums"
+                    title={c.raw !== undefined && c.raw !== null ? String(c.raw) : undefined}
+                  >
+                    {c.value}
                   </span>
-                  {'delta' in c && <DeltaText value={c.delta ?? null} />}
+                  {c.delta !== undefined && <DeltaText value={c.delta ?? null} />}
                 </CardContent>
               </Card>
             ))}

@@ -30,13 +30,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatTime } from '@/lib/format'
+import { formatCompactNumber, formatTime } from '@/lib/format'
 
 const CONFIRM_TOKEN = 'PURGE_SUBMITS'
 
 function fmtNum(n: number | undefined) {
   if (n === undefined || Number.isNaN(n)) return '—'
-  return n.toLocaleString('zh-CN')
+  return formatCompactNumber(n)
 }
 
 export function DashboardOps() {
@@ -244,7 +244,10 @@ function Metric({
   return (
     <div className="rounded-xl border bg-card px-4 py-3">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
+      <p
+        className="mt-1 text-2xl font-semibold tabular-nums tracking-tight"
+        title={value === undefined ? undefined : String(value)}
+      >
         {value === undefined ? '—' : fmtNum(value)}
       </p>
       {hint ? (

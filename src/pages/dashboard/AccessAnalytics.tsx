@@ -33,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { formatCompactNumber } from '@/lib/format'
 
 function delta(cur?: number, prev?: number) {
   if (cur === undefined || prev === undefined) return null
@@ -49,16 +50,16 @@ function DeltaText({ value }: { value: number | null }) {
         ? 'text-destructive'
         : 'text-muted-foreground'
   return (
-    <span className={`text-xs tabular-nums ${cls}`}>
+    <span className={`text-xs tabular-nums ${cls}`} title={String(value)}>
       {sign}
-      {value}
+      {formatCompactNumber(value)}
     </span>
   )
 }
 
 function fmtNum(n?: number) {
   if (n === undefined || n === null) return '-'
-  return n.toLocaleString('zh-CN')
+  return formatCompactNumber(n)
 }
 
 function fmtTime(ts?: number) {
@@ -103,7 +104,14 @@ function MetricGrid({
               </CardHeader>
               <CardContent className="space-y-0.5 px-3">
                 <div className="flex items-end gap-2">
-                  <span className="text-2xl font-semibold tabular-nums tracking-tight">
+                  <span
+                    className="text-2xl font-semibold tabular-nums tracking-tight"
+                    title={
+                      c.value !== undefined && c.value !== null
+                        ? String(c.value)
+                        : undefined
+                    }
+                  >
                     {fmtNum(c.value)}
                   </span>
                   {c.delta !== undefined && <DeltaText value={c.delta ?? null} />}
@@ -316,7 +324,7 @@ export function DashboardAccessAnalytics() {
         <div>
           <h3 className="text-lg font-semibold tracking-tight">访问统计</h3>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            自建精确统计：用户量 · 页面流量 · API 与爬虫技术指标
+            用户量 · 页面流量 · API 与爬虫技术指标（大数以 k/M 约显）
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -377,8 +385,17 @@ export function DashboardAccessAnalytics() {
                 <LineChart data={trendData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} width={40} />
-                  <Tooltip />
+                  <YAxis
+                    tick={{ fontSize: 11 }}
+                    width={44}
+                    tickFormatter={(v) => formatCompactNumber(v)}
+                  />
+                  <Tooltip
+                    formatter={(value, name) => {
+                      const n = typeof value === 'number' ? value : Number(value) || 0
+                      return [formatCompactNumber(n), name]
+                    }}
+                  />
                   <Legend />
                   <Line type="monotone" dataKey="PV" stroke="var(--color-chart-1, #6366f1)" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey="DAU" stroke="var(--color-chart-2, #22c55e)" strokeWidth={2} dot={false} />
@@ -414,13 +431,14 @@ export function DashboardAccessAnalytics() {
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                   <YAxis
                     tick={{ fontSize: 11 }}
-                    width={36}
+                    width={40}
                     allowDecimals={false}
+                    tickFormatter={(v) => formatCompactNumber(v)}
                   />
                   <Tooltip
                     formatter={(value) => {
                       const n = typeof value === 'number' ? value : Number(value) || 0
-                      return [n.toLocaleString('zh-CN'), '新增注册']
+                      return [formatCompactNumber(n), '新增注册']
                     }}
                   />
                   <Legend />
@@ -456,7 +474,11 @@ export function DashboardAccessAnalytics() {
                   <BarChart data={catData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} width={36} />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      width={40}
+                      tickFormatter={(v) => formatCompactNumber(v)}
+                    />
                     <Tooltip
                       formatter={(value, _name, item) => {
                         const n = typeof value === 'number' ? value : Number(value) || 0
@@ -464,7 +486,7 @@ export function DashboardAccessAnalytics() {
                           item as { payload?: { share?: number } } | undefined
                         )?.payload?.share
                         return [
-                          `${n.toLocaleString('zh-CN')}${share != null ? `（${share.toFixed(1)}%）` : ''}`,
+                          `${formatCompactNumber(n)}${share != null ? `（${share.toFixed(1)}%）` : ''}`,
                           'PV',
                         ]
                       }}
