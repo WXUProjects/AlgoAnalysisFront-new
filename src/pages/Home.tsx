@@ -151,6 +151,9 @@ export function Home() {
   const [period, setPeriod] = useState<PeriodData | null>(null)
   const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
+  const [acHeatLoaded, setAcHeatLoaded] = useState(false)
+  const [acHeatLoading, setAcHeatLoading] = useState(false)
+  const [heatTab, setHeatTab] = useState<'submit' | 'ac'>('submit')
   const [bulletins, setBulletins] = useState<BulletinInfo[]>([])
   const [summary, setSummary] = useState<AgentSummaryData | null>(null)
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
@@ -169,6 +172,9 @@ export function Home() {
       setLoading(true)
       const uid = isLogin && user ? user.userId : -1
       const end = todayYmd()
+      setAcHeat([])
+      setAcHeatLoaded(false)
+      setHeatTab('submit')
       const tasks: Promise<unknown>[] = [
         getPeriod(uid).then((res) => {
           if (!cancelled && res.success) setPeriod(res.data)
@@ -181,14 +187,6 @@ export function Home() {
           ...(uid > 0 ? { userId: uid } : {}),
         }).then((res) => {
           if (!cancelled && res.success) setSubmitHeat(res.data || [])
-        }),
-        getHeatmap({
-          startDate: '20230101',
-          endDate: end,
-          isAc: true,
-          ...(uid > 0 ? { userId: uid } : {}),
-        }).then((res) => {
-          if (!cancelled && res.success) setAcHeat(res.data || [])
         }),
         listBulletins(1, 5).then((res) => {
           if (!cancelled && res.success && res.data) setBulletins(res.data.list)
@@ -221,6 +219,29 @@ export function Home() {
       cancelled = true
     }
   }, [ready, isLogin, user, showAiSummary])
+
+  useEffect(() => {
+    if (heatTab !== 'ac' || acHeatLoaded || acHeatLoading) return
+    let cancelled = false
+    async function loadAc() {
+      setAcHeatLoading(true)
+      const uid = isLogin && user ? user.userId : -1
+      const res = await getHeatmap({
+        startDate: '20230101',
+        endDate: todayYmd(),
+        isAc: true,
+        ...(uid > 0 ? { userId: uid } : {}),
+      })
+      if (cancelled) return
+      if (res.success) setAcHeat(res.data || [])
+      setAcHeatLoaded(true)
+      setAcHeatLoading(false)
+    }
+    void loadAc()
+    return () => {
+      cancelled = true
+    }
+  }, [heatTab, acHeatLoaded, acHeatLoading, isLogin, user])
 
   const stats: PeriodItem | null = mode === 'ac' ? period?.ac ?? null : period?.submit ?? null
   const modeLabel = mode === 'ac' ? 'AC' : '提交'
@@ -373,7 +394,10 @@ export function Home() {
               {loading ? (
                 <Skeleton className="h-32 w-full" />
               ) : (
-                <Tabs defaultValue="submit">
+                <Tabs
+                  value={heatTab}
+                  onValueChange={(v) => setHeatTab(v === 'ac' ? 'ac' : 'submit')}
+                >
                   <TabsList>
                     <TabsTrigger value="submit">提交热力图</TabsTrigger>
                     <TabsTrigger value="ac">AC 热力图</TabsTrigger>
@@ -382,7 +406,11 @@ export function Home() {
                     <HeatmapSimple items={submitHeat} />
                   </TabsContent>
                   <TabsContent value="ac" className="pt-3">
-                    <HeatmapSimple items={acHeat} />
+                    {acHeatLoading || !acHeatLoaded ? (
+                      <Skeleton className="h-32 w-full" />
+                    ) : (
+                      <HeatmapSimple items={acHeat} />
+                    )}
                   </TabsContent>
                 </Tabs>
               )}

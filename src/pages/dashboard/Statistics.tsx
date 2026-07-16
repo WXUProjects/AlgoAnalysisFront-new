@@ -29,7 +29,9 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
-import { todayYmd } from '@/lib/format'
+import { daysAgoYmd, todayYmd } from '@/lib/format'
+
+const TREND_DAYS = 30
 
 function delta(cur?: number, prev?: number) {
   if (cur === undefined || prev === undefined) return null
@@ -93,6 +95,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     async function load() {
       setLoading(true)
       const end = todayYmd()
+      const start = daysAgoYmd(TREND_DAYS - 1)
       const [p, users, groups, hS, hA] = await Promise.all([
         getPeriod(periodUserId),
         listProfiles(1, 1, isSite ? 'site' : 'org'),
@@ -100,13 +103,13 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
           ? Promise.resolve({ success: true, data: { total: 0, list: [] } as const })
           : listGroups(1, 1),
         getHeatmap({
-          startDate: '20230101',
+          startDate: start,
           endDate: end,
           isAc: false,
           userId: heatmapUserId,
         }),
         getHeatmap({
-          startDate: '20230101',
+          startDate: start,
           endDate: end,
           isAc: true,
           userId: heatmapUserId,
@@ -240,7 +243,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
           {loading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
-            <TrendChart submit={submitHeat} ac={acHeat} days={30} />
+            <TrendChart submit={submitHeat} ac={acHeat} days={TREND_DAYS} />
           )}
         </CardContent>
       </Card>

@@ -46,7 +46,18 @@ export function formatPipelineStage(stage?: string | null): string {
 }
 
 export function todayYmd(): string {
+  return dateToYmd(new Date())
+}
+
+/** 相对今天往前 offsetDays 天的 YYYYMMDD（0=今天） */
+export function daysAgoYmd(offsetDays: number): string {
   const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - offsetDays)
+  return dateToYmd(d)
+}
+
+function dateToYmd(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')

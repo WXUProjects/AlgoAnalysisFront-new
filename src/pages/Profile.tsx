@@ -179,6 +179,9 @@ export function Profile() {
   const [userCount, setUserCount] = useState(1)
   const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
+  const [acHeatLoaded, setAcHeatLoaded] = useState(false)
+  const [acHeatLoading, setAcHeatLoading] = useState(false)
+  const [heatTab, setHeatTab] = useState<'submit' | 'ac'>('submit')
   const [activities, setActivities] = useState<SubmitLogItem[]>([])
   const [contests, setContests] = useState<ContestItem[]>([])
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
@@ -194,6 +197,9 @@ export function Profile() {
   const load = useCallback(async (signal?: { cancelled: boolean }) => {
     if (!targetId) return
     setLoading(true)
+    setAcHeat([])
+    setAcHeatLoaded(false)
+    setHeatTab('submit')
     const end = todayYmd()
     const [
       pRes,
@@ -201,7 +207,6 @@ export function Profile() {
       globalRes,
       listRes,
       hSubmit,
-      hAc,
       acts,
       cont,
       algoRes,
@@ -214,12 +219,6 @@ export function Profile() {
         startDate: '20230101',
         endDate: end,
         isAc: false,
-        userId: targetId,
-      }),
-      getHeatmap({
-        startDate: '20230101',
-        endDate: end,
-        isAc: true,
         userId: targetId,
       }),
       getSubmitLogs({ userId: targetId, cursor: -1, limit: 10 }),
@@ -241,7 +240,6 @@ export function Profile() {
       setUserCount(Math.max(listRes.data.total, 1))
     }
     if (hSubmit.success) setSubmitHeat(hSubmit.data || [])
-    if (hAc.success) setAcHeat(hAc.data || [])
     if (acts.success) setActivities(acts.data || [])
     if (cont.success) setContests(cont.data?.list || [])
     if (algoRes.success) setAlgo(algoRes.data)
@@ -254,6 +252,28 @@ export function Profile() {
       signal.cancelled = true
     }
   }, [load])
+
+  useEffect(() => {
+    if (!targetId || heatTab !== 'ac' || acHeatLoaded || acHeatLoading) return
+    let cancelled = false
+    async function loadAc() {
+      setAcHeatLoading(true)
+      const res = await getHeatmap({
+        startDate: '20230101',
+        endDate: todayYmd(),
+        isAc: true,
+        userId: targetId,
+      })
+      if (cancelled) return
+      if (res.success) setAcHeat(res.data || [])
+      setAcHeatLoaded(true)
+      setAcHeatLoading(false)
+    }
+    void loadAc()
+    return () => {
+      cancelled = true
+    }
+  }, [targetId, heatTab, acHeatLoaded, acHeatLoading])
 
   function handleLogout() {
     logout()
@@ -536,7 +556,10 @@ export function Profile() {
               <CardTitle className="text-base">热力图</CardTitle>
             </CardHeader>
             <CardContent className="px-4">
-              <Tabs defaultValue="submit">
+              <Tabs
+                value={heatTab}
+                onValueChange={(v) => setHeatTab(v === 'ac' ? 'ac' : 'submit')}
+              >
                 <TabsList>
                   <TabsTrigger value="submit">提交热力图</TabsTrigger>
                   <TabsTrigger value="ac">AC 热力图</TabsTrigger>
@@ -545,7 +568,11 @@ export function Profile() {
                   <HeatmapSimple items={submitHeat} />
                 </TabsContent>
                 <TabsContent value="ac" className="pt-3">
-                  <HeatmapSimple items={acHeat} />
+                  {acHeatLoading || !acHeatLoaded ? (
+                    <Skeleton className="h-32 w-full" />
+                  ) : (
+                    <HeatmapSimple items={acHeat} />
+                  )}
                 </TabsContent>
               </Tabs>
             </CardContent>
