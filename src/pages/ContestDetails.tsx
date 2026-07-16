@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ExternalLinkIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -27,16 +27,19 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-const PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 20
 
 export function ContestDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { isLogin } = useAuth()
-  const [page, setPage] = useState(1)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+  })
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<ContestRankingItem[]>([])
   const [contest, setContest] = useState<Partial<ContestItem> | null>(null)
@@ -64,8 +67,8 @@ export function ContestDetails() {
     setLoading(true)
     const res = await getContestRanking({
       contestId: id,
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
       groupId,
       followingOnly: followingOnly || undefined,
     })
@@ -77,15 +80,20 @@ export function ContestDetails() {
     setList(res.data.list)
     setTotal(res.data.total)
     if (res.data.contest) setContest(res.data.contest)
-  }, [id, page, groupId, followingOnly])
+  }, [id, page, pageSize, groupId, followingOnly])
 
   useEffect(() => {
     void load()
   }, [load])
 
+  const filterKey = `${id ?? ''}\0${groupId ?? ''}\0${followingOnly ? 1 : 0}`
+  const prevFilterKey = useRef(filterKey)
   useEffect(() => {
-    setPage(1)
-  }, [groupId, id, followingOnly])
+    if (prevFilterKey.current !== filterKey) {
+      prevFilterKey.current = filterKey
+      setPage(1)
+    }
+  }, [filterKey, setPage])
 
   return (
     <PageShell>
@@ -219,8 +227,9 @@ export function ContestDetails() {
       <Pagination
         page={page}
         total={total}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         onChange={setPage}
+        onPageSizeChange={setPageSize}
         disabled={loading}
       />
     </PageShell>

@@ -49,13 +49,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-const PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 20
 
 export function DashboardGroup() {
-  const [page, setPage] = useState(1)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+  })
   const [total, setTotal] = useState(0)
   const [groups, setGroups] = useState<GroupInfo[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -75,7 +78,7 @@ export function DashboardGroup() {
 
   const loadList = useCallback(async () => {
     setLoading(true)
-    const res = await listGroups(page, PAGE_SIZE)
+    const res = await listGroups(page, pageSize)
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '加载分组失败')
@@ -87,7 +90,7 @@ export function DashboardGroup() {
       if (prev !== null) return prev
       return res.data!.list[0]?.id ?? null
     })
-  }, [page])
+  }, [page, pageSize])
 
   const loadDetail = useCallback(async (id: number) => {
     setDetailLoading(true)
@@ -224,8 +227,9 @@ export function DashboardGroup() {
           <Pagination
             page={page}
             total={total}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             onChange={setPage}
+            onPageSizeChange={setPageSize}
             disabled={loading}
           />
         </CardContent>

@@ -29,7 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
-const PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 20
 
 type TabKey = 'following' | 'followers' | 'search'
 
@@ -40,6 +40,11 @@ export function Social() {
 
   const tab = (searchParams.get('tab') as TabKey) || (username ? 'following' : 'search')
   const page = Number(searchParams.get('page') || 1) || 1
+  const pageSizeRaw = Number(searchParams.get('pageSize') || DEFAULT_PAGE_SIZE)
+  const pageSize =
+    Number.isFinite(pageSizeRaw) && pageSizeRaw > 0
+      ? Math.floor(pageSizeRaw)
+      : DEFAULT_PAGE_SIZE
   const qParam = searchParams.get('q') || ''
 
   const [targetUserId, setTargetUserId] = useState(0)
@@ -93,7 +98,7 @@ export function Social() {
   const load = useCallback(async () => {
     setLoading(true)
     if (tab === 'search') {
-      const res = await searchUsers(qParam, page, PAGE_SIZE)
+      const res = await searchUsers(qParam, page, pageSize)
       setLoading(false)
       if (!res.success || !res.data) {
         toast.error(res.message || '搜索失败')
@@ -113,8 +118,8 @@ export function Social() {
     }
     const res =
       tab === 'followers'
-        ? await listFollowers(targetUserId, page, PAGE_SIZE)
-        : await listFollowing(targetUserId, page, PAGE_SIZE)
+        ? await listFollowers(targetUserId, page, pageSize)
+        : await listFollowing(targetUserId, page, pageSize)
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '加载失败')
@@ -124,7 +129,7 @@ export function Social() {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [tab, page, qParam, targetUserId])
+  }, [tab, page, pageSize, qParam, targetUserId])
 
   useEffect(() => {
     void load()
@@ -171,7 +176,21 @@ export function Social() {
     setSearchParams(
       (prev) => {
         const n = new URLSearchParams(prev)
-        n.set('page', String(p))
+        if (p <= 1) n.delete('page')
+        else n.set('page', String(p))
+        return n
+      },
+      { replace: true },
+    )
+  }
+
+  function setPageSize(size: number) {
+    setSearchParams(
+      (prev) => {
+        const n = new URLSearchParams(prev)
+        if (size === DEFAULT_PAGE_SIZE) n.delete('pageSize')
+        else n.set('pageSize', String(size))
+        n.delete('page')
         return n
       },
       { replace: true },
@@ -343,12 +362,13 @@ export function Social() {
         </CardContent>
       </Card>
 
-      {total > PAGE_SIZE && (
+      {total > pageSize && (
         <Pagination
           page={page}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           total={total}
           onChange={setPage}
+          onPageSizeChange={setPageSize}
         />
       )}
     </PageShell>

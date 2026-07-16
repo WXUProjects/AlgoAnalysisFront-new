@@ -16,6 +16,7 @@ import type { GroupInfo, UserListItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,7 +72,7 @@ import {
 } from '@/components/ui/table'
 import { orgRoleName } from '@/lib/roles'
 
-const PAGE_SIZE = 10
+const DEFAULT_PAGE_SIZE = 10
 
 type UserScope = 'org' | 'site'
 
@@ -93,7 +94,9 @@ export function DashboardUser() {
 function UserListPage({ scope }: { scope: UserScope }) {
   const { isAdmin, isStaff, currentOrg } = useAuth()
   const isSite = scope === 'site'
-  const [page, setPage] = useState(1)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+  })
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<UserListItem[]>([])
   const [groups, setGroups] = useState<GroupInfo[]>([])
@@ -121,7 +124,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await listProfiles(page, PAGE_SIZE, scope)
+    const res = await listProfiles(page, pageSize, scope)
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '加载用户失败')
@@ -129,7 +132,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page, scope])
+  }, [page, pageSize, scope])
 
   useEffect(() => {
     void load()
@@ -265,7 +268,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     }
     toast.success(res.message || '已更新同步间隔')
     // 刷新列表以拿有效间隔
-    const listRes = await listProfiles(page, PAGE_SIZE, scope)
+    const listRes = await listProfiles(page, pageSize, scope)
     if (listRes.success && listRes.data) {
       setList(listRes.data.list)
       setTotal(listRes.data.total)
@@ -629,8 +632,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
       <Pagination
         page={page}
         total={total}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         onChange={setPage}
+        onPageSizeChange={setPageSize}
         disabled={loading}
       />
 

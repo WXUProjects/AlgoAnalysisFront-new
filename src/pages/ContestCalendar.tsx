@@ -8,6 +8,7 @@ import {
 import { toast } from 'sonner'
 import {
   CONTEST_CALENDAR_ADVANCE_OPTIONS,
+  CONTEST_CALENDAR_DEFAULT_ADVANCE,
   type ContestCalendarItem,
   type ContestCalendarPlatform,
   type ContestCalendarSub,
@@ -48,10 +49,11 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-const PAGE_SIZE = 15
+const DEFAULT_PAGE_SIZE = 15
 
 function countdownLabel(startUnix: number, endUnix: number): string {
   const now = Math.floor(Date.now() / 1000)
@@ -75,7 +77,11 @@ export function ContestCalendar() {
   const { isLogin } = useAuth()
   const requestId = useRef(0)
 
-  const [page, setPage] = useState(1)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    pageKey: 'cpage',
+    pageSizeKey: 'cpageSize',
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+  })
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<ContestCalendarItem[]>([])
   const [platforms, setPlatforms] = useState<ContestCalendarPlatform[]>([])
@@ -89,7 +95,7 @@ export function ContestCalendar() {
 
   const [subDialogOpen, setSubDialogOpen] = useState(false)
   const [subTarget, setSubTarget] = useState<ContestCalendarItem | null>(null)
-  const [subAdvance, setSubAdvance] = useState(1440)
+  const [subAdvance, setSubAdvance] = useState(CONTEST_CALENDAR_DEFAULT_ADVANCE)
   const [subSaving, setSubSaving] = useState(false)
 
   const [platDialogOpen, setPlatDialogOpen] = useState(false)
@@ -102,8 +108,8 @@ export function ContestCalendar() {
       platform: platform || undefined,
       keyword: keyword || undefined,
       status,
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
     })
     if (id !== requestId.current) return
     setLoading(false)
@@ -113,7 +119,7 @@ export function ContestCalendar() {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page, platform, keyword, status])
+  }, [page, pageSize, platform, keyword, status])
 
   const loadMeta = useCallback(async () => {
     const platRes = await listContestCalendarPlatforms()
@@ -134,9 +140,14 @@ export function ContestCalendar() {
     void loadMeta()
   }, [loadMeta])
 
+  const filterKey = `${platform}\0${keyword}\0${status}`
+  const prevFilterKey = useRef(filterKey)
   useEffect(() => {
-    setPage(1)
-  }, [platform, keyword, status])
+    if (prevFilterKey.current !== filterKey) {
+      prevFilterKey.current = filterKey
+      setPage(1)
+    }
+  }, [filterKey, setPage])
 
   const contestSubMap = useMemo(() => {
     const m = new Map<number, ContestCalendarSub>()
@@ -149,26 +160,36 @@ export function ContestCalendar() {
   const platformSubMap = useMemo(() => {
     const m = new Map<string, ContestCalendarSub>()
     for (const s of subs) {
-      if (s.scope === 'platform' && s.platform) m.set(s.platform, s)
+      if (s.scope === 'platform' && s.platform && s.enabled) m.set(s.platform, s)
     }
     return m
   }, [subs])
 
+  /** 本场 contest 订阅 enabled=false 视为静默，覆盖平台订阅 */
+  function isItemMuted(item: ContestCalendarItem): boolean {
+    const c = contestSubMap.get(item.id)
+    return Boolean(c && !c.enabled)
+  }
+
   function isItemSubscribed(item: ContestCalendarItem): boolean {
     const c = contestSubMap.get(item.id)
-    if (c?.enabled) return true
+    if (c) return c.enabled
     const p = platformSubMap.get(item.platform)
     return Boolean(p?.enabled)
   }
 
   function openContestSub(item: ContestCalendarItem) {
     if (!isLogin) {
-      toast.message('请先登录后再订阅邮件提醒')
+      toast.message('请先登录后再订阅')
       return
     }
     const existing = contestSubMap.get(item.id)
     setSubTarget(item)
-    setSubAdvance(existing?.advanceMinutes || platformSubMap.get(item.platform)?.advanceMinutes || 1440)
+    setSubAdvance(
+      (existing?.enabled ? existing.advanceMinutes : undefined) ||
+        platformSubMap.get(item.platform)?.advanceMinutes ||
+        CONTEST_CALENDAR_DEFAULT_ADVANCE,
+    )
     setSubDialogOpen(true)
   }
 
@@ -187,17 +208,39 @@ export function ContestCalendar() {
       toast.error(res.message || '保存订阅失败')
       return
     }
-    toast.success(
-      enabled
-        ? '已订阅该比赛提醒，确认邮件将发往绑定邮箱（请检查垃圾箱）'
-        : '已关闭该比赛提醒',
-    )
+    toast.success(enabled ? '订阅成功' : '已取消本场提醒')
     setSubDialogOpen(false)
     void loadMeta()
   }
 
+  /**
+   * 取消本场提醒：
+   * - 有平台覆盖时：写入 contest enabled=false 静默（覆盖平台）
+   * - 仅单场：删除 contest 订阅
+   */
   async function removeContestSub(item: ContestCalendarItem) {
     if (!isLogin) return
+    const platformOn = Boolean(platformSubMap.get(item.platform)?.enabled)
+    if (platformOn) {
+      const adv =
+        contestSubMap.get(item.id)?.advanceMinutes ||
+        platformSubMap.get(item.platform)?.advanceMinutes ||
+        CONTEST_CALENDAR_DEFAULT_ADVANCE
+      const res = await upsertContestCalendarSub({
+        scope: 'contest',
+        calendarId: item.id,
+        platform: item.platform,
+        advanceMinutes: adv,
+        enabled: false,
+      })
+      if (!res.success) {
+        toast.error(res.message || '取消失败')
+        return
+      }
+      toast.success('已取消本场提醒')
+      void loadMeta()
+      return
+    }
     const res = await deleteContestCalendarSub({
       scope: 'contest',
       calendarId: item.id,
@@ -207,7 +250,7 @@ export function ContestCalendar() {
       toast.error(res.message || '取消失败')
       return
     }
-    toast.success('已取消单场订阅')
+    toast.success('已取消本场提醒')
     void loadMeta()
   }
 
@@ -242,9 +285,7 @@ export function ContestCalendar() {
       toast.error(res.message || '订阅失败')
       return
     }
-    toast.success(
-      `已订阅 ${plat.platformName}（提前 ${advanceLabel(advance)}），确认邮件将发往绑定邮箱`,
-    )
+    toast.success(`已订阅 ${plat.platformName}（提前 ${advanceLabel(advance)}）`)
     void loadMeta()
   }
 
@@ -372,6 +413,9 @@ export function ContestCalendar() {
                             已订阅
                           </Badge>
                         )}
+                        {isItemMuted(item) && (
+                          <Badge variant="secondary">本场已静默</Badge>
+                        )}
                       </div>
                       <CardTitle className="text-base leading-snug sm:text-lg">
                         {item.name}
@@ -385,7 +429,8 @@ export function ContestCalendar() {
                           {countdownLabel(item.startTime, item.endTime)}
                           {contestSub?.enabled
                             ? ` · 单场提醒提前 ${advanceLabel(contestSub.advanceMinutes)}`
-                            : platformSubMap.get(item.platform)?.enabled
+                            : !isItemMuted(item) &&
+                                platformSubMap.get(item.platform)?.enabled
                               ? ` · 平台提醒提前 ${advanceLabel(platformSubMap.get(item.platform)!.advanceMinutes)}`
                               : ''}
                         </span>
@@ -400,14 +445,14 @@ export function ContestCalendar() {
                           </a>
                         </Button>
                       ) : null}
-                      {contestSub?.enabled ? (
+                      {subbed ? (
                         <Button
                           variant="secondary"
                           size="sm"
                           onClick={() => void removeContestSub(item)}
                         >
                           <BellOffIcon data-icon="inline-start" />
-                          取消单场
+                          取消订阅
                         </Button>
                       ) : (
                         <Button size="sm" onClick={() => openContestSub(item)}>
@@ -422,9 +467,10 @@ export function ContestCalendar() {
             })}
             <Pagination
               page={page}
-              pageSize={PAGE_SIZE}
+              pageSize={pageSize}
               total={total}
               onChange={setPage}
+              onPageSizeChange={setPageSize}
             />
           </div>
         )}
@@ -484,7 +530,7 @@ export function ContestCalendar() {
               platforms.map((p) => {
                 const sub = platformSubMap.get(p.platform)
                 const enabled = Boolean(sub?.enabled)
-                const adv = sub?.advanceMinutes || 1440
+                const adv = sub?.advanceMinutes || CONTEST_CALENDAR_DEFAULT_ADVANCE
                 return (
                   <Card key={p.platform}>
                     <CardContent className="flex flex-col gap-3 pt-4">

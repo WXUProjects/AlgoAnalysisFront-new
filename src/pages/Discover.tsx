@@ -26,6 +26,7 @@ import type {
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -66,7 +67,7 @@ import { num } from '@/lib/http'
 import { cn } from '@/lib/utils'
 
 const FEED_LIMIT = 50
-const PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 20
 
 type TabKey = 'feed' | 'rank' | 'users' | 'orgs'
 
@@ -396,7 +397,11 @@ function FeedPanel({
 
 function RankPanel() {
   const [scoreType, setScoreType] = useState<'ac' | 'submit'>('ac')
-  const [page, setPage] = useState(1)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    pageKey: 'rpage',
+    pageSizeKey: 'rpageSize',
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+  })
   const [list, setList] = useState<StatisticRankItem[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -411,7 +416,7 @@ function RankPanel() {
       endDate: range.end,
       scoreType,
       page,
-      pageSize: PAGE_SIZE,
+      pageSize,
     }).then((res) => {
       if (cancelled) return
       setLoading(false)
@@ -427,7 +432,7 @@ function RankPanel() {
     return () => {
       cancelled = true
     }
-  }, [scoreType, page, range.start, range.end])
+  }, [scoreType, page, pageSize, range.start, range.end])
 
   return (
     <>
@@ -511,12 +516,13 @@ function RankPanel() {
           )}
         </CardContent>
       </Card>
-      {total > PAGE_SIZE && (
+      {total > pageSize && (
         <Pagination
           page={page}
           total={total}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           onChange={setPage}
+          onPageSizeChange={setPageSize}
           disabled={loading}
         />
       )}
@@ -533,7 +539,11 @@ function UsersPanel({
 }) {
   const [qInput, setQInput] = useState('')
   const [q, setQ] = useState('')
-  const [page, setPage] = useState(1)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    pageKey: 'upage',
+    pageSizeKey: 'upageSize',
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+  })
   const [list, setList] = useState<SocialUser[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -543,7 +553,7 @@ function UsersPanel({
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    void searchUsers(q, page, PAGE_SIZE).then((res) => {
+    void searchUsers(q, page, pageSize).then((res) => {
       if (cancelled) return
       setLoading(false)
       if (!res.success || !res.data) {
@@ -557,7 +567,7 @@ function UsersPanel({
     return () => {
       cancelled = true
     }
-  }, [q, page])
+  }, [q, page, pageSize])
 
   useEffect(() => {
     if (!isLogin || !list.length) {
@@ -698,12 +708,13 @@ function UsersPanel({
             })}
         </CardContent>
       </Card>
-      {total > PAGE_SIZE && (
+      {total > pageSize && (
         <Pagination
           page={page}
           total={total}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           onChange={setPage}
+          onPageSizeChange={setPageSize}
           disabled={loading}
         />
       )}
@@ -722,7 +733,11 @@ function OrgsPanel({
 }) {
   const [qInput, setQInput] = useState('')
   const [q, setQ] = useState('')
-  const [page, setPage] = useState(1)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    pageKey: 'opage',
+    pageSizeKey: 'opageSize',
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+  })
   const [list, setList] = useState<OrgDiscoverItem[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -734,7 +749,7 @@ function OrgsPanel({
 
   const reload = useCallback(async () => {
     setLoading(true)
-    const res = await discoverOrgs({ page, pageSize: PAGE_SIZE, q })
+    const res = await discoverOrgs({ page, pageSize, q })
     setLoading(false)
     if (!res.success) {
       toast.error(res.message || '加载组织失败')
@@ -744,7 +759,7 @@ function OrgsPanel({
     }
     setList(res.list)
     setTotal(res.total)
-  }, [page, q])
+  }, [page, pageSize, q])
 
   useEffect(() => {
     void reload()
@@ -880,12 +895,13 @@ function OrgsPanel({
           </p>
         )}
       </div>
-      {total > PAGE_SIZE && (
+      {total > pageSize && (
         <Pagination
           page={page}
           total={total}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           onChange={setPage}
+          onPageSizeChange={setPageSize}
           disabled={loading}
         />
       )}

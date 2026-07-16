@@ -10,6 +10,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,7 +48,7 @@ import {
 } from '@/components/ui/table'
 import { formatTime } from '@/lib/format'
 
-const PAGE_SIZE = 15
+const DEFAULT_PAGE_SIZE = 15
 
 function statusLabel(s: string) {
   if (s === 'pending') return '待审核'
@@ -65,7 +66,9 @@ function statusVariant(s: string): 'default' | 'secondary' | 'outline' | 'destru
 
 export function DashboardProblemEditReview() {
   const { isSiteAdmin, ready } = useAuth()
-  const [page, setPage] = useState(1)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+  })
   const [status, setStatus] = useState('pending')
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<ProblemEditInfo[]>([])
@@ -79,7 +82,7 @@ export function DashboardProblemEditReview() {
     setLoading(true)
     const res = await listProblemEditRequests({
       page,
-      pageSize: PAGE_SIZE,
+      pageSize,
       status: status === 'all' ? undefined : status,
     })
     setLoading(false)
@@ -89,7 +92,7 @@ export function DashboardProblemEditReview() {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page, status])
+  }, [page, pageSize, status])
 
   useEffect(() => {
     if (!ready || !isSiteAdmin) return
@@ -245,12 +248,13 @@ export function DashboardProblemEditReview() {
         </CardContent>
       </Card>
 
-      {total > PAGE_SIZE && (
+      {total > pageSize && (
         <Pagination
           page={page}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           total={total}
           onChange={setPage}
+          onPageSizeChange={setPageSize}
         />
       )}
 

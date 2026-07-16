@@ -6,6 +6,7 @@ import type { BulletinInfo } from '@shared/api'
 import { MarkdownDialog } from '@/components/markdown-dialog'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import { Badge } from '@/components/ui/badge'
 import {
   Card,
@@ -17,12 +18,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-const PAGE_SIZE = 10
+const DEFAULT_PAGE_SIZE = 10
 
 export function Bulletin() {
   const [searchParams, setSearchParams] = useSearchParams()
   const expandId = Number(searchParams.get('expand') || 0)
-  const [page, setPage] = useState(1)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+  })
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<BulletinInfo[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,7 +35,7 @@ export function Bulletin() {
     let cancelled = false
     void (async () => {
       setLoading(true)
-      const res = await listBulletins(page, PAGE_SIZE)
+      const res = await listBulletins(page, pageSize)
       if (cancelled) return
       setLoading(false)
       if (!res.success || !res.data) {
@@ -45,7 +48,7 @@ export function Bulletin() {
     return () => {
       cancelled = true
     }
-  }, [page])
+  }, [page, pageSize])
 
   useEffect(() => {
     if (!expandId || !list.length) return
@@ -114,8 +117,9 @@ export function Bulletin() {
       <Pagination
         page={page}
         total={total}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         onChange={setPage}
+        onPageSizeChange={setPageSize}
         disabled={loading}
       />
 

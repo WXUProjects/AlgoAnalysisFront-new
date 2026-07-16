@@ -486,8 +486,12 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/contest-calendar/sub/delete` | 是 | 删除订阅 body: `{ scope, platform?, calendarId? }` |
 
 **scope**：`platform`（整平台）或 `contest`（单场）。  
-**advanceMinutes** 白名单：`30, 60, 180, 360, 720, 1440, 2880, 4320`。  
-订阅需账号已绑定邮箱（core 经 user 内部 `GetContactEmail` 校验）；`enabled=true` 保存成功后**每次**异步发送**订阅成功确认邮件**（含已订阅再点、取消后再订；不限流）。`enabled=false` 不发确认信。开赛前提醒在 `advanceMinutes` 时发送，同一用户同一场同一提前量只发一次（先原子占坑再发信）。
+**advanceMinutes** 白名单：`30, 60, 180, 360, 720, 1440, 2880, 4320`；未传或 ≤0 时默认 **360（6 小时）**。  
+订阅需账号已绑定邮箱（core 经 user 内部 `GetContactEmail` 校验）；`enabled=true` 保存成功后**每次**异步发送**订阅成功确认邮件**（含已订阅再点、取消后再订；不限流）。`enabled=false` 不发确认信。  
+
+**本场静默（mute）**：`scope=contest` 且 `enabled=false` 表示取消本场提醒，并**覆盖**同平台的 platform 订阅（该场不再发提醒）。列表 `subscribed` 在 mute 时为 false。  
+
+**开赛前提醒**：在 `advanceMinutes` 时发送；同一用户同一场同一提前量只发一次（先原子占坑再发信）。平台订阅与单场订阅**提前量相同**时只发一封；单场优先于平台。不同提前量仍可各发一次。
 
 ### Bulletin
 

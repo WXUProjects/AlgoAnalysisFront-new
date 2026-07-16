@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils'
 
 const TAG_COLLAPSE_COUNT = 16
 
-const PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 20
 const PLATFORMS = ['NowCoder', 'AtCoder', 'CodeForces', 'LuoGu', 'LeetCode', 'QOJ']
 const DIFFS = ['简单', '中等', '困难']
 const STATUSES = [
@@ -52,6 +52,11 @@ export function QuestionBank() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const page = Number(searchParams.get('page') || 1) || 1
+  const pageSizeRaw = Number(searchParams.get('pageSize') || DEFAULT_PAGE_SIZE)
+  const pageSize =
+    Number.isFinite(pageSizeRaw) && pageSizeRaw > 0
+      ? Math.floor(pageSizeRaw)
+      : DEFAULT_PAGE_SIZE
   const sort = 'latest_desc'
   const keyword = searchParams.get('keyword') || ''
   const platformsKey = searchParams.get('platforms') || ''
@@ -151,7 +156,7 @@ export function QuestionBank() {
       setLoading(true)
       const res = await listProblems({
         page,
-        pageSize: PAGE_SIZE,
+        pageSize,
         sort,
         platforms: platformsKey || undefined,
         tags: tagsKey || undefined,
@@ -176,6 +181,7 @@ export function QuestionBank() {
     }
   }, [
     page,
+    pageSize,
     sort,
     platformsKey,
     tagsKey,
@@ -569,8 +575,18 @@ export function QuestionBank() {
       <Pagination
         page={page}
         total={total}
-        pageSize={PAGE_SIZE}
-        onChange={(p) => patchParams({ page: String(p) })}
+        pageSize={pageSize}
+        onChange={(p) =>
+          patchParams({
+            page: p <= 1 ? null : String(p),
+          })
+        }
+        onPageSizeChange={(size) =>
+          patchParams({
+            pageSize: size === DEFAULT_PAGE_SIZE ? null : String(size),
+            page: null,
+          })
+        }
         disabled={loading}
       />
     </PageShell>

@@ -542,7 +542,7 @@ export interface ContestCalendarSub {
   startTime?: number
 }
 
-/** 订阅提前量白名单（分钟） */
+/** 订阅提前量白名单（分钟）；新建默认 360（6 小时） */
 export const CONTEST_CALENDAR_ADVANCE_OPTIONS = [
   { value: 30, label: '30 分钟' },
   { value: 60, label: '1 小时' },
@@ -553,6 +553,9 @@ export const CONTEST_CALENDAR_ADVANCE_OPTIONS = [
   { value: 2880, label: '2 天' },
   { value: 4320, label: '3 天' },
 ] as const
+
+/** 新建订阅默认提前量（6 小时） */
+export const CONTEST_CALENDAR_DEFAULT_ADVANCE = 360
 
 export interface BulletinInfo {
   id: number

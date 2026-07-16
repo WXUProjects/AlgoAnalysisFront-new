@@ -16,6 +16,7 @@ import { uploadImage } from '@/api/upload'
 import type { OrgMemberInfo, UserProfile } from '@shared/api'
 import { ImageUploadTile } from '@/components/image-upload-tile'
 import { Pagination } from '@/components/pagination'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -30,11 +31,22 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { orgRoleName } from '@/lib/roles'
 
-const MEMBER_PAGE_SIZE = 10
+const DEFAULT_MEMBER_PAGE_SIZE = 10
 
 export function DashboardOrgSettings() {
   const { isAdmin, isOrgAdmin, currentOrg, user, refreshOrgs } = useAuth()
   const orgId = currentOrg?.id || user?.orgId || 0
+
+  const {
+    page: memberPage,
+    pageSize: memberPageSize,
+    setPage: setMemberPage,
+    setPageSize: setMemberPageSize,
+  } = useListQueryState({
+    pageKey: 'mpage',
+    pageSizeKey: 'mpageSize',
+    defaultPageSize: DEFAULT_MEMBER_PAGE_SIZE,
+  })
 
   const [brandTitle, setBrandTitle] = useState('')
   const [brandLogo, setBrandLogo] = useState('')
@@ -50,7 +62,6 @@ export function DashboardOrgSettings() {
   const [inviteCode, setInviteCode] = useState('')
   const [members, setMembers] = useState<OrgMemberInfo[]>([])
   const [memberTotal, setMemberTotal] = useState(0)
-  const [memberPage, setMemberPage] = useState(1)
   const [memberKeyword, setMemberKeyword] = useState('')
   const [memberKeywordDraft, setMemberKeywordDraft] = useState('')
   const [membersLoading, setMembersLoading] = useState(false)
@@ -66,7 +77,7 @@ export function DashboardOrgSettings() {
     setMembersLoading(true)
     const r = await listOrgMembers(orgId, {
       page: memberPage,
-      pageSize: MEMBER_PAGE_SIZE,
+      pageSize: memberPageSize,
       keyword: memberKeyword,
     })
     setMembersLoading(false)
@@ -74,7 +85,7 @@ export function DashboardOrgSettings() {
       setMembers(r.list)
       setMemberTotal(r.total)
     }
-  }, [orgId, memberPage, memberKeyword])
+  }, [orgId, memberPage, memberPageSize, memberKeyword])
 
   useEffect(() => {
     if (!orgId) return
@@ -451,8 +462,9 @@ export function DashboardOrgSettings() {
           <Pagination
             page={memberPage}
             total={memberTotal}
-            pageSize={MEMBER_PAGE_SIZE}
+            pageSize={memberPageSize}
             onChange={setMemberPage}
+            onPageSizeChange={setMemberPageSize}
             disabled={membersLoading}
           />
         </CardContent>

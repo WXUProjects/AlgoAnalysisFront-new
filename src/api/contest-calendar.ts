@@ -42,7 +42,7 @@ function normalizeSub(raw: Record<string, unknown>): ContestCalendarSub {
     scope: str(raw.scope),
     platform: str(raw.platform),
     calendarId: num(raw.calendarId),
-    advanceMinutes: num(raw.advanceMinutes, 1440),
+    advanceMinutes: num(raw.advanceMinutes, 360), // CONTEST_CALENDAR_DEFAULT_ADVANCE
     enabled: Boolean(raw.enabled),
     contestName: str(raw.contestName) || undefined,
     contestUrl: str(raw.contestUrl) || undefined,

@@ -9,6 +9,7 @@ import {
 import type { BulletinInfo } from '@shared/api'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import { RichTextEditor } from '@/components/rich-text-editor'
 import {
   AlertDialog,
@@ -50,10 +51,12 @@ import {
 } from '@/components/ui/table'
 import { formatTime } from '@/lib/format'
 
-const PAGE_SIZE = 10
+const DEFAULT_PAGE_SIZE = 10
 
 export function DashboardBulletinManage() {
-  const [page, setPage] = useState(1)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+  })
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<BulletinInfo[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,7 +70,7 @@ export function DashboardBulletinManage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await listBulletins(page, PAGE_SIZE)
+    const res = await listBulletins(page, pageSize)
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '加载公告失败')
@@ -75,7 +78,7 @@ export function DashboardBulletinManage() {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page])
+  }, [page, pageSize])
 
   useEffect(() => {
     void load()
@@ -229,8 +232,9 @@ export function DashboardBulletinManage() {
       <Pagination
         page={page}
         total={total}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         onChange={setPage}
+        onPageSizeChange={setPageSize}
         disabled={loading}
       />
 

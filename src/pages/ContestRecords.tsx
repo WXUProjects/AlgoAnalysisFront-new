@@ -7,6 +7,7 @@ import { getProfileById } from '@/api/profile'
 import type { ContestItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { Pagination } from '@/components/pagination'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -19,7 +20,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime } from '@/lib/format'
 
-const PAGE_SIZE = 10
+const DEFAULT_PAGE_SIZE = 10
 
 /** 比赛记录列表（嵌入 Contest 页「比赛记录」Tab） */
 export function ContestRecords() {
@@ -30,7 +31,9 @@ export function ContestRecords() {
   const userMode = Boolean(idParam)
   const targetUserId = userMode ? Number(idParam) : -1
 
-  const [page, setPage] = useState(1)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+  })
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<ContestItem[]>([])
   const [titleName, setTitleName] = useState('')
@@ -41,8 +44,8 @@ export function ContestRecords() {
     setLoading(true)
     const res = await listContests({
       userId: targetUserId,
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
     })
     if (id !== requestId.current) return
     setLoading(false)
@@ -52,15 +55,20 @@ export function ContestRecords() {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page, targetUserId])
+  }, [page, pageSize, targetUserId])
 
   useEffect(() => {
     void load()
   }, [load])
 
+  // 切换用户筛选时回到第一页
+  const prevTarget = useRef(targetUserId)
   useEffect(() => {
-    setPage(1)
-  }, [targetUserId])
+    if (prevTarget.current !== targetUserId) {
+      prevTarget.current = targetUserId
+      setPage(1)
+    }
+  }, [targetUserId, setPage])
 
   useEffect(() => {
     if (!userMode || !targetUserId || targetUserId < 0) {
@@ -178,8 +186,9 @@ export function ContestRecords() {
       <Pagination
         page={page}
         total={total}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         onChange={setPage}
+        onPageSizeChange={setPageSize}
         disabled={loading}
       />
     </div>

@@ -9,6 +9,7 @@ import {
 import type { EmergencyInfo } from '@shared/api'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import { RichTextEditor } from '@/components/rich-text-editor'
 import {
   AlertDialog,
@@ -50,10 +51,12 @@ import {
 } from '@/components/ui/table'
 import { formatTime } from '@/lib/format'
 
-const PAGE_SIZE = 10
+const DEFAULT_PAGE_SIZE = 10
 
 export function DashboardEmergencyManage() {
-  const [page, setPage] = useState(1)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+  })
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<EmergencyInfo[]>([])
   const [loading, setLoading] = useState(true)
@@ -68,7 +71,7 @@ export function DashboardEmergencyManage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await listEmergencies(page, PAGE_SIZE)
+    const res = await listEmergencies(page, pageSize)
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '加载紧急通知失败')
@@ -76,7 +79,7 @@ export function DashboardEmergencyManage() {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page])
+  }, [page, pageSize])
 
   useEffect(() => {
     void load()
@@ -244,8 +247,9 @@ export function DashboardEmergencyManage() {
       <Pagination
         page={page}
         total={total}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         onChange={setPage}
+        onPageSizeChange={setPageSize}
         disabled={loading}
       />
 
