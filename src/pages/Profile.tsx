@@ -331,26 +331,31 @@ export function Profile() {
   }, [load])
 
   useEffect(() => {
-    if (!targetId || heatTab !== 'ac' || acHeatLoaded || acHeatLoading) return
+    // 勿把 acHeatLoading 放进 deps：setLoading 会触发 cleanup 把请求标 cancelled，导致永远卡在 Skeleton
+    if (!targetId || heatTab !== 'ac' || acHeatLoaded) return
     let cancelled = false
     async function loadAc() {
       setAcHeatLoading(true)
-      const res = await getHeatmap({
-        startDate: '20230101',
-        endDate: todayYmd(),
-        isAc: true,
-        userId: targetId,
-      })
-      if (cancelled) return
-      if (res.success) setAcHeat(res.data || [])
-      setAcHeatLoaded(true)
-      setAcHeatLoading(false)
+      try {
+        const res = await getHeatmap({
+          startDate: '20230101',
+          endDate: todayYmd(),
+          isAc: true,
+          userId: targetId,
+        })
+        if (cancelled) return
+        if (res.success) setAcHeat(res.data || [])
+        else toast.error(res.message || 'AC 热力图加载失败')
+        setAcHeatLoaded(true)
+      } finally {
+        if (!cancelled) setAcHeatLoading(false)
+      }
     }
     void loadAc()
     return () => {
       cancelled = true
     }
-  }, [targetId, heatTab, acHeatLoaded, acHeatLoading])
+  }, [targetId, heatTab, acHeatLoaded])
 
   function handleLogout() {
     logout()

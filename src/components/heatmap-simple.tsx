@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { HeatmapItem } from '@shared/api'
 import {
   Tooltip,
@@ -80,6 +80,12 @@ export function HeatmapSimple({ items, className }: HeatmapSimpleProps) {
   }, [items])
 
   const [year, setYear] = useState(() => years[0] || new Date().getFullYear())
+
+  // items 异步到达后 years 会变；若当前 year 不在列表里则切到最新有数据年份
+  useEffect(() => {
+    if (years.length === 0) return
+    if (!years.includes(year)) setYear(years[0])
+  }, [years, year])
 
   const days = yearDays(year)
   const pad = firstDayOffset(year)

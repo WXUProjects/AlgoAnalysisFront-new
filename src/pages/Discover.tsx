@@ -205,7 +205,16 @@ function FeedPanel({
       }
       const list = res.data
       setItems((prev) => (reset ? list : [...prev, ...list]))
-      setHasMore(list.length >= FEED_LIMIT)
+      // 满页 → 还有更多。不足一页时：
+      // - 首屏仍允许再点一次（兼容个人动态 Redis 被小 limit 预热导致截断）
+      // - 后续不足一页则结束，避免空点
+      if (list.length === 0) {
+        setHasMore(false)
+      } else if (list.length >= FEED_LIMIT) {
+        setHasMore(true)
+      } else {
+        setHasMore(reset)
+      }
       if (list.length) {
         cursorRef.current = num(list[list.length - 1].time, -1)
       }
