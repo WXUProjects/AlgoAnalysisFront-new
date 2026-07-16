@@ -25,6 +25,7 @@ export const endpoints = {
       moveGroup: `${API_PREFIX}/user/profile/move-group`,
       setEmailEnabled: `${API_PREFIX}/user/profile/set-email-enabled`,
       setProblemPipeline: `${API_PREFIX}/user/profile/set-problem-pipeline`,
+      setSyncIntervals: `${API_PREFIX}/user/profile/set-sync-intervals`,
       idsByGroup: `${API_PREFIX}/user/profile/ids-by-group`,
       getByIds: `${API_PREFIX}/user/profile/get-by-ids`,
       nonPublicOrgUserIds: `${API_PREFIX}/user/profile/non-public-org-user-ids`,
@@ -338,6 +339,14 @@ export interface UserListItem {
   problemAiEnabled?: boolean
   /** 注册时间（unix 秒） */
   createdAt?: number
+  /** 有效爬取间隔（分钟；站管覆盖优先，否则组织 MIN） */
+  spiderIntervalMin?: number
+  /** 有效 AI 总结间隔（分钟） */
+  aiSummaryIntervalMin?: number
+  /** 是否存在站点管理员爬取间隔覆盖 */
+  spiderIntervalOverridden?: boolean
+  /** 是否存在站点管理员 AI 总结间隔覆盖 */
+  aiSummaryIntervalOverridden?: boolean
 }
 
 export interface UserListRes {

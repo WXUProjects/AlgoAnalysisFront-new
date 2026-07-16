@@ -124,19 +124,22 @@ function buildRows(
 }
 
 function StatBarRow({ row }: { row: StatRow }) {
-  const denom = row.value + row.ave
-  const pct = denom > 0 ? Math.min(100, (row.value / denom) * 100) : 0
-  const avePct = denom > 0 ? Math.min(100, (row.ave / denom) * 100) : 0
+  // 用 max 定标：本人与人均同一把尺子，比「求和」更直观
+  const scale = Math.max(row.value, row.ave, 0)
+  const pct = scale > 0 ? Math.min(100, (row.value / scale) * 100) : 0
+  const avePct = scale > 0 ? Math.min(100, (row.ave / scale) * 100) : 0
   const isRate = row.title === 'AC 率'
   const display = row.display
     ? row.display
     : isRate
       ? `${row.value.toFixed(2)}%`
-      : String(row.value)
-  const aveDisplay = isRate ? `${row.ave.toFixed(2)}%` : row.ave.toFixed(2)
+      : String(Math.round(row.value * 100) / 100)
+  const aveDisplay = isRate
+    ? `${row.ave.toFixed(2)}%`
+    : String(Math.round(row.ave * 100) / 100)
 
   const growClass = cn(
-    'text-xs font-medium',
+    'text-xs font-medium tabular-nums',
     row.grow !== undefined && row.grow > 0 && 'text-destructive',
     row.grow !== undefined && row.grow < 0 && 'text-emerald-600 dark:text-emerald-400',
     row.grow === 0 && 'text-muted-foreground',
@@ -144,40 +147,47 @@ function StatBarRow({ row }: { row: StatRow }) {
   const growText =
     row.grow === undefined ? null : row.grow > 0 ? `+${row.grow}` : String(row.grow)
 
+  // 移动端竖排：标题+数值 → 固定高度进度条 → 人均文案
+  // 桌面横排：标题 | 条 | 数值。进度条父级用固定 px 高度 + absolute 填充，避免移动端 h-full 塌缩。
   return (
     <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-      <div className="flex items-center justify-between gap-2 sm:w-20 sm:shrink-0 sm:block">
-        <div className="text-sm text-muted-foreground">{row.title}</div>
-        <div className="flex items-center gap-1.5 tabular-nums sm:hidden">
-          <span className="text-sm font-semibold">{display}</span>
+      <div className="flex min-w-0 items-baseline justify-between gap-2 sm:w-[4.5rem] sm:shrink-0 sm:flex-col sm:justify-center sm:gap-0">
+        <div className="truncate text-sm text-muted-foreground">{row.title}</div>
+        <div className="flex shrink-0 items-center gap-1.5 tabular-nums sm:hidden">
+          <span className="text-base font-semibold leading-none">{display}</span>
           {growText !== null && <span className={growClass}>{growText}</span>}
         </div>
       </div>
-      {/*
-        进度条用文档流 + overflow clip，避免 absolute + inset-y 空块在
-        Firefox / 部分移动端高度为 0 导致蓝条不显示。
-      */}
-      <div className="relative h-2.5 w-full min-w-0 flex-1">
-        <div className="h-full w-full overflow-hidden rounded-full bg-muted">
+
+      <div className="min-w-0 w-full flex-1">
+        <div
+          className="relative w-full"
+          style={{ height: 12 }}
+          role="progressbar"
+          aria-label={row.title}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(pct)}
+        >
+          <div className="absolute inset-0 rounded-full bg-muted" />
           <div
-            className="h-full min-w-0 rounded-full bg-sky-500 transition-[width] duration-700 ease-out"
+            className="absolute left-0 top-0 bottom-0 rounded-full bg-sky-500 transition-[width] duration-500 ease-out"
             style={{ width: `${pct}%` }}
-            role="progressbar"
-            aria-label={row.title}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(pct)}
           />
+          {row.ave > 0 && (
+            <div
+              className="pointer-events-none absolute top-[-3px] bottom-[-3px] z-10 w-0.5 -translate-x-1/2 rounded-full bg-destructive"
+              style={{ left: `${avePct}%` }}
+              title={`全站人均 ${aveDisplay}`}
+            />
+          )}
         </div>
-        {row.ave > 0 && (
-          <div
-            className="pointer-events-none absolute top-1/2 z-10 h-3.5 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-destructive"
-            style={{ left: `${avePct}%` }}
-            title={`全站人均 ${aveDisplay}`}
-          />
-        )}
+        <p className="mt-1 text-[11px] leading-none text-muted-foreground sm:hidden">
+          人均 {aveDisplay}
+        </p>
       </div>
-      <div className="hidden w-28 shrink-0 items-center justify-end gap-1.5 tabular-nums sm:flex">
+
+      <div className="hidden w-[5.5rem] shrink-0 items-center justify-end gap-1.5 tabular-nums sm:flex">
         <span className="text-sm font-semibold">{display}</span>
         {growText !== null && <span className={growClass}>{growText}</span>}
       </div>
@@ -696,12 +706,13 @@ export function Profile() {
                 </TabsList>
               </Tabs>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3 px-4">
+            <CardContent className="flex flex-col gap-3.5 px-4 sm:gap-3">
               {statRows.map((row) => (
                 <StatBarRow key={row.title} row={row} />
               ))}
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
                 蓝条为本人 · 红线为全站人均（{userCount} 人）
+                <span className="sm:hidden"> · 下方数字为人均参考</span>
               </p>
             </CardContent>
           </Card>

@@ -9,6 +9,7 @@ import {
   setEmailEnabled,
   setProblemPipeline,
   setSiteAdmin,
+  setSyncIntervals,
 } from '@/api/profile'
 import { updateSpider } from '@/api/spider'
 import type { GroupInfo, UserListItem } from '@shared/api'
@@ -56,6 +57,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
@@ -103,6 +105,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [syncingId, setSyncingId] = useState<number | null>(null)
   const [togglingKey, setTogglingKey] = useState<string | null>(null)
   const [detailUser, setDetailUser] = useState<UserListItem | null>(null)
+  const [spiderIntervalDraft, setSpiderIntervalDraft] = useState('')
+  const [aiIntervalDraft, setAiIntervalDraft] = useState('')
+  const [savingIntervals, setSavingIntervals] = useState(false)
 
   const groupName = useCallback(
     (u: UserListItem) => {
@@ -200,6 +205,77 @@ function UserListPage({ scope }: { scope: UserScope }) {
     setSyncingId(null)
     if (res.success) toast.success(res.message || '已开始同步该用户的 OJ 数据')
     else toast.error(res.message || '同步失败')
+  }
+
+  function openDetail(u: UserListItem) {
+    setDetailUser(u)
+    setSpiderIntervalDraft(String(u.spiderIntervalMin ?? 60))
+    setAiIntervalDraft(String(u.aiSummaryIntervalMin ?? 180))
+  }
+
+  async function saveSyncIntervals(mode: 'save' | 'clearSpider' | 'clearAi' | 'clearBoth') {
+    if (!detailUser || !isAdmin) return
+    let spiderIntervalMin = Number(spiderIntervalDraft)
+    let aiSummaryIntervalMin = Number(aiIntervalDraft)
+    let setSpider = false
+    let setAi = false
+    if (mode === 'save') {
+      setSpider = true
+      setAi = true
+      if (
+        !Number.isFinite(spiderIntervalMin) ||
+        spiderIntervalMin < 5 ||
+        spiderIntervalMin > 10080
+      ) {
+        toast.error('爬取间隔须为 5–10080 分钟')
+        return
+      }
+      if (
+        !Number.isFinite(aiSummaryIntervalMin) ||
+        aiSummaryIntervalMin < 5 ||
+        aiSummaryIntervalMin > 10080
+      ) {
+        toast.error('AI 总结间隔须为 5–10080 分钟')
+        return
+      }
+    } else if (mode === 'clearSpider') {
+      setSpider = true
+      spiderIntervalMin = 0
+    } else if (mode === 'clearAi') {
+      setAi = true
+      aiSummaryIntervalMin = 0
+    } else {
+      setSpider = true
+      setAi = true
+      spiderIntervalMin = 0
+      aiSummaryIntervalMin = 0
+    }
+    setSavingIntervals(true)
+    const res = await setSyncIntervals({
+      userId: detailUser.userId,
+      setSpider,
+      setAi,
+      spiderIntervalMin,
+      aiSummaryIntervalMin,
+    })
+    setSavingIntervals(false)
+    if (!res.success) {
+      toast.error(res.message || '保存间隔失败')
+      return
+    }
+    toast.success(res.message || '已更新同步间隔')
+    // 刷新列表以拿有效间隔
+    const listRes = await listProfiles(page, PAGE_SIZE, scope)
+    if (listRes.success && listRes.data) {
+      setList(listRes.data.list)
+      setTotal(listRes.data.total)
+      const next = listRes.data.list.find((x) => x.userId === detailUser.userId)
+      if (next) {
+        setDetailUser(next)
+        setSpiderIntervalDraft(String(next.spiderIntervalMin ?? 60))
+        setAiIntervalDraft(String(next.aiSummaryIntervalMin ?? 180))
+      }
+    }
   }
 
   async function handlePipelineToggle(
@@ -474,7 +550,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                               type="button"
                               size="sm"
                               variant="outline"
-                              onClick={() => setDetailUser(u)}
+                              onClick={() => openDetail(u)}
                             >
                               详情
                             </Button>
@@ -703,6 +779,93 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     }
                   />
                 </Field>
+              </FieldGroup>
+
+              <Separator />
+
+              <FieldGroup className="gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">个人同步间隔</p>
+                  <p className="text-xs text-muted-foreground">
+                    站点管理员指定后优先于组织设置；清除后回落组织最短间隔
+                  </p>
+                </div>
+                <Field>
+                  <FieldLabel htmlFor="spider-interval">
+                    数据同步间隔（分钟）
+                    {detailUser.spiderIntervalOverridden ? (
+                      <Badge variant="secondary" className="ml-2 font-normal">
+                        站管指定
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="ml-2 font-normal">
+                        组织默认
+                      </Badge>
+                    )}
+                  </FieldLabel>
+                  <Input
+                    id="spider-interval"
+                    type="number"
+                    min={5}
+                    max={10080}
+                    value={spiderIntervalDraft}
+                    onChange={(e) => setSpiderIntervalDraft(e.target.value)}
+                    disabled={savingIntervals}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="ai-interval">
+                    AI 总结间隔（分钟）
+                    {detailUser.aiSummaryIntervalOverridden ? (
+                      <Badge variant="secondary" className="ml-2 font-normal">
+                        站管指定
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="ml-2 font-normal">
+                        组织默认
+                      </Badge>
+                    )}
+                  </FieldLabel>
+                  <Input
+                    id="ai-interval"
+                    type="number"
+                    min={5}
+                    max={10080}
+                    value={aiIntervalDraft}
+                    onChange={(e) => setAiIntervalDraft(e.target.value)}
+                    disabled={savingIntervals}
+                  />
+                </Field>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={savingIntervals}
+                    onClick={() => void saveSyncIntervals('save')}
+                  >
+                    {savingIntervals ? '保存中…' : '保存间隔'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={savingIntervals || !detailUser.spiderIntervalOverridden}
+                    onClick={() => void saveSyncIntervals('clearSpider')}
+                  >
+                    清除爬取覆盖
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={
+                      savingIntervals || !detailUser.aiSummaryIntervalOverridden
+                    }
+                    onClick={() => void saveSyncIntervals('clearAi')}
+                  >
+                    清除 AI 覆盖
+                  </Button>
+                </div>
               </FieldGroup>
 
               <Separator />

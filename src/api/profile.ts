@@ -128,6 +128,26 @@ export async function setProblemPipeline(
   return post(endpoints.user.profile.setProblemPipeline, { userId, enabled, kind })
 }
 
+/**
+ * 站点管理员：个人爬取 / AI 总结间隔覆盖（优先级最高）
+ * minutes 为 0 表示清除覆盖、回落组织 MIN
+ */
+export async function setSyncIntervals(body: {
+  userId: number
+  spiderIntervalMin?: number
+  aiSummaryIntervalMin?: number
+  setSpider?: boolean
+  setAi?: boolean
+}): Promise<ApiResult<unknown>> {
+  return post(endpoints.user.profile.setSyncIntervals, {
+    userId: body.userId,
+    spiderIntervalMin: body.spiderIntervalMin ?? 0,
+    aiSummaryIntervalMin: body.aiSummaryIntervalMin ?? 0,
+    setSpider: body.setSpider ?? body.spiderIntervalMin !== undefined,
+    setAi: body.setAi ?? body.aiSummaryIntervalMin !== undefined,
+  })
+}
+
 export async function moveGroup(body: {
   userId: number
   groupId: number
@@ -203,6 +223,22 @@ export async function listProfiles(
             u.createdAt === undefined || u.createdAt === null
               ? undefined
               : num(u.createdAt) || undefined,
+          spiderIntervalMin:
+            u.spiderIntervalMin === undefined
+              ? undefined
+              : num(u.spiderIntervalMin) || undefined,
+          aiSummaryIntervalMin:
+            u.aiSummaryIntervalMin === undefined
+              ? undefined
+              : num(u.aiSummaryIntervalMin) || undefined,
+          spiderIntervalOverridden:
+            u.spiderIntervalOverridden === undefined
+              ? undefined
+              : bool(u.spiderIntervalOverridden),
+          aiSummaryIntervalOverridden:
+            u.aiSummaryIntervalOverridden === undefined
+              ? undefined
+              : bool(u.aiSummaryIntervalOverridden),
           orgs: orgsRaw.map((o) => ({
             orgId: num(o.orgId),
             name: str(o.name),
