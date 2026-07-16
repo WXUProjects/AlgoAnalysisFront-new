@@ -40,6 +40,9 @@ export function getSubmitLink(
       return `https://codeforces.com/contest/${contest}/submission/${submitId}`
     case 'QOJ':
       return `https://qoj.ac/submission/${submitId}`
+    case 'LeetCode':
+      // 力扣公开「最近通过」无提交代码页，不提供查看源码链接
+      return ''
     default:
       return ''
   }
@@ -91,7 +94,7 @@ export const OJ_BIND_GUIDES: Record<
   LeetCode: {
     fieldLabel: '用户名',
     placeholder: '例如 sanenchen-o',
-    tip: '填写力扣个人主页 /u/ 后面那一段。力扣只计入热力图与总做题/提交数，不展示提交明细。',
+    tip: '填写力扣个人主页 /u/ 后面那一段。计入热力/做题数；「最近通过」会进题库、动态与提交历史（默认 AC，无代码）。',
     example: 'https://leetcode.cn/u/sanenchen-o/ → sanenchen-o',
   },
 }

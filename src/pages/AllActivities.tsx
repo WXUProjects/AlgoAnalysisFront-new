@@ -31,6 +31,7 @@ export function AllActivities() {
   const { isLogin, user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const idParam = searchParams.get('id')
+  const followingOnly = searchParams.get('following') === '1'
   const userId = idParam ? Number(idParam) : -1
   const userMode = userId > 0
 
@@ -45,13 +46,18 @@ export function AllActivities() {
   const loadMore = useCallback(
     async (reset = false) => {
       if (loadingRef.current) return
+      if (followingOnly && !isLogin) {
+        toast.error('登录后可查看关注动态')
+        return
+      }
       loadingRef.current = true
       setLoading(true)
       const nextCursor = reset ? -1 : cursorRef.current
       const res = await getSubmitLogs({
-        userId,
+        userId: userMode ? userId : -1,
         cursor: nextCursor,
         limit: LIMIT,
+        followingOnly: !userMode && followingOnly,
       })
       loadingRef.current = false
       setLoading(false)
@@ -67,7 +73,7 @@ export function AllActivities() {
         cursorRef.current = num(last.time, -1)
       }
     },
-    [userId],
+    [userId, userMode, followingOnly, isLogin],
   )
 
   useEffect(() => {
@@ -101,21 +107,35 @@ export function AllActivities() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold">
-            {userMode ? `${titleName || '用户'} 的动态` : '全站动态'}
+            {userMode
+              ? `${titleName || '用户'} 的动态`
+              : followingOnly
+                ? '关注动态'
+                : '全站动态'}
           </h2>
           <p className="text-sm text-muted-foreground">
-            全站或个人的提交动态
+            全站、关注或个人的提交动态
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             size="sm"
-            variant={!userMode ? 'default' : 'outline'}
+            variant={!userMode && !followingOnly ? 'default' : 'outline'}
             onClick={() => setSearchParams({})}
           >
             全部
           </Button>
+          {isLogin && (
+            <Button
+              type="button"
+              size="sm"
+              variant={!userMode && followingOnly ? 'default' : 'outline'}
+              onClick={() => setSearchParams({ following: '1' })}
+            >
+              仅关注
+            </Button>
+          )}
           {isLogin && user && (
             <Button
               type="button"

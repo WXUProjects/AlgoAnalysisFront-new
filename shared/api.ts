@@ -19,14 +19,32 @@ export const endpoints = {
     profile: {
       getById: `${API_PREFIX}/user/profile/get-by-id`,
       getByName: `${API_PREFIX}/user/profile/get-by-name`,
+      getByUsername: `${API_PREFIX}/user/profile/get-by-username`,
       list: `${API_PREFIX}/user/profile/list`,
       update: `${API_PREFIX}/user/profile/update`,
       moveGroup: `${API_PREFIX}/user/profile/move-group`,
       setEmailEnabled: `${API_PREFIX}/user/profile/set-email-enabled`,
+      setProblemPipeline: `${API_PREFIX}/user/profile/set-problem-pipeline`,
       idsByGroup: `${API_PREFIX}/user/profile/ids-by-group`,
       getByIds: `${API_PREFIX}/user/profile/get-by-ids`,
       nonPublicOrgUserIds: `${API_PREFIX}/user/profile/non-public-org-user-ids`,
       delete: `${API_PREFIX}/user/profile/delete`,
+      followingIds: `${API_PREFIX}/user/profile/following-ids`,
+      filterPublicFeedUserIds: `${API_PREFIX}/user/profile/filter-public-feed-user-ids`,
+    },
+    social: {
+      follow: `${API_PREFIX}/user/social/follow`,
+      unfollow: `${API_PREFIX}/user/social/unfollow`,
+      following: `${API_PREFIX}/user/social/following`,
+      followers: `${API_PREFIX}/user/social/followers`,
+      counts: `${API_PREFIX}/user/social/counts`,
+      relation: `${API_PREFIX}/user/social/relation`,
+      search: `${API_PREFIX}/user/social/search`,
+    },
+    privacy: {
+      get: `${API_PREFIX}/user/privacy/get`,
+      update: `${API_PREFIX}/user/privacy/update`,
+      status: `${API_PREFIX}/user/privacy/status`,
     },
     group: {
       create: `${API_PREFIX}/user/group/create`,
@@ -106,6 +124,12 @@ export const endpoints = {
       history: `${API_PREFIX}/core/contest/history`,
       ranking: `${API_PREFIX}/core/contest/ranking`,
     },
+    contestCalendar: {
+      list: `${API_PREFIX}/core/contest-calendar/list`,
+      platforms: `${API_PREFIX}/core/contest-calendar/platforms`,
+      sub: `${API_PREFIX}/core/contest-calendar/sub`,
+      subDelete: `${API_PREFIX}/core/contest-calendar/sub/delete`,
+    },
     bulletin: {
       create: `${API_PREFIX}/core/bulletin/create`,
       update: `${API_PREFIX}/core/bulletin/update`,
@@ -135,6 +159,16 @@ export const endpoints = {
       retryFailed: `${API_PREFIX}/core/problem/retry-failed`,
       toggleAnalyze: `${API_PREFIX}/core/problem/toggle-analyze`,
       toggleFetch: `${API_PREFIX}/core/problem/toggle-fetch`,
+      /** 站点管理员直接改标签/题面 */
+      adminUpdate: `${API_PREFIX}/core/problem/admin-update`,
+      /** 登录用户提交修改申请（站管调用时直存） */
+      proposeEdit: `${API_PREFIX}/core/problem/propose-edit`,
+      /** 站点管理员审核列表 */
+      editRequests: `${API_PREFIX}/core/problem/edit-requests`,
+      /** 站点管理员通过/驳回 */
+      reviewEdit: `${API_PREFIX}/core/problem/review-edit`,
+      /** 当前用户对该题的待审申请 */
+      myPendingEdit: `${API_PREFIX}/core/problem/my-pending-edit`,
     },
   },
   agent: {
@@ -171,6 +205,7 @@ export interface LoginRes {
 }
 
 export interface RegisterReq {
+  /** 3–64 位 A-Za-z0-9_-，禁止中文与其它特殊符号 */
   username: string
   password: string
   name: string
@@ -240,6 +275,36 @@ export interface UserProfile {
   spiders: SpiderBinding[]
 }
 
+/** 关注/粉丝/搜索列表项 */
+export interface SocialUser {
+  userId: number
+  username: string
+  name: string
+  avatar: string
+}
+
+export interface SocialListRes {
+  list: SocialUser[]
+  total: number
+}
+
+export interface SocialCounts {
+  followingCount: number
+  followerCount: number
+}
+
+export interface SocialRelation {
+  isFollowing: boolean
+  isFollower: boolean
+}
+
+/** 公共域隐私设置（私人域组织内不生效） */
+export interface PrivacySettings {
+  privacyConfigured: boolean
+  allowPublicProfile: boolean
+  allowPublicFeed: boolean
+}
+
 export interface UserOrgBrief {
   orgId: number
   name: string
@@ -265,6 +330,10 @@ export interface UserListItem {
   emailAllowedByOrg?: boolean
   /** 是否有组织授权周报且为 staff（可开启） */
   emailWeeklyAllowedByOrg?: boolean
+  /** 有效：近窗提交是否触发题面爬取（默认=非公共域组织；可个人覆盖） */
+  problemFetchEnabled?: boolean
+  /** 有效：近窗提交是否触发题面 AI（默认=非公共域组织；可个人覆盖） */
+  problemAiEnabled?: boolean
 }
 
 export interface UserListRes {
@@ -395,6 +464,53 @@ export interface ContestRankingItem {
   totalCount: number
 }
 
+/** 比赛日历条目（公开赛程，非参赛记录） */
+export interface ContestCalendarItem {
+  id: number
+  platform: string
+  platformName: string
+  externalId: string
+  name: string
+  url: string
+  startTime: number
+  endTime: number
+  source: string
+  iconUrl: string
+  subscribed: boolean
+}
+
+export interface ContestCalendarPlatform {
+  platform: string
+  platformName: string
+  iconUrl: string
+  count: number
+}
+
+/** scope: platform=整平台 / contest=单场 */
+export interface ContestCalendarSub {
+  id: number
+  scope: 'platform' | 'contest' | string
+  platform: string
+  calendarId: number
+  advanceMinutes: number
+  enabled: boolean
+  contestName?: string
+  contestUrl?: string
+  startTime?: number
+}
+
+/** 订阅提前量白名单（分钟） */
+export const CONTEST_CALENDAR_ADVANCE_OPTIONS = [
+  { value: 30, label: '30 分钟' },
+  { value: 60, label: '1 小时' },
+  { value: 180, label: '3 小时' },
+  { value: 360, label: '6 小时' },
+  { value: 720, label: '12 小时' },
+  { value: 1440, label: '1 天' },
+  { value: 2880, label: '2 天' },
+  { value: 4320, label: '3 天' },
+] as const
+
 export interface BulletinInfo {
   id: number
   title: string
@@ -440,6 +556,58 @@ export interface ProblemInfo {
   errorMsg: string
   lastSubmittedAt: number
   userStatus: string
+}
+
+/** 题库标签/题面人工修改申请 */
+export type ProblemEditStatus = 'pending' | 'approved' | 'rejected' | string
+
+export interface ProblemEditInfo {
+  id: number
+  problemId: number
+  platform: string
+  externalId: string
+  problemTitle: string
+  userId: number
+  userName: string
+  hasTags: boolean
+  hasContent: boolean
+  proposedTags: string[]
+  proposedContentMd: string
+  proposedTitle: string
+  note: string
+  status: ProblemEditStatus
+  reviewerId: number
+  reviewNote: string
+  createdAt: number
+  updatedAt: number
+  currentTags: string[]
+  currentContentMd: string
+  currentTitle: string
+}
+
+export interface AdminUpdateProblemReq {
+  id: number
+  updateTags?: boolean
+  tags?: string[]
+  updateContent?: boolean
+  contentMd?: string
+  title?: string
+}
+
+export interface ProposeProblemEditReq {
+  problemId: number
+  updateTags?: boolean
+  tags?: string[]
+  updateContent?: boolean
+  contentMd?: string
+  title?: string
+  note?: string
+}
+
+export interface ReviewProblemEditReq {
+  id: number
+  approve: boolean
+  reviewNote?: string
 }
 
 export interface ProblemListRes {

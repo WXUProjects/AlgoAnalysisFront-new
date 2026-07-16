@@ -38,6 +38,7 @@
 |------|------|--------|
 | 首页 | `/` | 全部 |
 | 比赛 | `/contest` | 全部 |
+| 比赛日历 | `/contest-calendar` | 全部 |
 | 公告 | `/bulletin` | 全部 |
 | 动态 | `/all-activities` | 全部 |
 | 题库 | `/question-bank` | 全部 |

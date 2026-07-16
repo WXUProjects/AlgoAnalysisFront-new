@@ -58,6 +58,7 @@ export function QuestionBank() {
   const tagsKey = searchParams.get('tags') || ''
   const difficulty = searchParams.get('difficulty') || ''
   const userStatus = searchParams.get('userStatus') || ''
+  const followingOnly = searchParams.get('following') === '1'
   const userId = isLogin && user ? user.userId : undefined
 
   const platforms = useMemo(() => parseList(platformsKey), [platformsKey])
@@ -158,6 +159,7 @@ export function QuestionBank() {
         userStatus: userStatus || undefined,
         keyword: keyword || undefined,
         userId,
+        followingOnly: followingOnly || undefined,
       })
       if (cancelled) return
       setLoading(false)
@@ -181,6 +183,7 @@ export function QuestionBank() {
     userStatus,
     keyword,
     userId,
+    followingOnly,
   ])
 
   function toggleInList(key: 'platforms' | 'tags', value: string) {
@@ -208,9 +211,21 @@ export function QuestionBank() {
   const hasFilters = useMemo(
     () =>
       Boolean(
-        keyword || platforms.length || tags.length || difficulty || userStatus,
+        keyword ||
+          platforms.length ||
+          tags.length ||
+          difficulty ||
+          userStatus ||
+          followingOnly,
       ),
-    [keyword, platforms.length, tags.length, difficulty, userStatus],
+    [
+      keyword,
+      platforms.length,
+      tags.length,
+      difficulty,
+      userStatus,
+      followingOnly,
+    ],
   )
 
   const platformLabel = (p: string) =>
@@ -234,6 +249,21 @@ export function QuestionBank() {
             按条件筛选题目，默认按最近提交排序
           </p>
         </div>
+        {isLogin && (
+          <Button
+            type="button"
+            size="sm"
+            variant={followingOnly ? 'default' : 'outline'}
+            onClick={() =>
+              patchParams({
+                following: followingOnly ? null : '1',
+                page: '1',
+              })
+            }
+          >
+            {followingOnly ? '仅关注 · 开' : '仅关注'}
+          </Button>
+        )}
       </div>
 
       <Card className="gap-3 py-4">

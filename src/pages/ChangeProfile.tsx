@@ -258,7 +258,9 @@ export function ChangeProfile() {
               保存资料
             </Button>
             <Button type="button" variant="outline" asChild>
-              <Link to="/profile">取消</Link>
+              <Link to={user?.username ? `/profile/${user.username}` : '/profile'}>
+                取消
+              </Link>
             </Button>
           </CardFooter>
         </form>
@@ -347,7 +349,13 @@ export function ChangeProfile() {
       </Card>
 
       <div className="flex justify-end">
-        <Button type="button" variant="ghost" onClick={() => navigate('/profile')}>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() =>
+            navigate(user?.username ? `/profile/${user.username}` : '/profile')
+          }
+        >
           返回个人资料
         </Button>
       </div>

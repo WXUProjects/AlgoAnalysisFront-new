@@ -7,6 +7,7 @@ import {
   listProfiles,
   moveGroup,
   setEmailEnabled,
+  setProblemPipeline,
   setSiteAdmin,
 } from '@/api/profile'
 import { updateSpider } from '@/api/spider'
@@ -37,10 +38,17 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field'
 import {
   Select,
   SelectContent,
@@ -48,6 +56,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -93,6 +102,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [saving, setSaving] = useState(false)
   const [syncingId, setSyncingId] = useState<number | null>(null)
   const [togglingKey, setTogglingKey] = useState<string | null>(null)
+  const [detailUser, setDetailUser] = useState<UserListItem | null>(null)
 
   const groupName = useCallback(
     (u: UserListItem) => {
@@ -160,6 +170,14 @@ function UserListPage({ scope }: { scope: UserScope }) {
     const res = await setSiteAdmin(u.userId, next)
     if (res.success) {
       toast.success(next ? '已设为站点管理员' : '已取消站点管理员')
+      setList((prev) =>
+        prev.map((row) =>
+          row.userId === u.userId ? { ...row, isSiteAdmin: next } : row,
+        ),
+      )
+      setDetailUser((cur) =>
+        cur && cur.userId === u.userId ? { ...cur, isSiteAdmin: next } : cur,
+      )
       void load()
     } else toast.error(res.message || '操作失败')
   }
@@ -182,6 +200,61 @@ function UserListPage({ scope }: { scope: UserScope }) {
     setSyncingId(null)
     if (res.success) toast.success(res.message || '已开始同步该用户的 OJ 数据')
     else toast.error(res.message || '同步失败')
+  }
+
+  async function handlePipelineToggle(
+    u: UserListItem,
+    kind: 'fetch' | 'ai',
+    checked: boolean,
+  ) {
+    const key = `${u.userId}:pipeline:${kind}`
+    setTogglingKey(key)
+    setList((prev) =>
+      prev.map((row) => {
+        if (row.userId !== u.userId) return row
+        return kind === 'fetch'
+          ? { ...row, problemFetchEnabled: checked }
+          : { ...row, problemAiEnabled: checked }
+      }),
+    )
+    setDetailUser((cur) =>
+      cur && cur.userId === u.userId
+        ? kind === 'fetch'
+          ? { ...cur, problemFetchEnabled: checked }
+          : { ...cur, problemAiEnabled: checked }
+        : cur,
+    )
+    const res = await setProblemPipeline(u.userId, checked, kind)
+    setTogglingKey(null)
+    if (res.success) {
+      toast.success(
+        res.message ||
+          (kind === 'fetch'
+            ? checked
+              ? '已开启题面爬取'
+              : '已关闭题面爬取'
+            : checked
+              ? '已开启题面 AI'
+              : '已关闭题面 AI'),
+      )
+    } else {
+      setList((prev) =>
+        prev.map((row) => {
+          if (row.userId !== u.userId) return row
+          return kind === 'fetch'
+            ? { ...row, problemFetchEnabled: !checked }
+            : { ...row, problemAiEnabled: !checked }
+        }),
+      )
+      setDetailUser((cur) =>
+        cur && cur.userId === u.userId
+          ? kind === 'fetch'
+            ? { ...cur, problemFetchEnabled: !checked }
+            : { ...cur, problemAiEnabled: !checked }
+          : cur,
+      )
+      toast.error(res.message || '设置失败')
+    }
   }
 
   async function handleEmailToggle(
@@ -244,7 +317,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
       ? `${currentOrg.name} · 成员`
       : '组织成员'
   const desc = isSite
-    ? '全站用户与所属组织；可查看日报/周报接收情况，站点管理员可开关'
+    ? '全站用户与所属组织；日报/周报可直接开关，题面爬取与 AI 见用户详情'
     : '当前组织成员；可查看并在权限允许时开关日报/周报接收'
 
   return (
@@ -401,9 +474,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
                               type="button"
                               size="sm"
                               variant="outline"
-                              onClick={() => void handleToggleSiteAdmin(u)}
+                              onClick={() => setDetailUser(u)}
                             >
-                              {u.isSiteAdmin ? '取消站点管理员' : '设为站点管理员'}
+                              详情
                             </Button>
                           )}
                           {!isSite && isStaff && (
@@ -417,9 +490,17 @@ function UserListPage({ scope }: { scope: UserScope }) {
                             </Button>
                           )}
                           <Button type="button" size="sm" variant="ghost" asChild>
-                            <Link to={`/profile?id=${u.userId}`}>资料</Link>
+                            <Link
+                              to={
+                                u.username
+                                  ? `/profile/${u.username}`
+                                  : `/profile?id=${u.userId}`
+                              }
+                            >
+                              资料
+                            </Link>
                           </Button>
-                          {isAdmin && (
+                          {isAdmin && !isSite && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -446,32 +527,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
                                     onClick={() => void handleSyncOj(u.userId)}
                                   >
                                     确认同步
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                          {isSite && isAdmin && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button type="button" size="sm" variant="destructive">
-                                  删除
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>彻底删除用户？</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  确认删除用户「{u.username}」？将清空其组织关系、粘贴板、OJ
-                                  绑定、提交与比赛记录，且无法恢复。
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>取消</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => void handleDelete(u.userId)}
-                                  >
-                                    确认删除
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -526,6 +581,199 @@ function UserListPage({ scope }: { scope: UserScope }) {
             </Button>
             <Button type="button" disabled={saving} onClick={() => void handleSaveGroup()}>
               保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!detailUser}
+        onOpenChange={(o) => {
+          if (!o) setDetailUser(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              用户详情 · {detailUser?.name || detailUser?.username}
+            </DialogTitle>
+            <DialogDescription>
+              站点级操作与题面流水线开关。默认仅非公共域组织成员触发题面爬取与
+              AI；可对个人强制开/关。
+            </DialogDescription>
+          </DialogHeader>
+          {detailUser ? (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="size-10">
+                  <AvatarImage src={detailUser.avatar || undefined} />
+                  <AvatarFallback>
+                    {(detailUser.name || detailUser.username || '?').slice(0, 1)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex flex-col gap-0.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-medium truncate">
+                      {detailUser.name || detailUser.username}
+                    </span>
+                    {detailUser.isSiteAdmin && (
+                      <Badge variant="default" className="text-[10px]">
+                        站点管理员
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-sm text-muted-foreground truncate">
+                    @{detailUser.username}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex max-w-full flex-wrap gap-1">
+                {(detailUser.orgs || []).map((o) => (
+                  <Badge
+                    key={o.orgId}
+                    variant="secondary"
+                    className="font-normal"
+                  >
+                    {o.name}
+                    {o.role && o.role !== 'member' ? (
+                      <span className="ml-1 text-muted-foreground">
+                        · {orgRoleName(o.role)}
+                      </span>
+                    ) : null}
+                  </Badge>
+                ))}
+                {!(detailUser.orgs || []).length && (
+                  <span className="text-xs text-muted-foreground">无组织信息</span>
+                )}
+              </div>
+
+              <Separator />
+
+              <FieldGroup className="gap-4">
+                <Field orientation="horizontal">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <FieldLabel htmlFor="pipeline-fetch">题面爬取</FieldLabel>
+                    <FieldDescription>
+                      开启后，该用户近窗提交可触发题面爬取
+                    </FieldDescription>
+                  </div>
+                  <Switch
+                    id="pipeline-fetch"
+                    checked={!!detailUser.problemFetchEnabled}
+                    disabled={
+                      togglingKey === `${detailUser.userId}:pipeline:fetch`
+                    }
+                    onCheckedChange={(v) =>
+                      void handlePipelineToggle(detailUser, 'fetch', v)
+                    }
+                  />
+                </Field>
+                <Field orientation="horizontal">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <FieldLabel htmlFor="pipeline-ai">题面 AI 分析</FieldLabel>
+                    <FieldDescription>
+                      开启后，该用户近窗提交可触发题面 AI（与爬取独立）
+                    </FieldDescription>
+                  </div>
+                  <Switch
+                    id="pipeline-ai"
+                    checked={!!detailUser.problemAiEnabled}
+                    disabled={
+                      togglingKey === `${detailUser.userId}:pipeline:ai`
+                    }
+                    onCheckedChange={(v) =>
+                      void handlePipelineToggle(detailUser, 'ai', v)
+                    }
+                  />
+                </Field>
+              </FieldGroup>
+
+              <Separator />
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void handleToggleSiteAdmin(detailUser)}
+                >
+                  {detailUser.isSiteAdmin ? '取消站点管理员' : '设为站点管理员'}
+                </Button>
+                <Button type="button" size="sm" variant="ghost" asChild>
+                  <Link
+                    to={
+                      detailUser.username
+                        ? `/profile/${detailUser.username}`
+                        : `/profile?id=${detailUser.userId}`
+                    }
+                  >
+                    打开资料
+                  </Link>
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={syncingId === detailUser.userId}
+                    >
+                      同步 OJ
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        同步「{detailUser.name || detailUser.username}」的 OJ 数据？
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        将从该用户已绑定的各平台重新同步提交与比赛记录，可能需要一些时间。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>取消</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => void handleSyncOj(detailUser.userId)}
+                      >
+                        确认同步
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" size="sm" variant="destructive">
+                      删除用户
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>彻底删除用户？</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        确认删除用户「{detailUser.username}」？将清空其组织关系、粘贴板、OJ
+                        绑定、提交与比赛记录，且无法恢复。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>取消</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          void handleDelete(detailUser.userId)
+                          setDetailUser(null)
+                        }}
+                      >
+                        确认删除
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDetailUser(null)}>
+              关闭
             </Button>
           </DialogFooter>
         </DialogContent>

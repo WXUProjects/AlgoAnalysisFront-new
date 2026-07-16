@@ -5,6 +5,7 @@ import {
   BookOpenIcon,
   BarChart3Icon,
   CalendarIcon,
+  ClipboardCheckIcon,
   KeyRoundIcon,
   LayoutDashboardIcon,
   LogOutIcon,
@@ -53,6 +54,7 @@ const titles: Record<string, string> = {
   '/admin/bulletin': '公告管理',
   '/admin/emergency': '紧急通知',
   '/admin/problem-progress': '题库识别',
+  '/admin/problem-edits': '题库修改审核',
   '/admin/group': '分组管理',
   '/admin/user': '组织成员',
   '/admin/site-users': '站点用户',
@@ -279,6 +281,18 @@ export function AdminLayout() {
                         <NavLink to="/admin/problem-progress">
                           <WorkflowIcon />
                           <span>题库识别</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/admin/problem-edits')}
+                        tooltip="题库修改审核"
+                      >
+                        <NavLink to="/admin/problem-edits">
+                          <ClipboardCheckIcon />
+                          <span>修改审核</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

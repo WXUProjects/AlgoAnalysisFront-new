@@ -33,6 +33,52 @@ export async function getProfileById(userId: number): Promise<ApiResult<UserProf
   return { ...res, data: normalizeProfile(res.data) }
 }
 
+export async function getProfileByUsername(
+  username: string,
+): Promise<ApiResult<UserProfile>> {
+  const uname = username.trim()
+  if (!uname) {
+    return { success: false, message: '用户名无效', data: null }
+  }
+  // 优先精确用户名接口；未部署时回退 get-by-name + get-by-id
+  const res = await get<Record<string, unknown>>(
+    endpoints.user.profile.getByUsername,
+    { username: uname },
+  )
+  if (res.success && res.data) {
+    const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
+    if (raw.userId !== undefined || raw.username !== undefined) {
+      return { ...res, data: normalizeProfile(raw) }
+    }
+  }
+  // 隐私/权限拒绝：不要回退模糊搜索（避免换用户或绕过提示）
+  if (
+    res.status === 403 ||
+    (res.message &&
+      (res.message.includes('隐私') ||
+        res.message.includes('未开放') ||
+        res.message.includes('禁止')))
+  ) {
+    return { ...res, data: null }
+  }
+  const byName = await getProfileByName(uname)
+  if (!byName.success || !byName.data?.length) {
+    return {
+      success: false,
+      message: res.message || byName.message || '用户不存在',
+      data: null,
+    }
+  }
+  // 仅精确匹配用户名，禁止回落到模糊结果的第一项（会串号）
+  const exact = byName.data.find(
+    (u) => u.username.toLowerCase() === uname.toLowerCase(),
+  )
+  if (!exact) {
+    return { success: false, message: '用户不存在', data: null }
+  }
+  return getProfileById(exact.userId)
+}
+
 export async function getProfileByName(
   name: string,
 ): Promise<ApiResult<UserProfile[]>> {
@@ -63,6 +109,15 @@ export async function setEmailEnabled(
   kind: 'daily' | 'weekly' = 'daily',
 ): Promise<ApiResult<unknown>> {
   return post(endpoints.user.profile.setEmailEnabled, { userId, enabled, kind })
+}
+
+/** 站点管理员：题面爬取 / 题面 AI 个人覆盖 */
+export async function setProblemPipeline(
+  userId: number,
+  enabled: boolean,
+  kind: 'fetch' | 'ai',
+): Promise<ApiResult<unknown>> {
+  return post(endpoints.user.profile.setProblemPipeline, { userId, enabled, kind })
 }
 
 export async function moveGroup(body: {
@@ -127,6 +182,14 @@ export async function listProfiles(
             u.emailWeeklyAllowedByOrg === undefined
               ? undefined
               : bool(u.emailWeeklyAllowedByOrg),
+          problemFetchEnabled:
+            u.problemFetchEnabled === undefined
+              ? undefined
+              : bool(u.problemFetchEnabled),
+          problemAiEnabled:
+            u.problemAiEnabled === undefined
+              ? undefined
+              : bool(u.problemAiEnabled),
           orgs: orgsRaw.map((o) => ({
             orgId: num(o.orgId),
             name: str(o.name),

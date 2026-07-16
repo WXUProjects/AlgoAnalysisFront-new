@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { register as registerApi, sendCode } from '@/api/auth'
+import {
+  register as registerApi,
+  sendCode,
+  USERNAME_HINT,
+  validateUsername,
+} from '@/api/auth'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { Button } from '@/components/ui/button'
@@ -61,6 +66,11 @@ export function Register() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const usernameErr = validateUsername(form.username)
+    if (usernameErr) {
+      toast.error(usernameErr)
+      return
+    }
     setPending(true)
     const res = await registerApi(form)
     setPending(false)
@@ -89,9 +99,15 @@ export function Register() {
                   autoComplete="username"
                   value={form.username}
                   onChange={(e) => update('username', e.target.value)}
-                  placeholder="请输入账号"
+                  placeholder="例如 student_01"
                   disabled={pending}
+                  minLength={3}
+                  maxLength={64}
+                  pattern="[A-Za-z0-9_-]{3,64}"
+                  title={USERNAME_HINT}
+                  spellCheck={false}
                 />
+                <p className="text-xs text-muted-foreground">{USERNAME_HINT}</p>
               </Field>
               <Field className="gap-1.5">
                 <FieldLabel htmlFor="reg-password">密码</FieldLabel>

@@ -343,7 +343,15 @@ export function DashboardGroup() {
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button type="button" size="sm" variant="ghost" asChild>
-                            <Link to={`/profile?id=${m.userId}`}>资料</Link>
+                            <Link
+                              to={
+                                m.username
+                                  ? `/profile/${m.username}`
+                                  : `/profile?id=${m.userId}`
+                              }
+                            >
+                              资料
+                            </Link>
                           </Button>
                           {selectedId !== 0 && (
                             <Button

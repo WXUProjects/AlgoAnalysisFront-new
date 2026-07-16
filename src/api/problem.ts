@@ -1,8 +1,12 @@
 import {
   endpoints,
+  type AdminUpdateProblemReq,
+  type ProblemEditInfo,
   type ProblemInfo,
   type ProblemListRes,
   type ProblemUserProfile,
+  type ProposeProblemEditReq,
+  type ReviewProblemEditReq,
   type SolutionMeta,
 } from '@shared/api'
 import { get, post, num, str, bool, type ApiResult } from '@/lib/http'
@@ -75,6 +79,7 @@ export async function listProblems(params: {
   userId?: number
   keyword?: string
   difficulty?: string
+  followingOnly?: boolean
 }): Promise<ApiResult<ProblemListRes>> {
   const res = await get<Record<string, unknown>[]>(endpoints.core.problem.list, {
     page: params.page ?? 1,
@@ -86,6 +91,7 @@ export async function listProblems(params: {
     ...(params.userId !== undefined ? { userId: params.userId } : {}),
     ...(params.keyword ? { keyword: params.keyword } : {}),
     ...(params.difficulty ? { difficulty: params.difficulty } : {}),
+    ...(params.followingOnly ? { followingOnly: true } : {}),
   })
   if (!res.success) return { ...res, data: null }
   const list = Array.isArray(res.data) ? res.data.map(normalizeProblem) : []
@@ -257,4 +263,113 @@ export async function resetProblemQueues(): Promise<ApiResult<unknown>> {
 
 export async function retryFailedProblems(limit = 0): Promise<ApiResult<unknown>> {
   return post(endpoints.core.problem.retryFailed, { limit })
+}
+
+function normalizeEditInfo(raw: Record<string, unknown>): ProblemEditInfo {
+  return {
+    id: num(raw.id),
+    problemId: num(raw.problemId),
+    platform: str(raw.platform),
+    externalId: str(raw.externalId),
+    problemTitle: str(raw.problemTitle),
+    userId: num(raw.userId),
+    userName: str(raw.userName),
+    hasTags: bool(raw.hasTags),
+    hasContent: bool(raw.hasContent),
+    proposedTags: Array.isArray(raw.proposedTags)
+      ? (raw.proposedTags as unknown[]).map((t) => str(t))
+      : [],
+    proposedContentMd: str(raw.proposedContentMd),
+    proposedTitle: str(raw.proposedTitle),
+    note: str(raw.note),
+    status: str(raw.status),
+    reviewerId: num(raw.reviewerId),
+    reviewNote: str(raw.reviewNote),
+    createdAt: num(raw.createdAt),
+    updatedAt: num(raw.updatedAt),
+    currentTags: Array.isArray(raw.currentTags)
+      ? (raw.currentTags as unknown[]).map((t) => str(t))
+      : [],
+    currentContentMd: str(raw.currentContentMd),
+    currentTitle: str(raw.currentTitle),
+  }
+}
+
+/** 站点管理员直接修改标签/题面 */
+export async function adminUpdateProblem(
+  body: AdminUpdateProblemReq,
+): Promise<ApiResult<ProblemInfo>> {
+  const res = await post<Record<string, unknown>>(endpoints.core.problem.adminUpdate, body)
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.data ?? res.raw) as Record<string, unknown>
+  // 响应可能是 { data: ProblemInfo } 或顶层字段
+  const nested = raw?.data
+  if (nested && typeof nested === 'object') {
+    return { ...res, data: normalizeProblem(nested as Record<string, unknown>) }
+  }
+  if (raw && (raw.id !== undefined || raw.title !== undefined)) {
+    return { ...res, data: normalizeProblem(raw) }
+  }
+  return { ...res, data: null }
+}
+
+/** 提交修改申请；站管会直存 */
+export async function proposeProblemEdit(
+  body: ProposeProblemEditReq,
+): Promise<ApiResult<{ requestId: number }>> {
+  const res = await post<Record<string, unknown>>(endpoints.core.problem.proposeEdit, body)
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
+  return {
+    ...res,
+    data: { requestId: num(raw.requestId) },
+  }
+}
+
+export async function listProblemEditRequests(params?: {
+  page?: number
+  pageSize?: number
+  status?: string
+}): Promise<ApiResult<{ list: ProblemEditInfo[]; total: number; page: number; pageSize: number }>> {
+  const res = await get<Record<string, unknown>[]>(endpoints.core.problem.editRequests, {
+    page: params?.page ?? 1,
+    pageSize: params?.pageSize ?? 20,
+    ...(params?.status ? { status: params.status } : {}),
+  })
+  if (!res.success) return { ...res, data: null }
+  const list = Array.isArray(res.data)
+    ? res.data.map((r) => normalizeEditInfo(r as Record<string, unknown>))
+    : []
+  const raw = (res.raw ?? {}) as Record<string, unknown>
+  return {
+    ...res,
+    data: {
+      list,
+      total: num(raw.total, list.length),
+      page: num(raw.page, params?.page ?? 1),
+      pageSize: num(raw.pageSize, params?.pageSize ?? 20),
+    },
+  }
+}
+
+export async function reviewProblemEdit(
+  body: ReviewProblemEditReq,
+): Promise<ApiResult<unknown>> {
+  return post(endpoints.core.problem.reviewEdit, body)
+}
+
+export async function getMyPendingProblemEdit(
+  problemId: number | string,
+): Promise<ApiResult<{ hasPending: boolean; data: ProblemEditInfo | null }>> {
+  const res = await get<Record<string, unknown>>(endpoints.core.problem.myPendingEdit, {
+    problemId,
+  })
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
+  const hasPending = bool(raw.hasPending)
+  let data: ProblemEditInfo | null = null
+  if (hasPending && raw.data && typeof raw.data === 'object') {
+    data = normalizeEditInfo(raw.data as Record<string, unknown>)
+  }
+  return { ...res, data: { hasPending, data } }
 }

@@ -80,6 +80,18 @@ export async function sendCode(
   }
 }
 
+/** 与后端一致：3–64 位字母、数字、下划线或短横线（不含中文与其它符号） */
+export const USERNAME_RE = /^[A-Za-z0-9_-]{3,64}$/
+export const USERNAME_HINT =
+  '3–64 位，仅英文字母、数字、下划线或短横线，不能含中文或特殊符号'
+
+export function validateUsername(username: string): string | null {
+  const u = username.trim()
+  if (!u) return '请填写账号'
+  if (!USERNAME_RE.test(u)) return USERNAME_HINT
+  return null
+}
+
 export async function register(input: {
   username: string
   password: string
@@ -101,6 +113,11 @@ export async function register(input: {
     !input.code
   ) {
     return { success: false, message: '请填写所有必填项', data: null }
+  }
+
+  const usernameErr = validateUsername(input.username)
+  if (usernameErr) {
+    return { success: false, message: usernameErr, data: null }
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {

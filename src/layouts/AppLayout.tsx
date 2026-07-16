@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import {
   BookOpenIcon,
   Building2Icon,
+  CalendarDaysIcon,
   CalendarIcon,
   HomeIcon,
   InfoIcon,
@@ -22,6 +23,7 @@ import { trackPageVisit } from '@/lib/visit-tracker'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
 import { EmergencyDialogHost } from '@/components/emergency-dialog'
+import { PrivacySetupDialog } from '@/components/privacy-setup-dialog'
 import { SiteFooter } from '@/components/site-footer'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
@@ -54,9 +56,12 @@ const titles: Record<string, string> = {
   '/change-password': '修改密码',
   '/profile': '个人资料',
   '/change-profile': '编辑资料',
+  '/privacy': '隐私设置',
+  '/social': '关注与粉丝',
   '/all-activities': '动态',
   '/bulletin': '公告',
   '/contest': '比赛',
+  '/contest-calendar': '比赛日历',
   '/question-bank': '题库',
   '/about': '关于我们',
   '/org': '我的组织',
@@ -67,6 +72,8 @@ const titles: Record<string, string> = {
 
 function resolveTitle(pathname: string, brand: string): string {
   if (titles[pathname]) return titles[pathname]
+  if (pathname.startsWith('/profile/')) return '个人资料'
+  if (pathname.startsWith('/social')) return '关注与粉丝'
   if (pathname.startsWith('/contest/')) return '比赛详情'
   if (pathname.startsWith('/question-bank/detail/')) return '题目详情'
   if (pathname.startsWith('/p/')) return '粘贴板'
@@ -193,12 +200,27 @@ export function AppLayout() {
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname.startsWith('/contest')}
+                      isActive={
+                        pathname === '/contest' ||
+                        pathname.startsWith('/contest/')
+                      }
                       tooltip="比赛"
                     >
                       <NavLink to="/contest">
                         <CalendarIcon />
                         <span>比赛</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname.startsWith('/contest-calendar')}
+                      tooltip="比赛日历"
+                    >
+                      <NavLink to="/contest-calendar">
+                        <CalendarDaysIcon />
+                        <span>比赛日历</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -253,14 +275,14 @@ export function AppLayout() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {isLogin && isMemberLike && (
+                  {isLogin && isMemberLike && user?.username && (
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
                         isActive={pathname.startsWith('/profile')}
                         tooltip="个人资料"
                       >
-                        <NavLink to="/profile">
+                        <NavLink to={`/profile/${user.username}`}>
                           <UserIcon />
                           <span>个人资料</span>
                         </NavLink>
@@ -421,6 +443,7 @@ export function AppLayout() {
         </SidebarInset>
         <Toaster richColors position="top-center" />
         <EmergencyDialogHost />
+        <PrivacySetupDialog />
       </SidebarProvider>
     </TooltipProvider>
     </MotionProvider>

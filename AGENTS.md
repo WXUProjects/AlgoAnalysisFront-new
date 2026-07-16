@@ -155,8 +155,9 @@ Auth 标志：`isAdmin` / `isCoach`(纯教练) / `isCaptain` / `isStaff`(1\|2\|3
 | `/change-profile` | ChangeProfile | 登录 | 编辑资料 + 绑 OJ（旧路径 `/changeProfile`） |
 | `/all-activities` | AllActivities | 无 | 提交动态（旧 `/allActivities`） |
 | `/bulletin` | Bulletin | 无 | 公告列表 |
-| `/contest` | Contest | 无 | 比赛列表 |
+| `/contest` | Contest | 无 | 比赛列表（参赛记录） |
 | `/contest/:id` | ContestDetails | 无 | 比赛详情 + 站内榜 |
+| `/contest-calendar` | ContestCalendar | 无 | 比赛日历（公开赛程 + 邮件订阅） |
 | `/question-bank` | QuestionBank | 无 | 题库列表 |
 | `/question-bank/detail/:id` | QuestionBankDetail | 无 | 题目详情 |
 | `/star` | Star | 登录 | 收藏（半成品，可先占位） |
@@ -244,6 +245,7 @@ core.submitLog:   getById
 core.spider:      set, update, updateAll
 core.statistic:   heatmap, period, rank
 core.contest:     list, history, ranking
+core.contestCalendar: list, platforms, sub, subDelete
 core.bulletin:    list, get, create, update, delete
 core.problem:     list, get, submissions, userProfile, progress,
                   backfill, emergencyStop, resume, resetAll, retryFailed,
@@ -261,7 +263,7 @@ agent.summary:    recent
 
 ### 侧栏导航（启用项）
 
-首页 · 比赛 · 公告 · 动态 · 题库 · 个人资料(队员/队长/管理员) · 后台(管理员/教练/队长) · 论坛(外链) · 主题 · 登录/注册(未登录)
+首页 · 比赛 · 比赛日历 · 公告 · 动态 · 题库 · 个人资料(队员/队长/管理员) · 后台(管理员/教练/队长) · 论坛(外链) · 主题 · 登录/注册(未登录)
 
 品牌：**Algo-CWUX**（侧栏最上方）
 

@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ExternalLinkIcon } from 'lucide-react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ExternalLinkIcon, UserPlusIcon, UserMinusIcon } from 'lucide-react'
 import { toast } from 'sonner'
-import { listProfiles, getProfileById } from '@/api/profile'
+import {
+  listProfiles,
+  getProfileById,
+  getProfileByUsername,
+} from '@/api/profile'
+import {
+  followUser,
+  getSocialCounts,
+  getSocialRelation,
+  unfollowUser,
+} from '@/api/social'
 import { getHeatmap, getPeriod } from '@/api/statistic'
 import { getSubmitLogs } from '@/api/submitLog'
 import { listContests } from '@/api/contest'
@@ -13,7 +23,6 @@ import type {
   PeriodData,
   PeriodItem,
   ProblemUserProfile,
-  SubmitLogItem,
   UserProfile,
 } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
@@ -144,15 +153,26 @@ function StatBarRow({ row }: { row: StatRow }) {
           {growText !== null && <span className={growClass}>{growText}</span>}
         </div>
       </div>
-      <div className="relative h-2.5 w-full min-w-0 flex-1 rounded-full bg-muted">
-        <div
-          className="absolute inset-y-0 left-0 rounded-full bg-sky-500/80 transition-all duration-700"
-          style={{ width: `${pct}%` }}
-        />
+      {/*
+        进度条用文档流 + overflow clip，避免 absolute + inset-y 空块在
+        Firefox / 部分移动端高度为 0 导致蓝条不显示。
+      */}
+      <div className="relative h-2.5 w-full min-w-0 flex-1">
+        <div className="h-full w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full min-w-0 rounded-full bg-sky-500 transition-[width] duration-700 ease-out"
+            style={{ width: `${pct}%` }}
+            role="progressbar"
+            aria-label={row.title}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(pct)}
+          />
+        </div>
         {row.ave > 0 && (
           <div
-            className="absolute top-1/2 h-3.5 w-0.5 -translate-y-1/2 bg-destructive"
-            style={{ left: `calc(${avePct}% - 1px)` }}
+            className="pointer-events-none absolute top-1/2 z-10 h-3.5 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-destructive"
+            style={{ left: `${avePct}%` }}
             title={`全站人均 ${aveDisplay}`}
           />
         )}
@@ -167,13 +187,14 @@ function StatBarRow({ row }: { row: StatRow }) {
 
 export function Profile() {
   const { user, isLogin, logout } = useAuth()
+  const { username: routeUsername } = useParams<{ username?: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  // 兼容旧 ?id=；优先 /profile/:username
   const queryId = searchParams.get('id')
-  const targetId = queryId ? Number(queryId) : user?.userId || 0
-  const isSelf = Boolean(isLogin && user && targetId === user.userId)
 
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [targetId, setTargetId] = useState(0)
   const [period, setPeriod] = useState<PeriodData | null>(null)
   const [globalPeriod, setGlobalPeriod] = useState<PeriodData | null>(null)
   const [userCount, setUserCount] = useState(1)
@@ -182,11 +203,26 @@ export function Profile() {
   const [acHeatLoaded, setAcHeatLoaded] = useState(false)
   const [acHeatLoading, setAcHeatLoading] = useState(false)
   const [heatTab, setHeatTab] = useState<'submit' | 'ac'>('submit')
-  const [activities, setActivities] = useState<SubmitLogItem[]>([])
+  const [activities, setActivities] = useState<
+    import('@shared/api').SubmitLogItem[]
+  >([]) // 最近动态
   const [contests, setContests] = useState<ContestItem[]>([])
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [mode, setMode] = useState<'submit' | 'ac'>('ac')
+  const [followingCount, setFollowingCount] = useState(0)
+  const [followerCount, setFollowerCount] = useState(0)
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [followBusy, setFollowBusy] = useState(false)
+  const [denied, setDenied] = useState(false)
+
+  const isSelf = Boolean(
+    isLogin &&
+      user &&
+      ((targetId > 0 && targetId === user.userId) ||
+        (routeUsername && routeUsername === user.username) ||
+        (!routeUsername && !queryId)),
+  )
 
   const spiderMap = useMemo(() => {
     const m = new Map<string, string>()
@@ -195,14 +231,51 @@ export function Profile() {
   }, [profile])
 
   const load = useCallback(async (signal?: { cancelled: boolean }) => {
-    if (!targetId) return
     setLoading(true)
+    setDenied(false)
     setAcHeat([])
     setAcHeatLoaded(false)
     setHeatTab('submit')
+
+    // 解析目标用户
+    let pRes: Awaited<ReturnType<typeof getProfileById>>
+    if (routeUsername) {
+      pRes = await getProfileByUsername(routeUsername)
+    } else if (queryId) {
+      pRes = await getProfileById(Number(queryId))
+    } else if (user?.userId) {
+      pRes = await getProfileById(user.userId)
+    } else {
+      setLoading(false)
+      setProfile(null)
+      return
+    }
+    if (signal?.cancelled) return
+
+    if (!pRes.success || !pRes.data) {
+      setLoading(false)
+      setProfile(null)
+      const msg = pRes.message || '加载资料失败'
+      if (msg.includes('隐私') || msg.includes('禁止') || msg.includes('未开放')) {
+        setDenied(true)
+      } else {
+        toast.error(msg)
+      }
+      return
+    }
+
+    const pf = pRes.data
+    // 无 username 路由时重定向到 /profile/:username
+    if (!routeUsername && pf.username) {
+      navigate(`/profile/${pf.username}`, { replace: true })
+      return
+    }
+
+    setProfile(pf)
+    setTargetId(pf.userId)
+    const uid = pf.userId
     const end = todayYmd()
     const [
-      pRes,
       periodRes,
       globalRes,
       listRes,
@@ -210,30 +283,27 @@ export function Profile() {
       acts,
       cont,
       algoRes,
+      countsRes,
+      relRes,
     ] = await Promise.all([
-      getProfileById(targetId),
-      getPeriod(targetId),
+      getPeriod(uid),
       getPeriod(-1),
       listProfiles(1, 1),
       getHeatmap({
         startDate: '20230101',
         endDate: end,
         isAc: false,
-        userId: targetId,
+        userId: uid,
       }),
-      getSubmitLogs({ userId: targetId, cursor: -1, limit: 10 }),
-      listContests({ userId: targetId, limit: 5, offset: 0 }),
-      getProblemUserProfile(targetId),
+      getSubmitLogs({ userId: uid, cursor: -1, limit: 10 }),
+      listContests({ userId: uid, limit: 5, offset: 0 }),
+      getProblemUserProfile(uid),
+      getSocialCounts(uid),
+      isLogin ? getSocialRelation(uid) : Promise.resolve(null),
     ])
     if (signal?.cancelled) return
     setLoading(false)
 
-    if (!pRes.success || !pRes.data) {
-      toast.error(pRes.message || '加载资料失败')
-      setProfile(null)
-      return
-    }
-    setProfile(pRes.data)
     if (periodRes.success) setPeriod(periodRes.data)
     if (globalRes.success) setGlobalPeriod(globalRes.data)
     if (listRes.success && listRes.data) {
@@ -243,7 +313,14 @@ export function Profile() {
     if (acts.success) setActivities(acts.data || [])
     if (cont.success) setContests(cont.data?.list || [])
     if (algoRes.success) setAlgo(algoRes.data)
-  }, [targetId])
+    if (countsRes.success && countsRes.data) {
+      setFollowingCount(countsRes.data.followingCount)
+      setFollowerCount(countsRes.data.followerCount)
+    }
+    if (relRes && relRes.success && relRes.data) {
+      setIsFollowing(relRes.data.isFollowing)
+    }
+  }, [routeUsername, queryId, user?.userId, isLogin, navigate])
 
   useEffect(() => {
     const signal = { cancelled: false }
@@ -338,7 +415,9 @@ export function Profile() {
       <PageShell>
         <Card className="py-4">
           <CardContent className="px-4 text-sm text-muted-foreground">
-            用户不存在
+            {denied
+              ? '该用户未开放公共域个人资料'
+              : '用户不存在'}
           </CardContent>
         </Card>
       </PageShell>
@@ -347,6 +426,22 @@ export function Profile() {
 
   const displayName = profile.name || profile.username
   const avatarSrc = profile.avatar || '/images/defaultAvatar.png'
+
+  async function handleToggleFollow() {
+    if (!isLogin || !profile || isSelf) return
+    setFollowBusy(true)
+    const res = isFollowing
+      ? await unfollowUser(profile.userId)
+      : await followUser(profile.userId)
+    setFollowBusy(false)
+    if (!res.success) {
+      toast.error(res.message || '操作失败')
+      return
+    }
+    setIsFollowing(!isFollowing)
+    setFollowerCount((c) => Math.max(0, c + (isFollowing ? -1 : 1)))
+    toast.success(isFollowing ? '已取消关注' : '已关注')
+  }
 
   return (
     <PageShell className="gap-4">
@@ -368,10 +463,36 @@ export function Profile() {
                 <p className="truncate text-xs text-muted-foreground sm:text-sm">
                   @{profile.username}
                 </p>
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs sm:text-sm">
+                  <Link
+                    to={`/social/${profile.username}?tab=following`}
+                    className="hover:underline"
+                  >
+                    <span className="font-semibold tabular-nums">
+                      {followingCount}
+                    </span>{' '}
+                    <span className="text-muted-foreground">关注</span>
+                  </Link>
+                  <Link
+                    to={`/social/${profile.username}?tab=followers`}
+                    className="hover:underline"
+                  >
+                    <span className="font-semibold tabular-nums">
+                      {followerCount}
+                    </span>{' '}
+                    <span className="text-muted-foreground">粉丝</span>
+                  </Link>
+                </div>
                 {isSelf && (
                   <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
                     <Button type="button" size="sm" className="h-7 px-2 text-xs" asChild>
                       <Link to="/change-profile">编辑</Link>
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" asChild>
+                      <Link to="/privacy">隐私</Link>
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" asChild>
+                      <Link to="/social?tab=search">找人</Link>
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -496,10 +617,16 @@ export function Profile() {
             </CardContent>
           </Card>
 
-          {isSelf && (
+          {isSelf ? (
             <div className="hidden flex-col gap-2 lg:flex">
               <Button type="button" asChild>
                 <Link to="/change-profile">编辑个人资料</Link>
+              </Button>
+              <Button type="button" variant="outline" asChild>
+                <Link to="/privacy">隐私设置</Link>
+              </Button>
+              <Button type="button" variant="outline" asChild>
+                <Link to="/social?tab=search">搜索用户</Link>
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -523,6 +650,29 @@ export function Profile() {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
+          ) : (
+            isLogin && (
+              <div className="flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant={isFollowing ? 'outline' : 'default'}
+                  disabled={followBusy}
+                  onClick={() => void handleToggleFollow()}
+                >
+                  {isFollowing ? (
+                    <>
+                      <UserMinusIcon data-icon="inline-start" />
+                      已关注
+                    </>
+                  ) : (
+                    <>
+                      <UserPlusIcon data-icon="inline-start" />
+                      关注
+                    </>
+                  )}
+                </Button>
+              </div>
+            )
           )}
         </aside>
 

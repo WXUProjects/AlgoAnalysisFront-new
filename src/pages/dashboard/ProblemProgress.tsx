@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   backfillProblems,
   getProblemProgress,
-  resetAllProblems,
   resetProblemQueues,
   retryFailedProblems,
   toggleAnalyze,
@@ -28,13 +27,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Spinner } from '@/components/ui/spinner'
 import {
   Table,
   TableBody,
@@ -50,6 +49,27 @@ import {
 } from '@/components/ui/tooltip'
 import { cleanProblemTitle, formatPipelineStage, formatTime } from '@/lib/format'
 import { num, str } from '@/lib/http'
+
+/** 本地隐藏的永久失败题目 ID，不改后端状态 */
+const HIDDEN_PERM_KEY = 'goalgo.problem.hiddenFailedPerm'
+
+function readHiddenPermIds(): Set<number> {
+  try {
+    const raw = localStorage.getItem(HIDDEN_PERM_KEY)
+    if (!raw) return new Set()
+    const arr = JSON.parse(raw) as unknown
+    if (!Array.isArray(arr)) return new Set()
+    return new Set(
+      arr.map((x) => Number(x)).filter((n) => Number.isFinite(n) && n > 0),
+    )
+  } catch {
+    return new Set()
+  }
+}
+
+function writeHiddenPermIds(ids: Set<number>) {
+  localStorage.setItem(HIDDEN_PERM_KEY, JSON.stringify([...ids]))
+}
 
 function ActionTip({
   tip,
@@ -95,6 +115,9 @@ export function DashboardProblemProgress() {
   const [data, setData] = useState<ProblemProgressData | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [hiddenPermIds, setHiddenPermIds] = useState<Set<number>>(() =>
+    readHiddenPermIds(),
+  )
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -146,6 +169,26 @@ export function DashboardProblemProgress() {
     const next = !data?.fetchPaused
     await run(next ? '暂停获取' : '恢复获取', () => toggleFetch(next))
   }
+
+  function handleClearPermHistory() {
+    const current = data?.recentFailedPerm || []
+    const next = new Set(hiddenPermIds)
+    for (const r of current) {
+      const id = num(r.id ?? r.problemId)
+      if (id) next.add(id)
+    }
+    writeHiddenPermIds(next)
+    setHiddenPermIds(next)
+    toast.success('已清除永久失败列表显示（题目仍为永久失败）')
+  }
+
+  const visibleFailedPerm = useMemo(() => {
+    const rows = data?.recentFailedPerm || []
+    return rows.filter((r) => {
+      const id = num(r.id ?? r.problemId)
+      return !id || !hiddenPermIds.has(id)
+    })
+  }, [data?.recentFailedPerm, hiddenPermIds])
 
   const queueMap = Object.fromEntries(
     (data?.queues || []).map((q) => [str(q.name), q]),
@@ -313,68 +356,6 @@ export function DashboardProblemProgress() {
                 </AlertDialogContent>
               </AlertDialog>
             </ActionTip>
-
-            <ActionTip tip="只重试近 6 个月内可恢复的失败题目，永久失败不会重试">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" size="sm" variant="outline" disabled={busy}>
-                    重试失败
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>重试失败的题目？</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      仅重试近 6 个月内可恢复的失败项。有题面的会重新分析，没有题面的会先获取题面。永久失败不会纳入。
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() =>
-                        void run('重试失败', () => retryFailedProblems(0))
-                      }
-                    >
-                      确认
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </ActionTip>
-
-            <ActionTip tip="清空全部 AI 难度、标签与解法，保留题面后重新分析。影响范围很大，请谨慎">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="destructive"
-                    disabled={busy}
-                  >
-                    {busy ? <Spinner data-icon="inline-start" /> : null}
-                    重置 AI
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>重置全部 AI 结果？</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      将清空题目的难度、标签与推荐解法，并重新分析；题面本身会保留。影响范围很大，请确认后再操作。
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() =>
-                        void run('重置 AI', () => resetAllProblems(true))
-                      }
-                    >
-                      确认重置
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </ActionTip>
           </div>
         )}
       </div>
@@ -464,19 +445,85 @@ export function DashboardProblemProgress() {
       <Card className="gap-0 py-0 overflow-hidden">
         <CardHeader className="px-4 py-3 border-b">
           <CardTitle className="text-base">近期失败</CardTitle>
+          {isAdmin && (
+            <CardAction>
+              <ActionTip tip="只重试近 6 个月内可恢复的失败题目，永久失败不会重试">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={busy || !(data?.recentFailed?.length)}
+                    >
+                      重试
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>重试失败的题目？</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        仅重试近 6 个月内可恢复的失败项。有题面的会重新分析，没有题面的会先获取题面。永久失败不会纳入。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>取消</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() =>
+                          void run('重试失败', () => retryFailedProblems(0))
+                        }
+                      >
+                        确认
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </ActionTip>
+            </CardAction>
+          )}
         </CardHeader>
         <CardContent className="p-0">
-          <JobTable rows={data?.recentFailed || []} />
+          <JobTable rows={data?.recentFailed || []} showError />
         </CardContent>
       </Card>
 
-      {(data?.recentFailedPerm?.length || 0) > 0 && (
+      {visibleFailedPerm.length > 0 && (
         <Card className="gap-0 py-0 overflow-hidden">
           <CardHeader className="px-4 py-3 border-b">
             <CardTitle className="text-base">永久失败</CardTitle>
+            <CardDescription className="text-xs">
+              不会自动重试；清除历史只隐藏本页列表，状态仍为永久失败
+            </CardDescription>
+            {isAdmin && (
+              <CardAction>
+                <ActionTip tip="从本页列表中隐藏当前永久失败记录，不会改动题目状态，也不会重新排队">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button type="button" size="sm" variant="outline" disabled={busy}>
+                        清除历史
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>清除永久失败历史？</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          列表将不再显示当前这些永久失败题目，但它们在系统中仍是永久失败，不会被重试。之后新出现的永久失败仍会显示。
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClearPermHistory}>
+                          确认清除
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </ActionTip>
+              </CardAction>
+            )}
           </CardHeader>
           <CardContent className="p-0">
-            <JobTable rows={data?.recentFailedPerm || []} />
+            <JobTable rows={visibleFailedPerm} showError />
           </CardContent>
         </Card>
       )}
@@ -484,7 +531,13 @@ export function DashboardProblemProgress() {
   )
 }
 
-function JobTable({ rows }: { rows: Record<string, unknown>[] }) {
+function JobTable({
+  rows,
+  showError = false,
+}: {
+  rows: Record<string, unknown>[]
+  showError?: boolean
+}) {
   if (!rows.length) {
     return <p className="p-4 text-sm text-muted-foreground">暂无</p>
   }
@@ -495,6 +548,7 @@ function JobTable({ rows }: { rows: Record<string, unknown>[] }) {
           <TableHead>题目</TableHead>
           <TableHead>平台</TableHead>
           <TableHead>阶段</TableHead>
+          {showError ? <TableHead className="min-w-40">原因</TableHead> : null}
           <TableHead>时间</TableHead>
         </TableRow>
       </TableHeader>
@@ -506,6 +560,7 @@ function JobTable({ rows }: { rows: Record<string, unknown>[] }) {
             str(r.externalId || id || '-'),
           )
           const stage = formatPipelineStage(str(r.stage || r.status))
+          const errorMsg = str(r.errorMsg || r.error_msg || r.message)
           return (
             <TableRow key={i}>
               <TableCell>
@@ -524,6 +579,13 @@ function JobTable({ rows }: { rows: Record<string, unknown>[] }) {
               <TableCell>
                 <Badge variant="outline">{stage}</Badge>
               </TableCell>
+              {showError ? (
+                <TableCell className="max-w-xs text-xs text-muted-foreground">
+                  <span className="line-clamp-2 break-all" title={errorMsg || undefined}>
+                    {errorMsg || '—'}
+                  </span>
+                </TableCell>
+              ) : null}
               <TableCell className="text-xs text-muted-foreground">
                 {formatTime(r.startedAt || r.updatedAt || r.time)}
               </TableCell>

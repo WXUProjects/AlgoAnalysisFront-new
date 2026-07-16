@@ -26,6 +26,7 @@ export async function getSubmitLogs(params: {
   userId: number
   cursor?: number | string
   limit?: number
+  followingOnly?: boolean
 }): Promise<ApiResult<SubmitLogItem[]>> {
   const res = await get<Record<string, unknown>[] | { data?: unknown }>(
     endpoints.core.submitLog.getById,
@@ -33,6 +34,7 @@ export async function getSubmitLogs(params: {
       userId: params.userId,
       cursor: params.cursor ?? -1,
       limit: params.limit ?? 50,
+      ...(params.followingOnly ? { followingOnly: true } : {}),
     },
   )
   if (!res.success) return { ...res, data: [] }

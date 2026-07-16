@@ -29,6 +29,14 @@ const Home = lazy(() =>
 const Profile = lazy(() =>
   import('@/pages/Profile').then((m) => ({ default: m.Profile })),
 )
+const Social = lazy(() =>
+  import('@/pages/Social').then((m) => ({ default: m.Social })),
+)
+const PrivacySettings = lazy(() =>
+  import('@/pages/PrivacySettings').then((m) => ({
+    default: m.PrivacySettings,
+  })),
+)
 const ChangeProfile = lazy(() =>
   import('@/pages/ChangeProfile').then((m) => ({ default: m.ChangeProfile })),
 )
@@ -43,6 +51,9 @@ const Contest = lazy(() =>
 )
 const ContestDetails = lazy(() =>
   import('@/pages/ContestDetails').then((m) => ({ default: m.ContestDetails })),
+)
+const ContestCalendar = lazy(() =>
+  import('@/pages/ContestCalendar').then((m) => ({ default: m.ContestCalendar })),
 )
 const QuestionBank = lazy(() =>
   import('@/pages/QuestionBank').then((m) => ({ default: m.QuestionBank })),
@@ -95,6 +106,11 @@ const DashboardEmergencyManage = lazy(() =>
 const DashboardProblemProgress = lazy(() =>
   import('@/pages/dashboard/ProblemProgress').then((m) => ({
     default: m.DashboardProblemProgress,
+  })),
+)
+const DashboardProblemEditReview = lazy(() =>
+  import('@/pages/dashboard/ProblemEditReview').then((m) => ({
+    default: m.DashboardProblemEditReview,
   })),
 )
 const DashboardSiteSettings = lazy(() =>
@@ -210,6 +226,40 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'profile/:username',
+        element: (
+          <Lazy>
+            <Profile />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'social',
+        element: (
+          <Lazy>
+            <Social />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'social/:username',
+        element: (
+          <Lazy>
+            <Social />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'privacy',
+        element: (
+          <RequireLogin>
+            <Lazy>
+              <PrivacySettings />
+            </Lazy>
+          </RequireLogin>
+        ),
+      },
+      {
         path: 'change-profile',
         element: (
           <RequireMemberLike>
@@ -248,6 +298,14 @@ export const router = createBrowserRouter([
         element: (
           <Lazy>
             <ContestDetails />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'contest-calendar',
+        element: (
+          <Lazy>
+            <ContestCalendar />
           </Lazy>
         ),
       },
@@ -409,6 +467,14 @@ export const router = createBrowserRouter([
             element: (
               <Lazy>
                 <DashboardProblemProgress />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'problem-edits',
+            element: (
+              <Lazy>
+                <DashboardProblemEditReview />
               </Lazy>
             ),
           },

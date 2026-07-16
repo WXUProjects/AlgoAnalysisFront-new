@@ -58,6 +58,7 @@
 }
 ```
 
+`username`：3–64 位，仅 `A-Za-z0-9_-`（字母、数字、下划线、短横线），**不允许中文及其它特殊符号**。  
 `name` = **全局昵称**（非真实姓名；加入校队时另填「组织内名称」）。  
 `code` = 邮箱验证码（先调 `send-code`，`purpose=register`）。邮箱全局唯一。
 
@@ -92,17 +93,40 @@
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| GET | `/user/profile/get-by-id` | 否 | query: `userId` |
-| GET | `/user/profile/get-by-name` | 否 | query: `name` |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开） |
+| GET | `/user/profile/get-by-id` | 否 | query: `userId`；公共域受隐私约束，私人域组织内隐私配置失效 |
+| GET | `/user/profile/get-by-username` | 否 | query: `username` 精确匹配；返回同 get-by-id |
+| GET | `/user/profile/get-by-name` | 否 | query: `name` 模糊（用户名/昵称） |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开）、`problemFetchEnabled`/`problemAiEnabled`（题面爬取/AI 有效状态） |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新资料 |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
 | POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；本人 / 站点管理员 / **当前组织 staff 管理本组织成员**；无组织授权时不可开启日报/周报 |
+| POST | `/user/profile/set-problem-pipeline` | 是(站点管理员) | body: `{ userId, enabled, kind: fetch\|ai }`；个人覆盖：近窗提交是否触发题面爬取 / 题面 AI（默认按是否非公共域组织） |
 | GET | `/user/profile/ids-by-group` | 否 | query: `groupId` |
 | POST | `/user/profile/get-by-ids` | 否 | body: `{ userIds, orgId? }`；`name`=该组织 `org_display_name`（空则 username）；`orgId` 缺省用 JWT 当前组织，再回落公共域 |
-| GET | `/user/profile/non-public-org-user-ids` | 否（内部） | 至少属于一个非公共域组织的 userIds（core 题面 AI 闸门） |
+| GET | `/user/profile/non-public-org-user-ids` | 否（内部） | 题面流水线资格：`userIds`/`fetchUserIds`=爬取资格，`aiUserIds`=AI 资格（默认非公共域组织 + 个人覆盖） |
 | POST | `/user/profile/delete` | 是(站点管理员) | **硬删除**用户：清空 org 成员/申请/粘贴板 + core 的 OJ 绑定/提交/比赛记录，再删账号；不可删自己与站点管理员 |
+| GET | `/user/profile/following-ids` | 否 | query: `userId`（0=当前用户）→ 关注的 userIds |
+| POST | `/user/profile/filter-public-feed-user-ids` | 否 | body: `{ userIds }` → 公共域动态可见的子集（未配置隐私默认可见） |
+
+### Social / Privacy
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| POST | `/user/social/follow` | 是 | body: `{ userId }` 关注 |
+| POST | `/user/social/unfollow` | 是 | body: `{ userId }` 取消关注 |
+| GET | `/user/social/following` | 否 | query: `userId`, `page`, `pageSize` → 关注列表 |
+| GET | `/user/social/followers` | 否 | query: `userId`, `page`, `pageSize` → 粉丝列表 |
+| GET | `/user/social/counts` | 否 | query: `userId` → `{ followingCount, followerCount }` |
+| GET | `/user/social/relation` | 否（可选 JWT） | query: `userId` → `{ isFollowing, isFollower }` |
+| GET | `/user/social/search` | 否 | query: `q`, `page`, `pageSize` → 搜索用户 |
+| GET | `/user/privacy/get` | 是 | 本人隐私：`privacyConfigured`, `allowPublicProfile`(默认 true), `allowPublicFeed`(默认 true) |
+| POST | `/user/privacy/update` | 是 | body: `{ allowPublicProfile?, allowPublicFeed? }`；保存后 `privacyConfigured=true` |
+| GET | `/user/privacy/status` | 否（可选 JWT） | `{ privacyConfigured }`；未登录视为 true（不弹窗） |
+
+**隐私规则**：仅在**公共域**生效。私人域组织内上述配置全部失效。未登录访客视作公共域上下文。未配置过隐私时默认「允许看资料 + 加入动态」，登录后强制弹窗完成首次配置。
+
+**动态 / 题库过滤**（core）：`submit-log/get-by-id` 支持 `followingOnly`；`problem/list` 与 `problem/submissions` 支持 `followingOnly`。
 
 ### Upload / Site
 
@@ -433,6 +457,22 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/core/contest/history` | 否 | query: `userId`, `limit`, `cursor`, `platform?` |
 | GET | `/core/contest/ranking` | 否 | query: `contestId` 或 `contest_id`, `limit`, `offset`, `groupId?` |
 
+### ContestCalendar（比赛日历 / 公开赛程）
+
+与 Contest（参赛记录）分离。数据源：`calendar.cpolar.cn`（综合）+ 力扣 GraphQL，每 12 小时爬取。
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| GET | `/core/contest-calendar/list` | 否 | query: `platform?`, `keyword?`, `status?`(upcoming\|ongoing\|all), `limit`, `offset` |
+| GET | `/core/contest-calendar/platforms` | 否 | 平台及即将开始场次统计 |
+| GET | `/core/contest-calendar/sub` | 是 | 我的邮件订阅 |
+| POST | `/core/contest-calendar/sub` | 是 | 创建/更新订阅 body: `{ scope, platform?, calendarId?, advanceMinutes, enabled }` |
+| POST | `/core/contest-calendar/sub/delete` | 是 | 删除订阅 body: `{ scope, platform?, calendarId? }` |
+
+**scope**：`platform`（整平台）或 `contest`（单场）。  
+**advanceMinutes** 白名单：`30, 60, 180, 360, 720, 1440, 2880, 4320`。  
+订阅需账号已绑定邮箱；提醒邮件在开赛前 `advanceMinutes` 发送，同一场同一提前量只发一次。
+
 ### Bulletin
 
 | Method | Path | Auth | 说明 |
@@ -513,6 +553,18 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problem/retry-failed` | 是(管理员) | body: `{ limit }` |
 | POST | `/core/problem/toggle-analyze` | 是(管理员) | 暂停/恢复分析（不清队列）；`{ pause?, pauseSet? }` |
 | POST | `/core/problem/toggle-fetch` | 是(管理员) | 暂停/恢复爬取（不清队列）；`{ pause?, pauseSet? }` |
+| POST | `/core/problem/admin-update` | 是(**站点管理员**) | 直接改标签/题面（无需审核）；`{ id, updateTags?, tags?, updateContent?, contentMd?, title? }` |
+| POST | `/core/problem/propose-edit` | 是(登录) | 提交标签/题面修改申请；站管调用时直接保存；`{ problemId, updateTags?, tags?, updateContent?, contentMd?, title?, note? }` |
+| GET | `/core/problem/edit-requests` | 是(**站点管理员**) | 审核列表 `?page&pageSize&status=pending\|approved\|rejected` |
+| POST | `/core/problem/review-edit` | 是(**站点管理员**) | 通过/驳回；`{ id, approve, reviewNote? }` |
+| GET | `/core/problem/my-pending-edit` | 是(登录) | 当前用户对该题的待审申请 `?problemId=` |
+
+**人工修改与 AI 规则**
+
+- 站点管理员可直接改标签/题面；普通用户提交申请，由站点管理员审核。
+- 题面未爬取时也允许补充题面（走审核或站管直改）。
+- 标签**非空**时 AI 分析会跳过（避免覆盖人工标签）；标签为空时仍会分析。
+- 审核通过或站管直改后：有题面+有标签 → `COMPLETED`；有题面无标签 → 入队 AI 分析。
 
 **List query params**
 - `page`, `pageSize`
@@ -550,6 +602,78 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
   "lastSubmittedAt": 0,
   "userStatus": "AC|TRIED|NONE"
 }
+```
+
+**AdminUpdate** `POST /core/problem/admin-update`
+```json
+{
+  "id": 1,
+  "updateTags": true,
+  "tags": ["动态规划", "前缀和"],
+  "updateContent": true,
+  "contentMd": "# 题目标题\n\n## 题意\n...",
+  "title": "可选新标题"
+}
+```
+响应：`{ "code": 0, "message": "已保存", "data": ProblemInfo }`
+
+**ProposeEdit** `POST /core/problem/propose-edit`
+```json
+{
+  "problemId": 1,
+  "updateTags": true,
+  "tags": ["图论"],
+  "updateContent": false,
+  "contentMd": "",
+  "title": "",
+  "note": "原标签不准"
+}
+```
+响应：`{ "code": 0, "message": "已提交，等待站点管理员审核", "requestId": 12 }`  
+（站点管理员调用时直接保存，message 为「已直接保存」）
+
+**ProblemEditInfo / ListEditRequests**
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": [{
+    "id": 12,
+    "problemId": 1,
+    "platform": "CodeForces",
+    "externalId": "123A",
+    "problemTitle": "string",
+    "userId": 3,
+    "userName": "string",
+    "hasTags": true,
+    "hasContent": false,
+    "proposedTags": ["图论"],
+    "proposedContentMd": "",
+    "proposedTitle": "",
+    "note": "string",
+    "status": "pending",
+    "reviewerId": 0,
+    "reviewNote": "",
+    "createdAt": 1710000000,
+    "updatedAt": 1710000000,
+    "currentTags": ["旧标签"],
+    "currentContentMd": "...",
+    "currentTitle": "..."
+  }],
+  "total": 1,
+  "page": 1,
+  "pageSize": 20
+}
+```
+
+**ReviewEdit** `POST /core/problem/review-edit`
+```json
+{ "id": 12, "approve": true, "reviewNote": "ok" }
+```
+
+**MyPendingEdit** `GET /core/problem/my-pending-edit?problemId=1`
+```json
+{ "code": 0, "message": "success", "hasPending": true, "data": { /* ProblemEditInfo */ } }
 ```
 
 ---
