@@ -48,7 +48,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
-import { StatusBadge } from '@/components/status-badge'
+import { StatusBadge, formatSubmitStatus } from '@/components/status-badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Table,
@@ -357,7 +357,7 @@ function FeedPanel({
                           rel="noreferrer"
                           className="hover:underline"
                         >
-                          {item.status}
+                          {formatSubmitStatus(item.status)}
                         </a>
                       </StatusBadge>
                     ) : (

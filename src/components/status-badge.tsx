@@ -19,88 +19,143 @@ const toneClass: Record<StatusTone, string> = {
     'border-transparent bg-muted text-muted-foreground',
 }
 
+/**
+ * 生产 submit_logs 全量 status → 标准 ACM 展示名。
+ * 映射不到则返回原串（trim 后）；空串视为 Judging。
+ *
+ * 数据来源：algo_core_data.submit_logs DISTINCT status（2026-07-16）
+ */
+const ACM_STATUS_MAP: Record<string, string> = {
+  // —— Accepted ——
+  AC: 'Accepted',
+  OK: 'Accepted',
+  ACCEPTED: 'Accepted',
+  答案正确: 'Accepted',
+
+  // —— Wrong Answer ——
+  WA: 'Wrong Answer',
+  WRONG_ANSWER: 'Wrong Answer',
+  答案错误: 'Wrong Answer',
+
+  // —— Time Limit ——
+  TLE: 'Time Limit Exceeded',
+  TIME_LIMIT_EXCEEDED: 'Time Limit Exceeded',
+  运行超时: 'Time Limit Exceeded',
+
+  // —— Memory Limit ——
+  MLE: 'Memory Limit Exceeded',
+  MEMORY_LIMIT_EXCEEDED: 'Memory Limit Exceeded',
+  内存超限: 'Memory Limit Exceeded',
+
+  // —— Runtime Error（含段错误/浮点/执行出错）——
+  RE: 'Runtime Error',
+  RUNTIME_ERROR: 'Runtime Error',
+  运行错误: 'Runtime Error',
+  段错误: 'Runtime Error',
+  浮点错误: 'Runtime Error',
+  执行出错: 'Runtime Error',
+  CRASHED: 'Runtime Error',
+  INPUT_PREPARATION_CRASHED: 'Runtime Error',
+
+  // —— Compilation Error ——
+  CE: 'Compilation Error',
+  COMPILATION_ERROR: 'Compilation Error',
+  COMPILE_ERROR: 'Compilation Error',
+  编译错误: 'Compilation Error',
+  'spj编译错误': 'Compilation Error',
+
+  // —— Presentation / Output ——
+  PE: 'Presentation Error',
+  PRESENTATION_ERROR: 'Presentation Error',
+  格式错误: 'Presentation Error',
+  OLE: 'Output Limit Exceeded',
+  OUTPUT_LIMIT_EXCEEDED: 'Output Limit Exceeded',
+  输出超限: 'Output Limit Exceeded',
+
+  // —— Idleness (CF) ——
+  ILE: 'Idleness Limit Exceeded',
+  IDLENESS_LIMIT_EXCEEDED: 'Idleness Limit Exceeded',
+
+  // —— 其它 CF / 通用 ——
+  PARTIAL: 'Partial',
+  SKIPPED: 'Skipped',
+  CHALLENGED: 'Challenged',
+  REJECTED: 'Rejected',
+  FAILED: 'Failed',
+  SV: 'Security Violated',
+  SECURITY_VIOLATED: 'Security Violated',
+
+  // —— 评测中 ——
+  TESTING: 'Judging',
+  PENDING: 'Judging',
+  JUDGING: 'Judging',
+  IN_QUEUE: 'Judging',
+  正在判题: 'Judging',
+
+  // —— 力扣日历合成提交（无 verdict）——
+  SUBMIT: 'Submitted',
+}
+
+/** 提交结果 → 标准 ACM 文案；未知原样 */
+export function formatSubmitStatus(status?: string | null): string {
+  const s = (status || '').trim()
+  if (!s) return 'Judging'
+  // 先精确匹配（含中文 key）
+  if (ACM_STATUS_MAP[s]) return ACM_STATUS_MAP[s]
+  const u = s.toUpperCase()
+  if (ACM_STATUS_MAP[u]) return ACM_STATUS_MAP[u]
+  // 宽松：含关键字
+  if (s.includes('正确') && !s.includes('错误')) return 'Accepted'
+  if (s.includes('答案错误') || /^wrong/i.test(s)) return 'Wrong Answer'
+  if (s.includes('超时') || s.includes('时间超')) return 'Time Limit Exceeded'
+  if (s.includes('内存')) return 'Memory Limit Exceeded'
+  if (s.includes('编译')) return 'Compilation Error'
+  if (s.includes('格式')) return 'Presentation Error'
+  if (s.includes('输出超')) return 'Output Limit Exceeded'
+  if (s.includes('段错误') || s.includes('运行') || s.includes('浮点'))
+    return 'Runtime Error'
+  if (s.includes('判题') || s.includes('评测') || s.includes('等待'))
+    return 'Judging'
+  return s
+}
+
 /** 提交结果 / 用户做题状态 → 色调 */
 export function statusTone(status?: string | null): StatusTone {
+  const label = formatSubmitStatus(status)
+  // 用归一化后的 ACM 名判断，避免中英/长短码漏配
+  switch (label) {
+    case 'Accepted':
+      return 'success'
+    case 'Wrong Answer':
+      return 'error'
+    case 'Time Limit Exceeded':
+    case 'Memory Limit Exceeded':
+    case 'Idleness Limit Exceeded':
+    case 'Output Limit Exceeded':
+      return 'info'
+    case 'Runtime Error':
+      return 'purple'
+    case 'Compilation Error':
+    case 'Partial':
+    case 'Challenged':
+    case 'Judging':
+      return 'warning'
+    case 'Presentation Error':
+    case 'Skipped':
+    case 'Rejected':
+    case 'Failed':
+    case 'Security Violated':
+    case 'Submitted':
+      return 'muted'
+    default:
+      break
+  }
+
   const s = (status || '').trim()
-  if (!s) return 'muted'
+  if (!s) return 'warning'
   const u = s.toUpperCase()
-
-  // 通过
-  if (
-    u === 'AC' ||
-    u === 'OK' ||
-    u === 'ACCEPTED' ||
-    s === '答案正确' ||
-    s === '已通过' ||
-    (s.includes('正确') && !s.includes('错误'))
-  ) {
-    return 'success'
-  }
-
-  // 编译错误
-  if (
-    u === 'CE' ||
-    u === 'COMPILATION_ERROR' ||
-    u === 'COMPILE_ERROR' ||
-    s === '编译错误' ||
-    s.includes('编译')
-  ) {
-    return 'warning'
-  }
-
-  // 超时
-  if (
-    u === 'TLE' ||
-    u === 'TIME_LIMIT_EXCEEDED' ||
-    u === 'MLE' ||
-    u === 'MEMORY_LIMIT_EXCEEDED' ||
-    s === '运行超时' ||
-    s.includes('超时') ||
-    s.includes('时间超') ||
-    s.includes('内存超')
-  ) {
-    return 'info'
-  }
-
-  // 运行时 / 段错误
-  if (
-    u === 'RE' ||
-    u === 'RUNTIME_ERROR' ||
-    s === '运行错误' ||
-    s === '段错误' ||
-    s.includes('运行时') ||
-    s.includes('Runtime')
-  ) {
-    return 'purple'
-  }
-
-  // 错误答案
-  if (
-    u === 'WA' ||
-    u === 'WRONG_ANSWER' ||
-    s === '答案错误' ||
-    s.includes('错误') ||
-    s.includes('Wrong')
-  ) {
-    return 'error'
-  }
-
-  // 尝试过 / 评测中
-  if (
-    u === 'TRIED' ||
-    s === '尝试过' ||
-    u === 'TESTING' ||
-    u === 'PENDING' ||
-    u === 'JUDGING' ||
-    s.includes('评测') ||
-    s.includes('等待')
-  ) {
-    return 'warning'
-  }
-
-  // 未做
+  if (u === 'TRIED' || s === '尝试过') return 'warning'
   if (u === 'NONE' || s === '未做') return 'muted'
-
   return 'muted'
 }
 
@@ -133,7 +188,9 @@ export function StatusBadge({
   asChild,
   children,
 }: StatusBadgeProps) {
-  const label = userStatus ? formatUserStatus(status) : status || '-'
+  const label = userStatus
+    ? formatUserStatus(status)
+    : formatSubmitStatus(status)
   const tone = statusTone(status)
 
   return (

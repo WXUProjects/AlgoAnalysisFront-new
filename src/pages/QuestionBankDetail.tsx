@@ -17,7 +17,7 @@ import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/status-badge'
+import { StatusBadge, formatSubmitStatus } from '@/components/status-badge'
 import {
   Card,
   CardContent,
@@ -486,7 +486,7 @@ export function QuestionBankDetail() {
                                 className="hover:underline"
                                 title="查看原站提交"
                               >
-                                {status || '-'}
+                                {formatSubmitStatus(status)}
                               </a>
                             </StatusBadge>
                           ) : (
