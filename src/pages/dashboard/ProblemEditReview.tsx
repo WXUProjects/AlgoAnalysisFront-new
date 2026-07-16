@@ -332,7 +332,7 @@ export function DashboardProblemEditReview() {
                     <div className="max-h-64 overflow-y-auto rounded-lg border p-3">
                       <MarkdownBody
                         content={detail.proposedContentMd || ''}
-                        mode="markdown"
+                        mode="auto"
                         emptyText="（空）"
                       />
                     </div>

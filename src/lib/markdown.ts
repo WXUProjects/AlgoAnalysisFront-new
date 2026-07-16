@@ -260,6 +260,24 @@ export function looksLikeHtml(src: string): boolean {
 }
 
 /**
+ * 把 Markdown 转成 TipTap 可编辑的 HTML（不做 KaTeX，公式以原文保留）。
+ * 已是 HTML 则原样返回。
+ */
+export function markdownToEditorHtml(src: string): string {
+  if (!src?.trim()) return ''
+  if (looksLikeHtml(src)) return src
+  try {
+    return marked.parse(src, { async: false }) as string
+  } catch {
+    return src
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>')
+  }
+}
+
+/**
  * 自动：HTML 则消毒；否则按 Markdown 渲染。
  */
 export function renderContent(src: string): string {

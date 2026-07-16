@@ -8,13 +8,17 @@ import {
   getProblem,
   getProblemFollowingStatus,
   getProblemSubmissions,
+  listProblemTags,
   proposeProblemEdit,
+  type TagCountItem,
 } from '@/api/problem'
 import type { ProblemFollowingStatusItem, ProblemInfo } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
+import { RichTextEditor } from '@/components/rich-text-editor'
+import { TagInput } from '@/components/tag-input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { StatusBadge, formatSubmitStatus } from '@/components/status-badge'
@@ -48,14 +52,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime } from '@/lib/format'
 import { getSubmitLink } from '@/lib/link'
 import { num, str } from '@/lib/http'
+import { markdownToEditorHtml } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
-
-function parseTagsInput(raw: string): string[] {
-  return raw
-    .split(/[,，、\n]/)
-    .map((t) => t.trim())
-    .filter(Boolean)
-}
 
 export function QuestionBankDetail() {
   const { id } = useParams()
@@ -74,8 +72,9 @@ export function QuestionBankDetail() {
   const [subTab, setSubTab] = useState<'history' | 'following'>('history')
 
   const [tagsOpen, setTagsOpen] = useState(false)
-  const [contentOpen, setContentOpen] = useState(false)
-  const [tagsInput, setTagsInput] = useState('')
+  const [editingContent, setEditingContent] = useState(false)
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [allTags, setAllTags] = useState<TagCountItem[]>([])
   const [contentInput, setContentInput] = useState('')
   const [titleInput, setTitleInput] = useState('')
   const [noteInput, setNoteInput] = useState('')
@@ -138,9 +137,14 @@ export function QuestionBankDetail() {
       toast.error('请先登录后再修改')
       return
     }
-    setTagsInput(problem.tags.join('、'))
+    setSelectedTags([...problem.tags])
     setNoteInput('')
     setTagsOpen(true)
+    if (!allTags.length) {
+      void listProblemTags(200).then((res) => {
+        if (res.success && res.data) setAllTags(res.data)
+      })
+    }
   }
 
   function openContentEdit() {
@@ -149,15 +153,21 @@ export function QuestionBankDetail() {
       toast.error('请先登录后再修改')
       return
     }
-    setContentInput(problem.contentMd || '')
+    setContentInput(markdownToEditorHtml(problem.contentMd || ''))
     setTitleInput(problem.title || '')
     setNoteInput('')
-    setContentOpen(true)
+    setEditingContent(true)
+  }
+
+  function closeContentEdit() {
+    setEditingContent(false)
+    setContentInput('')
+    setNoteInput('')
   }
 
   async function submitTags() {
     if (!problem) return
-    const tags = parseTagsInput(tagsInput)
+    const tags = selectedTags.map((t) => t.trim()).filter(Boolean)
     setSaving(true)
     if (isSiteAdmin) {
       const res = await adminUpdateProblem({
@@ -195,7 +205,7 @@ export function QuestionBankDetail() {
   async function submitContent() {
     if (!problem) return
     const content = contentInput.trim()
-    if (!content) {
+    if (!content || content === '<p></p>') {
       toast.error('题面内容不能为空')
       return
     }
@@ -213,7 +223,7 @@ export function QuestionBankDetail() {
         return
       }
       toast.success(res.message || '题面已更新')
-      setContentOpen(false)
+      setEditingContent(false)
       if (res.data) setProblem(res.data)
       else void load()
       return
@@ -231,7 +241,7 @@ export function QuestionBankDetail() {
       return
     }
     toast.success(res.message || '已提交审核')
-    setContentOpen(false)
+    setEditingContent(false)
     setHasPending(true)
   }
 
@@ -258,6 +268,77 @@ export function QuestionBankDetail() {
 
   const contentEmpty = !problem.contentMd?.trim()
   const tagsEmpty = !problem.tags.length
+
+  // ── 全页题面编辑 ──────────────────────────────────────────
+  if (editingContent) {
+    return (
+      <PageShell className="min-h-0 gap-0 p-0" stagger={false}>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="sticky top-0 z-20 flex flex-wrap items-center gap-2 border-b bg-background px-4 py-3">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={closeContentEdit}
+              disabled={saving}
+            >
+              取消
+            </Button>
+            <div className="min-w-0 flex-1">
+              <Input
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                placeholder="题目标题（可选，留空不改）"
+                className="max-w-xl"
+                disabled={saving}
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void submitContent()}
+              disabled={saving}
+            >
+              {saving ? '提交中…' : isSiteAdmin ? '保存' : '提交审核'}
+            </Button>
+          </div>
+
+          <div className="border-b px-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              {isSiteAdmin
+                ? '编辑题面。保存后立即生效；若标签为空，系统会继续尝试自动分析标签。'
+                : '编辑题面。提交后由站点管理员审核通过才会展示。'}
+            </p>
+          </div>
+
+          {!isSiteAdmin && (
+            <div className="border-b px-4 py-2">
+              <Field>
+                <FieldLabel htmlFor="edit-content-note">说明（可选）</FieldLabel>
+                <Textarea
+                  id="edit-content-note"
+                  value={noteInput}
+                  onChange={(e) => setNoteInput(e.target.value)}
+                  placeholder="简要说明修改原因，方便审核"
+                  rows={2}
+                  disabled={saving}
+                />
+              </Field>
+            </div>
+          )}
+
+          <RichTextEditor
+            fullPage
+            value={contentInput}
+            onChange={setContentInput}
+            disabled={saving}
+            placeholder="在这里编写题面…"
+            className="min-h-0 flex-1"
+          />
+        </div>
+      </PageShell>
+    )
+  }
 
   return (
     <PageShell>
@@ -370,7 +451,7 @@ export function QuestionBankDetail() {
         <CardContent className="px-4">
           <MarkdownBody
             content={problem.contentMd || ''}
-            mode="markdown"
+            mode="auto"
             emptyText="题面准备中，请稍后刷新；也可登录后补充题面"
           />
         </CardContent>
@@ -587,18 +668,19 @@ export function QuestionBankDetail() {
             <DialogTitle>{isSiteAdmin ? '修改标签' : '建议修改标签'}</DialogTitle>
             <DialogDescription>
               {isSiteAdmin
-                ? '保存后立即生效。若标签非空，系统将不再对该题自动分析标签。'
-                : '提交后由站点管理员审核，通过后才会更新到题库。'}
+                ? '点选已有标签，或输入后回车新建。保存后立即生效；有标签后系统不再自动分析该题标签。'
+                : '点选已有标签，或输入后回车新建。提交后由站点管理员审核才会更新。'}
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="edit-tags">标签</FieldLabel>
-              <Input
+              <TagInput
                 id="edit-tags"
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
-                placeholder="用顿号、逗号或换行分隔，如：动态规划、前缀和"
+                value={selectedTags}
+                onChange={setSelectedTags}
+                suggestions={allTags}
+                disabled={saving}
               />
             </Field>
             {!isSiteAdmin && (
@@ -624,78 +706,6 @@ export function QuestionBankDetail() {
               取消
             </Button>
             <Button type="button" onClick={() => void submitTags()} disabled={saving}>
-              {saving ? '提交中…' : isSiteAdmin ? '保存' : '提交审核'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={contentOpen} onOpenChange={setContentOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {isSiteAdmin
-                ? contentEmpty
-                  ? '填写题面'
-                  : '编辑题面'
-                : contentEmpty
-                  ? '补充题面'
-                  : '建议修改题面'}
-            </DialogTitle>
-            <DialogDescription>
-              {isSiteAdmin
-                ? '支持 Markdown。保存后若标签为空，系统会继续尝试自动分析标签。'
-                : '支持 Markdown。提交后由站点管理员审核通过才会展示。'}
-            </DialogDescription>
-          </DialogHeader>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="edit-title">标题（可选）</FieldLabel>
-              <Input
-                id="edit-title"
-                value={titleInput}
-                onChange={(e) => setTitleInput(e.target.value)}
-                placeholder="留空则不改标题"
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="edit-content">题面 Markdown</FieldLabel>
-              <Textarea
-                id="edit-content"
-                value={contentInput}
-                onChange={(e) => setContentInput(e.target.value)}
-                placeholder={'# 标题\n\n## 题意\n\n## 输入\n\n## 输出\n\n## 样例\n'}
-                rows={14}
-                className="font-mono text-sm"
-              />
-            </Field>
-            {!isSiteAdmin && (
-              <Field>
-                <FieldLabel htmlFor="edit-content-note">说明（可选）</FieldLabel>
-                <Textarea
-                  id="edit-content-note"
-                  value={noteInput}
-                  onChange={(e) => setNoteInput(e.target.value)}
-                  placeholder="简要说明修改原因"
-                  rows={2}
-                />
-              </Field>
-            )}
-          </FieldGroup>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setContentOpen(false)}
-              disabled={saving}
-            >
-              取消
-            </Button>
-            <Button
-              type="button"
-              onClick={() => void submitContent()}
-              disabled={saving}
-            >
               {saving ? '提交中…' : isSiteAdmin ? '保存' : '提交审核'}
             </Button>
           </DialogFooter>
