@@ -128,7 +128,7 @@ export function DashboardOps() {
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Metric
-                  label="热表总行数"
+                  label="提交明细总行数"
                   value={inv?.submitLogsTotal}
                   hint="submit_logs（含力扣合成）"
                 />
@@ -140,10 +140,10 @@ export function DashboardOps() {
                 <Metric
                   label="已计入账本"
                   value={inv?.countedSubmitIdsTotal}
-                  hint="counted_submit_ids（含热窗外）"
+                  hint="counted_submit_ids（防全量重爬双计）"
                 />
                 <Metric
-                  label="热表时间范围"
+                  label="明细时间范围"
                   value={undefined}
                   hint={
                     inv && inv.oldestTime > 0
