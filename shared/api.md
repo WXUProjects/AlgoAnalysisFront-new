@@ -268,6 +268,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 |--------|------|------|------|
 | POST | `/user/auth/refresh` | 是 | 按 DB 重签 JWT（任命后 F5 同步权限） |
 | POST | `/user/auth/logout` | 否 | 清除 HttpOnly 会话 Cookie |
+| GET | `/user/org/discover` | 否（可选 JWT） | 组织广场：`page`/`pageSize`/`q` → `{id,name,brandLogo,memberCount,isSystem,isMember?,isCurrent?}` 无识别码 |
 | GET | `/user/org/list` | 是 | 我的组织；项含 `myRole`、`orgDisplayName`、`isCurrent`、`seatLimit`、`memberCount`；`?all=1` 站点管理员看全部 |
 | GET | `/user/org/get` | 是 | query: `id`（默认当前组织）；含 `seatLimit`、`memberCount`；若本人是成员则含 `myRole`、`orgDisplayName` |
 | POST | `/user/org/create` | 站点管理员 | `{ name, slug?, adminUserId?, joinMode?, seatLimit? }`；默认 `seatLimit=50` |
@@ -455,7 +456,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 |--------|------|------|------|
 | GET | `/core/contest/list` | 否 | query: `userId`(-1=全部), `limit`, `offset`, `platform?` |
 | GET | `/core/contest/history` | 否 | query: `userId`, `limit`, `cursor`, `platform?` |
-| GET | `/core/contest/ranking` | 否 | query: `contestId` 或 `contest_id`, `limit`, `offset`, `groupId?` |
+| GET | `/core/contest/ranking` | 否 | query: `contestId` 或 `contest_id`, `limit`, `offset`, `groupId?`, `followingOnly?`（与组织/分组求交） |
 
 ### ContestCalendar（比赛日历 / 公开赛程）
 
@@ -471,7 +472,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 **scope**：`platform`（整平台）或 `contest`（单场）。  
 **advanceMinutes** 白名单：`30, 60, 180, 360, 720, 1440, 2880, 4320`。  
-订阅需账号已绑定邮箱；提醒邮件在开赛前 `advanceMinutes` 发送，同一场同一提前量只发一次。
+订阅需账号已绑定邮箱（core 经 user 内部 `GetContactEmail` 校验）；`enabled=true` 保存成功后发送**订阅成功确认邮件**；开赛前提醒在 `advanceMinutes` 时发送，同一场同一提前量只发一次。
 
 ### Bulletin
 
@@ -542,7 +543,8 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/core/problem/list` | 否 | 题库列表 |
 | GET | `/core/problem/tags` | 否 | 标签聚合 `?limit=`，返回 `{ tag, count }[]` |
 | GET | `/core/problem/get` | 否 | query: `id` |
-| GET | `/core/problem/submissions` | 否 | query: `problemId`, `page`, `pageSize`, `userId?` |
+| GET | `/core/problem/following-status` | 是 | query: `problemId` → 关注用户对本题 `AC|TRIED|NONE` |
+| GET | `/core/problem/submissions` | 否 | query: `problemId`, `page`, `pageSize`, `userId?`, `followingOnly?`（不受域限制）, `status?`=`AC` |
 | GET | `/core/problem/user-profile` | 否 | query: `userId` 做题画像 |
 | GET | `/core/problem/progress` | 是(管理员) | 爬取/分析进度 |
 | POST | `/core/problem/backfill` | 是(管理员) | 近6月提交回填入队；body: `{ limit }`；**仅组织用户提交**的题才爬题面/跑 AI；纯公共域/散户只入库（前端「题面准备中」） |

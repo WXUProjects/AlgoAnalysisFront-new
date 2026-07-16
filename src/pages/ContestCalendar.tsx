@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   BellIcon,
   BellOffIcon,
@@ -21,7 +20,6 @@ import {
   upsertContestCalendarSub,
 } from '@/api/contest-calendar'
 import { useAuth } from '@/auth/AuthContext'
-import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -245,11 +243,11 @@ export function ContestCalendar() {
   }
 
   return (
-    <PageShell>
+    <>
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-1">
-            <h2 className="text-2xl font-semibold tracking-tight">比赛日历</h2>
+            <h3 className="text-base font-semibold">公开赛程</h3>
             <p className="text-sm text-muted-foreground">
               聚合 AtCoder / 洛谷 / 牛客 / Codeforces / UOJ / 力扣等近期赛程，支持按平台或单场邮件提醒。
             </p>
@@ -268,9 +266,6 @@ export function ContestCalendar() {
             >
               <Settings2Icon data-icon="inline-start" />
               平台订阅
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/contest">参赛记录</Link>
             </Button>
           </div>
         </div>
@@ -529,6 +524,6 @@ export function ContestCalendar() {
           </div>
         </DialogContent>
       </Dialog>
-    </PageShell>
+    </>
   )
 }

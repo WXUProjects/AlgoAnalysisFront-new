@@ -42,6 +42,7 @@ export function ContestDetails() {
   const [contest, setContest] = useState<Partial<ContestItem> | null>(null)
   const [groups, setGroups] = useState<GroupInfo[]>([])
   const [groupId, setGroupId] = useState<number | undefined>(undefined)
+  const [followingOnly, setFollowingOnly] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -66,6 +67,7 @@ export function ContestDetails() {
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
       groupId,
+      followingOnly: followingOnly || undefined,
     })
     setLoading(false)
     if (!res.success || !res.data) {
@@ -75,7 +77,7 @@ export function ContestDetails() {
     setList(res.data.list)
     setTotal(res.data.total)
     if (res.data.contest) setContest(res.data.contest)
-  }, [id, page, groupId])
+  }, [id, page, groupId, followingOnly])
 
   useEffect(() => {
     void load()
@@ -83,7 +85,7 @@ export function ContestDetails() {
 
   useEffect(() => {
     setPage(1)
-  }, [groupId, id])
+  }, [groupId, id, followingOnly])
 
   return (
     <PageShell>
@@ -111,39 +113,54 @@ export function ContestDetails() {
             </Button>
           )}
           <Button type="button" size="sm" variant="outline" asChild>
-            <Link to="/contest">返回列表</Link>
+            <Link to="/contest?tab=records">返回列表</Link>
           </Button>
         </div>
       </div>
 
-      {groups.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {groups.length > 0 && (
+          <>
+            <Button
+              type="button"
+              size="sm"
+              variant={groupId === undefined ? 'default' : 'outline'}
+              onClick={() => setGroupId(undefined)}
+            >
+              全部分组
+            </Button>
+            {groups.map((g) => (
+              <Button
+                key={g.id}
+                type="button"
+                size="sm"
+                variant={groupId === g.id ? 'default' : 'outline'}
+                onClick={() => setGroupId(g.id)}
+              >
+                {g.name}
+              </Button>
+            ))}
+          </>
+        )}
+        {isLogin && (
           <Button
             type="button"
             size="sm"
-            variant={groupId === undefined ? 'default' : 'outline'}
-            onClick={() => setGroupId(undefined)}
+            variant={followingOnly ? 'default' : 'outline'}
+            onClick={() => setFollowingOnly((v) => !v)}
           >
-            全部
+            {followingOnly ? '只看关注 · 开' : '只看关注'}
           </Button>
-          {groups.map((g) => (
-            <Button
-              key={g.id}
-              type="button"
-              size="sm"
-              variant={groupId === g.id ? 'default' : 'outline'}
-              onClick={() => setGroupId(g.id)}
-            >
-              {g.name}
-            </Button>
-          ))}
-        </div>
-      )}
+        )}
+      </div>
 
       <Card className="gap-0 py-0 overflow-hidden">
         <CardHeader className="px-4 py-3 border-b">
           <CardTitle className="text-base">站内榜</CardTitle>
-          <CardDescription>点击名称查看资料</CardDescription>
+          <CardDescription>
+            当前组织内排名
+            {followingOnly ? ' · 仅显示你关注的成员' : ''}
+          </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (

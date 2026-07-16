@@ -3,7 +3,6 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import {
   BookOpenIcon,
   Building2Icon,
-  CalendarDaysIcon,
   CalendarIcon,
   HomeIcon,
   InfoIcon,
@@ -58,10 +57,10 @@ const titles: Record<string, string> = {
   '/change-profile': '编辑资料',
   '/privacy': '隐私设置',
   '/social': '关注与粉丝',
-  '/all-activities': '动态',
+  '/discover': '发现',
+  '/all-activities': '发现',
   '/bulletin': '公告',
   '/contest': '比赛',
-  '/contest-calendar': '比赛日历',
   '/question-bank': '题库',
   '/about': '关于我们',
   '/org': '我的组织',
@@ -215,18 +214,6 @@ export function AppLayout() {
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname.startsWith('/contest-calendar')}
-                      tooltip="比赛日历"
-                    >
-                      <NavLink to="/contest-calendar">
-                        <CalendarDaysIcon />
-                        <span>比赛日历</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
                       isActive={pathname.startsWith('/bulletin')}
                       tooltip="公告"
                     >
@@ -239,12 +226,15 @@ export function AppLayout() {
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname.startsWith('/all-activities')}
-                      tooltip="动态"
+                      isActive={
+                        pathname.startsWith('/discover') ||
+                        pathname.startsWith('/all-activities')
+                      }
+                      tooltip="发现"
                     >
-                      <NavLink to="/all-activities">
+                      <NavLink to="/discover">
                         <ActivityIcon />
-                        <span>动态</span>
+                        <span>发现</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

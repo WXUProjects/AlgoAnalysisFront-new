@@ -147,16 +147,45 @@ export async function getProblemSubmissions(params: {
   page?: number
   pageSize?: number
   userId?: number
+  followingOnly?: boolean
+  /** 空=全部；AC=仅通过 */
+  status?: string
 }): Promise<ApiResult<Record<string, unknown>[]>> {
   const res = await get<Record<string, unknown>[]>(endpoints.core.problem.submissions, {
     problemId: params.problemId,
     page: params.page ?? 1,
     pageSize: params.pageSize ?? 50,
     ...(params.userId !== undefined ? { userId: params.userId } : {}),
+    ...(params.followingOnly ? { followingOnly: true } : {}),
+    ...(params.status ? { status: params.status } : {}),
   })
   if (!res.success) return { ...res, data: [] }
   const list = Array.isArray(res.data) ? res.data : []
   return { ...res, data: list }
+}
+
+export async function getProblemFollowingStatus(
+  problemId: number | string,
+): Promise<ApiResult<import('@shared/api').ProblemFollowingStatusItem[]>> {
+  const res = await get<Record<string, unknown>[]>(
+    endpoints.core.problem.followingStatus,
+    { problemId },
+  )
+  if (!res.success) return { ...res, data: [] }
+  const raw = (res.raw ?? {}) as Record<string, unknown>
+  let listRaw: Record<string, unknown>[] = []
+  if (Array.isArray(res.data)) listRaw = res.data
+  else if (Array.isArray(raw.data)) listRaw = raw.data as Record<string, unknown>[]
+  return {
+    ...res,
+    data: listRaw.map((r) => ({
+      userId: num(r.userId),
+      username: str(r.username),
+      name: str(r.name),
+      avatar: str(r.avatar),
+      status: str(r.status) || 'NONE',
+    })),
+  }
 }
 
 export async function getProblemUserProfile(

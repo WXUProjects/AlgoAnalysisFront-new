@@ -50,6 +50,7 @@ export function DashboardOrgsManage() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<OrgInfo | null>(null)
   const [members, setMembers] = useState<OrgMemberInfo[]>([])
+  const [memberTotal, setMemberTotal] = useState(0)
   const [newName, setNewName] = useState('')
   const [newSeatLimit, setNewSeatLimit] = useState(50)
   const [addKeyword, setAddKeyword] = useState('')
@@ -92,7 +93,10 @@ export function DashboardOrgsManage() {
     setEmailSchedule(selected.aiEmailSchedule || '30 7 * * *')
     setStatus(selected.status || 'active')
     setSeatLimit(selected.seatLimit && selected.seatLimit > 0 ? selected.seatLimit : 50)
-    void listOrgMembers(selected.id).then((r) => setMembers(r.list))
+    void listOrgMembers(selected.id, { page: 1, pageSize: 100 }).then((r) => {
+      setMembers(r.list)
+      setMemberTotal(r.total)
+    })
   }, [selected])
 
   if (!isAdmin) {
@@ -396,8 +400,12 @@ export function DashboardOrgsManage() {
                             if (r.success) {
                               toast.success(r.message || '已加入')
                               setAddKeyword('')
-                              const m = await listOrgMembers(selected.id)
+                              const m = await listOrgMembers(selected.id, {
+                                page: 1,
+                                pageSize: 100,
+                              })
                               setMembers(m.list)
+                              setMemberTotal(m.total)
                             } else toast.error(r.message)
                           })
                         }
@@ -408,7 +416,17 @@ export function DashboardOrgsManage() {
                   </div>
 
                   <div className="space-y-2 border-t pt-4">
-                    <Label>成员与角色</Label>
+                    <Label>
+                      成员与角色
+                      {memberTotal > 0 ? (
+                        <span className="ml-2 font-normal text-muted-foreground">
+                          共 {memberTotal} 人
+                          {members.length < memberTotal
+                            ? `（此处显示前 ${members.length} 人）`
+                            : ''}
+                        </span>
+                      ) : null}
+                    </Label>
                     {members.map((m) => (
                       <div
                         key={m.userId}
@@ -427,8 +445,12 @@ export function DashboardOrgsManage() {
                               async (r) => {
                                 if (r.success) {
                                   toast.success('已更新')
-                                  const list = await listOrgMembers(selected.id)
+                                  const list = await listOrgMembers(selected.id, {
+                                    page: 1,
+                                    pageSize: 100,
+                                  })
                                   setMembers(list.list)
+                                  setMemberTotal(list.total)
                                 } else toast.error(r.message)
                               },
                             )

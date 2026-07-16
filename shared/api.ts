@@ -76,6 +76,7 @@ export const endpoints = {
     },
     org: {
       list: `${API_PREFIX}/user/org/list`,
+      discover: `${API_PREFIX}/user/org/discover`,
       get: `${API_PREFIX}/user/org/get`,
       create: `${API_PREFIX}/user/org/create`,
       update: `${API_PREFIX}/user/org/update`,
@@ -149,6 +150,7 @@ export const endpoints = {
       tags: `${API_PREFIX}/core/problem/tags`,
       get: `${API_PREFIX}/core/problem/get`,
       submissions: `${API_PREFIX}/core/problem/submissions`,
+      followingStatus: `${API_PREFIX}/core/problem/following-status`,
       userProfile: `${API_PREFIX}/core/problem/user-profile`,
       progress: `${API_PREFIX}/core/problem/progress`,
       backfill: `${API_PREFIX}/core/problem/backfill`,
@@ -462,6 +464,34 @@ export interface ContestRankingItem {
   score: number
   acCount: number
   totalCount: number
+}
+
+/** 组织广场卡片（无识别码/成员明细） */
+export interface OrgDiscoverItem {
+  id: number
+  name: string
+  brandLogo?: string
+  memberCount: number
+  isSystem?: boolean
+  isMember?: boolean
+  isCurrent?: boolean
+}
+
+export interface StatisticRankItem {
+  rank: number
+  userId: number
+  name: string
+  score: number
+}
+
+/** 关注用户对本题状态 */
+export interface ProblemFollowingStatusItem {
+  userId: number
+  username: string
+  name: string
+  avatar: string
+  /** AC | TRIED | NONE */
+  status: string
 }
 
 /** 比赛日历条目（公开赛程，非参赛记录） */

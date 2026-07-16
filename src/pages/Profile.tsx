@@ -732,7 +732,7 @@ export function Profile() {
             <CardHeader className="flex flex-row items-center justify-between px-4 space-y-0">
               <CardTitle className="text-base">近期动态</CardTitle>
               <Button type="button" size="sm" variant="ghost" asChild>
-                <Link to={`/all-activities?id=${targetId}`}>查看所有动态</Link>
+                <Link to={`/discover?tab=feed&id=${targetId}`}>查看所有动态</Link>
               </Button>
             </CardHeader>
             <CardContent className="px-4 py-2">

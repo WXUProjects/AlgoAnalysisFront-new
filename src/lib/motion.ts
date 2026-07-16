@@ -36,6 +36,7 @@ export function routeDepth(pathname: string): number {
   if (
     pathname.startsWith('/contest') ||
     pathname.startsWith('/bulletin') ||
+    pathname.startsWith('/discover') ||
     pathname.startsWith('/all-activities') ||
     pathname.startsWith('/question-bank') ||
     pathname.startsWith('/profile') ||

@@ -341,7 +341,7 @@ export function AdminLayout() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip="动态">
-                      <Link to="/all-activities">
+                      <Link to="/discover">
                         <ActivityIcon />
                         <span>动态</span>
                       </Link>

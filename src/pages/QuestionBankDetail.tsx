@@ -6,11 +6,13 @@ import {
   adminUpdateProblem,
   getMyPendingProblemEdit,
   getProblem,
+  getProblemFollowingStatus,
   getProblemSubmissions,
   proposeProblemEdit,
 } from '@/api/problem'
-import type { ProblemInfo } from '@shared/api'
+import type { ProblemFollowingStatusItem, ProblemInfo } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
 import { Badge } from '@/components/ui/badge'
@@ -63,6 +65,13 @@ export function QuestionBankDetail() {
   const [subs, setSubs] = useState<Record<string, unknown>[]>([])
   const [loading, setLoading] = useState(true)
   const [hasPending, setHasPending] = useState(false)
+  const [followingOnly, setFollowingOnly] = useState(false)
+  const [acOnly, setAcOnly] = useState(false)
+  const [followStatus, setFollowStatus] = useState<ProblemFollowingStatusItem[]>(
+    [],
+  )
+  const [followStatusLoading, setFollowStatusLoading] = useState(false)
+  const [subTab, setSubTab] = useState<'history' | 'following'>('history')
 
   const [tagsOpen, setTagsOpen] = useState(false)
   const [contentOpen, setContentOpen] = useState(false)
@@ -77,7 +86,13 @@ export function QuestionBankDetail() {
     setLoading(true)
     const [pRes, sRes] = await Promise.all([
       getProblem(id),
-      getProblemSubmissions({ problemId: id, page: 1, pageSize: 50 }),
+      getProblemSubmissions({
+        problemId: id,
+        page: 1,
+        pageSize: 50,
+        followingOnly: followingOnly || undefined,
+        status: acOnly ? 'AC' : undefined,
+      }),
     ])
     setLoading(false)
     if (!pRes.success || !pRes.data) {
@@ -93,11 +108,29 @@ export function QuestionBankDetail() {
     } else {
       setHasPending(false)
     }
-  }, [id, isLogin, isSiteAdmin])
+  }, [id, isLogin, isSiteAdmin, followingOnly, acOnly])
 
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (!id || !isLogin || subTab !== 'following') return
+    let cancelled = false
+    setFollowStatusLoading(true)
+    void getProblemFollowingStatus(id).then((res) => {
+      if (cancelled) return
+      setFollowStatusLoading(false)
+      if (res.success && res.data) setFollowStatus(res.data)
+      else {
+        setFollowStatus([])
+        if (!res.success) toast.error(res.message || '加载关注进度失败')
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [id, isLogin, subTab])
 
   function openTagsEdit() {
     if (!problem) return
@@ -364,75 +397,187 @@ export function QuestionBankDetail() {
       )}
 
       <Card className="gap-0 overflow-hidden py-0">
-        <CardHeader className="border-b px-4 py-3">
-          <CardTitle className="text-base">提交历史</CardTitle>
+        <CardHeader className="flex flex-col gap-2 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="text-base">提交与关注</CardTitle>
+          <div className="flex flex-wrap gap-2">
+            {isLogin && (
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={followingOnly ? 'default' : 'outline'}
+                  onClick={() => setFollowingOnly((v) => !v)}
+                >
+                  {followingOnly ? '只看关注 · 开' : '只看关注'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={acOnly ? 'default' : 'outline'}
+                  onClick={() => setAcOnly((v) => !v)}
+                >
+                  {acOnly ? '仅通过 · 开' : '仅通过'}
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>用户</TableHead>
-                <TableHead>语言</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>时间</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {subs.map((s, i) => {
-                const uid = num(s.userId)
-                const name = str(
-                  s.userName || s.name || s.username || (uid ? `用户${uid}` : '-'),
-                )
-                const status = str(s.status)
-                const submitUrl = getSubmitLink(
-                  str(s.platform || problem.platform),
-                  str(s.contest),
-                  str(s.submitId),
-                )
-                return (
-                  <TableRow key={i}>
-                    <TableCell>
-                      {uid ? (
-                        <Link to={`/profile?id=${uid}`} className="hover:underline">
-                          {name}
-                        </Link>
-                      ) : (
-                        name
-                      )}
-                    </TableCell>
-                    <TableCell>{str(s.lang, '-')}</TableCell>
-                    <TableCell>
-                      {submitUrl ? (
-                        <StatusBadge status={status} asChild>
-                          <a
-                            href={submitUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="hover:underline"
-                            title="查看原站提交"
-                          >
-                            {status || '-'}
-                          </a>
-                        </StatusBadge>
-                      ) : (
-                        <StatusBadge status={status} />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {formatTime(s.time || s.submittedAt || s.createdAt)}
-                    </TableCell>
+          <Tabs
+            value={subTab}
+            onValueChange={(v) => setSubTab(v as 'history' | 'following')}
+            className="gap-0"
+          >
+            <div className="border-b px-4 py-2">
+              <TabsList>
+                <TabsTrigger value="history">提交历史</TabsTrigger>
+                {isLogin && (
+                  <TabsTrigger value="following">关注进度</TabsTrigger>
+                )}
+              </TabsList>
+            </div>
+            <TabsContent value="history" className="mt-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>用户</TableHead>
+                    <TableHead>语言</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead>时间</TableHead>
                   </TableRow>
-                )
-              })}
-              {!subs.length && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    暂无提交
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {subs.map((s, i) => {
+                    const uid = num(s.userId)
+                    const name = str(
+                      s.userName ||
+                        s.name ||
+                        s.username ||
+                        (uid ? `用户${uid}` : '-'),
+                    )
+                    const status = str(s.status)
+                    const submitUrl = getSubmitLink(
+                      str(s.platform || problem.platform),
+                      str(s.contest),
+                      str(s.submitId),
+                    )
+                    return (
+                      <TableRow key={i}>
+                        <TableCell>
+                          {uid ? (
+                            <Link
+                              to={`/profile?id=${uid}`}
+                              className="hover:underline"
+                            >
+                              {name}
+                            </Link>
+                          ) : (
+                            name
+                          )}
+                        </TableCell>
+                        <TableCell>{str(s.lang, '-')}</TableCell>
+                        <TableCell>
+                          {submitUrl ? (
+                            <StatusBadge status={status} asChild>
+                              <a
+                                href={submitUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="hover:underline"
+                                title="查看原站提交"
+                              >
+                                {status || '-'}
+                              </a>
+                            </StatusBadge>
+                          ) : (
+                            <StatusBadge status={status} />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {formatTime(s.time || s.submittedAt || s.createdAt)}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                  {!subs.length && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="text-center text-muted-foreground"
+                      >
+                        暂无提交
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TabsContent>
+            {isLogin && (
+              <TabsContent value="following" className="mt-0">
+                {followStatusLoading ? (
+                  <div className="flex flex-col gap-2 p-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton key={i} className="h-10 w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>用户</TableHead>
+                        <TableHead>状态</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {followStatus.map((u) => {
+                        const label =
+                          u.status === 'AC'
+                            ? '已通过'
+                            : u.status === 'TRIED'
+                              ? '尝试过'
+                              : '未做'
+                        const href = u.username
+                          ? `/profile/${u.username}`
+                          : `/profile?id=${u.userId}`
+                        return (
+                          <TableRow key={u.userId}>
+                            <TableCell>
+                              <Link to={href} className="hover:underline">
+                                {u.name || u.username || `用户${u.userId}`}
+                              </Link>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  u.status === 'AC'
+                                    ? 'default'
+                                    : u.status === 'TRIED'
+                                      ? 'secondary'
+                                      : 'outline'
+                                }
+                              >
+                                {label}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                      {!followStatus.length && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={2}
+                            className="text-center text-muted-foreground"
+                          >
+                            还没有关注任何人，或接口暂不可用
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </TabsContent>
+            )}
+          </Tabs>
         </CardContent>
       </Card>
 

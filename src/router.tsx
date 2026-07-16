@@ -1,5 +1,10 @@
 import { lazy, Suspense, type ReactNode } from 'react'
-import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  useLocation,
+} from 'react-router-dom'
 import { AppLayout } from '@/layouts/AppLayout'
 import { AdminLayout } from '@/layouts/AdminLayout'
 import { RequireCoach } from '@/auth/RequireCoach'
@@ -43,8 +48,8 @@ const ChangeProfile = lazy(() =>
 const Bulletin = lazy(() =>
   import('@/pages/Bulletin').then((m) => ({ default: m.Bulletin })),
 )
-const AllActivities = lazy(() =>
-  import('@/pages/AllActivities').then((m) => ({ default: m.AllActivities })),
+const Discover = lazy(() =>
+  import('@/pages/Discover').then((m) => ({ default: m.Discover })),
 )
 const Contest = lazy(() =>
   import('@/pages/Contest').then((m) => ({ default: m.Contest })),
@@ -52,9 +57,7 @@ const Contest = lazy(() =>
 const ContestDetails = lazy(() =>
   import('@/pages/ContestDetails').then((m) => ({ default: m.ContestDetails })),
 )
-const ContestCalendar = lazy(() =>
-  import('@/pages/ContestCalendar').then((m) => ({ default: m.ContestCalendar })),
-)
+
 const QuestionBank = lazy(() =>
   import('@/pages/QuestionBank').then((m) => ({ default: m.QuestionBank })),
 )
@@ -167,6 +170,13 @@ function CoachOutlet() {
   )
 }
 
+/** 旧「动态」路径 → 发现页，保留 query */
+function RedirectAllActivities() {
+  const { search } = useLocation()
+  const next = search ? `/discover${search}` : '/discover'
+  return <Navigate to={next} replace />
+}
+
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -270,12 +280,16 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'all-activities',
+        path: 'discover',
         element: (
           <Lazy>
-            <AllActivities />
+            <Discover />
           </Lazy>
         ),
+      },
+      {
+        path: 'all-activities',
+        element: <RedirectAllActivities />,
       },
       {
         path: 'bulletin',
@@ -303,11 +317,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'contest-calendar',
-        element: (
-          <Lazy>
-            <ContestCalendar />
-          </Lazy>
-        ),
+        element: <Navigate to="/contest?tab=calendar" replace />,
       },
       {
         path: 'question-bank',

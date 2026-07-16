@@ -69,6 +69,7 @@ export async function getContestRanking(params: {
   limit?: number
   offset?: number
   groupId?: number
+  followingOnly?: boolean
 }): Promise<ApiResult<ContestRankingData>> {
   const res = await get<unknown>(endpoints.core.contest.ranking, {
     contest_id: params.contestId,
@@ -76,6 +77,7 @@ export async function getContestRanking(params: {
     limit: params.limit ?? 20,
     offset: params.offset ?? 0,
     ...(params.groupId !== undefined ? { groupId: params.groupId } : {}),
+    ...(params.followingOnly ? { followingOnly: true } : {}),
   })
   if (!res.success) return { ...res, data: null }
 

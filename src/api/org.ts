@@ -1,6 +1,12 @@
-import { endpoints, type OrgInfo, type OrgMemberInfo } from '@shared/api'
-import { get, post } from '@/lib/http'
+import {
+  endpoints,
+  type OrgDiscoverItem,
+  type OrgInfo,
+  type OrgMemberInfo,
+} from '@shared/api'
+import { get, post, num, str, bool } from '@/lib/http'
 import { jwt } from '@/lib/jwt'
+import { normalizeStaticUrl } from '@/lib/static-url'
 
 function asList<T>(raw: unknown): T[] {
   if (Array.isArray(raw)) return raw as T[]
@@ -19,6 +25,35 @@ export async function listMyOrgs(opts?: { all?: boolean }) {
     success: res.success && (res.data as { code?: number })?.code !== 1,
     message: (res.data as { message?: string })?.message || res.message,
     list: asList<OrgInfo>((res.data as { list?: OrgInfo[] }) ?? res.data),
+  }
+}
+
+export async function discoverOrgs(params?: {
+  page?: number
+  pageSize?: number
+  q?: string
+}) {
+  const res = await get<Record<string, unknown>>(endpoints.user.org.discover, {
+    page: params?.page ?? 1,
+    pageSize: params?.pageSize ?? 20,
+    ...(params?.q ? { q: params.q } : {}),
+  })
+  const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
+  const listRaw = asList<Record<string, unknown>>(raw.list ?? res.data)
+  const list: OrgDiscoverItem[] = listRaw.map((o) => ({
+    id: num(o.id),
+    name: str(o.name),
+    brandLogo: normalizeStaticUrl(str(o.brandLogo)) || undefined,
+    memberCount: num(o.memberCount),
+    isSystem: bool(o.isSystem),
+    isMember: o.isMember === undefined ? undefined : bool(o.isMember),
+    isCurrent: o.isCurrent === undefined ? undefined : bool(o.isCurrent),
+  }))
+  return {
+    success: res.success && (raw.code === undefined || num(raw.code) === 0),
+    message: str(raw.message) || res.message,
+    list,
+    total: num(raw.total, list.length),
   }
 }
 
