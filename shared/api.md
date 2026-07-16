@@ -96,7 +96,7 @@
 | GET | `/user/profile/get-by-id` | 否 | query: `userId`；公共域受隐私约束，私人域组织内隐私配置失效 |
 | GET | `/user/profile/get-by-username` | 否 | query: `username` 精确匹配；返回同 get-by-id |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` 模糊（用户名/昵称） |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开）、`problemFetchEnabled`/`problemAiEnabled`（题面爬取/AI 有效状态） |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开）、`problemFetchEnabled`/`problemAiEnabled`（题面爬取/AI 有效状态）、`createdAt`（注册时间 unix 秒） |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新资料 |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
@@ -157,9 +157,9 @@
   "code": 0,
   "registeredUsers": 1200,
   "mau": 86,
-  "today": { "date": "2026-07-16", "pv": 120, "dau": 18, "uv": 40, "uniqueIp": 35 },
-  "yesterday": { "date": "2026-07-15", "pv": 90, "dau": 15, "uv": 32, "uniqueIp": 28 },
-  "series": [{ "date": "2026-07-01", "pv": 50, "dau": 10, "uv": 20, "uniqueIp": 15 }],
+  "today": { "date": "2026-07-16", "pv": 120, "dau": 18, "uv": 40, "uniqueIp": 35, "newUsers": 3 },
+  "yesterday": { "date": "2026-07-15", "pv": 90, "dau": 15, "uv": 32, "uniqueIp": 28, "newUsers": 1 },
+  "series": [{ "date": "2026-07-01", "pv": 50, "dau": 10, "uv": 20, "uniqueIp": 15, "newUsers": 2 }],
   "totalPv": 3000,
   "totalDauSum": 400,
   "topPaths": [{ "path": "/", "category": "首页", "pv": 50, "share": 41.6 }],
@@ -184,6 +184,7 @@
 | `registeredUsers` | 注册用户总数 |
 | `today.dau` / `mau` | 日活 / 月活（登录用户访问去重） |
 | `today.pv` | 页面浏览量 PV（同 path 约 30s 节流） |
+| `series[].newUsers` / `today.newUsers` | 当日新注册用户数（上海时区自然日） |
 | `today.uniqueIp` / `ips[]` | 独立 IP 数与明细列表 |
 | `categories` / `topPaths` | 服务模块使用分布与热门页面 |
 | `apiRequestsToday` / `apiPeakConcurrent` | 今日 API 请求量 / 并发峰值 |
@@ -472,7 +473,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 **scope**：`platform`（整平台）或 `contest`（单场）。  
 **advanceMinutes** 白名单：`30, 60, 180, 360, 720, 1440, 2880, 4320`。  
-订阅需账号已绑定邮箱（core 经 user 内部 `GetContactEmail` 校验）；`enabled=true` 保存成功后发送**订阅成功确认邮件**；开赛前提醒在 `advanceMinutes` 时发送，同一场同一提前量只发一次。
+订阅需账号已绑定邮箱（core 经 user 内部 `GetContactEmail` 校验）；**首次创建或从关闭→开启**时发送**订阅成功确认邮件**（改提前量/重复保存不重发）；开赛前提醒在 `advanceMinutes` 时发送，同一用户同一场同一提前量只发一次（先原子占坑再发信，防 cron 重试/多实例双发）。
 
 ### Bulletin
 

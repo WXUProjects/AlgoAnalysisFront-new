@@ -148,6 +148,8 @@ export type AccessDayStat = {
   dau: number
   uv: number
   uniqueIp: number
+  /** 当日新注册用户数 */
+  newUsers: number
 }
 
 export type AccessPathStat = {
@@ -193,18 +195,22 @@ export type AccessStats = {
 }
 
 function emptyDay(date = ''): AccessDayStat {
-  return { date, pv: 0, dau: 0, uv: 0, uniqueIp: 0 }
+  return { date, pv: 0, dau: 0, uv: 0, uniqueIp: 0, newUsers: 0 }
 }
 
 function normalizeDay(raw: unknown): AccessDayStat {
   if (!raw || typeof raw !== 'object') return emptyDay()
   const d = raw as Record<string, unknown>
+  // uniqueIp / newUsers：兼容 camelCase 与 snake_case
+  const uniqueIp = d.uniqueIp ?? d.unique_ip
+  const newUsers = d.newUsers ?? d.new_users
   return {
     date: str(d.date),
     pv: num(d.pv, 0) || 0,
     dau: num(d.dau, 0) || 0,
     uv: num(d.uv, 0) || 0,
-    uniqueIp: num(d.uniqueIp, 0) || 0,
+    uniqueIp: num(uniqueIp, 0) || 0,
+    newUsers: num(newUsers, 0) || 0,
   }
 }
 

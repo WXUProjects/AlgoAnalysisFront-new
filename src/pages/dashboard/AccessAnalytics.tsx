@@ -162,6 +162,22 @@ export function DashboardAccessAnalytics() {
     [data],
   )
 
+  const registerData = useMemo(
+    () =>
+      data?.series.map((s) => ({
+        date: s.date.slice(5),
+        新增注册: s.newUsers,
+      })) ?? [],
+    [data],
+  )
+
+  const registerToday = data?.today?.newUsers
+  const registerYesterday = data?.yesterday?.newUsers
+  const registerSum = useMemo(
+    () => data?.series.reduce((sum, s) => sum + (s.newUsers || 0), 0) ?? 0,
+    [data],
+  )
+
   const catData = useMemo(
     () =>
       data?.categories.map((c) => ({
@@ -190,6 +206,12 @@ export function DashboardAccessAnalytics() {
       hint: '当前账号总数',
     },
     {
+      label: '今日新增注册',
+      value: registerToday,
+      delta: delta(registerToday, registerYesterday),
+      hint: '当日新注册账号',
+    },
+    {
       label: '今日活跃 DAU',
       value: t?.dau,
       delta: delta(t?.dau, y?.dau),
@@ -204,6 +226,11 @@ export function DashboardAccessAnalytics() {
       label: '昨日活跃',
       value: y?.dau,
       hint: y?.date || '昨日 DAU',
+    },
+    {
+      label: `近 ${days} 日新增`,
+      value: data ? registerSum : undefined,
+      hint: '区间内新注册合计',
     },
   ]
 
@@ -357,6 +384,54 @@ export function DashboardAccessAnalytics() {
                   <Line type="monotone" dataKey="DAU" stroke="var(--color-chart-2, #22c55e)" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey="UV" stroke="var(--color-chart-3, #f59e0b)" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey="IP" stroke="var(--color-chart-4, #ec4899)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="gap-3 py-4">
+        <CardHeader className="px-4">
+          <CardTitle className="text-base">趋势 · 每日新增注册</CardTitle>
+          <CardDescription>
+            近 {days} 日按自然日统计的新注册账号（上海时区）
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-2">
+          {loading ? (
+            <Skeleton className="h-64 w-full" />
+          ) : registerData.length === 0 ? (
+            <p className="px-2 text-sm text-muted-foreground">暂无注册趋势数据</p>
+          ) : (
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={registerData}
+                  margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    tick={{ fontSize: 11 }}
+                    width={36}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    formatter={(value) => {
+                      const n = typeof value === 'number' ? value : Number(value) || 0
+                      return [n.toLocaleString('zh-CN'), '新增注册']
+                    }}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="新增注册"
+                    stroke="var(--color-chart-2, #22c55e)"
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    activeDot={{ r: 4 }}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>

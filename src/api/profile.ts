@@ -190,6 +190,11 @@ export async function listProfiles(
             u.problemAiEnabled === undefined
               ? undefined
               : bool(u.problemAiEnabled),
+          // 注册时间 unix 秒；旧后端可能无此字段
+          createdAt:
+            u.createdAt === undefined || u.createdAt === null
+              ? undefined
+              : num(u.createdAt) || undefined,
           orgs: orgsRaw.map((o) => ({
             orgId: num(o.orgId),
             name: str(o.name),

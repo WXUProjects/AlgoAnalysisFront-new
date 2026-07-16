@@ -336,6 +336,8 @@ export interface UserListItem {
   problemFetchEnabled?: boolean
   /** 有效：近窗提交是否触发题面 AI（默认=非公共域组织；可个人覆盖） */
   problemAiEnabled?: boolean
+  /** 注册时间（unix 秒） */
+  createdAt?: number
 }
 
 export interface UserListRes {
