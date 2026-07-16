@@ -187,7 +187,11 @@ export function ContestCalendar() {
       toast.error(res.message || '保存订阅失败')
       return
     }
-    toast.success(enabled ? '已订阅该比赛提醒' : '已关闭该比赛提醒')
+    toast.success(
+      enabled
+        ? '已订阅该比赛提醒，确认邮件将发往绑定邮箱（请检查垃圾箱）'
+        : '已关闭该比赛提醒',
+    )
     setSubDialogOpen(false)
     void loadMeta()
   }
@@ -238,7 +242,9 @@ export function ContestCalendar() {
       toast.error(res.message || '订阅失败')
       return
     }
-    toast.success(`已订阅 ${plat.platformName}（提前 ${advanceLabel(advance)}）`)
+    toast.success(
+      `已订阅 ${plat.platformName}（提前 ${advanceLabel(advance)}），确认邮件将发往绑定邮箱`,
+    )
     void loadMeta()
   }
 
