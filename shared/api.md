@@ -430,6 +430,8 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/spider/set` | 是 | 绑定 OJ 账号（仅全量同步该平台） |
 | POST | `/core/spider/update` | 是(站点管理员) | 手动全量同步单用户全部已绑定平台 |
 | POST | `/core/spider/update-all` | 是(站点管理员) | 全站用户全量更新 |
+| GET | `/core/spider/submit-inventory` | 是(站点管理员) | 真实入库库存：`submitLogsTotal` / `submitLogsRealTotal` / `countedSubmitIdsTotal` / `oldestTime` / `newestTime` |
+| POST | `/core/spider/purge-submits-and-recrawl` | 是(站点管理员) | 清空全部提交相关（`submit_logs`+账本+日汇总+AC 预聚合）并全量重爬；body `{ confirm: "PURGE_SUBMITS" }`；保留比赛记录与 OJ 绑定 |
 
 **SetSpiderReq**
 ```json
@@ -485,7 +487,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 **scope**：`platform`（整平台）或 `contest`（单场）。  
 **advanceMinutes** 白名单：`30, 60, 180, 360, 720, 1440, 2880, 4320`。  
-订阅需账号已绑定邮箱（core 经 user 内部 `GetContactEmail` 校验）；`enabled=true` 保存成功后异步发送**订阅成功确认邮件**（新建/重开/改提前量必发；已开启再保存 5 分钟内限流防连点）。开赛前提醒在 `advanceMinutes` 时发送，同一用户同一场同一提前量只发一次（先原子占坑再发信）。
+订阅需账号已绑定邮箱（core 经 user 内部 `GetContactEmail` 校验）；`enabled=true` 保存成功后**每次**异步发送**订阅成功确认邮件**（含已订阅再点、取消后再订；不限流）。`enabled=false` 不发确认信。开赛前提醒在 `advanceMinutes` 时发送，同一用户同一场同一提前量只发一次（先原子占坑再发信）。
 
 ### Bulletin
 
@@ -763,6 +765,8 @@ GET    /api/core/submit-log/get-by-id
 POST   /api/core/spider/set
 POST   /api/core/spider/update
 POST   /api/core/spider/update-all
+GET    /api/core/spider/submit-inventory
+POST   /api/core/spider/purge-submits-and-recrawl
 GET    /api/core/statistic/heatmap
 GET    /api/core/statistic/period
 GET    /api/core/statistic/rank

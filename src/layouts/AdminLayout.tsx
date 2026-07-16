@@ -13,6 +13,7 @@ import {
   SettingsIcon,
   SirenIcon,
   UsersIcon,
+  WrenchIcon,
   WorkflowIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -59,6 +60,7 @@ const titles: Record<string, string> = {
   '/admin/user': '组织成员',
   '/admin/site-users': '站点用户',
   '/admin/site': '站点设置',
+  '/admin/ops': '运维',
   '/admin/org': '组织设置',
   '/admin/orgs': '组织管理',
 }
@@ -320,6 +322,18 @@ export function AdminLayout() {
                         <NavLink to="/admin/site">
                           <SettingsIcon />
                           <span>站点设置</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/admin/ops')}
+                        tooltip="运维"
+                      >
+                        <NavLink to="/admin/ops">
+                          <WrenchIcon />
+                          <span>运维</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

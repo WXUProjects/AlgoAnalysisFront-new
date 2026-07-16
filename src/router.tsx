@@ -121,6 +121,11 @@ const DashboardSiteSettings = lazy(() =>
     default: m.DashboardSiteSettings,
   })),
 )
+const DashboardOps = lazy(() =>
+  import('@/pages/dashboard/Ops').then((m) => ({
+    default: m.DashboardOps,
+  })),
+)
 const DashboardOrgSettings = lazy(() =>
   import('@/pages/dashboard/OrgSettings').then((m) => ({
     default: m.DashboardOrgSettings,
@@ -493,6 +498,14 @@ export const router = createBrowserRouter([
             element: (
               <Lazy>
                 <DashboardSiteSettings />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'ops',
+            element: (
+              <Lazy>
+                <DashboardOps />
               </Lazy>
             ),
           },

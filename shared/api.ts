@@ -115,6 +115,8 @@ export const endpoints = {
       set: `${API_PREFIX}/core/spider/set`,
       update: `${API_PREFIX}/core/spider/update`,
       updateAll: `${API_PREFIX}/core/spider/update-all`,
+      submitInventory: `${API_PREFIX}/core/spider/submit-inventory`,
+      purgeSubmitsAndRecrawl: `${API_PREFIX}/core/spider/purge-submits-and-recrawl`,
     },
     statistic: {
       heatmap: `${API_PREFIX}/core/statistic/heatmap`,
