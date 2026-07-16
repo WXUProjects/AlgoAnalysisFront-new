@@ -494,7 +494,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/core/problem/submissions` | 否 | query: `problemId`, `page`, `pageSize`, `userId?` |
 | GET | `/core/problem/user-profile` | 否 | query: `userId` 做题画像 |
 | GET | `/core/problem/progress` | 是(管理员) | 爬取/分析进度 |
-| POST | `/core/problem/backfill` | 是(管理员) | 近6月提交回填入队；body: `{ limit }`；无题面一律补爬；题面 AI 仅当近窗有组织用户（非纯公共域）提交 |
+| POST | `/core/problem/backfill` | 是(管理员) | 近6月提交回填入队；body: `{ limit }`；**仅组织用户提交**的题才爬题面/跑 AI；纯公共域/散户只入库（前端「题面准备中」） |
 | POST | `/core/problem/emergency-stop` | 是(管理员) | 暂停分析（队列保留） |
 | POST | `/core/problem/reset-all` | 是(管理员) | 重置 AI 标签；body: `{ requeue, requeueSet }` |
 | POST | `/core/problem/reset-queues` | 是(管理员) | purge MQ 后按 DB 待爬/待分析重灌 |
