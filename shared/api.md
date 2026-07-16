@@ -28,6 +28,7 @@
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
 | POST | `/user/auth/login` | 否 | 登录（用户名或邮箱 + 密码），返回 jwtToken |
+| POST | `/user/auth/logout` | 否 | 清除 HttpOnly 会话 Cookie |
 | POST | `/user/auth/register` | 否 | 邮箱验证码注册 |
 | POST | `/user/auth/refresh` | 是 | 按 DB 重签 JWT |
 | POST | `/user/auth/send-code` | 否 | 发送邮箱验证码（注册/找回密码） |
@@ -233,6 +234,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
 | POST | `/user/auth/refresh` | 是 | 按 DB 重签 JWT（任命后 F5 同步权限） |
+| POST | `/user/auth/logout` | 否 | 清除 HttpOnly 会话 Cookie |
 | GET | `/user/org/list` | 是 | 我的组织；项含 `myRole`、`orgDisplayName`、`isCurrent`、`seatLimit`、`memberCount`；`?all=1` 站点管理员看全部 |
 | GET | `/user/org/get` | 是 | query: `id`（默认当前组织）；含 `seatLimit`、`memberCount`；若本人是成员则含 `myRole`、`orgDisplayName` |
 | POST | `/user/org/create` | 站点管理员 | `{ name, slug?, adminUserId?, joinMode?, seatLimit? }`；默认 `seatLimit=50` |
@@ -563,6 +565,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 ```
 POST   /api/user/auth/login
+POST   /api/user/auth/logout
 POST   /api/user/auth/register
 POST   /api/user/auth/refresh
 POST   /api/user/auth/send-code

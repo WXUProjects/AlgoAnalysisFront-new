@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ExternalLinkIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { listContests } from '@/api/contest'
@@ -19,13 +19,12 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime } from '@/lib/format'
-import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 10
 
 export function Contest() {
   const { isLogin, user } = useAuth()
-  const navigate = useNavigate()
+  const requestId = useRef(0)
   const [searchParams, setSearchParams] = useSearchParams()
   const idParam = searchParams.get('id')
   const userMode = Boolean(idParam)
@@ -38,12 +37,14 @@ export function Contest() {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
+    const id = ++requestId.current
     setLoading(true)
     const res = await listContests({
       userId: targetUserId,
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
     })
+    if (id !== requestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '加载比赛失败')
@@ -128,33 +129,25 @@ export function Contest() {
         {list.map((item) => (
           <Card
             key={item.id}
-            role="link"
-            tabIndex={0}
-            onClick={() => navigate(`/contest/${item.id}`)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                navigate(`/contest/${item.id}`)
-              }
-            }}
-            className={cn(
-              'cursor-pointer gap-2 py-3 transition-all duration-200',
-              'hover:shadow-md hover:-translate-y-0.5',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            )}
+            className="gap-2 py-3 transition-shadow duration-200 hover:shadow-md"
           >
             <CardHeader className="flex flex-row items-start justify-between gap-3 px-4 space-y-0">
               <div className="flex min-w-0 flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary">{item.platform || '-'}</Badge>
                   <CardTitle className="truncate text-base">
-                    {item.contestName || item.contestId}
+                    <Link
+                      to={`/contest/${item.id}`}
+                      className="rounded-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {item.contestName || item.contestId}
+                    </Link>
                   </CardTitle>
                 </div>
                 <CardDescription>{formatTime(item.time)}</CardDescription>
               </div>
               {item.contestUrl && (
-                <div className="flex shrink-0 gap-2" onClick={(e) => e.stopPropagation()}>
+                <div className="flex shrink-0 gap-2">
                   <Button type="button" size="sm" variant="outline" asChild>
                     <a href={item.contestUrl} target="_blank" rel="noreferrer">
                       <ExternalLinkIcon data-icon="inline-start" />

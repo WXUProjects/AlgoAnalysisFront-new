@@ -12,25 +12,15 @@ export interface JwtPayload {
   orgRole?: string
 }
 
-const TOKEN_KEY = 'jwtToken'
-
 let memoryToken = ''
 
 export const jwt = {
   get token(): string {
-    if (!memoryToken) {
-      memoryToken = localStorage.getItem(TOKEN_KEY) || ''
-    }
     return memoryToken
   },
 
   set token(value: string) {
     memoryToken = value
-    if (value) {
-      localStorage.setItem(TOKEN_KEY, value)
-    } else {
-      localStorage.removeItem(TOKEN_KEY)
-    }
   },
 
   setNewToken(token: string) {
@@ -39,7 +29,6 @@ export const jwt = {
 
   clearToken() {
     this.token = ''
-    memoryToken = ''
   },
 
   getUserInfo(): JwtPayload | null {

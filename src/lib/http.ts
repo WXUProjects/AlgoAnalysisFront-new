@@ -40,6 +40,7 @@ function fireAuthExpired() {
 
 export const http = axios.create({
   timeout: 30_000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },

@@ -11,7 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@shared': path.resolve(__dirname, './shared'),
+      '@shared': path.resolve(__dirname, '../shared'),
     },
   },
   build: {
@@ -21,9 +21,20 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return
           if (id.includes('recharts') || id.includes('d3-')) return 'charts'
-          if (id.includes('katex') || id.includes('markdown-it')) return 'markdown'
+          if (
+            id.includes('katex') ||
+            id.includes('markdown-it') ||
+            id.includes('/marked/') ||
+            id.includes('dompurify')
+          ) {
+            return 'markdown'
+          }
+          if (id.includes('highlight.js')) return 'syntax-highlighting'
           if (id.includes('@tiptap') || id.includes('prosemirror')) return 'editor'
           if (id.includes('gsap')) return 'gsap'
+          if (id.includes('radix-ui')) return 'radix-ui'
+          if (id.includes('lucide-react')) return 'icons'
+          if (id.includes('axios')) return 'http-vendor'
           if (
             id.includes('react-dom') ||
             id.includes('/react/') ||
@@ -39,6 +50,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    fs: {
+      allow: [path.resolve(__dirname, '..')],
+    },
     proxy: {
       '/api': {
         target: 'https://algo.zhiyuansofts.cn',

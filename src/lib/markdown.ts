@@ -1,5 +1,6 @@
 import { marked, type Tokens } from 'marked'
 import katex from 'katex'
+import DOMPurify from 'dompurify'
 import 'katex/dist/katex.min.css'
 import { highlightWith, loadHljs, mapHljsLang } from '@/lib/code-hl'
 
@@ -82,24 +83,31 @@ function restoreMath(html: string, pieces: MathPiece[]): string {
   )
 }
 
-/** 公告 HTML / Markdown 共用消毒（非 DOMPurify 级，但挡住常见 XSS 面） */
+/** 公告 HTML / Markdown 共用 allowlist 消毒。 */
 export function sanitizeHtml(html: string): string {
   if (!html) return ''
-  return html
-    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
-    .replace(/<\/script>/gi, '')
-    .replace(/<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi, '')
-    .replace(/<object[\s\S]*?>[\s\S]*?<\/object>/gi, '')
-    .replace(/<embed[\s\S]*?>/gi, '')
-    .replace(/<link[\s\S]*?>/gi, '')
-    .replace(/<meta[\s\S]*?>/gi, '')
-    .replace(/<base[\s\S]*?>/gi, '')
-    .replace(/<form[\s\S]*?>[\s\S]*?<\/form>/gi, '')
-    .replace(/\son\w+\s*=\s*(['"]).*?\1/gi, '')
-    .replace(/\son\w+\s*=\s*[^\s>]+/gi, '')
-    .replace(/javascript:/gi, '')
-    .replace(/vbscript:/gi, '')
-    .replace(/data:text\/html/gi, '')
+  return DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+    ADD_ATTR: ['target'],
+    ALLOW_ARIA_ATTR: true,
+    ALLOW_DATA_ATTR: false,
+    FORBID_TAGS: [
+      'base',
+      'embed',
+      'form',
+      'iframe',
+      'input',
+      'link',
+      'math',
+      'meta',
+      'object',
+      'script',
+      'style',
+      'svg',
+      'textarea',
+    ],
+    FORBID_ATTR: ['srcdoc'],
+  })
 }
 
 let rendererReady = false

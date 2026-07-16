@@ -8,7 +8,12 @@ import {
   type ReactNode,
 } from 'react'
 import type { OrgInfo, UserProfile } from '@shared/api'
-import { fetchProfileById, login as apiLogin, refreshToken } from '@/api/auth'
+import {
+  fetchProfileById,
+  login as apiLogin,
+  logout as apiLogout,
+  refreshToken,
+} from '@/api/auth'
 import { listMyOrgs, switchOrg as apiSwitchOrg } from '@/api/org'
 import { setAuthExpiredHandler } from '@/lib/http'
 import { jwt, type JwtPayload } from '@/lib/jwt'
@@ -68,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
 
   const logout = useCallback(() => {
+    void apiLogout()
     jwt.clearToken()
     setUser(null)
     setProfile(null)
@@ -84,14 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const sync = useCallback(async () => {
-    if (!jwt.isValid()) {
-      setUser(null)
-      setProfile(null)
-      setOrgs([])
-      return
-    }
-
-    // 启动/刷新时重签 JWT（后端未部署时静默跳过）
+    // 启动时通过 HttpOnly Cookie 恢复内存中的短期访问令牌。
     try {
       await refreshToken()
     } catch {
@@ -143,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [sync])
 
-  // 有效期内活跃则重签 JWT（滑动 30 天）；过期则登出
+  // 有效期内活跃则重签短期 JWT；过期则登出
   useEffect(() => {
     let lastRenewAt = 0
     const RENEW_MIN_INTERVAL_MS = 60 * 60 * 1000 // 续期最多每小时一次

@@ -47,7 +47,7 @@ export async function listGroups(
       : []) as Record<string, unknown>[]
 
   return {
-    success: true,
+    success: res.success,
     message: res.message || 'ok',
     data: {
       list: listRaw.map(normalizeGroup),

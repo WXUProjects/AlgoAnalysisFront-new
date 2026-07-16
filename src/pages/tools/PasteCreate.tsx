@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { createPaste, listMyPastes, deletePaste } from '@/api/paste'
@@ -18,6 +18,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { detectLanguage } from '@/lib/code-hl'
 import {
   PASTE_DETECT_SUBSET,
@@ -43,17 +44,17 @@ export function PasteCreate() {
 
   const resolvedLanguage = language === 'auto' ? detected : language
 
-  async function loadMine() {
+  const loadMine = useCallback(async () => {
     if (!isLogin) return
     setMineLoading(true)
     const res = await listMyPastes()
     setMineLoading(false)
     if (res.success && res.data) setMine(res.data)
-  }
+  }, [isLogin])
 
   useEffect(() => {
     void loadMine()
-  }, [isLogin])
+  }, [loadMine])
 
   useEffect(() => {
     if (language !== 'auto') return
@@ -133,17 +134,19 @@ export function PasteCreate() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field>
                   <FieldLabel>语言</FieldLabel>
-                  <select
-                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                  <Select
                     value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
+                    onValueChange={setLanguage}
                   >
+                    <SelectTrigger className="w-full" aria-label="语言"><SelectValue /></SelectTrigger>
+                    <SelectContent>
                     {PASTE_LANGUAGES.map((l) => (
-                      <option key={l.value} value={l.value}>
+                      <SelectItem key={l.value} value={l.value}>
                         {l.label}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
+                    </SelectContent>
+                  </Select>
                   {language === 'auto' ? (
                     <p className="text-xs text-muted-foreground">
                       已识别为 {languageLabel(detected)}
@@ -152,17 +155,19 @@ export function PasteCreate() {
                 </Field>
                 <Field>
                   <FieldLabel>有效期</FieldLabel>
-                  <select
-                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                  <Select
                     value={expire}
-                    onChange={(e) => setExpire(e.target.value)}
+                    onValueChange={setExpire}
                   >
+                    <SelectTrigger className="w-full" aria-label="有效期"><SelectValue /></SelectTrigger>
+                    <SelectContent>
                     {PASTE_EXPIRES.map((x) => (
-                      <option key={x.value} value={x.value}>
+                      <SelectItem key={x.value} value={x.value}>
                         {x.label}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
+                    </SelectContent>
+                  </Select>
                 </Field>
               </div>
               <Field>

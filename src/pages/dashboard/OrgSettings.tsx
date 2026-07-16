@@ -177,14 +177,16 @@ export function DashboardOrgSettings() {
           />
           <div className="space-y-2">
             <Label>加入方式</Label>
-            <select
-              className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+            <Select
               value={joinMode}
-              onChange={(e) => setJoinMode(e.target.value)}
+              onValueChange={setJoinMode}
             >
-              <option value="auto">识别码自动通过</option>
-              <option value="review">需管理员审批</option>
-            </select>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">识别码自动通过</SelectItem>
+                <SelectItem value="review">需管理员审批</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-center justify-between">
             <Label>AI 总结</Label>

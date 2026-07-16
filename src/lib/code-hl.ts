@@ -2,11 +2,11 @@ import type { CSSProperties } from 'react'
 
 /** highlight.js 加载与语言映射（编辑器 / 查看共用） */
 
-let hljsPromise: Promise<typeof import('highlight.js').default> | null = null
+let hljsPromise: Promise<typeof import('highlight.js/lib/common').default> | null = null
 
 export async function loadHljs() {
   if (!hljsPromise) {
-    hljsPromise = import('highlight.js').then((m) => m.default)
+    hljsPromise = import('highlight.js/lib/common').then((m) => m.default)
   }
   return hljsPromise
 }

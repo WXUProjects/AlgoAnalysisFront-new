@@ -217,8 +217,9 @@ export function DashboardSiteSettings() {
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
               <Field className="gap-1.5">
-                <FieldLabel>站点标题</FieldLabel>
+                <FieldLabel htmlFor="site-title">站点标题</FieldLabel>
                 <Input
+                  id="site-title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="GoAlgo"
@@ -256,8 +257,9 @@ export function DashboardSiteSettings() {
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
               <Field className="gap-1.5">
-                <FieldLabel>备案号</FieldLabel>
+                <FieldLabel htmlFor="footer-icp">备案号</FieldLabel>
                 <Input
+                  id="footer-icp"
                   value={footerIcp}
                   onChange={(e) => setFooterIcp(e.target.value)}
                   placeholder="苏ICP备2025217901号"
@@ -280,16 +282,18 @@ export function DashboardSiteSettings() {
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
               <Field className="gap-1.5">
-                <FieldLabel>邮件服务器地址</FieldLabel>
+                <FieldLabel htmlFor="smtp-host">邮件服务器地址</FieldLabel>
                 <Input
+                  id="smtp-host"
                   value={smtpHost}
                   onChange={(e) => setSmtpHost(e.target.value)}
                   placeholder="smtp.163.com"
                 />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel>端口</FieldLabel>
+                <FieldLabel htmlFor="smtp-port">端口</FieldLabel>
                 <Input
+                  id="smtp-port"
                   value={smtpPort}
                   onChange={(e) => setSmtpPort(e.target.value)}
                   placeholder="465"
@@ -297,8 +301,9 @@ export function DashboardSiteSettings() {
                 />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel>用户名</FieldLabel>
+                <FieldLabel htmlFor="smtp-username">用户名</FieldLabel>
                 <Input
+                  id="smtp-username"
                   value={smtpUsername}
                   onChange={(e) => setSmtpUsername(e.target.value)}
                   placeholder="your@email.com"
@@ -306,8 +311,9 @@ export function DashboardSiteSettings() {
                 />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel>密码 / 授权码</FieldLabel>
+                <FieldLabel htmlFor="smtp-password">密码 / 授权码</FieldLabel>
                 <Input
+                  id="smtp-password"
                   type="password"
                   value={smtpPassword}
                   onChange={(e) => setSmtpPassword(e.target.value)}
@@ -324,17 +330,19 @@ export function DashboardSiteSettings() {
                 </p>
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel>发件人邮箱</FieldLabel>
+                <FieldLabel htmlFor="smtp-from">发件人邮箱</FieldLabel>
                 <Input
+                  id="smtp-from"
                   value={smtpFrom}
                   onChange={(e) => setSmtpFrom(e.target.value)}
                   placeholder="your@email.com"
                 />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel>测试收件人</FieldLabel>
+                <FieldLabel htmlFor="smtp-test-to">测试收件人</FieldLabel>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input
+                    id="smtp-test-to"
                     value={testTo}
                     onChange={(e) => setTestTo(e.target.value)}
                     placeholder="接收测试邮件的邮箱"
@@ -365,16 +373,18 @@ export function DashboardSiteSettings() {
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
               <Field className="gap-1.5">
-                <FieldLabel>模型名称</FieldLabel>
+                <FieldLabel htmlFor="agent-model">模型名称</FieldLabel>
                 <Input
+                  id="agent-model"
                   value={agentModel}
                   onChange={(e) => setAgentModel(e.target.value)}
                   placeholder="请填写模型名称"
                 />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel>密钥（API Key）</FieldLabel>
+                <FieldLabel htmlFor="agent-secret">密钥（API Key）</FieldLabel>
                 <Input
+                  id="agent-secret"
                   type="password"
                   value={agentSecret}
                   onChange={(e) => setAgentSecret(e.target.value)}
@@ -401,24 +411,27 @@ export function DashboardSiteSettings() {
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
               <Field className="gap-1.5">
-                <FieldLabel>接口地址</FieldLabel>
+                <FieldLabel htmlFor="ai-endpoint">接口地址</FieldLabel>
                 <Input
+                  id="ai-endpoint"
                   value={aiEndpoint}
                   onChange={(e) => setAiEndpoint(e.target.value)}
                   placeholder="请填写服务商提供的接口地址"
                 />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel>模型名称</FieldLabel>
+                <FieldLabel htmlFor="ai-model">模型名称</FieldLabel>
                 <Input
+                  id="ai-model"
                   value={aiModel}
                   onChange={(e) => setAiModel(e.target.value)}
                   placeholder="请填写模型名称"
                 />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel>密钥（API Key）</FieldLabel>
+                <FieldLabel htmlFor="ai-secret">密钥（API Key）</FieldLabel>
                 <Input
+                  id="ai-secret"
                   type="password"
                   value={aiSecret}
                   onChange={(e) => setAiSecret(e.target.value)}

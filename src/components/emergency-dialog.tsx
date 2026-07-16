@@ -64,8 +64,6 @@ export function EmergencyDialogHost() {
   }
 
   function onOpenChange(next: boolean) {
-    // 禁止点遮罩/ESC 关闭，必须点「我知道了」
-    if (!next) return
     setOpen(next)
   }
 
@@ -74,9 +72,7 @@ export function EmergencyDialogHost() {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        showCloseButton={false}
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
+        showCloseButton
         className="flex max-h-[min(90vh,880px)] w-full max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg md:max-w-xl"
       >
         <DialogHeader className="shrink-0 space-y-1 border-b px-5 py-4 text-left">

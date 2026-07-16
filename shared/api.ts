@@ -9,6 +9,7 @@ export const endpoints = {
   user: {
     auth: {
       login: `${API_PREFIX}/user/auth/login`,
+      logout: `${API_PREFIX}/user/auth/logout`,
       register: `${API_PREFIX}/user/auth/register`,
       refresh: `${API_PREFIX}/user/auth/refresh`,
       sendCode: `${API_PREFIX}/user/auth/send-code`,

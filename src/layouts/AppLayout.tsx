@@ -41,6 +41,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { MotionProvider } from '@/motion/MotionContext'
@@ -319,18 +320,22 @@ export function AppLayout() {
                 <label className="mb-1 block text-xs text-muted-foreground">
                   当前组织
                 </label>
-                <select
-                  className="h-8 w-full rounded-md border bg-background px-2 text-xs"
-                  value={user?.orgId || currentOrg?.id || ''}
-                  onChange={(e) => void handleSwitchOrg(Number(e.target.value))}
+                <Select
+                  value={String(user?.orgId || currentOrg?.id || '')}
+                  onValueChange={(value) => void handleSwitchOrg(Number(value))}
                 >
+                  <SelectTrigger size="sm" className="w-full text-xs" aria-label="当前组织">
+                    <SelectValue placeholder="选择组织" />
+                  </SelectTrigger>
+                  <SelectContent>
                   {orgs.map((o) => (
-                    <option key={o.id} value={o.id}>
+                    <SelectItem key={o.id} value={String(o.id)}>
                       {o.name}
                       {o.myRole === 'org_admin' ? ' · 管理' : ''}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
+                  </SelectContent>
+                </Select>
               </div>
             )}
             <SidebarMenu>

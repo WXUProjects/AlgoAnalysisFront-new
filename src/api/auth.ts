@@ -213,9 +213,6 @@ export async function fetchProfileById(
 
 /** 根据当前登录态重签 JWT（任命后刷新页面可同步权限） */
 export async function refreshToken(): Promise<ApiResult<LoginRes>> {
-  if (!jwt.isValid()) {
-    return { success: false, message: '未登录', data: null }
-  }
   try {
     const res = await http.post<LoginRes>(endpoints.user.auth.refresh, {})
     const data = res.data
@@ -234,5 +231,13 @@ export async function refreshToken(): Promise<ApiResult<LoginRes>> {
     }
   } catch (err) {
     return { success: false, message: errMessage(err, '刷新失败'), data: null }
+  }
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await http.post(endpoints.user.auth.logout, {})
+  } finally {
+    jwt.clearToken()
   }
 }
