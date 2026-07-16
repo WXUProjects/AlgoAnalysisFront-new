@@ -163,10 +163,15 @@ export function DashboardOps() {
               <Badge variant="destructive">不可撤销</Badge>
             </div>
             <CardDescription className="leading-relaxed">
-              清空全部提交明细（真提交 + 合成）、统计账本与日/AC
-              预聚合，随后为所有已绑定 OJ 的用户触发全量重爬。
-              <strong className="text-foreground"> 比赛记录与 OJ 绑定会保留。</strong>
-              重爬期间统计数字会先变 0 再逐步回升，可能需要较长时间。
+              <strong className="text-foreground">硬删除</strong>
+              全部训练相关数据：提交明细（真/假/合成）、统计账本、日汇总、AC
+              预聚合、OJ 比赛记录、提醒发送日志，并清空相关缓存。随后按已绑定
+              OJ 全量重爬。
+              <br />
+              <strong className="text-foreground">
+                保留：用户账号、OJ 绑定、题库、公告/紧急通知、比赛日历赛程与订阅、站点运维配置。
+              </strong>
+              重爬期间数字会先归零再回升。
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -199,10 +204,10 @@ export function DashboardOps() {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>确认清空全部提交？</AlertDialogTitle>
+                  <AlertDialogTitle>确认硬清训练数据？</AlertDialogTitle>
                   <AlertDialogDescription className="space-y-2">
                     <span className="block">
-                      将删除所有提交明细与统计缓存，并后台重新同步所有已绑定用户。此操作无法撤销。
+                      将硬删提交、统计、比赛记录等（题库与 OJ 绑定保留），并后台全量重爬。无法撤销。
                     </span>
                     <span className="block text-muted-foreground">
                       请确认已做好备份，且当前不在业务高峰期。

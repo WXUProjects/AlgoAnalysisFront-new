@@ -431,7 +431,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/spider/update` | 是(站点管理员) | 手动全量同步单用户全部已绑定平台 |
 | POST | `/core/spider/update-all` | 是(站点管理员) | 全站用户全量更新 |
 | GET | `/core/spider/submit-inventory` | 是(站点管理员) | 真实入库库存：`submitLogsTotal` / `submitLogsRealTotal` / `countedSubmitIdsTotal` / `oldestTime` / `newestTime` |
-| POST | `/core/spider/purge-submits-and-recrawl` | 是(站点管理员) | 清空全部提交相关（`submit_logs`+账本+日汇总+AC 预聚合）并全量重爬；body `{ confirm: "PURGE_SUBMITS" }`；保留比赛记录与 OJ 绑定 |
+| POST | `/core/spider/purge-submits-and-recrawl` | 是(站点管理员) | **硬清**训练数据并全量重爬；body `{ confirm: "PURGE_SUBMITS" }`。删：`submit_logs`（真假全删）、账本、日汇总、AC 预聚合、`contest_logs`、提醒发送日志 + 相关 Redis。**保留**：`platforms`、题库、公告/紧急通知、比赛日历赛程与订阅；用户账号在 user 库不动 |
 
 **SetSpiderReq**
 ```json
