@@ -83,14 +83,18 @@ function buildRows(
   const n = Math.max(userCount, 1)
   const ave = (v: number | undefined) => (v ?? 0) / n
   const prefix = kind === 'ac' ? 'AC' : '提交'
-  const acRaw = u?.totalRaw ?? problemCount
-  const acRawAve = g?.totalRaw != null ? ave(g.totalRaw) : problemCountAve
+  // AC 次数 ≥ 去重题数（每题至少 1 次）
+  const acRaw = Math.max(u?.totalRaw ?? problemCount, problemCount)
+  const acRawAve = Math.max(
+    g?.totalRaw != null ? ave(g.totalRaw) : problemCountAve,
+    problemCountAve,
+  )
   return [
     {
       title: kind === 'ac' ? '生涯 AC' : `总${prefix}`,
       value: kind === 'ac' ? acRaw : (u?.total ?? 0),
       ave: kind === 'ac' ? acRawAve : ave(g?.total),
-      display: kind === 'ac' ? `${acRaw} / ${problemCount}` : undefined,
+      display: kind === 'ac' ? `${acRaw} 次 · ${problemCount} 题` : undefined,
     },
     {
       title: `今日${prefix}`,

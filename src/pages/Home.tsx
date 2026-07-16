@@ -338,11 +338,19 @@ export function Home() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <StatCard
             label="生涯"
-            sub={mode === 'ac' ? '累计AC次数 / 累计题数' : '累计提交'}
+            sub={mode === 'ac' ? 'AC次数 · 去重题数' : '累计提交'}
             value={
               mode === 'ac'
                 ? period
-                  ? `${period.ac.totalRaw ?? period.ac.total} / ${period.ac.total}`
+                  ? (() => {
+                      // 次数 ≥ 题数；日汇总落后时用题数兜底
+                      const problems = period.ac.total
+                      const times = Math.max(
+                        period.ac.totalRaw ?? problems,
+                        problems,
+                      )
+                      return `${times} · ${problems}`
+                    })()
                   : '-'
                 : (stats?.total ?? '-')
             }
