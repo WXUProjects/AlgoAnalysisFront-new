@@ -140,7 +140,7 @@ export function DashboardOps() {
                 <Metric
                   label="已计入账本"
                   value={inv?.countedSubmitIdsTotal}
-                  hint="counted_submit_ids（含 6 个月外）"
+                  hint="counted_submit_ids（含热窗外）"
                 />
                 <Metric
                   label="热表时间范围"
