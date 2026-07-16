@@ -1,6 +1,5 @@
 import { marked, type Tokens } from 'marked'
 import katex from 'katex'
-import DOMPurify from 'dompurify'
 import 'katex/dist/katex.min.css'
 import { highlightWith, loadHljs, mapHljsLang } from '@/lib/code-hl'
 
@@ -86,28 +85,92 @@ function restoreMath(html: string, pieces: MathPiece[]): string {
 /** 公告 HTML / Markdown 共用 allowlist 消毒。 */
 export function sanitizeHtml(html: string): string {
   if (!html) return ''
-  return DOMPurify.sanitize(html, {
-    USE_PROFILES: { html: true },
-    ADD_ATTR: ['target'],
-    ALLOW_ARIA_ATTR: true,
-    ALLOW_DATA_ATTR: false,
-    FORBID_TAGS: [
-      'base',
-      'embed',
-      'form',
-      'iframe',
-      'input',
-      'link',
-      'math',
-      'meta',
-      'object',
-      'script',
-      'style',
-      'svg',
-      'textarea',
-    ],
-    FORBID_ATTR: ['srcdoc'],
-  })
+  if (typeof document === 'undefined') return escapeHtml(html)
+
+  const allowedTags = new Set([
+    'a', 'abbr', 'b', 'blockquote', 'br', 'code', 'del', 'details', 'div',
+    'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'kbd',
+    'li', 'ol', 'p', 'pre', 's', 'span', 'strong', 'sub', 'summary', 'sup',
+    'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'u', 'ul',
+  ])
+  const dropWithContent = new Set([
+    'base', 'button', 'embed', 'form', 'iframe', 'input', 'link', 'math',
+    'meta', 'object', 'script', 'style', 'svg', 'template', 'textarea',
+  ])
+  const doc = document.implementation.createHTMLDocument('')
+  doc.body.innerHTML = html
+
+  const safeURL = (value: string, image: boolean): boolean => {
+    const normalized = Array.from(value)
+      .filter((character) => character.charCodeAt(0) > 0x20)
+      .join('')
+      .toLowerCase()
+    if (!normalized) return false
+    if (/^(javascript|vbscript|data|file|blob):/.test(normalized)) return false
+    if (/^(https?:)?\/\//.test(normalized)) return true
+    if (!image && /^(mailto|tel):/.test(normalized)) return true
+    if (!normalized.includes(':')) return true
+    return /^(#|\?|\.\.\/|\.\/|\/)/.test(normalized)
+  }
+
+  for (const el of Array.from(doc.body.querySelectorAll('*'))) {
+    if (!el.isConnected) continue
+    const tag = el.tagName.toLowerCase()
+    if (!allowedTags.has(tag)) {
+      if (dropWithContent.has(tag)) el.remove()
+      else el.replaceWith(...Array.from(el.childNodes))
+      continue
+    }
+
+    for (const attr of Array.from(el.attributes)) {
+      const name = attr.name.toLowerCase()
+      const allowed =
+        name === 'title' ||
+        name === 'class' ||
+        name === 'aria-hidden' ||
+        (tag === 'a' && ['href', 'target', 'rel'].includes(name)) ||
+        (tag === 'img' && ['src', 'alt', 'width', 'height', 'loading'].includes(name)) ||
+        (['td', 'th'].includes(tag) && ['colspan', 'rowspan', 'align'].includes(name)) ||
+        (name === 'style' && Boolean(el.closest('.katex')))
+      if (!allowed || name.startsWith('on') || name.startsWith('data-')) {
+        el.removeAttribute(attr.name)
+      }
+    }
+
+    if (tag === 'a') {
+      const href = el.getAttribute('href') || ''
+      if (!safeURL(href, false)) el.removeAttribute('href')
+      if (el.getAttribute('target') === '_blank') {
+        el.setAttribute('rel', 'noopener noreferrer')
+      } else {
+        el.removeAttribute('target')
+        el.removeAttribute('rel')
+      }
+    }
+    if (tag === 'img') {
+      const src = el.getAttribute('src') || ''
+      if (!safeURL(src, true)) el.remove()
+      else el.setAttribute('loading', 'lazy')
+    }
+    if (el.hasAttribute('style')) {
+      const declarations = (el.getAttribute('style') || '').split(';')
+      const safeDeclarations = declarations.filter((declaration) => {
+        const [property, ...rest] = declaration.split(':')
+        const value = rest.join(':').trim().toLowerCase()
+        const safeProperty = /^(height|width|min-width|top|left|margin(?:-right)?|vertical-align|font-size|position)$/
+        const safeValue = /^-?(?:\d+|\d*\.\d+)(?:em|ex|rem|px|%)?$|^relative$/
+        return safeProperty.test(property.trim().toLowerCase()) && safeValue.test(value)
+      })
+      if (safeDeclarations.length) el.setAttribute('style', safeDeclarations.join(';'))
+      else el.removeAttribute('style')
+    }
+  }
+
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_COMMENT)
+  const comments: Comment[] = []
+  while (walker.nextNode()) comments.push(walker.currentNode as Comment)
+  comments.forEach((comment) => comment.remove())
+  return doc.body.innerHTML
 }
 
 let rendererReady = false

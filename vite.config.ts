@@ -11,7 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@shared': path.resolve(__dirname, '../shared'),
+      '@shared': path.resolve(__dirname, './shared'),
     },
   },
   build: {
@@ -24,8 +24,7 @@ export default defineConfig({
           if (
             id.includes('katex') ||
             id.includes('markdown-it') ||
-            id.includes('/marked/') ||
-            id.includes('dompurify')
+            id.includes('/marked/')
           ) {
             return 'markdown'
           }
@@ -50,9 +49,6 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    fs: {
-      allow: [path.resolve(__dirname, '..')],
-    },
     proxy: {
       '/api': {
         target: 'https://algo.zhiyuansofts.cn',
