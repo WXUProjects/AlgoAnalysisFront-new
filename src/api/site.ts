@@ -1,6 +1,9 @@
-import { endpoints } from '@shared/api'
-import { get, post, str, num, type ApiResult } from '@/lib/http'
+import { endpoints, type BackupJob, type BackupScope } from '@shared/api'
+import { get, post, del, str, num, http, type ApiResult } from '@/lib/http'
+import { jwt } from '@/lib/jwt'
 import { normalizeStaticUrl } from '@/lib/static-url'
+
+export type { BackupJob, BackupScope }
 
 export type SiteConfig = {
   siteTitle: string
@@ -245,6 +248,179 @@ export async function visitPing(path: string, visitorId: string): Promise<ApiRes
   return {
     ...res,
     data: { counted: Boolean(raw?.counted) },
+  }
+}
+
+function normalizeBackupJob(raw: unknown): BackupJob | null {
+  if (!raw || typeof raw !== 'object') return null
+  const d = raw as Record<string, unknown>
+  const scopesRaw = Array.isArray(d.scopes) ? d.scopes : []
+  return {
+    id: num(d.id, 0) || 0,
+    kind: str(d.kind),
+    status: str(d.status),
+    scopes: scopesRaw.map((s) => String(s)),
+    progress: num(d.progress, 0) || 0,
+    message: str(d.message),
+    fileSize: num(d.fileSize, 0) || 0,
+    createdBy: num(d.createdBy, 0) || 0,
+    errorDetail: str(d.errorDetail) || undefined,
+    createdAt: str(d.createdAt) || undefined,
+    startedAt: str(d.startedAt) || undefined,
+    finishedAt: str(d.finishedAt) || undefined,
+    downloadable: Boolean(d.downloadable),
+  }
+}
+
+/** 创建全站数据导出任务（后台异步） */
+export async function startBackupExport(
+  scopes: BackupScope[] = ['all'],
+): Promise<ApiResult<{ jobId: number }>> {
+  const res = await post<Record<string, unknown>>(endpoints.user.site.backup.export, {
+    scopes,
+  })
+  if (!res.success) return { ...res, data: null }
+  const raw = pickRaw(res)
+  if (raw && typeof raw.code === 'number' && raw.code !== 0) {
+    return { success: false, message: str(raw.message, '创建导出失败'), data: null }
+  }
+  const jobId = num(raw?.jobId, 0) || 0
+  if (!jobId) {
+    return { success: false, message: str(raw?.message, '未返回任务 id'), data: null }
+  }
+  return { ...res, data: { jobId } }
+}
+
+/** 上传备份包并创建导入任务（confirm 必须为 RESTORE） */
+export async function startBackupImport(
+  file: File,
+  confirm = 'RESTORE',
+): Promise<ApiResult<{ jobId: number }>> {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('confirm', confirm)
+  try {
+    const headers: Record<string, string> = {}
+    if (jwt.isValid()) {
+      headers.Authorization = `Bearer ${jwt.token}`
+    }
+    const res = await fetch(endpoints.user.site.backup.import, {
+      method: 'POST',
+      headers,
+      body: form,
+      credentials: 'include',
+    })
+    const body = (await res.json().catch(() => null)) as Record<string, unknown> | null
+    if (!body || typeof body !== 'object') {
+      return { success: false, message: '导入响应异常', data: null }
+    }
+    if (typeof body.code === 'number' && body.code !== 0) {
+      return {
+        success: false,
+        message: str(body.message, '创建导入失败'),
+        data: null,
+      }
+    }
+    if (!res.ok) {
+      return {
+        success: false,
+        message: str(body.message, `HTTP ${res.status}`),
+        data: null,
+      }
+    }
+    const jobId = num(body.jobId, 0) || 0
+    if (!jobId) {
+      return { success: false, message: str(body.message, '未返回任务 id'), data: null }
+    }
+    return { success: true, message: str(body.message, 'ok'), data: { jobId } }
+  } catch (e) {
+    return {
+      success: false,
+      message: e instanceof Error ? e.message : '上传失败',
+      data: null,
+    }
+  }
+}
+
+export async function getBackupJob(id: number): Promise<ApiResult<BackupJob>> {
+  const res = await get<Record<string, unknown>>(endpoints.user.site.backup.job(id))
+  if (!res.success) return { ...res, data: null }
+  const raw = pickRaw(res)
+  if (raw && typeof raw.code === 'number' && raw.code !== 0) {
+    return { success: false, message: str(raw.message, '加载失败'), data: null }
+  }
+  const job = normalizeBackupJob(raw?.job ?? raw)
+  if (!job) {
+    return { success: false, message: '任务数据无效', data: null }
+  }
+  return { ...res, data: job }
+}
+
+export async function listBackupJobs(): Promise<ApiResult<BackupJob[]>> {
+  const res = await get<Record<string, unknown>>(endpoints.user.site.backup.jobs)
+  if (!res.success) return { ...res, data: null }
+  const raw = pickRaw(res)
+  if (raw && typeof raw.code === 'number' && raw.code !== 0) {
+    return { success: false, message: str(raw.message, '加载失败'), data: null }
+  }
+  const list = Array.isArray(raw?.jobs) ? raw!.jobs : []
+  return {
+    ...res,
+    data: list.map(normalizeBackupJob).filter((j): j is BackupJob => j != null),
+  }
+}
+
+export async function deleteBackupJob(id: number): Promise<ApiResult<null>> {
+  const res = await del<Record<string, unknown>>(endpoints.user.site.backup.job(id))
+  if (!res.success) return { ...res, data: null }
+  const raw = pickRaw(res)
+  if (raw && typeof raw.code === 'number' && raw.code !== 0) {
+    return { success: false, message: str(raw.message, '删除失败'), data: null }
+  }
+  return { success: true, message: 'ok', data: null }
+}
+
+/** 下载导出完成的 zip（触发浏览器保存） */
+export async function downloadBackupJob(id: number): Promise<ApiResult<null>> {
+  try {
+    const res = await http.get(endpoints.user.site.backup.download(id), {
+      responseType: 'blob',
+      timeout: 600_000,
+      headers: jwt.isValid()
+        ? { Authorization: `Bearer ${jwt.token}` }
+        : undefined,
+    })
+    const blob = res.data as Blob
+    const cd = String(res.headers['content-disposition'] || '')
+    let name = `goalgo-backup-${id}.zip`
+    const m = /filename="?([^";]+)"?/i.exec(cd)
+    if (m?.[1]) name = m[1]
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = name
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+    return { success: true, message: 'ok', data: null }
+  } catch (e) {
+    const err = e as { response?: { data?: Blob }; message?: string }
+    // try parse JSON error from blob
+    if (err.response?.data instanceof Blob) {
+      try {
+        const text = await err.response.data.text()
+        const j = JSON.parse(text) as { message?: string }
+        return { success: false, message: j.message || '下载失败', data: null }
+      } catch {
+        /* ignore */
+      }
+    }
+    return {
+      success: false,
+      message: err.message || '下载失败',
+      data: null,
+    }
   }
 }
 

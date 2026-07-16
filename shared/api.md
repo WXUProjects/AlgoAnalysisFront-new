@@ -116,6 +116,15 @@
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
 | POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
 | GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |
+| POST | `/user/site/backup/export` | 是(站点管理员) | 创建全量/按 scope 导出任务；body `{ scopes?: string[] }`（默认 `["all"]`）；返回 `{ jobId }`；后台慢慢导出 |
+| POST | `/user/site/backup/import` | 是(站点管理员) | multipart：`file`=zip + `confirm=RESTORE`；按包内数据 **清空再写入** 完美复现；返回 `{ jobId }` |
+| GET | `/user/site/backup/jobs` | 是(站点管理员) | 最近备份任务列表 |
+| GET | `/user/site/backup/jobs/{id}` | 是(站点管理员) | 任务状态：`pending\|running\|done\|failed`、progress、message、downloadable |
+| GET | `/user/site/backup/jobs/{id}/download` | 是(站点管理员) | 下载导出完成的 zip（`goalgo-backup-v1`） |
+| DELETE | `/user/site/backup/jobs/{id}` | 是(站点管理员) | 删除已结束任务及磁盘文件 |
+
+**备份 scope（预留细粒度）**：`all` \| `site` \| `users` \| `orgs` \| `pastes` \| `visits` \| `platforms` \| `submits` \| `contests` \| `problems` \| `bulletins` \| `emergency` \| `daily_stats` \| `files`。  
+需 user 服务能连 `algo_core_data`（默认由 `dbname=algo_user` 推导，或 `CWXU_CORE_DATABASE_SOURCE`）。导入时 `config_encryption_key` 指纹须与导出时一致。
 
 **GetAccessStatsRes（审核/运营看板）**
 
@@ -574,6 +583,12 @@ GET    /api/user/site/config
 GET    /api/user/site/admin-config
 POST   /api/user/site/config
 POST   /api/user/site/test-email
+POST   /api/user/site/backup/export
+POST   /api/user/site/backup/import
+GET    /api/user/site/backup/jobs
+GET    /api/user/site/backup/jobs/{id}
+GET    /api/user/site/backup/jobs/{id}/download
+DELETE /api/user/site/backup/jobs/{id}
 GET    /api/user/profile/get-by-id
 GET    /api/user/profile/get-by-name
 GET    /api/user/profile/list

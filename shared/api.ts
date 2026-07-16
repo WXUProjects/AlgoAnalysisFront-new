@@ -46,6 +46,15 @@ export const endpoints = {
       testEmail: `${API_PREFIX}/user/site/test-email`,
       visitPing: `${API_PREFIX}/user/site/visit-ping`,
       accessStats: `${API_PREFIX}/user/site/access-stats`,
+      backup: {
+        export: `${API_PREFIX}/user/site/backup/export`,
+        import: `${API_PREFIX}/user/site/backup/import`,
+        jobs: `${API_PREFIX}/user/site/backup/jobs`,
+        job: (id: number | string) =>
+          `${API_PREFIX}/user/site/backup/jobs/${id}`,
+        download: (id: number | string) =>
+          `${API_PREFIX}/user/site/backup/jobs/${id}/download`,
+      },
     },
     org: {
       list: `${API_PREFIX}/user/org/list`,
@@ -471,4 +480,40 @@ export interface PasteCreateReq {
   content: string
   language?: string
   expire?: PasteExpire
+}
+
+/** 站点备份 scope；`all` 表示全量。后续可在 UI 做多选。 */
+export type BackupScope =
+  | 'all'
+  | 'site'
+  | 'users'
+  | 'orgs'
+  | 'pastes'
+  | 'visits'
+  | 'platforms'
+  | 'submits'
+  | 'contests'
+  | 'problems'
+  | 'bulletins'
+  | 'emergency'
+  | 'daily_stats'
+  | 'files'
+
+export type BackupJobKind = 'export' | 'import'
+export type BackupJobStatus = 'pending' | 'running' | 'done' | 'failed'
+
+export interface BackupJob {
+  id: number
+  kind: BackupJobKind | string
+  status: BackupJobStatus | string
+  scopes: string[]
+  progress: number
+  message: string
+  fileSize: number
+  createdBy: number
+  errorDetail?: string
+  createdAt?: string
+  startedAt?: string
+  finishedAt?: string
+  downloadable: boolean
 }
