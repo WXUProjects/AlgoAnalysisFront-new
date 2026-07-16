@@ -100,7 +100,9 @@ export function OrgHub() {
       <div>
         <h1 className="text-xl font-semibold">我的组织</h1>
         <p className="text-sm text-muted-foreground">
-          默认加入公共域。可用团队识别码加入其他校队，并切换当前组织。公共域的称呼与站内昵称同步，其他组织可单独设置。
+          默认加入公共域。可用团队识别码加入其他校队，并切换当前组织。
+          <strong className="font-medium text-foreground">站内昵称请在下方「修改称呼」中设置</strong>
+          （改公共域称呼即改昵称）；其他校队可单独设置队内名称。
         </p>
       </div>
 
@@ -216,10 +218,14 @@ export function OrgHub() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>修改组织内称呼</DialogTitle>
+            <DialogTitle>
+              {editOrg?.isSystem ? '修改站内昵称（公共域）' : '修改组织内称呼'}
+            </DialogTitle>
             <DialogDescription>
               {editOrg
-                ? `在「${editOrg.name}」中展示的名称，仅该组织成员可见。`
+                ? editOrg.isSystem
+                  ? '公共域称呼会同步为站内昵称，在个人主页与公共空间展示。'
+                  : `在「${editOrg.name}」中展示的名称，仅该组织成员可见。`
                 : ''}
             </DialogDescription>
           </DialogHeader>

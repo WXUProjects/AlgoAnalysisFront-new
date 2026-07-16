@@ -222,10 +222,10 @@ export interface RegisterRes {
   message: string
 }
 
-/** purpose: register | reset */
+/** purpose: register | reset | change_email */
 export interface SendCodeReq {
   email: string
-  purpose: 'register' | 'reset'
+  purpose: 'register' | 'reset' | 'change_email'
 }
 
 export interface SendCodeRes {

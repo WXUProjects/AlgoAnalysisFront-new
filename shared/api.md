@@ -71,7 +71,7 @@
 ```json
 { "email": "string", "purpose": "register" }
 ```
-`purpose`: `register` | `reset`。验证码 10 分钟有效，同一邮箱 60 秒内不可重复发送。
+`purpose`: `register` | `reset` | `change_email`。验证码 10 分钟有效，同一邮箱 60 秒内不可重复发送。`change_email` 须登录，用于绑定/更换邮箱（发往**新**邮箱）。
 
 **SendCodeRes**
 ```json
@@ -98,7 +98,7 @@
 | GET | `/user/profile/get-by-name` | 否 | query: `name` 模糊（用户名/昵称） |
 | GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开）、`problemFetchEnabled`/`problemAiEnabled`（题面爬取/AI 有效状态）、`createdAt`（注册时间 unix 秒） |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
-| POST | `/user/profile/update` | 是 | 更新资料 |
+| POST | `/user/profile/update` | 是 | 更新头像/邮箱；`name` 已忽略（昵称改「我的组织」）；邮箱变更须 `emailCode`（`purpose=change_email`） |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
 | POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；本人 / 站点管理员 / **当前组织 staff 管理本组织成员**；无组织授权时不可开启日报/周报 |
 | POST | `/user/profile/set-problem-pipeline` | 是(站点管理员) | body: `{ userId, enabled, kind: fetch\|ai }`；个人覆盖：近窗提交是否触发题面爬取 / 题面 AI（默认按是否非公共域组织） |
@@ -334,8 +334,17 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 **UpdateReq**
 ```json
-{ "userId": 1, "name": "string", "email": "string", "avatar": "string" }
+{
+  "userId": 1,
+  "email": "string",
+  "avatar": "string",
+  "emailCode": "string",
+  "name": "string"
+}
 ```
+- `name`：已废弃，服务端忽略；请在「我的组织」改组织内称呼（公共域同步全局昵称）
+- `email` 与当前不同时：`emailCode` 必填（`POST /user/auth/send-code`，`purpose=change_email`）
+- 旧版迁移用户若邮箱为空，须在此绑定并验证后才能收订阅/日报邮件
 
 **MoveGroupReq**
 ```json
@@ -473,7 +482,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 **scope**：`platform`（整平台）或 `contest`（单场）。  
 **advanceMinutes** 白名单：`30, 60, 180, 360, 720, 1440, 2880, 4320`。  
-订阅需账号已绑定邮箱（core 经 user 内部 `GetContactEmail` 校验）；**首次创建或从关闭→开启**时发送**订阅成功确认邮件**（改提前量/重复保存不重发）；开赛前提醒在 `advanceMinutes` 时发送，同一用户同一场同一提前量只发一次（先原子占坑再发信，防 cron 重试/多实例双发）。
+订阅需账号已绑定邮箱（core 经 user 内部 `GetContactEmail` 校验）；`enabled=true` 保存成功后异步发送**订阅成功确认邮件**（新建/重开/改提前量必发；已开启再保存 5 分钟内限流防连点）。开赛前提醒在 `advanceMinutes` 时发送，同一用户同一场同一提前量只发一次（先原子占坑再发信）。
 
 ### Bulletin
 

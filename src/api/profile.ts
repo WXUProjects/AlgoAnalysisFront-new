@@ -96,11 +96,19 @@ export async function getProfileByName(
 
 export async function updateProfile(body: {
   userId: number
-  name: string
   email: string
   avatar?: string
+  /** 修改/绑定邮箱时必填：发往新邮箱的验证码 */
+  emailCode?: string
+  /** @deprecated 昵称请在「我的组织」修改，服务端已忽略 */
+  name?: string
 }): Promise<ApiResult<unknown>> {
-  return post(endpoints.user.profile.update, body)
+  return post(endpoints.user.profile.update, {
+    userId: body.userId,
+    email: body.email,
+    avatar: body.avatar ?? '',
+    emailCode: body.emailCode ?? '',
+  })
 }
 
 export async function setEmailEnabled(

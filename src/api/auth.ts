@@ -11,9 +11,9 @@ import {
   type UserProfile,
 } from '@shared/api'
 import { http, type ApiResult } from '@/lib/http'
-import { get } from '@/lib/http'
 import { jwt } from '@/lib/jwt'
 import { hashPassword } from '@/lib/hash'
+import { getProfileById } from '@/api/profile'
 
 function errMessage(err: unknown, fallback: string): string {
   return (
@@ -66,7 +66,10 @@ export async function sendCode(
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { success: false, message: '请输入有效邮箱', data: null }
   }
-  const body: SendCodeReq = { email: email.trim(), purpose }
+  const body: SendCodeReq = {
+    email: email.trim(),
+    purpose: purpose || 'register',
+  }
   try {
     const res = await http.post<SendCodeRes>(endpoints.user.auth.sendCode, body)
     const data = res.data
@@ -225,7 +228,8 @@ export async function resetPassword(input: {
 export async function fetchProfileById(
   userId: number,
 ): Promise<ApiResult<UserProfile>> {
-  return get<UserProfile>(endpoints.user.profile.getById, { userId })
+  // 与 getProfileById 一致：规范化 protobuf 数字字符串等字段
+  return getProfileById(userId)
 }
 
 /** 根据当前登录态重签 JWT（任命后刷新页面可同步权限） */
