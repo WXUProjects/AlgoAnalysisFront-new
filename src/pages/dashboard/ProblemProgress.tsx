@@ -410,7 +410,8 @@ export function DashboardProblemProgress() {
                   <span className="mx-2 text-muted-foreground">·</span>
                   处理服务 {q ? num(q.consumers) : '-'}
                   <span className="mx-2 text-muted-foreground">·</span>
-                  同时分析 {q ? num(q.concurrency) : '-'}
+                  {name === 'problem_fetch' ? '同时获取' : '同时分析'}{' '}
+                  {q ? num(q.concurrency) : '-'}
                 </p>
               </CardContent>
             </Card>
