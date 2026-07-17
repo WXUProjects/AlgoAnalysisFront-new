@@ -171,11 +171,14 @@ export async function listProfiles(
   pageNum = 1,
   pageSize = 10,
   scope?: 'org' | 'site',
+  keyword?: string,
 ): Promise<ApiResult<UserListRes>> {
+  const kw = keyword?.trim()
   const res = await get<Record<string, unknown>>(endpoints.user.profile.list, {
     pageNum,
     pageSize,
     ...(scope ? { scope } : {}),
+    ...(kw ? { keyword: kw } : {}),
   })
   // list 可能无 success 字段，裸 { list, total }
   const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>

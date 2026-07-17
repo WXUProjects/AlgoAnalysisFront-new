@@ -95,13 +95,20 @@ export function DashboardUser() {
 function UserListPage({ scope }: { scope: UserScope }) {
   const { isAdmin, isStaff, currentOrg } = useAuth()
   const isSite = scope === 'site'
-  const { page, pageSize, setPage, setPageSize } = useListQueryState({
-    defaultPageSize: DEFAULT_PAGE_SIZE,
-  })
+  const { page, pageSize, setPage, setPageSize, patch, searchParams } =
+    useListQueryState({
+      defaultPageSize: DEFAULT_PAGE_SIZE,
+    })
+  const keyword = (searchParams.get('keyword') || '').trim()
+  const [keywordDraft, setKeywordDraft] = useState(keyword)
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<UserListItem[]>([])
   const [groups, setGroups] = useState<GroupInfo[]>([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setKeywordDraft(keyword)
+  }, [keyword])
 
   const [editUser, setEditUser] = useState<UserListItem | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -125,7 +132,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await listProfiles(page, pageSize, scope)
+    const res = await listProfiles(page, pageSize, scope, keyword || undefined)
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '用户列表加载失败，请稍后重试')
@@ -133,7 +140,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page, pageSize, scope])
+  }, [page, pageSize, scope, keyword])
 
   useEffect(() => {
     void load()
@@ -293,7 +300,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     }
     toast.success(res.message || '已更新同步间隔')
     // 刷新列表以拿有效间隔
-    const listRes = await listProfiles(page, pageSize, scope)
+    const listRes = await listProfiles(page, pageSize, scope, keyword || undefined)
     if (listRes.success && listRes.data) {
       setList(listRes.data.list)
       setTotal(listRes.data.total)
@@ -432,13 +439,58 @@ function UserListPage({ scope }: { scope: UserScope }) {
       </div>
 
       <Card className="gap-0 py-0 overflow-hidden">
-        <CardHeader className="px-4 py-3 border-b">
+        <CardHeader className="px-4 py-3 border-b space-y-3">
           <CardTitle className="text-base">{isSite ? '用户列表' : '成员列表'}</CardTitle>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              className="sm:max-w-xs"
+              placeholder={
+                isSite ? '搜索昵称或用户名' : '搜索组织内名称或用户名'
+              }
+              value={keywordDraft}
+              onChange={(e) => setKeywordDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  patch({ keyword: keywordDraft.trim() || null })
+                }
+              }}
+              aria-label="搜索用户"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => patch({ keyword: keywordDraft.trim() || null })}
+              >
+                搜索
+              </Button>
+              {(keyword || keywordDraft) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setKeywordDraft('')
+                    patch({ keyword: null })
+                  }}
+                >
+                  清空
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
             <div className="p-4">
               <Skeleton className="h-40 w-full" />
+            </div>
+          ) : list.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              {keyword
+                ? `没有找到与「${keyword}」相关的用户`
+                : isSite
+                  ? '暂无用户'
+                  : '暂无成员'}
             </div>
           ) : (
             <Table>
@@ -651,13 +703,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     </TableRow>
                   )
                 })}
-                {!list.length && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
-                      暂无用户
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           )}
