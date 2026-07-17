@@ -27,7 +27,11 @@ function notifLink(n: NotificationItem): string | null {
     if (n.refType === 'solution' && n.refId > 0) {
       return `/question-bank/detail/${n.problemId}/solution/${n.refId}`
     }
-    if (n.refType === 'comment' || n.type === 'mention') {
+    if (
+      n.refType === 'comment' ||
+      n.type === 'mention' ||
+      n.type === 'comment_reply'
+    ) {
       return `/question-bank/detail/${n.problemId}?tab=comments`
     }
     return `/question-bank/detail/${n.problemId}`

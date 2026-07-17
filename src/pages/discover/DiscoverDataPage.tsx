@@ -213,21 +213,16 @@ export function DiscoverDataPage({ isLogin, userId }: Props) {
   const stats: PeriodItem | null =
     mode === 'ac' ? (period?.ac ?? null) : (period?.submit ?? null)
   const modeLabel = mode === 'ac' ? 'AC' : '提交'
-  const acRate =
-    period && period.submit.total > 0
-      ? `${((period.ac.total / period.submit.total) * 100).toFixed(1)}%`
-      : '—'
 
   const careerValue = useMemo(() => {
     if (!period) return '—'
     if (mode === 'submit') return String(period.submit.total)
+    // 生涯只展示 AC 次数；去重题数见「总题数」
     const problems = period.ac.total
-    const times = Math.max(period.ac.totalRaw ?? problems, problems)
-    if (period.ac.totalRaw != null && times !== problems) {
-      return `${times} · ${problems}`
-    }
-    return String(problems)
+    return String(Math.max(period.ac.totalRaw ?? problems, problems))
   }, [period, mode])
+
+  const totalProblems = period != null ? String(period.ac.total) : '—'
 
   const weekTrend = stats
     ? trendOf(stats.thisWeek, stats.lastWeek)
@@ -277,14 +272,14 @@ export function DiscoverDataPage({ isLogin, userId }: Props) {
           <StatTile
             label="生涯"
             value={careerValue}
-            hint={mode === 'ac' ? '次数 · 去重题数' : '累计提交'}
+            hint={mode === 'ac' ? '累计 AC 次数' : '累计提交'}
             loading={loading}
             accent
           />
           <StatTile
-            label="AC 率"
-            value={acRate}
-            hint="通过 / 提交"
+            label="总题数"
+            value={totalProblems}
+            hint="累计通过题"
             loading={loading}
           />
           <StatTile

@@ -649,14 +649,16 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/core/problem/get` | 否 | query: `id` |
 | GET | `/core/problem/following-status` | 是 | query: `problemId` → 关注用户对本题 `AC|TRIED|NONE` |
 | GET | `/core/problem/submissions` | 否 | query: `problemId`, `page`, `pageSize`, `userId?`, `followingOnly?`（不受域限制）, `status?`=`AC`；返回 `data` + **`total`**（服务端分页） |
-| GET | `/core/problem/comment/list` | 否 | query: `problemId`, `page`, `pageSize` → 题目评论（**全站可见，不做组织隔离**） |
-| POST | `/core/problem/comment/create` | 是 | body: `{ problemId, content, syncToPublic? }`；支持 `@username`；同步发现流（当前组织）；`syncToPublic=true` 且非公共域时**额外**写入公共域发现流 |
-| POST | `/core/problem/comment/delete` | 是 | body: `{ id }` 本人或站管 |
-| GET | `/core/problem/solution/list` | 否 | query: `problemId`, `page`, `pageSize` → **用户题解**列表（全站；非 AI `solutions`） |
-| GET | `/core/problem/solution/get` | 否 | query: `id` → 题解全文 `contentMd` |
+| GET | `/core/problem/comment/list` | 否（登录可带 liked） | query: `problemId`, `page`, `pageSize` → **顶层评论分页** + 嵌套 `replies`（全站；含 `likeCount`/`liked`/`parentId`/`rootId`/`depth`） |
+| POST | `/core/problem/comment/create` | 是 | body: `{ problemId, content, parentId?, syncToPublic? }`；`parentId` 回复某条；最大深度 3；仅**顶层**写发现流；回复通知父作者；`@username` |
+| POST | `/core/problem/comment/delete` | 是 | body: `{ id }` 本人或站管；**级联删除子树** + 点赞/举报/发现流 |
+| GET | `/core/problem/solution/list` | 否（登录可带 liked） | query: `problemId`, `page`, `pageSize` → **用户题解**列表（含 `likeCount`/`liked`） |
+| GET | `/core/problem/solution/get` | 否（登录可带 liked） | query: `id` → 题解全文 `contentMd` + `likeCount`/`liked` |
 | POST | `/core/problem/solution/create` | 是 | body: `{ problemId, title, contentMd }`；Markdown；`@username`；同步发现流 |
 | POST | `/core/problem/solution/update` | 是 | body: `{ id, title, contentMd }` 本人或站管 |
-| POST | `/core/problem/solution/delete` | 是 | body: `{ id }` 本人或站管 |
+| POST | `/core/problem/solution/delete` | 是 | body: `{ id }` 本人或站管；清理点赞/举报/发现流 |
+| POST | `/core/problem/like` | 是 | body: `{ targetType: "comment"\|"solution", targetId }` **toggle** 点赞 → `{ liked, likeCount }` |
+| POST | `/core/problem/report` | 是 | body: `{ targetType: "comment"\|"solution", targetId, reason }`；同用户同目标去重 |
 | GET | `/core/activity/feed` | 否（建议登录） | query: `page`, `pageSize`, `type?`=`comment\|solution` → 发现动态（**按 JWT 当前组织隔离**） |
 | GET | `/core/user/recent-comments` | 否 | query: `userId`, `limit?` → 用户近期评论（资料页） |
 | GET | `/core/user/recent-solutions` | 否 | query: `userId`, `limit?` → 用户近期题解（资料页） |
@@ -831,12 +833,19 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 - **评论、题解挂在题目上，全站可见**（list 不按 org 过滤）。
 - **发现流 `activity/feed` 按组织隔离**：创建时写入作者 JWT `orgId`；列表只返回当前组织条目。
 - **评论可选同步公共域**：`POST comment/create` 传 `syncToPublic: true` 时，若当前组织不是公共域，会再写一条公共域 `activity_feeds`（同一评论 `refId`）；删除评论时两条 feed 一并清除。
+- **层级评论**：`parentId` 指定回复目标；`rootId`/`depth` 维护树；最大深度 **3**；list **仅分页顶层**，子回复在 `replies` 中递归返回；仅顶层写发现流；回复会通知父评论作者（`comment_reply`）。
+- **点赞**：`POST /core/problem/like` toggle；`targetType`=`comment|solution`；列表/详情带 `likeCount`/`liked`。
+- **举报**：`POST /core/problem/report`；同用户同目标仅一次；不能举报自己。
 - 题解 `contentMd` 按题面规格渲染（GFM + 公式）；与 AI `ProblemInfo.solutions` 无关。
 - `@username` 在创建时解析并写站内通知。
 
 **Comment create** `POST /core/problem/comment/create`
 ```json
-{ "problemId": 1, "content": "不错 @bob", "syncToPublic": true }
+{ "problemId": 1, "content": "不错 @bob", "parentId": 0, "syncToPublic": true }
+```
+回复：
+```json
+{ "problemId": 1, "content": "我也这么觉得", "parentId": 12 }
 ```
 
 **Comment list** `GET /core/problem/comment/list?problemId=1&page=1&pageSize=20`
@@ -845,7 +854,14 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
   "success": true,
   "list": [{
     "id": 1, "problemId": 1, "userId": 2, "username": "alice", "name": "Alice",
-    "avatar": "", "content": "不错 @bob", "createdAt": 1710000000
+    "avatar": "", "content": "不错 @bob", "parentId": 0, "rootId": 1, "depth": 0,
+    "likeCount": 3, "liked": false, "createdAt": 1710000000,
+    "replies": [{
+      "id": 12, "parentId": 1, "rootId": 1, "depth": 1,
+      "replyToUserId": 2, "replyToUsername": "alice", "replyToName": "Alice",
+      "content": "同意", "likeCount": 0, "liked": false, "replies": [],
+      "createdAt": 1710000100
+    }]
   }],
   "total": 1, "page": 1, "pageSize": 20
 }
@@ -854,6 +870,19 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 **Solution create** `POST /core/problem/solution/create`
 ```json
 { "problemId": 1, "title": "差分思路", "contentMd": "## 思路\n$O(n)$" }
+```
+
+**Like** `POST /core/problem/like`
+```json
+{ "targetType": "comment", "targetId": 12 }
+```
+```json
+{ "success": true, "data": { "liked": true, "likeCount": 4, "targetType": "comment", "targetId": 12 } }
+```
+
+**Report** `POST /core/problem/report`
+```json
+{ "targetType": "solution", "targetId": 5, "reason": "广告引流" }
 ```
 
 **Activity feed** `GET /core/activity/feed?page=1&pageSize=20&type=comment`

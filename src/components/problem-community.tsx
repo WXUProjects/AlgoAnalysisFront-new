@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { BookOpenIcon, MessageSquareIcon, Trash2Icon } from 'lucide-react'
+import {
+  BookOpenIcon,
+  FlagIcon,
+  HeartIcon,
+  MessageSquareIcon,
+  Trash2Icon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import {
   createProblemComment,
@@ -8,9 +14,11 @@ import {
   deleteProblemSolution,
   listProblemComments,
   listProblemSolutions,
+  toggleCommunityLike,
 } from '@/api/community'
 import type { ProblemCommentItem, ProblemUserSolutionItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+import { CommunityReportDialog } from '@/components/community-report-dialog'
 import { MentionTextarea } from '@/components/mention-textarea'
 import { Pagination } from '@/components/pagination'
 import { Button } from '@/components/ui/button'
@@ -44,6 +52,10 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
   const [solutions, setSolutions] = useState<ProblemUserSolutionItem[]>([])
   const [sTotal, setSTotal] = useState(0)
   const [sPage, setSPage] = useState(1)
+  const [likingId, setLikingId] = useState(0)
+  const [reportTarget, setReportTarget] = useState<ProblemUserSolutionItem | null>(
+    null,
+  )
 
   const loadSolutions = useCallback(async () => {
     const res = await listProblemSolutions({ problemId, page: sPage, pageSize: 10 })
@@ -74,6 +86,30 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
     }
     toast.success('已删除')
     void loadSolutions()
+  }
+
+  async function onLikeSolution(s: ProblemUserSolutionItem) {
+    if (!isLogin) {
+      toast.error('请先登录后再点赞')
+      return
+    }
+    setLikingId(s.id)
+    const res = await toggleCommunityLike({
+      targetType: 'solution',
+      targetId: s.id,
+    })
+    setLikingId(0)
+    if (!res.success || !res.data) {
+      toast.error(res.message || '操作失败')
+      return
+    }
+    setSolutions((prev) =>
+      prev.map((x) =>
+        x.id === s.id
+          ? { ...x, liked: res.data!.liked, likeCount: res.data!.likeCount }
+          : x,
+      ),
+    )
   }
 
   const myId = user?.userId ?? 0
@@ -126,32 +162,60 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
                   </p>
                 )}
               </Link>
-              {(myId === s.userId || isSiteAdmin) && (
-                <div className="flex gap-1">
+              <div className="flex flex-wrap items-center gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 gap-1 px-2"
+                  disabled={likingId === s.id}
+                  onClick={() => void onLikeSolution(s)}
+                >
+                  <HeartIcon
+                    className={cn(s.liked && 'fill-current text-destructive')}
+                    data-icon="inline-start"
+                  />
+                  {s.likeCount && s.likeCount > 0 ? s.likeCount : '赞'}
+                </Button>
+                {isLogin && myId !== s.userId && (
                   <Button
                     type="button"
                     size="sm"
                     variant="ghost"
                     className="h-7 px-2"
-                    onClick={() =>
-                      navigate(
-                        `/question-bank/detail/${problemId}/solution/${s.id}/edit`,
-                      )
-                    }
+                    onClick={() => setReportTarget(s)}
                   >
-                    编辑
+                    <FlagIcon data-icon="inline-start" />
+                    举报
                   </Button>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="size-7"
-                    onClick={() => void removeSolution(s.id)}
-                  >
-                    <Trash2Icon />
-                  </Button>
-                </div>
-              )}
+                )}
+                {(myId === s.userId || isSiteAdmin) && (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2"
+                      onClick={() =>
+                        navigate(
+                          `/question-bank/detail/${problemId}/solution/${s.id}/edit`,
+                        )
+                      }
+                    >
+                      编辑
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="size-7"
+                      onClick={() => void removeSolution(s.id)}
+                    >
+                      <Trash2Icon />
+                    </Button>
+                  </>
+                )}
+              </div>
             </li>
           ))}
           {!solutions.length && (
@@ -169,11 +233,22 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
           />
         )}
       </CardContent>
+
+      {reportTarget && (
+        <CommunityReportDialog
+          open={!!reportTarget}
+          onOpenChange={(o) => !o && setReportTarget(null)}
+          targetType="solution"
+          targetId={reportTarget.id}
+          ownerUserId={reportTarget.userId}
+          myUserId={myId}
+        />
+      )}
     </Card>
   )
 }
 
-/** 题目评论区：全站可见，独立于题解侧栏 */
+/** 题目评论区：全站可见，支持层级回复 / 点赞 / 举报 */
 export function ProblemComments({ problemId, className }: SharedProps) {
   const { isLogin, user, isSiteAdmin, currentOrg } = useAuth()
   const isPublicOrg =
@@ -184,8 +259,13 @@ export function ProblemComments({ problemId, className }: SharedProps) {
   const [cPage, setCPage] = useState(1)
   const [cDraft, setCDraft] = useState('')
   const [cSending, setCSending] = useState(false)
-  /** 非公共域：是否同步到公共域发现流 */
+  /** 正在回复的评论（null = 顶层） */
+  const [replyTo, setReplyTo] = useState<ProblemCommentItem | null>(null)
   const [syncToPublic, setSyncToPublic] = useState(false)
+  const [likingId, setLikingId] = useState(0)
+  const [reportTarget, setReportTarget] = useState<ProblemCommentItem | null>(
+    null,
+  )
 
   const loadComments = useCallback(async () => {
     const res = await listProblemComments({ problemId, page: cPage, pageSize: 10 })
@@ -205,11 +285,13 @@ export function ProblemComments({ problemId, className }: SharedProps) {
       toast.error('请先写点内容')
       return
     }
-    const didSyncPublic = !isPublicOrg && syncToPublic
+    const isReply = Boolean(replyTo)
+    const didSyncPublic = !isReply && !isPublicOrg && syncToPublic
     setCSending(true)
     const res = await createProblemComment({
       problemId,
       content,
+      parentId: replyTo?.id || 0,
       syncToPublic: didSyncPublic,
     })
     setCSending(false)
@@ -218,11 +300,16 @@ export function ProblemComments({ problemId, className }: SharedProps) {
       return
     }
     setCDraft('')
+    setReplyTo(null)
     setSyncToPublic(false)
     toast.success(
-      didSyncPublic ? '评论已发布，并同步到公共域' : '评论已发布',
+      isReply
+        ? '回复已发布'
+        : didSyncPublic
+          ? '评论已发布，并同步到公共域'
+          : '评论已发布',
     )
-    setCPage(1)
+    if (!isReply) setCPage(1)
     void loadComments()
   }
 
@@ -234,6 +321,44 @@ export function ProblemComments({ problemId, className }: SharedProps) {
     }
     toast.success('已删除')
     void loadComments()
+  }
+
+  function updateLikeInTree(
+    list: ProblemCommentItem[],
+    id: number,
+    liked: boolean,
+    likeCount: number,
+  ): ProblemCommentItem[] {
+    return list.map((c) => {
+      if (c.id === id) return { ...c, liked, likeCount }
+      if (c.replies?.length) {
+        return {
+          ...c,
+          replies: updateLikeInTree(c.replies, id, liked, likeCount),
+        }
+      }
+      return c
+    })
+  }
+
+  async function onLikeComment(c: ProblemCommentItem) {
+    if (!isLogin) {
+      toast.error('请先登录后再点赞')
+      return
+    }
+    setLikingId(c.id)
+    const res = await toggleCommunityLike({
+      targetType: 'comment',
+      targetId: c.id,
+    })
+    setLikingId(0)
+    if (!res.success || !res.data) {
+      toast.error(res.message || '操作失败')
+      return
+    }
+    setComments((prev) =>
+      updateLikeInTree(prev, c.id, res.data!.liked, res.data!.likeCount),
+    )
   }
 
   const myId = user?.userId ?? 0
@@ -252,15 +377,38 @@ export function ProblemComments({ problemId, className }: SharedProps) {
       <CardContent className="flex flex-col gap-3 p-4">
         {isLogin ? (
           <div className="flex flex-col gap-2">
+            {replyTo && (
+              <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                <span>
+                  回复{' '}
+                  <span className="font-medium text-foreground">
+                    {replyTo.name || replyTo.username || `用户${replyTo.userId}`}
+                  </span>
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2"
+                  onClick={() => setReplyTo(null)}
+                >
+                  取消
+                </Button>
+              </div>
+            )}
             <MentionTextarea
               value={cDraft}
               onChange={setCDraft}
-              placeholder="写点想法，可用 @用户名 提醒他人…"
+              placeholder={
+                replyTo
+                  ? `回复 ${replyTo.name || replyTo.username || ''}…`
+                  : '写点想法，可用 @用户名 提醒他人…'
+              }
               maxLength={2000}
               rows={3}
             />
             <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
-              {!isPublicOrg ? (
+              {!replyTo && !isPublicOrg ? (
                 <Field
                   orientation="horizontal"
                   className="mr-auto w-auto max-w-full gap-2"
@@ -291,7 +439,11 @@ export function ProblemComments({ problemId, className }: SharedProps) {
                 disabled={cSending}
                 onClick={() => void submitComment()}
               >
-                {cSending ? '发布中…' : '发布评论'}
+                {cSending
+                  ? '发布中…'
+                  : replyTo
+                    ? '发布回复'
+                    : '发布评论'}
               </Button>
             </div>
           </div>
@@ -304,41 +456,27 @@ export function ProblemComments({ problemId, className }: SharedProps) {
           </p>
         )}
 
-        <ul className="divide-y rounded-lg border">
+        <ul className="flex flex-col gap-0 divide-y rounded-lg border">
           {comments.map((c) => (
-            <li key={c.id} className="px-3 py-3 text-sm">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <Link
-                    to={
-                      c.username
-                        ? `/profile/${c.username}`
-                        : `/profile?id=${c.userId}`
-                    }
-                    className="font-medium hover:underline"
-                  >
-                    {c.name || c.username || `用户${c.userId}`}
-                  </Link>
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {formatTime(c.createdAt)}
-                  </span>
-                </div>
-                {(myId === c.userId || isSiteAdmin) && (
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="size-7 shrink-0"
-                    onClick={() => void removeComment(c.id)}
-                  >
-                    <Trash2Icon />
-                  </Button>
-                )}
-              </div>
-              <p className="mt-1 whitespace-pre-wrap break-words text-muted-foreground">
-                {c.content}
-              </p>
-            </li>
+            <CommentNode
+              key={c.id}
+              comment={c}
+              depth={0}
+              myId={myId}
+              isLogin={isLogin}
+              isSiteAdmin={isSiteAdmin}
+              likingId={likingId}
+              onLike={onLikeComment}
+              onReply={(item) => {
+                if (!isLogin) {
+                  toast.error('请先登录后再回复')
+                  return
+                }
+                setReplyTo(item)
+              }}
+              onReport={setReportTarget}
+              onDelete={removeComment}
+            />
           ))}
           {!comments.length && (
             <li className="px-3 py-8 text-center text-sm text-muted-foreground">
@@ -355,6 +493,153 @@ export function ProblemComments({ problemId, className }: SharedProps) {
           />
         )}
       </CardContent>
+
+      {reportTarget && (
+        <CommunityReportDialog
+          open={!!reportTarget}
+          onOpenChange={(o) => !o && setReportTarget(null)}
+          targetType="comment"
+          targetId={reportTarget.id}
+          ownerUserId={reportTarget.userId}
+          myUserId={myId}
+        />
+      )}
     </Card>
+  )
+}
+
+type CommentNodeProps = {
+  comment: ProblemCommentItem
+  depth: number
+  myId: number
+  isLogin: boolean
+  isSiteAdmin: boolean
+  likingId: number
+  onLike: (c: ProblemCommentItem) => void
+  onReply: (c: ProblemCommentItem) => void
+  onReport: (c: ProblemCommentItem) => void
+  onDelete: (id: number) => void
+}
+
+function CommentNode({
+  comment: c,
+  depth,
+  myId,
+  isLogin,
+  isSiteAdmin,
+  likingId,
+  onLike,
+  onReply,
+  onReport,
+  onDelete,
+}: CommentNodeProps) {
+  const indent = Math.min(depth, 3) * 12
+  const replies = c.replies || []
+
+  return (
+    <li className="list-none">
+      <div
+        className="px-3 py-3 text-sm"
+        style={{ paddingLeft: 12 + indent }}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <Link
+              to={
+                c.username
+                  ? `/profile/${c.username}`
+                  : `/profile?id=${c.userId}`
+              }
+              className="font-medium hover:underline"
+            >
+              {c.name || c.username || `用户${c.userId}`}
+            </Link>
+            {c.replyToUserId ? (
+              <span className="ml-1.5 text-xs text-muted-foreground">
+                回复{' '}
+                <span className="text-foreground/80">
+                  {c.replyToName ||
+                    c.replyToUsername ||
+                    `用户${c.replyToUserId}`}
+                </span>
+              </span>
+            ) : null}
+            <span className="ml-2 text-xs text-muted-foreground">
+              {formatTime(c.createdAt)}
+            </span>
+          </div>
+          {(myId === c.userId || isSiteAdmin) && (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="size-7 shrink-0"
+              onClick={() => void onDelete(c.id)}
+            >
+              <Trash2Icon />
+            </Button>
+          )}
+        </div>
+        <p className="mt-1 whitespace-pre-wrap break-words text-muted-foreground">
+          {c.content}
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1 px-2"
+            disabled={likingId === c.id}
+            onClick={() => void onLike(c)}
+          >
+            <HeartIcon
+              className={cn(c.liked && 'fill-current text-destructive')}
+              data-icon="inline-start"
+            />
+            {c.likeCount && c.likeCount > 0 ? c.likeCount : '赞'}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2"
+            onClick={() => onReply(c)}
+          >
+            回复
+          </Button>
+          {isLogin && myId !== c.userId && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2"
+              onClick={() => onReport(c)}
+            >
+              <FlagIcon data-icon="inline-start" />
+              举报
+            </Button>
+          )}
+        </div>
+      </div>
+      {replies.length > 0 && (
+        <ul className="border-t border-dashed">
+          {replies.map((r) => (
+            <CommentNode
+              key={r.id}
+              comment={r}
+              depth={depth + 1}
+              myId={myId}
+              isLogin={isLogin}
+              isSiteAdmin={isSiteAdmin}
+              likingId={likingId}
+              onLike={onLike}
+              onReply={onReply}
+              onReport={onReport}
+              onDelete={onDelete}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
   )
 }

@@ -1,15 +1,26 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BookmarkIcon,
+  CalendarIcon,
   FlameIcon,
   TrendingDownIcon,
   TrendingUpIcon,
   UsersIcon,
 } from 'lucide-react'
-import type { PeriodData } from '@shared/api'
+import { listContestCalendar } from '@/api/contest-calendar'
+import type { ContestCalendarItem, PeriodData } from '@shared/api'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { FeedScopeBar } from './FeedScopeBar'
 import type { FeedScope } from './types'
@@ -64,7 +75,7 @@ function StatCell({
   )
 }
 
-/** 左侧仅个人看板 + 提交动态范围（视图切换与顶部 Tab 重复，已去掉） */
+/** 左侧：提交范围 + 个人看板 + 近期竞赛（从右栏迁来，平衡高度） */
 export function LeftRail({
   feedScope,
   onFeedScope,
@@ -81,26 +92,31 @@ export function LeftRail({
   const delta =
     ac != null ? weekDelta(ac.thisWeek, ac.lastWeek) : null
 
-  const acRate =
-    ac != null && submit != null && submit.total > 0
-      ? `${((ac.total / submit.total) * 100).toFixed(0)}%`
-      : loading
-        ? '…'
-        : '—'
+  const [contests, setContests] = useState<ContestCalendarItem[]>([])
+  const [contestLoading, setContestLoading] = useState(true)
 
-  const totalAc = ac
-    ? (() => {
-        const problems = ac.total
-        const times = Math.max(ac.totalRaw ?? problems, problems)
-        // 有次数差异时显示「次数 · 题数」，否则只显示题数
-        if (ac.totalRaw != null && times !== problems) {
-          return `${problems}`
-        }
-        return String(problems)
-      })()
+  useEffect(() => {
+    let cancelled = false
+    setContestLoading(true)
+    void listContestCalendar({ status: 'upcoming', limit: 4 }).then((res) => {
+      if (cancelled) return
+      setContestLoading(false)
+      if (res.success && res.data) setContests(res.data.list.slice(0, 4))
+      else setContests([])
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  /** 累计 AC 次数（不去重） */
+  const totalAcTimes = ac
+    ? String(Math.max(ac.totalRaw ?? ac.total, ac.total))
     : loading
       ? '…'
       : '—'
+  /** 累计去重题数 */
+  const totalProblems = ac ? String(ac.total) : loading ? '…' : '—'
 
   return (
     <aside
@@ -170,8 +186,8 @@ export function LeftRail({
               <div className="grid grid-cols-2 gap-1.5">
                 <StatCell label="今日 AC" value={fmtNum(ac?.today, loading)} accent />
                 <StatCell label="本月 AC" value={fmtNum(ac?.thisMonth, loading)} />
-                <StatCell label="累计 AC" value={totalAc} />
-                <StatCell label="AC 率" value={acRate} />
+                <StatCell label="累计 AC" value={totalAcTimes} />
+                <StatCell label="总题数" value={totalProblems} />
               </div>
 
               {/* 提交量 */}
@@ -247,6 +263,55 @@ export function LeftRail({
               登录后可查看今日 / 本周 AC、提交量与关注入口
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="gap-0 py-0 shadow-none">
+        <CardHeader className="border-b px-3 py-2.5">
+          <CardTitle className="flex items-center gap-1.5 text-xs font-medium">
+            <CalendarIcon className="size-3.5 text-muted-foreground" />
+            近期竞赛
+          </CardTitle>
+          <CardDescription className="text-[11px]">
+            活动日历速览
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col divide-y p-0">
+          {contestLoading &&
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="px-3 py-2">
+                <Skeleton className="mb-1 h-3 w-full" />
+                <Skeleton className="h-3 w-14" />
+              </div>
+            ))}
+          {!contestLoading &&
+            contests.map((c) => (
+              <a
+                key={c.id}
+                href={c.url || undefined}
+                target="_blank"
+                rel="noreferrer"
+                className="block px-3 py-2 transition-colors hover:bg-muted/40"
+              >
+                <p className="line-clamp-2 text-xs font-medium leading-snug">
+                  {c.name}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {c.platformName || c.platform}
+                  {c.startTime ? ` · ${formatTime(c.startTime)}` : ''}
+                </p>
+              </a>
+            ))}
+          {!contestLoading && !contests.length && (
+            <p className="px-3 py-5 text-center text-[11px] text-muted-foreground">
+              近期暂无赛事
+            </p>
+          )}
+          <div className="px-2 py-1.5">
+            <Button asChild variant="ghost" size="sm" className="h-7 w-full text-xs">
+              <Link to="/contest?tab=calendar">打开竞赛日历</Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </aside>

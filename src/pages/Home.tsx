@@ -280,10 +280,12 @@ export function Home() {
 
   const stats: PeriodItem | null = mode === 'ac' ? period?.ac ?? null : period?.submit ?? null
   const modeLabel = mode === 'ac' ? 'AC' : '提交'
-  const acRate =
-    period && period.submit.total > 0
-      ? ((period.ac.total / period.submit.total) * 100).toFixed(2)
-      : '-'
+  /** 生涯 AC 次数（不去重）；日汇总落后时用题数兜底 */
+  const careerAcTimes = period
+    ? Math.max(period.ac.totalRaw ?? period.ac.total, period.ac.total)
+    : null
+  /** 累计去重题数 */
+  const totalProblems = period?.ac.total ?? null
 
   const yearTrend = useMemo(
     () => (stats ? trendOf(stats.thisYear, stats.lastYear) : undefined),
@@ -346,28 +348,18 @@ export function Home() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <StatCard
             label="生涯"
-            sub={mode === 'ac' ? 'AC次数 · 去重题数' : '累计提交'}
+            sub={mode === 'ac' ? '累计 AC 次数' : '累计提交'}
             value={
               mode === 'ac'
-                ? period
-                  ? (() => {
-                      // 次数 ≥ 题数；日汇总落后时用题数兜底
-                      const problems = period.ac.total
-                      const times = Math.max(
-                        period.ac.totalRaw ?? problems,
-                        problems,
-                      )
-                      return `${times} · ${problems}`
-                    })()
-                  : '-'
+                ? (careerAcTimes ?? '-')
                 : (stats?.total ?? '-')
             }
             loading={loading}
           />
           <StatCard
-            label="AC 率"
-            sub="通过 / 提交"
-            value={acRate === '-' ? '-' : `${acRate}%`}
+            label="总题数"
+            sub="累计通过题"
+            value={totalProblems ?? '-'}
             loading={loading}
           />
           <StatCard

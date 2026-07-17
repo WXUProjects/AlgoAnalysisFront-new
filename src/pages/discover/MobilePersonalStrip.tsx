@@ -45,12 +45,12 @@ export function MobilePersonalStrip({
   const ac = period?.ac
   const submit = period?.submit
   const delta = ac != null ? weekDelta(ac.thisWeek, ac.lastWeek) : null
-  const acRate =
-    ac != null && submit != null && submit.total > 0
-      ? `${((ac.total / submit.total) * 100).toFixed(0)}%`
-      : loading
-        ? '…'
-        : '—'
+  const totalAcTimes = ac
+    ? String(Math.max(ac.totalRaw ?? ac.total, ac.total))
+    : loading
+      ? '…'
+      : '—'
+  const totalProblems = ac ? String(ac.total) : loading ? '…' : '—'
 
   return (
     <Card
@@ -108,8 +108,8 @@ export function MobilePersonalStrip({
                 [
                   { label: '今日', value: fmtNum(ac?.today, loading) },
                   { label: '本月', value: fmtNum(ac?.thisMonth, loading) },
-                  { label: '累计', value: fmtNum(ac?.total, loading) },
-                  { label: 'AC 率', value: acRate },
+                  { label: '累计', value: totalAcTimes },
+                  { label: '总题数', value: totalProblems },
                 ] as const
               ).map((cell) => (
                 <div

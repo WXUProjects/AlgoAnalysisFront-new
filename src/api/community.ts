@@ -1,6 +1,9 @@
 import {
   endpoints,
   type ActivityFeedItem,
+  type CommunityLikeResult,
+  type CommunityReportResult,
+  type CommunityTargetType,
   type ProblemCommentItem,
   type ProblemUserSolutionItem,
   type UserRecentCommentItem,
@@ -9,6 +12,9 @@ import {
 import { get, post, num, str, type ApiResult } from '@/lib/http'
 
 function normComment(raw: Record<string, unknown>): ProblemCommentItem {
+  const repliesRaw = Array.isArray(raw.replies)
+    ? (raw.replies as Record<string, unknown>[])
+    : []
   return {
     id: num(raw.id),
     problemId: num(raw.problemId),
@@ -17,7 +23,16 @@ function normComment(raw: Record<string, unknown>): ProblemCommentItem {
     name: str(raw.name),
     avatar: str(raw.avatar),
     content: str(raw.content),
+    parentId: num(raw.parentId),
+    rootId: num(raw.rootId),
+    depth: num(raw.depth),
+    replyToUserId: num(raw.replyToUserId) || undefined,
+    replyToUsername: str(raw.replyToUsername) || undefined,
+    replyToName: str(raw.replyToName) || undefined,
+    likeCount: num(raw.likeCount),
+    liked: Boolean(raw.liked),
     createdAt: num(raw.createdAt),
+    replies: repliesRaw.map(normComment),
   }
 }
 
@@ -32,6 +47,8 @@ function normSolution(raw: Record<string, unknown>): ProblemUserSolutionItem {
     title: str(raw.title),
     excerpt: str(raw.excerpt),
     contentMd: str(raw.contentMd),
+    likeCount: num(raw.likeCount),
+    liked: Boolean(raw.liked),
     createdAt: num(raw.createdAt),
     updatedAt: num(raw.updatedAt),
   }
@@ -70,7 +87,9 @@ export async function listProblemComments(params: {
 export async function createProblemComment(body: {
   problemId: number
   content: string
-  /** 非公共域时可选：额外写入公共域发现流 */
+  /** 回复某条评论；0/省略为顶层 */
+  parentId?: number
+  /** 非公共域时可选：额外写入公共域发现流（仅顶层） */
   syncToPublic?: boolean
 }): Promise<ApiResult<ProblemCommentItem | null>> {
   const res = await post<Record<string, unknown>>(endpoints.core.problem.commentCreate, body)
@@ -142,6 +161,47 @@ export async function updateProblemSolution(body: {
 export async function deleteProblemSolution(id: number): Promise<ApiResult<null>> {
   const res = await post<null>(endpoints.core.problem.solutionDelete, { id })
   return { ...res, data: null }
+}
+
+/** 点赞 toggle（评论 / 题解） */
+export async function toggleCommunityLike(body: {
+  targetType: CommunityTargetType
+  targetId: number
+}): Promise<ApiResult<CommunityLikeResult | null>> {
+  const res = await post<Record<string, unknown>>(endpoints.core.problem.like, body)
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.raw ?? {}) as Record<string, unknown>
+  const data = (raw.data ?? res.data) as Record<string, unknown> | null
+  if (!data) return { ...res, data: null }
+  return {
+    ...res,
+    data: {
+      liked: Boolean(data.liked),
+      likeCount: num(data.likeCount),
+      targetType: str(data.targetType),
+      targetId: num(data.targetId),
+    },
+  }
+}
+
+/** 举报评论 / 题解 */
+export async function reportCommunity(body: {
+  targetType: CommunityTargetType
+  targetId: number
+  reason: string
+}): Promise<ApiResult<CommunityReportResult | null>> {
+  const res = await post<Record<string, unknown>>(endpoints.core.problem.report, body)
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.raw ?? {}) as Record<string, unknown>
+  const data = (raw.data ?? res.data) as Record<string, unknown> | null
+  if (!data) return { ...res, data: null }
+  return {
+    ...res,
+    data: {
+      id: num(data.id),
+      alreadyReported: Boolean(data.alreadyReported),
+    },
+  }
 }
 
 export async function listActivityFeed(params?: {

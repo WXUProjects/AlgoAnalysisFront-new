@@ -483,7 +483,7 @@ function DiscoverFeedLayout({
         </Tabs>
       </div>
 
-      <RightSidebar isLogin={isLogin} selfUserId={selfUserId} />
+      <RightSidebar />
     </div>
   )
 }

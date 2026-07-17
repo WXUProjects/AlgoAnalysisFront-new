@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { PencilIcon, Trash2Icon } from 'lucide-react'
+import { FlagIcon, HeartIcon, PencilIcon, Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   deleteProblemSolution,
   getProblemSolution,
+  toggleCommunityLike,
 } from '@/api/community'
 import { getProblem } from '@/api/problem'
 import type { ProblemUserSolutionItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+import { CommunityReportDialog } from '@/components/community-report-dialog'
 import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import { formatTime } from '@/lib/format'
 
 /**
@@ -22,11 +25,13 @@ import { formatTime } from '@/lib/format'
 export function ProblemSolutionView() {
   const { id, solutionId } = useParams()
   const navigate = useNavigate()
-  const { user, isSiteAdmin } = useAuth()
+  const { user, isSiteAdmin, isLogin } = useAuth()
   const [solution, setSolution] = useState<ProblemUserSolutionItem | null>(null)
   const [problemTitle, setProblemTitle] = useState('')
   const [loading, setLoading] = useState(true)
   const [removing, setRemoving] = useState(false)
+  const [liking, setLiking] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
 
   const problemId = Number(id || 0)
   const sid = Number(solutionId || 0)
@@ -71,6 +76,29 @@ export function ProblemSolutionView() {
     }
     toast.success('已删除')
     navigate(backTo)
+  }
+
+  async function onLike() {
+    if (!solution) return
+    if (!isLogin) {
+      toast.error('请先登录后再点赞')
+      return
+    }
+    setLiking(true)
+    const res = await toggleCommunityLike({
+      targetType: 'solution',
+      targetId: solution.id,
+    })
+    setLiking(false)
+    if (!res.success || !res.data) {
+      toast.error(res.message || '操作失败')
+      return
+    }
+    setSolution((prev) =>
+      prev
+        ? { ...prev, liked: res.data!.liked, likeCount: res.data!.likeCount }
+        : prev,
+    )
   }
 
   if (loading) {
@@ -131,6 +159,34 @@ export function ProblemSolutionView() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={liking}
+            onClick={() => void onLike()}
+          >
+            <HeartIcon
+              className={cn(
+                solution.liked && 'fill-current text-destructive',
+              )}
+              data-icon="inline-start"
+            />
+            {solution.likeCount && solution.likeCount > 0
+              ? solution.likeCount
+              : '点赞'}
+          </Button>
+          {isLogin && myId !== solution.userId && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setReportOpen(true)}
+            >
+              <FlagIcon data-icon="inline-start" />
+              举报
+            </Button>
+          )}
           {canEdit && (
             <>
               <Button
@@ -174,6 +230,15 @@ export function ProblemSolutionView() {
           <MarkdownBody content={solution.contentMd || ''} mode="auto" />
         </CardContent>
       </Card>
+
+      <CommunityReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        targetType="solution"
+        targetId={solution.id}
+        ownerUserId={solution.userId}
+        myUserId={myId}
+      />
     </PageShell>
   )
 }

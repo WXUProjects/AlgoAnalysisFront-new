@@ -187,7 +187,7 @@ export const endpoints = {
       reviewEdit: `${API_PREFIX}/core/problem/review-edit`,
       /** 当前用户对该题的待审申请 */
       myPendingEdit: `${API_PREFIX}/core/problem/my-pending-edit`,
-      /** 题目评论（全站可见） */
+      /** 题目评论（全站可见；支持层级回复） */
       commentList: `${API_PREFIX}/core/problem/comment/list`,
       commentCreate: `${API_PREFIX}/core/problem/comment/create`,
       commentDelete: `${API_PREFIX}/core/problem/comment/delete`,
@@ -197,6 +197,10 @@ export const endpoints = {
       solutionCreate: `${API_PREFIX}/core/problem/solution/create`,
       solutionUpdate: `${API_PREFIX}/core/problem/solution/update`,
       solutionDelete: `${API_PREFIX}/core/problem/solution/delete`,
+      /** 评论/题解点赞（toggle） */
+      like: `${API_PREFIX}/core/problem/like`,
+      /** 评论/题解举报 */
+      report: `${API_PREFIX}/core/problem/report`,
     },
     activity: {
       /** 发现页动态（组织隔离） */
@@ -821,7 +825,10 @@ export interface NotificationListRes {
   unreadCount: number
 }
 
-/** 题目评论（全站可见） */
+/** 社区互动目标类型 */
+export type CommunityTargetType = 'comment' | 'solution'
+
+/** 题目评论（全站可见；支持层级；list 返回树形 replies） */
 export interface ProblemCommentItem {
   id: number
   problemId: number
@@ -830,7 +837,21 @@ export interface ProblemCommentItem {
   name: string
   avatar?: string
   content: string
+  /** 直接父评论 id；0 为顶层 */
+  parentId?: number
+  /** 根评论 id */
+  rootId?: number
+  /** 嵌套深度，0=顶层 */
+  depth?: number
+  replyToUserId?: number
+  replyToUsername?: string
+  replyToName?: string
+  likeCount?: number
+  /** 当前登录用户是否已点赞 */
+  liked?: boolean
   createdAt: number
+  /** 子回复（list 接口树形返回） */
+  replies?: ProblemCommentItem[]
 }
 
 /** 用户题解列表项（非 AI SolutionMeta） */
@@ -844,8 +865,24 @@ export interface ProblemUserSolutionItem {
   title: string
   excerpt?: string
   contentMd?: string
+  likeCount?: number
+  liked?: boolean
   createdAt: number
   updatedAt?: number
+}
+
+/** 点赞 toggle 结果 */
+export interface CommunityLikeResult {
+  liked: boolean
+  likeCount: number
+  targetType: CommunityTargetType | string
+  targetId: number
+}
+
+/** 举报结果 */
+export interface CommunityReportResult {
+  id: number
+  alreadyReported?: boolean
 }
 
 /** 发现页动态（组织隔离） */
