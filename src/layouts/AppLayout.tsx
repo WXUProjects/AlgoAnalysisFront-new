@@ -19,6 +19,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
+import { useDocumentTitle } from '@/hooks/use-document-title'
+import { resolvePageTitle } from '@/lib/page-title'
 import { staffNavLabel } from '@/lib/roles'
 import { trackPageVisit } from '@/lib/visit-tracker'
 import { useSiteConfig } from '@/site/SiteConfigContext'
@@ -50,48 +52,6 @@ import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { MotionProvider } from '@/motion/MotionContext'
 
-const titles: Record<string, string> = {
-  '/': '首页',
-  '/login': '登录',
-  '/register': '注册',
-  '/forgot-password': '找回密码',
-  '/change-password': '修改密码',
-  '/profile': '个人资料',
-  '/change-profile': '编辑资料',
-  '/privacy': '隐私设置',
-  '/social': '关注与粉丝',
-  '/discover': '发现',
-  '/blog-plaza': '博客广场',
-  '/all-activities': '提交动态',
-  '/bulletin': '公告',
-  '/contest': '比赛',
-  '/question-bank': '题库',
-  '/problemset': '题单',
-  '/about': '关于我们',
-  '/org': '我的组织',
-  '/tools': '工具',
-  '/tools/paste': '粘贴板',
-  '/tools/code-image': '代码转图片',
-  // blog uses independent BlogLayout — not listed here
-}
-
-function resolveTitle(pathname: string, brand: string): string {
-  if (titles[pathname]) return titles[pathname]
-  if (pathname.startsWith('/profile/')) return '个人资料'
-  if (pathname.startsWith('/social')) return '关注与粉丝'
-  if (pathname.startsWith('/contest/')) return '比赛详情'
-  if (pathname.includes('/edit-content')) return '编辑题面'
-  if (pathname.includes('/solution/new')) return '写题解'
-  if (pathname.includes('/solution/') && pathname.endsWith('/edit'))
-    return '编辑题解'
-  if (pathname.includes('/solution/')) return '题解'
-  if (pathname.startsWith('/question-bank/detail/')) return '题目详情'
-  if (pathname.startsWith('/problemset/')) return '题单详情'
-  if (pathname.startsWith('/p/')) return '粘贴板'
-  if (pathname.startsWith('/tools')) return '工具'
-  return brand
-}
-
 export function AppLayout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
@@ -113,7 +73,8 @@ export function AppLayout() {
     config.siteTitle ||
     'GoAlgo'
   const brandLogo = currentOrg?.brandLogo || config.siteLogo
-  const title = resolveTitle(pathname, brand)
+  const title = resolvePageTitle(pathname) || brand
+  useDocumentTitle(title, brand)
   const homeTo = isLogin ? '/' : '/about'
   const adminLabel = staffNavLabel(user)
   // 公共域（或未登录默认视图）展示「关于我们」
@@ -319,7 +280,11 @@ export function AppLayout() {
                   {isLogin && isStaff && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild tooltip={adminLabel}>
-                        <Link to="/admin">
+                        <Link
+                          to="/admin"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
                           <LayoutDashboardIcon />
                           <span>{adminLabel}</span>
                         </Link>

@@ -1,7 +1,6 @@
 import { marked, type Tokens } from 'marked'
 import katex from 'katex'
 import TurndownService from 'turndown'
-import 'katex/dist/katex.min.css'
 import { highlightWith, loadHljs, mapHljsLang } from '@/lib/code-hl'
 
 marked.setOptions({
@@ -286,9 +285,98 @@ export async function prepareMarkdownHighlight(): Promise<void> {
   ensureRenderer()
 }
 
+export type MarkdownOutlineItem = {
+  id: string
+  /** 1–6，对应 # … ###### */
+  level: number
+  text: string
+}
+
+/** 标题 slug：保留中英文与数字，便于提纲锚点与渲染 id 一致。 */
+function slugifyHeadingText(text: string): string {
+  const base = text
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\u4e00-\u9fff\-]+/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80)
+  return base || 'section'
+}
+
+function makeHeadingIdAssigner() {
+  const used = new Map<string, number>()
+  return (text: string): string => {
+    const base = slugifyHeadingText(text)
+    const n = used.get(base) ?? 0
+    used.set(base, n + 1)
+    return n === 0 ? base : `${base}-${n}`
+  }
+}
+
+/** 去掉标题行内常见 Markdown 标记，便于展示与生成 id。 */
+function stripMdInline(s: string): string {
+  return s
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/[*_~]+/g, '')
+    .replace(/\\([\\`*_{}[\]()#+\-.!])/g, '$1')
+    .trim()
+}
+
+/**
+ * 从 Markdown 源码提取标题提纲（跳过代码围栏内的 #）。
+ * id 与 renderMarkdown 注入的 heading id 算法一致，可点按跳转。
+ */
+export function extractMarkdownOutline(md: string): MarkdownOutlineItem[] {
+  if (!md?.trim()) return []
+  const lines = md.replace(/\r\n/g, '\n').split('\n')
+  const items: MarkdownOutlineItem[] = []
+  const assignId = makeHeadingIdAssigner()
+  let inFence = false
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (/^(`{3,}|~{3,})/.test(trimmed)) {
+      inFence = !inFence
+      continue
+    }
+    if (inFence) continue
+    const m = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line)
+    if (!m) continue
+    const text = stripMdInline(m[2])
+    if (!text) continue
+    items.push({
+      id: assignId(text),
+      level: m[1].length,
+      text,
+    })
+  }
+  return items
+}
+
+/** 给 h1–h6 注入 id（与 extractMarkdownOutline 一致），并加 scroll-mt 便于锚点。 */
+function withHeadingIds(html: string): string {
+  if (!html || typeof document === 'undefined') return html
+  const doc = document.implementation.createHTMLDocument('')
+  doc.body.innerHTML = html
+  const assignId = makeHeadingIdAssigner()
+  for (const el of Array.from(
+    doc.body.querySelectorAll('h1,h2,h3,h4,h5,h6'),
+  )) {
+    const text = (el.textContent || '').replace(/\s+/g, ' ').trim()
+    if (!text) continue
+    el.id = assignId(text)
+    el.classList.add('scroll-mt-24')
+  }
+  return doc.body.innerHTML
+}
+
 /**
  * 将 Markdown 渲染为安全 HTML（GFM + KaTeX + 代码高亮）。
  * 代码高亮依赖 hljs 是否已加载；未加载时仍输出正确结构，可先 await prepareMarkdownHighlight()。
+ * 标题会注入 id，供文章提纲锚点跳转。
  */
 export function renderMarkdown(md: string): string {
   if (!md) return ''
@@ -297,10 +385,12 @@ export function renderMarkdown(md: string): string {
     const raw = md.replace(/\$\$\$/g, '$')
     const { text, pieces } = extractMath(raw)
     const html = marked.parse(text, { async: false }) as string
-    return sanitizeHtml(restoreMath(html, pieces))
+    return withHeadingIds(sanitizeHtml(restoreMath(html, pieces)))
   } catch {
-    return sanitizeHtml(
-      md.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'),
+    return withHeadingIds(
+      sanitizeHtml(
+        md.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'),
+      ),
     )
   }
 }
@@ -386,4 +476,52 @@ export async function renderContentAsync(src: string): Promise<string> {
   if (!src) return ''
   if (looksLikeHtml(src)) return sanitizeHtml(src)
   return renderMarkdownAsync(src)
+}
+
+/**
+ * 列表/卡片「文章简述」专用渲染。
+ *
+ * 只渲染不影响版式的行内标记：
+ * - 行内/块级公式（$…$ / $$…$$ / \(…\) / \[…\]）
+ * - 加粗 **…** / __…__
+ * - 行内代码 `…`
+ *
+ * 刻意不渲染（改成纯文本，避免卡片里出现可点链接、大标题等「文章头」）：
+ * - 链接、图片、标题、列表、引用等
+ */
+export function renderSummaryMarkdown(md: string): string {
+  if (!md) return ''
+  try {
+    const raw = md.replace(/\$\$\$/g, '$')
+    const { text, pieces } = extractMath(raw)
+
+    let s = text.replace(/\r\n/g, '\n')
+    // 标题 → 去掉 #，保留文字
+    s = s.replace(/^#{1,6}\s+/gm, '')
+    // 图片 → alt
+    s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    // 链接 [text](url) → text
+    s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    // 裸 URL 尖括号
+    s = s.replace(/<(https?:\/\/[^>\s]+)>/gi, '$1')
+    // 引用行首 >
+    s = s.replace(/^>\s?/gm, '')
+    // 无序/有序列表标记
+    s = s.replace(/^\s*[-*+]\s+/gm, '')
+    s = s.replace(/^\s*\d+\.\s+/gm, '')
+    // 卡片里压成一段，避免多段撑破 line-clamp
+    s = s.replace(/\n+/g, ' ').replace(/[ \t]{2,}/g, ' ').trim()
+
+    s = escapeHtml(s)
+
+    // 行内代码（先于加粗，避免 ** 在 code 里被误伤；code 内已转义）
+    s = s.replace(/`([^`]+)`/g, '<code class="md-summary-code">$1</code>')
+    // 加粗
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    s = s.replace(/__(.+?)__/g, '<strong>$1</strong>')
+
+    return restoreMath(s, pieces)
+  } catch {
+    return escapeHtml(md)
+  }
 }

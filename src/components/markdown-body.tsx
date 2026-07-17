@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/utils'
 import {
   prepareMarkdownHighlight,

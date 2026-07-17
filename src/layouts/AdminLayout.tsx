@@ -18,6 +18,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
+import { useDocumentTitle } from '@/hooks/use-document-title'
+import { resolvePageTitle } from '@/lib/page-title'
 import { staffNavLabel } from '@/lib/roles'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
@@ -47,25 +49,6 @@ import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { MotionProvider } from '@/motion/MotionContext'
 
-const titles: Record<string, string> = {
-  '/admin': '后台',
-  '/admin/statistics': '组织数据统计',
-  '/admin/site-statistics': '站点数据统计',
-  '/admin/access': '访问统计',
-  '/admin/bulletin': '组织公告',
-  '/admin/site-bulletin': '站点公告',
-  '/admin/emergency': '紧急通知',
-  '/admin/problem-progress': '题库识别',
-  '/admin/problem-edits': '题库修改审核',
-  '/admin/group': '分组管理',
-  '/admin/user': '组织成员',
-  '/admin/site-users': '站点用户',
-  '/admin/site': '站点设置',
-  '/admin/ops': '运维',
-  '/admin/org': '组织设置',
-  '/admin/orgs': '组织管理',
-}
-
 export function AdminLayout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
@@ -90,7 +73,8 @@ export function AdminLayout() {
     : currentOrg?.name
       ? `${currentOrg.name} · 组织后台`
       : '组织后台'
-  const title = titles[pathname] || staffLabel
+  const title = resolvePageTitle(pathname) || staffLabel
+  useDocumentTitle(title, brand)
   // 组织设置：管理员改配置；教练/队长等 staff 可导出训练报告
   const canOrgSettings = isAdmin || isOrgAdmin || isStaff
   const showTeamNav = isStaff

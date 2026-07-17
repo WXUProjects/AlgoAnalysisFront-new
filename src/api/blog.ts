@@ -8,8 +8,11 @@ import {
   type BlogComment,
   type BlogPlazaAuthor,
   type BlogPlazaSort,
+  type BlogSocialLink,
+  type BlogThemeId,
 } from '@shared/api'
 import { get, post, num, str, type ApiResult } from '@/lib/http'
+import { normalizeBlogThemeId, normalizeSocialLinks } from '@/lib/blog-theme'
 
 function authorOf(raw: Record<string, unknown> | undefined): BlogAuthor | undefined {
   if (!raw || typeof raw !== 'object') return undefined
@@ -106,6 +109,9 @@ export async function listBlogByUsername(params: {
     page: number
     pageSize: number
     themeEnabled: boolean
+    themeId: BlogThemeId
+    subtitle: string
+    socialLinks: BlogSocialLink[]
     isOwner: boolean
   }>
 > {
@@ -130,6 +136,9 @@ export async function listBlogByUsername(params: {
       page: num(data.page, 1),
       pageSize: num(data.pageSize, 20),
       themeEnabled: Boolean(data.themeEnabled),
+      themeId: normalizeBlogThemeId(str(data.themeId)),
+      subtitle: str(data.subtitle),
+      socialLinks: normalizeSocialLinks(data.socialLinks),
       isOwner: Boolean(data.isOwner),
     }
   })
@@ -500,13 +509,45 @@ export async function toggleBlogLike(
 }
 
 export async function getBlogThemeStatus(username?: string): Promise<
-  ApiResult<{ enabled: boolean; customTheme: unknown }>
+  ApiResult<{
+    enabled: boolean
+    themeId: BlogThemeId
+    subtitle: string
+    socialLinks: BlogSocialLink[]
+    customTheme: unknown
+  }>
 > {
   const res = await get<Record<string, unknown>>(endpoints.user.blog.themeStatus, {
     username,
   })
   return wrapData(res, (data) => ({
     enabled: Boolean(data.enabled),
+    themeId: normalizeBlogThemeId(str(data.themeId)),
+    subtitle: str(data.subtitle),
+    socialLinks: normalizeSocialLinks(data.socialLinks),
     customTheme: data.customTheme ?? null,
+  }))
+}
+
+/** 作者保存博客壳主题与侧栏社交链接 */
+export async function saveBlogThemeConfig(body: {
+  themeId: BlogThemeId | string
+  subtitle?: string
+  socialLinks?: BlogSocialLink[]
+}): Promise<
+  ApiResult<{
+    themeId: BlogThemeId
+    subtitle: string
+    socialLinks: BlogSocialLink[]
+  }>
+> {
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.blog.themeConfig,
+    body,
+  )
+  return wrapData(res, (data) => ({
+    themeId: normalizeBlogThemeId(str(data.themeId)),
+    subtitle: str(data.subtitle),
+    socialLinks: normalizeSocialLinks(data.socialLinks),
   }))
 }

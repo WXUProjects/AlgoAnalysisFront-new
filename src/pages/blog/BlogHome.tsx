@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useOutletContext, useSearchParams } from 'react-router-dom'
-import { EyeIcon, HeartIcon, MessageCircleIcon } from 'lucide-react'
+import {
+  CalendarIcon,
+  ChevronRightIcon,
+  EyeIcon,
+  FolderOpenIcon,
+  HeartIcon,
+  MessageCircleIcon,
+} from 'lucide-react'
 import { listBlogByUsername, listBlogCategories } from '@/api/blog'
+import { MarkdownSummary } from '@/components/markdown-summary'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
@@ -19,8 +27,18 @@ function formatDate(sec?: number) {
   })
 }
 
+function formatDateSlash(sec?: number) {
+  if (!sec) return ''
+  const d = new Date(sec * 1000)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}/${m}/${day}`
+}
+
 export function BlogHome() {
-  const { username, author } = useOutletContext<BlogOutletContext>()
+  const { username, author, theme, categories: shellCats } =
+    useOutletContext<BlogOutletContext>()
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryId = Number(searchParams.get('categoryId') || 0) || undefined
   const keyword = (searchParams.get('q') || '').trim()
@@ -28,9 +46,13 @@ export function BlogHome() {
 
   const [list, setList] = useState<BlogArticle[]>([])
   const [total, setTotal] = useState(0)
-  const [categories, setCategories] = useState<BlogCategory[]>([])
+  const [categories, setCategories] = useState<BlogCategory[]>(shellCats || [])
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState(keyword)
+
+  useEffect(() => {
+    setQ(keyword)
+  }, [keyword])
 
   useEffect(() => {
     let cancelled = false
@@ -40,7 +62,12 @@ export function BlogHome() {
         listBlogByUsername({
           username,
           page,
-          pageSize: 12,
+          pageSize:
+            theme.themeId === 'chirpy'
+              ? 10
+              : theme.themeId === 'mizuki'
+                ? 8
+                : 12,
           categoryId,
           keyword: keyword || undefined,
         }),
@@ -60,11 +87,232 @@ export function BlogHome() {
     return () => {
       cancelled = true
     }
-  }, [username, page, categoryId, keyword])
+  }, [username, page, categoryId, keyword, theme.themeId])
 
-  const pageSize = 12
+  const pageSize =
+    theme.themeId === 'chirpy' ? 10 : theme.themeId === 'mizuki' ? 8 : 12
   const pages = Math.max(1, Math.ceil(total / pageSize))
+  const catName = (id?: number | null) =>
+    categories.find((c) => c.id === id)?.name
 
+  if (theme.themeId === 'chirpy') {
+    const activeCat = categoryId
+      ? categories.find((c) => c.id === categoryId)?.name
+      : undefined
+    return (
+      <div>
+        {(keyword || activeCat) && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 px-1 text-sm text-[var(--text-muted-color)]">
+            {keyword ? <span>搜索：{keyword}</span> : null}
+            {activeCat ? <span>分类：{activeCat}</span> : null}
+            <button
+              type="button"
+              className="chirpy-post-tag"
+              onClick={() => setSearchParams({})}
+            >
+              清除筛选
+            </button>
+          </div>
+        )}
+        {loading ? (
+          <div className="chirpy-empty">
+            <Spinner className="mx-auto size-6" />
+          </div>
+        ) : list.length === 0 ? (
+          <div className="chirpy-empty">还没有公开文章</div>
+        ) : (
+          <div id="post-list" className="chirpy-post-list">
+            {list.map((a) => (
+              <Link
+                key={a.id}
+                to={`/blog/${username}/${a.slug}`}
+                className="chirpy-card"
+              >
+                <div className="chirpy-card-body">
+                  {/* 卡片标题用 h2：列表页不要文章头级 h1 */}
+                  <h2 className="chirpy-card-title">{a.title}</h2>
+                  {a.summary ? (
+                    <div className="chirpy-card-text">
+                      <MarkdownSummary content={a.summary} />
+                    </div>
+                  ) : null}
+                  <div className="chirpy-post-meta">
+                    <div className="meta-left">
+                      <CalendarIcon className="inline" />
+                      <time>
+                        {formatDateSlash(a.publishedAt || a.createdAt)}
+                      </time>
+                      {catName(a.categoryId) ? (
+                        <>
+                          <FolderOpenIcon className="meta-sep inline" />
+                          <span className="categories">
+                            {catName(a.categoryId)}
+                          </span>
+                        </>
+                      ) : null}
+                      {a.requiresPassword ? (
+                        <span className="meta-sep text-xs opacity-70">密码</span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {pages > 1 && (
+          <div className="chirpy-pagination">
+            <button
+              type="button"
+              className="chirpy-page-btn"
+              disabled={page <= 1}
+              onClick={() => {
+                const next = new URLSearchParams(searchParams)
+                next.set('page', String(page - 1))
+                setSearchParams(next)
+              }}
+            >
+              上一页
+            </button>
+            <span className="chirpy-page-btn is-active">{page}</span>
+            <span className="self-center text-sm text-[var(--text-muted-color)]">
+              / {pages}
+            </span>
+            <button
+              type="button"
+              className="chirpy-page-btn"
+              disabled={page >= pages}
+              onClick={() => {
+                const next = new URLSearchParams(searchParams)
+                next.set('page', String(page + 1))
+                setSearchParams(next)
+              }}
+            >
+              下一页
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ---------- mizuki ----------
+  if (theme.themeId === 'mizuki') {
+    const activeCat = categoryId
+      ? categories.find((c) => c.id === categoryId)?.name
+      : undefined
+    return (
+      <div>
+        {(keyword || activeCat) && (
+          <div className="mz-filter-bar">
+            {keyword ? (
+              <span className="text-sm text-[var(--mz-text-50)]">
+                搜索：{keyword}
+              </span>
+            ) : null}
+            {activeCat ? (
+              <span className="text-sm text-[var(--mz-text-50)]">
+                分类：{activeCat}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              className="mz-tag"
+              onClick={() => setSearchParams({})}
+            >
+              清除筛选
+            </button>
+          </div>
+        )}
+        {loading ? (
+          <div className="mz-empty">
+            <Spinner className="mx-auto size-6" />
+          </div>
+        ) : list.length === 0 ? (
+          <div className="mz-empty">还没有公开文章</div>
+        ) : (
+          <div className="mz-post-list">
+            {list.map((a) => (
+              <Link
+                key={a.id}
+                to={`/blog/${username}/${a.slug}`}
+                className={cn('mz-post-card', a.coverUrl && 'has-cover')}
+              >
+                <div className="mz-post-body">
+                  <h2 className="mz-post-title">{a.title}</h2>
+                  <div className="mz-post-meta">
+                    <span className="inline-flex items-center gap-1">
+                      <CalendarIcon />
+                      <time>
+                        {formatDateSlash(a.publishedAt || a.createdAt)}
+                      </time>
+                    </span>
+                    {catName(a.categoryId) ? (
+                      <span className="inline-flex items-center gap-1">
+                        <FolderOpenIcon />
+                        {catName(a.categoryId)}
+                      </span>
+                    ) : null}
+                    {a.requiresPassword ? (
+                      <span className="text-xs opacity-70">密码</span>
+                    ) : null}
+                  </div>
+                  {a.summary ? (
+                    <div className="mz-post-excerpt">
+                      <MarkdownSummary content={a.summary} />
+                    </div>
+                  ) : null}
+                  {!a.coverUrl ? (
+                    <span className="mz-post-enter" aria-hidden>
+                      <ChevronRightIcon className="size-7" />
+                    </span>
+                  ) : null}
+                </div>
+                {a.coverUrl ? (
+                  <span className="mz-post-cover">
+                    <img src={a.coverUrl} alt="" loading="lazy" />
+                  </span>
+                ) : null}
+              </Link>
+            ))}
+          </div>
+        )}
+        {pages > 1 && (
+          <div className="mz-pagination">
+            <button
+              type="button"
+              className="mz-page-btn"
+              disabled={page <= 1}
+              onClick={() => {
+                const next = new URLSearchParams(searchParams)
+                next.set('page', String(page - 1))
+                setSearchParams(next)
+              }}
+            >
+              上一页
+            </button>
+            <span className="mz-page-btn is-active">{page}</span>
+            <span className="text-sm text-[var(--mz-text-50)]">/ {pages}</span>
+            <button
+              type="button"
+              className="mz-page-btn"
+              disabled={page >= pages}
+              onClick={() => {
+                const next = new URLSearchParams(searchParams)
+                next.set('page', String(page + 1))
+                setSearchParams(next)
+              }}
+            >
+              下一页
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ---------- simple (简约) ----------
   return (
     <div className="space-y-6">
       <section className="rounded-xl border bg-card p-6 shadow-sm">
@@ -182,9 +430,9 @@ export function BlogHome() {
                     {a.title}
                   </h2>
                   {a.summary ? (
-                    <p className="line-clamp-2 flex-1 text-sm text-muted-foreground">
-                      {a.summary}
-                    </p>
+                    <div className="line-clamp-2 flex-1 text-sm text-muted-foreground">
+                      <MarkdownSummary content={a.summary} />
+                    </div>
                   ) : null}
                   <div className="mt-auto flex items-center gap-3 pt-1 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1">

@@ -132,6 +132,7 @@ export const endpoints = {
       commentDelete: `${API_PREFIX}/user/blog/comment/delete`,
       like: `${API_PREFIX}/user/blog/like`,
       themeStatus: `${API_PREFIX}/user/blog/theme/status`,
+      themeConfig: `${API_PREFIX}/user/blog/theme/config`,
       themeEnable: `${API_PREFIX}/user/blog/theme/enable`,
     },
     notification: {
@@ -235,13 +236,13 @@ export const endpoints = {
       recentSolutions: `${API_PREFIX}/core/user/recent-solutions`,
     },
     problemset: {
-      /** 我的题单（自动确保收藏/待做） */
+      /** 我的题单（自动确保收藏/待做）；可选 query problemId → containsProblem */
       mine: `${API_PREFIX}/core/problemset/mine`,
       /** 题单广场（公有自定义） */
       square: `${API_PREFIX}/core/problemset/square`,
       /** 题单详情 query: id, unlockToken? */
       get: `${API_PREFIX}/core/problemset/get`,
-      /** 题目关联的公有题单 query: problemId */
+      /** 题目关联的公有自定义题单 query: problemId（不含收藏/待做） */
       byProblem: `${API_PREFIX}/core/problemset/by-problem`,
       create: `${API_PREFIX}/core/problemset/create`,
       update: `${API_PREFIX}/core/problemset/update`,
@@ -333,6 +334,8 @@ export interface ProblemsetInfo {
   liked?: boolean
   isOwner?: boolean
   isSystem?: boolean
+  /** 仅 mine?problemId= 时返回：本题是否已在该题单 */
+  containsProblem?: boolean
   createdAt?: number
   updatedAt?: number
   locked?: boolean
@@ -1084,6 +1087,24 @@ export interface BlogAuthor {
   username: string
   name: string
   avatar?: string
+}
+
+/** 博客壳主题：chirpy 默认 | simple 简约 | mizuki（https://github.com/LyraVoid/Mizuki，用户可选） */
+export type BlogThemeId = 'chirpy' | 'simple' | 'mizuki'
+
+/** 侧栏社交链接（Chirpy 左下角） */
+export interface BlogSocialLink {
+  /** github | twitter | x | email | rss | custom | bilibili | zhihu | ... */
+  type: string
+  url: string
+  label?: string
+}
+
+/** 个人博客壳配置 */
+export interface BlogSiteConfig {
+  themeId: BlogThemeId | string
+  subtitle?: string
+  socialLinks: BlogSocialLink[]
 }
 
 /** 博客文章（列表可不含 content） */

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useOutletContext } from 'react-router-dom'
-import { PlusIcon, Trash2Icon } from 'lucide-react'
+import { PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   createBlogCategory,
@@ -77,7 +77,7 @@ export function BlogCategoriesPage() {
   }
 
   async function handleDelete(id: number, n: string) {
-    if (!confirm(`删除分类「${n}」？文章会变为未分类。`)) return
+    if (!confirm(`删除分类「${n}」？该分类下的文章将不再归属此分类。`)) return
     const res = await deleteBlogCategory(id)
     if (!res.success) {
       toast.error(res.message || '删除失败')
@@ -88,7 +88,7 @@ export function BlogCategoriesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold">分类管理</h1>
         <p className="text-sm text-muted-foreground">
@@ -103,7 +103,7 @@ export function BlogCategoriesPage() {
           placeholder="新分类名称"
         />
         <Button type="submit" disabled={creating} className="gap-1.5">
-          <PlusIcon className="size-4" />
+          <PlusIcon data-icon="inline-start" />
           添加
         </Button>
       </form>
@@ -123,34 +123,42 @@ export function BlogCategoriesPage() {
               key={c.id}
               className="flex items-center justify-between gap-3 px-4 py-3"
             >
-              <div>
-                <button
-                  type="button"
-                  className="font-medium hover:text-primary"
-                  onClick={() => void handleRename(c.id, c.name)}
-                >
-                  {c.name}
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{c.name}</span>
                   {c.isDefault ? (
-                    <span className="ml-2 text-xs font-normal text-muted-foreground">
-                      默认 · 题解会进这里
+                    <span className="text-xs font-normal text-muted-foreground">
+                      默认
                     </span>
                   ) : null}
-                </button>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {c.articleCount ?? 0} 篇
                   {c.isDefault ? ' · 不可删除' : ''}
                 </p>
               </div>
-              {!c.isDefault && (
+              <div className="flex shrink-0 items-center gap-1">
                 <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => void handleDelete(c.id, c.name)}
-                  aria-label="删除"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void handleRename(c.id, c.name)}
                 >
-                  <Trash2Icon className="size-3.5" />
+                  <PencilIcon data-icon="inline-start" />
+                  编辑
                 </Button>
-              )}
+                {!c.isDefault ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleDelete(c.id, c.name)}
+                  >
+                    <Trash2Icon data-icon="inline-start" />
+                    删除
+                  </Button>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>

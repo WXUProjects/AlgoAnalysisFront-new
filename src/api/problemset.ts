@@ -28,6 +28,7 @@ function normalizeSet(raw: Record<string, unknown>): ProblemsetInfo {
   const items = Array.isArray(raw.items)
     ? (raw.items as Record<string, unknown>[]).map(normalizeItem)
     : undefined
+  const hasContains = Object.prototype.hasOwnProperty.call(raw, 'containsProblem')
   return {
     id: num(raw.id),
     ownerId: num(raw.ownerId),
@@ -41,6 +42,7 @@ function normalizeSet(raw: Record<string, unknown>): ProblemsetInfo {
     liked: bool(raw.liked),
     isOwner: bool(raw.isOwner),
     isSystem: bool(raw.isSystem),
+    containsProblem: hasContains ? bool(raw.containsProblem) : undefined,
     createdAt: num(raw.createdAt),
     updatedAt: num(raw.updatedAt),
     locked: bool(raw.locked),
@@ -48,8 +50,13 @@ function normalizeSet(raw: Record<string, unknown>): ProblemsetInfo {
   }
 }
 
-export async function listMyProblemsets(): Promise<ApiResult<ProblemsetInfo[]>> {
-  const res = await get<unknown>(endpoints.core.problemset.mine)
+export async function listMyProblemsets(params?: {
+  /** 传入时每项带 containsProblem，表示该题是否已在题单中 */
+  problemId?: number | string
+}): Promise<ApiResult<ProblemsetInfo[]>> {
+  const res = await get<unknown>(endpoints.core.problemset.mine, {
+    problemId: params?.problemId || undefined,
+  })
   if (!res.success) {
     return { success: false, message: res.message, data: null, status: res.status }
   }

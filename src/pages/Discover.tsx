@@ -270,14 +270,14 @@ export function Discover() {
       : DISCOVER_MOBILE_VIEW_LABEL[mobileView]
 
   return (
-    <PageShell className="gap-5" stagger={false}>
-      <section className="flex flex-wrap items-start justify-between gap-4">
+    <PageShell className="gap-3" stagger={false}>
+      <section className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold tracking-tight">
+          <h2 className="text-lg font-semibold tracking-tight">
             <span className="lg:hidden">{headerTitle}</span>
             <span className="hidden lg:inline">发现</span>
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
             <span className="lg:hidden">{VIEW_SUBTITLE[mobileView]}</span>
             <span className="hidden lg:inline">
               浏览推荐内容、提交动态与组织
@@ -409,7 +409,7 @@ function DiscoverFeedLayout({
   return (
     <div
       data-discover-layout=""
-      className="mx-auto flex w-full max-w-[1340px] flex-col gap-4 lg:flex-row lg:items-start lg:justify-center lg:gap-5"
+      className="mx-auto flex w-full max-w-[1340px] flex-col gap-3 lg:flex-row lg:items-start lg:justify-center lg:gap-4"
     >
       <LeftRail
         feedScope={feedScope}
@@ -430,27 +430,27 @@ function DiscoverFeedLayout({
           onValueChange={(v) => setTab(normalizeDiscoverTab(v))}
         >
           {!otherUserMode && (
-            <TabsList className="mb-4 w-full max-w-full justify-start overflow-x-auto sm:w-auto">
-              <TabsTrigger value="recommend">
+            <TabsList className="mb-2.5 h-8 w-full max-w-full justify-start overflow-x-auto sm:w-auto">
+              <TabsTrigger value="recommend" className="text-xs sm:text-sm">
                 <CompassIcon data-icon="inline-start" />
                 推荐
               </TabsTrigger>
-              <TabsTrigger value="feed">
+              <TabsTrigger value="feed" className="text-xs sm:text-sm">
                 <ActivityIcon data-icon="inline-start" />
                 提交动态
               </TabsTrigger>
-              <TabsTrigger value="orgs">
+              <TabsTrigger value="orgs" className="text-xs sm:text-sm">
                 <Building2Icon data-icon="inline-start" />
                 组织
               </TabsTrigger>
             </TabsList>
           )}
 
-          <TabsContent value="recommend" className="mt-0 flex flex-col gap-4">
+          <TabsContent value="recommend" className="mt-0 flex flex-col gap-2.5">
             <RecommendStream />
           </TabsContent>
 
-          <TabsContent value="feed" className="mt-0 flex flex-col gap-4">
+          <TabsContent value="feed" className="mt-0 flex flex-col gap-2.5">
             {showFeedScope ? (
               <div className="lg:hidden">
                 <FeedScopeBar
@@ -472,7 +472,7 @@ function DiscoverFeedLayout({
           </TabsContent>
 
           {!otherUserMode && (
-            <TabsContent value="orgs" className="mt-0 flex flex-col gap-4">
+            <TabsContent value="orgs" className="mt-0 flex flex-col gap-2.5">
               <OrgsPanel
                 isLogin={isLogin}
                 switchOrg={switchOrg}

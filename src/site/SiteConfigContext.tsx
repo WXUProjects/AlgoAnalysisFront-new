@@ -28,10 +28,8 @@ const SiteConfigContext = createContext<Ctx>({
   refresh: async () => {},
 })
 
+/** 只应用 favicon；浏览器标题由布局按路由动态设置（页面名 - 站点名） */
 function applyBrand(cfg: SiteConfig) {
-  const title = cfg.siteTitle || 'GoAlgo'
-  document.title = title
-
   const fav = cfg.favicon || '/favicon.svg'
   let link = document.querySelector<HTMLLinkElement>("link[rel='icon']")
   if (!link) {

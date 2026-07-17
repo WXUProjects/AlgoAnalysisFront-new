@@ -11,6 +11,8 @@ import {
 import { toast } from 'sonner'
 import { listBlogAuthors, listBlogPlaza } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
+import { BlogLink } from '@/components/blog/blog-link'
+import { MarkdownSummary } from '@/components/markdown-summary'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -143,14 +145,14 @@ export function BlogPlaza() {
           {isLogin && myBlogHref ? (
             <>
               <Button variant="outline" size="sm" asChild>
-                <Link to={myBlogHref}>我的博客</Link>
+                <BlogLink to={myBlogHref}>我的博客</BlogLink>
               </Button>
               {writeHref ? (
                 <Button size="sm" className="gap-1.5" asChild>
-                  <Link to={writeHref}>
+                  <BlogLink to={writeHref}>
                     <PenLineIcon className="size-3.5" />
                     写文章
-                  </Link>
+                  </BlogLink>
                 </Button>
               ) : null}
             </>
@@ -228,7 +230,7 @@ export function BlogPlaza() {
               </EmptyHeader>
               {isLogin && writeHref ? (
                 <Button className="mt-2" asChild>
-                  <Link to={writeHref}>去写文章</Link>
+                  <BlogLink to={writeHref}>去写文章</BlogLink>
                 </Button>
               ) : null}
             </Empty>
@@ -273,7 +275,7 @@ export function BlogPlaza() {
               <ul className="space-y-1">
                 {authors.map((a) => (
                   <li key={a.id}>
-                    <Link
+                    <BlogLink
                       to={`/blog/${a.username}`}
                       className={cn(
                         'flex items-center gap-2.5 rounded-lg px-1.5 py-2 transition',
@@ -295,7 +297,7 @@ export function BlogPlaza() {
                           {a.latestTitle ? ` · ${a.latestTitle}` : ''}
                         </p>
                       </div>
-                    </Link>
+                    </BlogLink>
                   </li>
                 ))}
               </ul>
@@ -321,18 +323,21 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
     <li>
       <article className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition hover:border-primary/40 hover:shadow-md">
         {a.coverUrl ? (
-          <Link to={articleHref} className="aspect-[16/9] overflow-hidden bg-muted">
+          <BlogLink
+            to={articleHref}
+            className="aspect-[16/9] overflow-hidden bg-muted"
+          >
             <img
               src={a.coverUrl}
               alt=""
               className="size-full object-cover transition duration-300 group-hover:scale-[1.02]"
               loading="lazy"
             />
-          </Link>
+          </BlogLink>
         ) : null}
         <div className="flex flex-1 flex-col gap-2 p-4">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Link
+            <BlogLink
               to={authorHref}
               className="inline-flex min-w-0 items-center gap-1.5 hover:text-foreground"
               onClick={(e) => e.stopPropagation()}
@@ -346,7 +351,7 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
                 </AvatarFallback>
               </Avatar>
               <span className="truncate">{authorName}</span>
-            </Link>
+            </BlogLink>
             <span>·</span>
             <time>{formatDate(a.publishedAt || a.createdAt)}</time>
             {a.recommend ? (
@@ -355,14 +360,16 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
               </span>
             ) : null}
           </div>
-          <Link to={articleHref} className="min-w-0 space-y-1">
+          <BlogLink to={articleHref} className="min-w-0 space-y-1">
             <h2 className="line-clamp-2 text-base font-semibold leading-snug group-hover:text-primary">
               {a.title}
             </h2>
             {a.summary ? (
-              <p className="line-clamp-2 text-sm text-muted-foreground">{a.summary}</p>
+              <div className="line-clamp-2 text-sm text-muted-foreground">
+                <MarkdownSummary content={a.summary} />
+              </div>
             ) : null}
-          </Link>
+          </BlogLink>
           <div className="mt-auto flex items-center gap-3 pt-1 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <EyeIcon className="size-3.5" />

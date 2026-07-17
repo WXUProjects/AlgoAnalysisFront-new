@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { sendCode } from '@/api/auth'
 import { setEmailEnabled, updateProfile } from '@/api/profile'
+import { getPrivacy, updatePrivacy } from '@/api/social'
 import { setSpider } from '@/api/spider'
 import { uploadImage } from '@/api/upload'
 import { useAuth } from '@/auth/AuthContext'
@@ -26,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
 import {
@@ -55,6 +57,10 @@ export function ChangeProfile() {
   const [uploading, setUploading] = useState(false)
   const [sendingCode, setSendingCode] = useState(false)
   const [codeCooldown, setCodeCooldown] = useState(0)
+  const [privacyLoading, setPrivacyLoading] = useState(true)
+  const [privacySaving, setPrivacySaving] = useState(false)
+  const [allowPublicProfile, setAllowPublicProfile] = useState(true)
+  const [allowPublicFeed, setAllowPublicFeed] = useState(true)
   const ojGuide = getOjBindGuide(platform)
 
   const boundEmail = (profile?.email || '').trim()
@@ -85,6 +91,23 @@ export function ChangeProfile() {
     const t = window.setTimeout(() => setCodeCooldown((c) => c - 1), 1000)
     return () => window.clearTimeout(t)
   }, [codeCooldown])
+
+  useEffect(() => {
+    let cancelled = false
+    void getPrivacy().then((res) => {
+      if (cancelled) return
+      setPrivacyLoading(false)
+      if (!res.success || !res.data) {
+        toast.error(res.message || '隐私设置加载失败，请稍后重试')
+        return
+      }
+      setAllowPublicProfile(res.data.allowPublicProfile)
+      setAllowPublicFeed(res.data.allowPublicFeed)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   async function handleSendEmailCode() {
     if (!emailOk(email)) {
@@ -188,6 +211,17 @@ export function ChangeProfile() {
     } else {
       toast.error(res.message || '绑定失败，请稍后重试')
     }
+  }
+
+  async function handleSavePrivacy() {
+    setPrivacySaving(true)
+    const res = await updatePrivacy({ allowPublicProfile, allowPublicFeed })
+    setPrivacySaving(false)
+    if (!res.success) {
+      toast.error(res.message || '隐私设置保存失败，请稍后重试')
+      return
+    }
+    toast.success('隐私设置已保存')
   }
 
   return (
@@ -446,6 +480,63 @@ export function ChangeProfile() {
             </Button>
           </CardFooter>
         </form>
+      </Card>
+
+      <Card className="gap-4 py-4">
+        <CardHeader className="gap-1 px-4">
+          <CardTitle>隐私设置</CardTitle>
+          <CardDescription>
+            只影响公共域。在校队等私人组织里，队友仍可查看你的资料与动态。
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-4">
+          {privacyLoading ? (
+            <div className="flex flex-col gap-3">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : (
+            <FieldGroup className="gap-5">
+              <Field orientation="horizontal">
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <FieldLabel htmlFor="set-profile">
+                    允许他人查看个人资料
+                  </FieldLabel>
+                  <FieldDescription>
+                    关闭后，公共域中的其他人将无法打开你的资料页
+                  </FieldDescription>
+                </div>
+                <Switch
+                  id="set-profile"
+                  checked={allowPublicProfile}
+                  onCheckedChange={setAllowPublicProfile}
+                />
+              </Field>
+              <Field orientation="horizontal">
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <FieldLabel htmlFor="set-feed">出现在公共域动态</FieldLabel>
+                  <FieldDescription>
+                    关闭后，公共域动态里不会再出现你的提交
+                  </FieldDescription>
+                </div>
+                <Switch
+                  id="set-feed"
+                  checked={allowPublicFeed}
+                  onCheckedChange={setAllowPublicFeed}
+                />
+              </Field>
+              <Button
+                type="button"
+                className="w-fit"
+                disabled={privacySaving}
+                onClick={() => void handleSavePrivacy()}
+              >
+                {privacySaving ? <Spinner data-icon="inline-start" /> : null}
+                保存隐私设置
+              </Button>
+            </FieldGroup>
+          )}
+        </CardContent>
       </Card>
 
       <Card className="gap-4 py-4">

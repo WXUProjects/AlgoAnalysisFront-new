@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ExternalLinkIcon,
@@ -21,13 +21,20 @@ import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
 import { ProblemComments } from '@/components/problem-community'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { extractMarkdownOutline } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 import { formatTime } from '@/lib/format'
 
 /**
  * 题解阅读页：走主布局（保留左侧 Tab），替代原弹窗阅读。
+ * 桌面 7:3 — 左正文+评论 / 右文章提纲；移动端隐藏右侧提纲。
  */
 export function ProblemSolutionView() {
   const { id, solutionId } = useParams()
@@ -39,6 +46,7 @@ export function ProblemSolutionView() {
   const [removing, setRemoving] = useState(false)
   const [liking, setLiking] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
+  const [activeHeadingId, setActiveHeadingId] = useState('')
 
   const problemId = Number(id || 0)
   const sid = Number(solutionId || 0)
@@ -71,6 +79,11 @@ export function ProblemSolutionView() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const outline = useMemo(
+    () => extractMarkdownOutline(solution?.contentMd || ''),
+    [solution?.contentMd],
+  )
 
   async function removeSolution() {
     if (!solution) return
@@ -108,6 +121,13 @@ export function ProblemSolutionView() {
     )
   }
 
+  function scrollToHeading(headingId: string) {
+    const el = document.getElementById(headingId)
+    if (!el) return
+    setActiveHeadingId(headingId)
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   if (loading) {
     return (
       <PageShell stagger={false}>
@@ -134,6 +154,7 @@ export function ProblemSolutionView() {
 
   const myId = user?.userId ?? 0
   const canEdit = myId === solution.userId || isSiteAdmin
+  const pid = problemId || solution.problemId
 
   return (
     <PageShell stagger={false} className="gap-3">
@@ -144,7 +165,7 @@ export function ProblemSolutionView() {
               to={backTo}
               className="hover:underline underline-offset-2"
             >
-              {problemTitle || `题目 #${problemId || solution.problemId}`}
+              {problemTitle || `题目 #${pid}`}
             </Link>
             <span className="mx-1.5">·</span>
             题解
@@ -217,7 +238,7 @@ export function ProblemSolutionView() {
                 variant="outline"
                 onClick={() =>
                   navigate(
-                    `/question-bank/detail/${problemId || solution.problemId}/solution/${solution.id}/edit`,
+                    `/question-bank/detail/${pid}/solution/${solution.id}/edit`,
                   )
                 }
               >
@@ -247,20 +268,66 @@ export function ProblemSolutionView() {
         </div>
       </div>
 
-      <Card className="min-w-0 gap-3 py-5 sm:py-6">
-        <CardContent className="min-w-0 px-5 sm:px-6">
-          <MarkdownBody
-            content={solution.contentMd || ''}
-            mode="markdown"
-            emptyText="暂无题解内容"
-          />
-        </CardContent>
-      </Card>
+      {/* 桌面 7:3：左正文+评论 / 右文章提纲；移动端隐藏右侧 */}
+      <div className="grid min-w-0 gap-4 md:grid-cols-[7fr_3fr] md:items-start">
+        <div className="flex min-w-0 flex-col gap-3">
+          <Card className="min-w-0 gap-3 py-5 sm:py-6">
+            <CardContent className="min-w-0 px-5 sm:px-6">
+              <MarkdownBody
+                content={solution.contentMd || ''}
+                mode="markdown"
+                emptyText="暂无题解内容"
+              />
+            </CardContent>
+          </Card>
 
-      <ProblemComments
-        problemId={problemId || solution.problemId}
-        solutionId={solution.id}
-      />
+          <ProblemComments problemId={pid} solutionId={solution.id} />
+        </div>
+
+        <Card
+          className={cn(
+            'hidden min-w-0 gap-3 py-4 md:flex',
+            'md:sticky md:top-4 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto',
+          )}
+        >
+          <CardHeader className="px-4 pb-0">
+            <CardTitle className="text-base">文章内容</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4">
+            {outline.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                正文里还没有标题，写上 # 小标题后会出现在这里
+              </p>
+            ) : (
+              <nav aria-label="文章提纲">
+                <ul className="flex flex-col gap-0.5">
+                  {outline.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => scrollToHeading(item.id)}
+                        className={cn(
+                          'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                          'hover:bg-muted hover:text-foreground',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          activeHeadingId === item.id
+                            ? 'bg-muted font-medium text-foreground'
+                            : 'text-muted-foreground',
+                        )}
+                        style={{
+                          paddingLeft: `${0.5 + (item.level - 1) * 0.75}rem`,
+                        }}
+                      >
+                        <span className="line-clamp-2">{item.text}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <CommunityReportDialog
         open={reportOpen}

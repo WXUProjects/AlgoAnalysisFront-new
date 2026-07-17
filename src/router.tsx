@@ -192,6 +192,11 @@ const CodeToImage = lazy(() =>
 const BlogLayout = lazy(() =>
   import('@/layouts/BlogLayout').then((m) => ({ default: m.BlogLayout })),
 )
+const BlogAdminLayout = lazy(() =>
+  import('@/layouts/BlogAdminLayout').then((m) => ({
+    default: m.BlogAdminLayout,
+  })),
+)
 const BlogHome = lazy(() =>
   import('@/pages/blog/BlogHome').then((m) => ({ default: m.BlogHome })),
 )
@@ -216,6 +221,24 @@ const BlogCategoriesPage = lazy(() =>
     default: m.BlogCategoriesPage,
   })),
 )
+const BlogSettingsPage = lazy(() =>
+  import('@/pages/blog/BlogSettings').then((m) => ({
+    default: m.BlogSettingsPage,
+  })),
+)
+const BlogCategoriesPublicPage = lazy(() =>
+  import('@/pages/blog/BlogCategoriesPublic').then((m) => ({
+    default: m.BlogCategoriesPublicPage,
+  })),
+)
+const BlogArchivesPage = lazy(() =>
+  import('@/pages/blog/BlogArchives').then((m) => ({
+    default: m.BlogArchivesPage,
+  })),
+)
+const BlogAboutPage = lazy(() =>
+  import('@/pages/blog/BlogAbout').then((m) => ({ default: m.BlogAboutPage })),
+)
 
 function PageFallback() {
   return (
@@ -238,6 +261,67 @@ function CoachOutlet() {
 }
 
 export const router = createBrowserRouter([
+  // Manage is a standalone shell (new tab from public blog)
+  {
+    path: '/blog/:username/manage',
+    element: (
+      <Lazy>
+        <BlogAdminLayout />
+      </Lazy>
+    ),
+    errorElement: <RouteErrorFallback />,
+    children: [
+      {
+        index: true,
+        element: (
+          <Lazy>
+            <BlogManage />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'new',
+        element: (
+          <Lazy>
+            <BlogEditor />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'edit/:id',
+        element: (
+          <Lazy>
+            <BlogEditor />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'analytics',
+        element: (
+          <Lazy>
+            <BlogAnalyticsPage />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'categories',
+        element: (
+          <Lazy>
+            <BlogCategoriesPage />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'settings',
+        element: (
+          <Lazy>
+            <BlogSettingsPage />
+          </Lazy>
+        ),
+      },
+    ],
+  },
+  // Public reading shell (Chirpy / 简约)
   {
     path: '/blog/:username',
     element: (
@@ -256,42 +340,26 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'manage',
+        path: 'categories',
         element: (
           <Lazy>
-            <BlogManage />
+            <BlogCategoriesPublicPage />
           </Lazy>
         ),
       },
       {
-        path: 'manage/new',
+        path: 'archives',
         element: (
           <Lazy>
-            <BlogEditor />
+            <BlogArchivesPage />
           </Lazy>
         ),
       },
       {
-        path: 'manage/edit/:id',
+        path: 'about',
         element: (
           <Lazy>
-            <BlogEditor />
-          </Lazy>
-        ),
-      },
-      {
-        path: 'manage/analytics',
-        element: (
-          <Lazy>
-            <BlogAnalyticsPage />
-          </Lazy>
-        ),
-      },
-      {
-        path: 'manage/categories',
-        element: (
-          <Lazy>
-            <BlogCategoriesPage />
+            <BlogAboutPage />
           </Lazy>
         ),
       },

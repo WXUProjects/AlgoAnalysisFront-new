@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   BookOpenIcon,
+  ChevronDownIcon,
   ExternalLinkIcon,
   FileTextIcon,
+  FolderPlusIcon,
   HeartIcon,
   ListTodoIcon,
   PencilIcon,
@@ -20,7 +22,12 @@ import {
   proposeProblemEdit,
   type TagCountItem,
 } from '@/api/problem'
-import { listProblemsetsByProblem } from '@/api/problemset'
+import {
+  addProblemToSet,
+  listMyProblemsets,
+  listProblemsetsByProblem,
+  removeProblemFromSet,
+} from '@/api/problemset'
 import type {
   ProblemFollowingStatusItem,
   ProblemInfo,
@@ -54,6 +61,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -65,10 +82,24 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Spinner } from '@/components/ui/spinner'
 import { formatTime } from '@/lib/format'
 import { getSubmitLink } from '@/lib/link'
 import { num, str } from '@/lib/http'
 import { cn } from '@/lib/utils'
+
+/** 题目页「关联题单」只展示公有自定义题单，不含收藏/待做 */
+function isPublicCustomSet(ps: ProblemsetInfo): boolean {
+  if (ps.isSystem) return false
+  if (ps.kind === 'favorites' || ps.kind === 'todo') return false
+  return ps.kind === 'custom' || !ps.kind
+}
+
+const kindHint: Record<string, string> = {
+  favorites: '收藏',
+  todo: '待做',
+  custom: '自建',
+}
 
 export function QuestionBankDetail() {
   const { id } = useParams()
@@ -100,6 +131,11 @@ export function QuestionBankDetail() {
   const [saving, setSaving] = useState(false)
   const [relatedSets, setRelatedSets] = useState<ProblemsetInfo[]>([])
 
+  const [addSetOpen, setAddSetOpen] = useState(false)
+  const [mySets, setMySets] = useState<ProblemsetInfo[]>([])
+  const [mySetsLoading, setMySetsLoading] = useState(false)
+  const [togglingSetId, setTogglingSetId] = useState<number | null>(null)
+
   const load = useCallback(async () => {
     if (!id) return
     setLoading(true)
@@ -124,8 +160,12 @@ export function QuestionBankDetail() {
       setSubs(sRes.data.list || [])
       setSubsTotal(sRes.data.total || 0)
     }
-    if (setRes.success && setRes.data) setRelatedSets(setRes.data)
-    else setRelatedSets([])
+    // 后端已只返回公有 custom；前端再滤一层，避免收藏/待做误入
+    if (setRes.success && setRes.data) {
+      setRelatedSets(setRes.data.filter(isPublicCustomSet))
+    } else {
+      setRelatedSets([])
+    }
 
     if (isLogin && !isSiteAdmin) {
       const pend = await getMyPendingProblemEdit(id)
@@ -134,6 +174,61 @@ export function QuestionBankDetail() {
       setHasPending(false)
     }
   }, [id, isLogin, isSiteAdmin, followingOnly, acOnly, subsPage, subsPageSize])
+
+  async function loadMySetsForProblem(problemId: number | string) {
+    setMySetsLoading(true)
+    const res = await listMyProblemsets({ problemId })
+    setMySetsLoading(false)
+    if (!res.success || !res.data) {
+      toast.error(res.message || '题单加载失败，请稍后重试')
+      setMySets([])
+      return
+    }
+    setMySets(res.data)
+  }
+
+  async function toggleInSet(set: ProblemsetInfo, next: boolean) {
+    if (!problem) return
+    if (togglingSetId != null) return
+    setTogglingSetId(set.id)
+    // 乐观更新
+    setMySets((prev) =>
+      prev.map((s) =>
+        s.id === set.id
+          ? {
+              ...s,
+              containsProblem: next,
+              itemCount: Math.max(0, (s.itemCount || 0) + (next ? 1 : -1)),
+            }
+          : s,
+      ),
+    )
+    const res = next
+      ? await addProblemToSet({ problemsetId: set.id, problemId: problem.id })
+      : await removeProblemFromSet(set.id, problem.id)
+    setTogglingSetId(null)
+    if (!res.success) {
+      // 回滚
+      setMySets((prev) =>
+        prev.map((s) =>
+          s.id === set.id
+            ? {
+                ...s,
+                containsProblem: !next,
+                itemCount: Math.max(0, (s.itemCount || 0) + (next ? -1 : 1)),
+              }
+            : s,
+        ),
+      )
+      toast.error(res.message || (next ? '加入失败，请稍后重试' : '移除失败，请稍后重试'))
+      return
+    }
+    toast.success(
+      next
+        ? `已加入「${set.title}」`
+        : `已从「${set.title}」移除`,
+    )
+  }
 
   useEffect(() => {
     void load()
@@ -368,21 +463,83 @@ export function QuestionBankDetail() {
                 )}
               </div>
               {isLogin && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={openContentEdit}
-                >
-                  <PencilIcon data-icon="inline-start" />
-                  {isSiteAdmin
-                    ? contentEmpty
-                      ? '填写题面'
-                      : '编辑题面'
-                    : contentEmpty
-                      ? '补充题面'
-                      : '建议修改'}
-                </Button>
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  <DropdownMenu
+                    open={addSetOpen}
+                    onOpenChange={(open) => {
+                      setAddSetOpen(open)
+                      if (open && problem) {
+                        void loadMySetsForProblem(problem.id)
+                      }
+                    }}
+                  >
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" size="sm" variant="outline">
+                        <FolderPlusIcon data-icon="inline-start" />
+                        添加到题单
+                        <ChevronDownIcon data-icon="inline-end" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64">
+                      <DropdownMenuLabel>选择要加入的题单</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {mySetsLoading ? (
+                        <div className="flex items-center justify-center gap-2 px-2 py-4 text-sm text-muted-foreground">
+                          <Spinner />
+                          加载中…
+                        </div>
+                      ) : mySets.length === 0 ? (
+                        <div className="px-2 py-3 text-sm text-muted-foreground">
+                          还没有题单。可先去题单页创建。
+                        </div>
+                      ) : (
+                        <DropdownMenuGroup>
+                          {mySets.map((ps) => {
+                            const checked = Boolean(ps.containsProblem)
+                            const busy = togglingSetId === ps.id
+                            return (
+                              <DropdownMenuCheckboxItem
+                                key={ps.id}
+                                checked={checked}
+                                disabled={busy || togglingSetId != null}
+                                onSelect={(e) => e.preventDefault()}
+                                onCheckedChange={(v) => {
+                                  void toggleInSet(ps, Boolean(v))
+                                }}
+                              >
+                                <span className="min-w-0 flex-1 truncate">
+                                  {ps.title}
+                                </span>
+                                <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                                  {kindHint[ps.kind] || kindHint.custom}
+                                </span>
+                              </DropdownMenuCheckboxItem>
+                            )
+                          })}
+                        </DropdownMenuGroup>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/problemset">管理我的题单</Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={openContentEdit}
+                  >
+                    <PencilIcon data-icon="inline-start" />
+                    {isSiteAdmin
+                      ? contentEmpty
+                        ? '填写题面'
+                        : '编辑题面'
+                      : contentEmpty
+                        ? '补充题面'
+                        : '建议修改'}
+                  </Button>
+                </div>
               )}
             </CardHeader>
             <CardContent className="min-w-0 px-5 sm:px-6">
@@ -432,7 +589,7 @@ export function QuestionBankDetail() {
               收录本题的公开题单
             </CardTitle>
             <CardDescription>
-              以下题单已开放到广场，可点进去继续刷题
+              仅展示公开的自建题单；收藏与待做不会出现在这里
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2 px-4">

@@ -65,15 +65,6 @@ import { formatTime, todayYmd } from '@/lib/format'
 import { getPlatformHomeLink, getSubmitLink, OJ_PLATFORMS } from '@/lib/link'
 import { cn } from '@/lib/utils'
 
-/** 后端已实现 Rating 抓取的平台（QOJ 等暂不支持） */
-const RATING_PLATFORMS = new Set([
-  'AtCoder',
-  'NowCoder',
-  'CodeForces',
-  'LuoGu',
-  'LeetCode',
-])
-
 export function Profile() {
   const { user, isLogin, logout } = useAuth()
   const { username: routeUsername } = useParams<{ username?: string }>()
@@ -379,13 +370,7 @@ export function Profile() {
                 {isSelf && (
                   <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
                     <Button type="button" size="sm" className="h-7 px-2 text-xs" asChild>
-                      <Link to="/change-profile">编辑</Link>
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" asChild>
-                      <Link to="/privacy">隐私</Link>
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" asChild>
-                      <Link to="/social?tab=search">找人</Link>
+                      <Link to="/change-profile">编辑资料</Link>
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -419,162 +404,132 @@ export function Profile() {
             </CardContent>
           </Card>
 
-          {/* 移动端：OJ 芯片；桌面：列表（含 Rating） */}
+          {/* OJ 绑定：紧凑列表，Rating 数字始终可见 */}
           <Card className="gap-0 overflow-hidden py-0">
-            <div className="border-b px-3 py-2 lg:px-4 lg:py-2.5">
+            <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
               <p className="text-sm font-medium">OJ 绑定</p>
-              <p className="text-xs text-muted-foreground">
-                同步时会尽量带上各平台 Rating
-              </p>
+              {isSelf ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-1.5 text-xs"
+                  asChild
+                >
+                  <Link to="/change-profile">管理</Link>
+                </Button>
+              ) : null}
             </div>
-            <CardContent className="flex flex-wrap gap-1.5 px-3 py-2.5 lg:hidden">
+            <CardContent className="flex flex-col divide-y px-0 py-0">
               {OJ_PLATFORMS.map((p) => {
                 const bind = spiderMap.get(p.value)
                 if (!bind) {
-                  return isSelf ? (
-                    <Button
+                  if (!isSelf) return null
+                  return (
+                    <div
                       key={p.value}
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-2 text-xs"
-                      asChild
+                      className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm"
                     >
-                      <Link to={`/change-profile?oj=${p.value}`}>
-                        绑定{p.label}
-                      </Link>
-                    </Button>
-                  ) : (
-                    <Badge key={p.value} variant="outline" className="text-xs">
-                      {p.label} 未绑定
-                    </Badge>
+                      <span className="text-muted-foreground">{p.label}</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-xs"
+                        asChild
+                      >
+                        <Link to={`/change-profile?oj=${p.value}`}>绑定</Link>
+                      </Button>
+                    </div>
                   )
                 }
                 return (
-                  <Button
-                    key={p.value}
-                    size="sm"
-                    variant="secondary"
-                    className="h-7 gap-1 px-2 text-xs"
-                    asChild
-                  >
-                    <a
-                      href={getPlatformHomeLink(p.value, bind.username)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {p.label}
-                      {bind.hasRating ? (
-                        <span className="font-mono tabular-nums opacity-90">
-                          {bind.rating}
-                        </span>
-                      ) : null}
-                      <ExternalLinkIcon className="size-3 opacity-70" />
-                    </a>
-                  </Button>
-                )
-              })}
-            </CardContent>
-            <CardContent className="hidden flex-col divide-y px-0 py-0 lg:flex">
-              {OJ_PLATFORMS.map((p) => {
-                const bind = spiderMap.get(p.value)
-                return (
                   <div
                     key={p.value}
-                    className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm"
+                    className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm"
                   >
-                    <span className="text-muted-foreground">{p.label}</span>
-                    {!bind ? (
-                      isSelf ? (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link to={`/change-profile?oj=${p.value}`}>
-                            去绑定
-                          </Link>
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          未绑定
-                        </span>
-                      )
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {bind.hasRating ? (
-                          <Badge
-                            variant="secondary"
-                            className="font-mono tabular-nums"
-                            title={`${p.label} Rating`}
-                          >
-                            Rating {bind.rating}
-                          </Badge>
-                        ) : RATING_PLATFORMS.has(p.value) ? (
-                          <span className="text-xs text-muted-foreground">
-                            暂无 Rating
-                          </span>
-                        ) : null}
-                        <Button
-                          size="sm"
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="shrink-0 font-medium">{p.label}</span>
+                      {bind.hasRating ? (
+                        <Badge
                           variant="secondary"
-                          className="h-7 gap-1"
-                          asChild
+                          className="h-5 font-mono tabular-nums"
+                          title={`${p.label} Rating`}
                         >
-                          <a
-                            href={getPlatformHomeLink(p.value, bind.username)}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            主页
-                            <ExternalLinkIcon className="size-3 opacity-70" />
-                          </a>
-                        </Button>
-                      </div>
-                    )}
+                          {bind.rating}
+                        </Badge>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground">
+                          暂无 Rating
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 gap-1 px-1.5 text-xs"
+                      asChild
+                    >
+                      <a
+                        href={getPlatformHomeLink(p.value, bind.username)}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={bind.username}
+                      >
+                        主页
+                        <ExternalLinkIcon className="size-3 opacity-70" />
+                      </a>
+                    </Button>
                   </div>
                 )
               })}
+              {!isSelf &&
+              OJ_PLATFORMS.every((p) => !spiderMap.get(p.value)) ? (
+                <p className="px-3 py-2 text-xs text-muted-foreground">
+                  暂无绑定
+                </p>
+              ) : null}
             </CardContent>
           </Card>
 
           <div className="flex flex-col gap-2">
             <Button type="button" variant="outline" asChild>
-              <Link to={`/blog/${profile.username}`}>访问博客</Link>
+              <Link
+                to={`/blog/${profile.username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                访问博客
+              </Link>
             </Button>
-          </div>
-
-          {isSelf ? (
-            <div className="hidden flex-col gap-2 lg:flex">
-              <Button type="button" asChild>
-                <Link to="/change-profile">编辑个人资料</Link>
-              </Button>
-              <Button type="button" variant="outline" asChild>
-                <Link to="/privacy">隐私设置</Link>
-              </Button>
-              <Button type="button" variant="outline" asChild>
-                <Link to="/social?tab=search">搜索用户</Link>
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" variant="ghost">
-                    退出登录
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>确认退出？</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      退出后需要重新登录才能访问个人相关功能。
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleLogout}>
-                      退出
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          ) : (
-            isLogin && (
-              <div className="flex flex-col gap-2">
+            {isSelf ? (
+              <div className="hidden flex-col gap-2 lg:flex">
+                <Button type="button" asChild>
+                  <Link to="/change-profile">编辑个人资料</Link>
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="ghost">
+                      退出登录
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>确认退出？</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        退出后需要重新登录才能访问个人相关功能。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>取消</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleLogout}>
+                        退出
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            ) : (
+              isLogin && (
                 <Button
                   type="button"
                   variant={isFollowing ? 'outline' : 'default'}
@@ -593,9 +548,9 @@ export function Profile() {
                     </>
                   )}
                 </Button>
-              </div>
-            )
-          )}
+              )
+            )}
+          </div>
         </aside>
 
         {/* 右栏：热力 / 动态 / 画像 / 比赛 */}

@@ -64,7 +64,7 @@ export function BlogManage() {
         只有博客主人可以管理文章
         <div className="mt-4">
           <Button variant="outline" asChild>
-            <Link to={`/blog/${username}`}>返回博客</Link>
+            <Link to={`/blog/${username}`}>打开博客</Link>
           </Button>
         </div>
       </div>

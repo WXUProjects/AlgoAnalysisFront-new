@@ -1,0 +1,1257 @@
+/**
+ * Chirpy blog shell — visual tokens & layout
+ * Reference: https://lumenvestige.github.io/ (jekyll-theme-chirpy)
+ * Scoped under [data-blog-theme="chirpy"]
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Source+Sans+Pro:wght@400;600;700;900&display=swap');
+
+[data-blog-theme='chirpy'] {
+  --chirpy-sidebar-width: 260px;
+  --chirpy-sidebar-width-xl: 300px;
+  --chirpy-bp: 850px;
+
+  /* light */
+  --main-bg: #ffffff;
+  --mask-bg: #c1c3c5;
+  --main-border-color: #f3f3f3;
+  --text-color: #34343c;
+  --text-muted-color: #757575;
+  --heading-color: #2a2a2a;
+  --label-color: #585858;
+  --link-color: #0056b2;
+  --link-underline-color: #dee2e6;
+  --link-hover: #d2603a;
+  --site-title-color: rgb(113, 113, 113);
+  --site-subtitle-color: #717171;
+  --sidebar-bg: #f6f8fa;
+  --sidebar-border-color: #efefef;
+  --sidebar-muted-color: #545454;
+  --sidebar-active-color: #1d1d1d;
+  --sidebar-hover-bg: rgb(223, 233, 241, 0.64);
+  --sidebar-btn-bg: #ffffff;
+  --sidebar-btn-color: #8e8e8e;
+  --avatar-border-color: #ffffff;
+  --topbar-bg: rgb(255, 255, 255, 0.7);
+  --topbar-text-color: rgb(78, 78, 78);
+  --search-border-color: rgb(240, 240, 240);
+  --search-icon-color: #c2c6cc;
+  --card-bg: #ffffff;
+  --card-hover-bg: #e2e2e2;
+  --card-shadow:
+    rgb(104, 104, 104, 0.05) 0 2px 6px 0,
+    rgba(211, 209, 209, 0.15) 0 0 0 1px;
+  --post-list-text-color: dimgray;
+  --btn-border-color: #e9ecef;
+  --btn-paginator-hover-color: var(--sidebar-bg);
+  --tag-border: #dee2e6;
+  --tag-hover: rgb(222, 226, 230);
+  --timeline-color: rgba(0, 0, 0, 0.075);
+  --timeline-node-bg: #c2c6cc;
+  --timeline-year-dot-color: #ffffff;
+  --selection-bg: rgb(0 86 178 / 0.24);
+  --selection-color: #1f2937;
+
+  color: var(--text-color);
+  background: var(--main-bg);
+  font-family:
+    'Source Sans Pro',
+    'Lato',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    'Noto Sans',
+    'Microsoft YaHei',
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 100svh;
+}
+
+[data-blog-theme='chirpy'].dark,
+.dark [data-blog-theme='chirpy'] {
+  color-scheme: dark;
+  --main-bg: rgb(27, 27, 30);
+  --mask-bg: rgb(68, 69, 70);
+  --main-border-color: rgb(44, 45, 45);
+  --text-color: rgb(175, 176, 177);
+  --text-muted-color: #868686;
+  --heading-color: #cccccc;
+  --label-color: #a7a7a7;
+  --link-color: rgb(138, 180, 248);
+  --link-underline-color: rgb(82, 108, 150);
+  --link-hover: #d2603a;
+  --site-title-color: #717070;
+  --site-subtitle-color: #868686;
+  --sidebar-bg: #1e1e1e;
+  --sidebar-border-color: #292929;
+  --sidebar-muted-color: #868686;
+  --sidebar-active-color: rgb(255, 255, 255, 0.95);
+  --sidebar-hover-bg: #262626;
+  --sidebar-btn-bg: #232328;
+  --sidebar-btn-color: #787878;
+  --avatar-border-color: rgb(206, 206, 206, 0.9);
+  --topbar-bg: rgb(27, 27, 30, 0.64);
+  --topbar-text-color: var(--text-color);
+  --search-border-color: rgb(55, 55, 55);
+  --search-icon-color: rgb(100, 102, 105);
+  --card-bg: #1e1e1e;
+  --card-hover-bg: #464d51;
+  --card-shadow:
+    rgb(21, 21, 21, 0.72) 0 6px 18px 0,
+    rgb(137, 135, 135, 0.24) 0 0 0 1px;
+  --post-list-text-color: rgb(175, 176, 177);
+  --btn-border-color: #2e2f31;
+  --btn-paginator-hover-color: #2e2e2e;
+  --tag-border: #3a3a3a;
+  --tag-hover: rgb(43, 56, 62);
+  --timeline-color: rgba(255, 255, 255, 0.08);
+  --timeline-node-bg: #6c757d;
+  --timeline-year-dot-color: #1e1e1e;
+  --selection-bg: rgb(138 180 248 / 0.32);
+  --selection-color: #f5f5f5;
+}
+
+@media (min-width: 1650px) {
+  [data-blog-theme='chirpy'] {
+    --chirpy-sidebar-width: var(--chirpy-sidebar-width-xl);
+  }
+}
+
+/* ---------- layout shell ---------- */
+.chirpy-shell {
+  position: relative;
+  min-height: 100svh;
+  background: var(--main-bg);
+  color: var(--text-color);
+}
+
+.chirpy-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: var(--chirpy-sidebar-width);
+  height: 100%;
+  overflow-y: auto;
+  padding: 0;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border-color);
+  scrollbar-width: none;
+  transition: transform 0.4s ease;
+}
+
+.chirpy-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 849px) {
+  .chirpy-sidebar {
+    transform: translateX(-100%);
+  }
+  .chirpy-shell[data-sidebar-open='1'] .chirpy-sidebar {
+    transform: translateX(0);
+  }
+}
+
+.chirpy-profile {
+  width: 100%;
+  margin-top: 2.5rem;
+  margin-bottom: 2.5rem;
+  padding-left: 2.5rem;
+  padding-right: 1.25rem;
+}
+
+@media (min-width: 850px) {
+  .chirpy-profile {
+    margin-top: 3rem;
+  }
+}
+
+@media (min-width: 1650px) {
+  .chirpy-profile {
+    margin-top: 3.5rem;
+    padding-left: 3.5rem;
+  }
+}
+
+.chirpy-avatar {
+  display: block;
+  width: 6.5rem;
+  height: 6.5rem;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: var(--avatar-border-color) 0 0 0 2px;
+  background: var(--sidebar-btn-bg);
+}
+
+@media (min-width: 576px) {
+  .chirpy-avatar {
+    width: 7rem;
+    height: 7rem;
+  }
+}
+
+.chirpy-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s;
+}
+
+.chirpy-avatar:hover img {
+  transform: scale(1.2);
+}
+
+.chirpy-site-title {
+  display: block;
+  width: fit-content;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-weight: 900;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  letter-spacing: 0.25px;
+  color: var(--site-title-color);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.chirpy-site-title:hover {
+  color: var(--sidebar-active-color);
+}
+
+.chirpy-site-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 95%;
+  font-style: italic;
+  color: var(--site-subtitle-color);
+  word-spacing: 1px;
+  user-select: none;
+}
+
+.chirpy-nav {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  width: 100%;
+  padding: 0;
+  margin: 0 0 2rem;
+  list-style: none;
+}
+
+.chirpy-nav-item {
+  width: 100%;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  opacity: 0.9;
+}
+
+@media (min-width: 1650px) {
+  .chirpy-nav-item {
+    padding-left: 2.75rem;
+    padding-right: 2.75rem;
+  }
+}
+
+.chirpy-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0;
+  color: var(--sidebar-muted-color);
+  text-decoration: none;
+  user-select: none;
+  transition: color 0.2s ease;
+}
+
+.chirpy-nav-link:hover {
+  color: var(--sidebar-active-color);
+}
+
+.chirpy-nav-item.is-active .chirpy-nav-link {
+  color: var(--sidebar-active-color);
+  font-weight: 600;
+}
+
+.chirpy-nav-link svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.chirpy-sidebar-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+  gap: 0.35rem 0.5rem;
+  padding-left: 2rem;
+  padding-right: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 1650px) {
+  .chirpy-sidebar-bottom {
+    padding-left: 2.75rem;
+    margin-bottom: 1.75rem;
+  }
+}
+
+.chirpy-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-bottom: 0.5rem;
+  border: 0;
+  border-radius: 50%;
+  color: var(--sidebar-btn-color);
+  background: var(--sidebar-btn-bg);
+  box-shadow: var(--sidebar-border-color) 0 0 0 1px;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
+}
+
+.chirpy-icon-btn:hover {
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-active-color);
+}
+
+.chirpy-icon-btn svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.chirpy-icon-border {
+  display: inline-block;
+  width: 1px;
+  height: 1.1rem;
+  margin: 0 0.15rem 0.5rem;
+  background: var(--sidebar-border-color);
+  align-self: center;
+}
+
+/* main */
+.chirpy-main-wrapper {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  justify-content: center;
+}
+
+@media (min-width: 850px) {
+  .chirpy-main-wrapper {
+    margin-left: var(--chirpy-sidebar-width);
+  }
+}
+
+.chirpy-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100svh;
+  max-width: 1140px;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+@media (min-width: 1200px) {
+  .chirpy-container {
+    max-width: 1140px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .chirpy-container {
+    max-width: 1320px;
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .chirpy-container {
+    max-width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* topbar */
+.chirpy-topbar-wrapper {
+  flex-shrink: 0;
+  height: 3rem;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--topbar-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.chirpy-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  max-width: 100%;
+  padding: 0 0.75rem;
+}
+
+@media (min-width: 992px) {
+  .chirpy-topbar {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+.chirpy-breadcrumb {
+  font-size: 1rem;
+  color: var(--text-muted-color);
+  padding-left: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chirpy-breadcrumb a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.chirpy-breadcrumb a:hover {
+  color: var(--link-hover);
+  border-bottom: 1px solid var(--link-hover);
+}
+
+.chirpy-breadcrumb span + span::before {
+  content: '›';
+  padding: 0 0.3rem;
+  color: var(--text-muted-color);
+}
+
+@media (max-width: 849px) {
+  .chirpy-breadcrumb {
+    display: none;
+  }
+}
+
+.chirpy-topbar-title {
+  display: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--topbar-text-color);
+  text-align: center;
+  width: 70%;
+  word-break: keep-all;
+}
+
+@media (max-width: 849px) {
+  .chirpy-topbar-title {
+    display: block;
+  }
+}
+
+.chirpy-topbar-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--topbar-text-color);
+  cursor: pointer;
+}
+
+@media (max-width: 849px) {
+  .chirpy-topbar-btn {
+    display: inline-flex;
+  }
+}
+
+.chirpy-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: 0.75rem;
+  min-width: 0;
+}
+
+@media (max-width: 849px) {
+  .chirpy-search-wrap:not(.is-open) {
+    display: none;
+  }
+  .chirpy-search-wrap.is-open {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0 0.75rem;
+    background: var(--topbar-bg);
+    z-index: 2;
+  }
+}
+
+.chirpy-search-input {
+  height: 2rem;
+  min-width: 10rem;
+  flex: 1;
+  border: 1px solid var(--search-border-color);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--text-color);
+  padding: 0 0.75rem 0 2rem;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.chirpy-search-input:focus {
+  border-color: var(--text-muted-color);
+}
+
+.chirpy-search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.chirpy-search-field > svg {
+  position: absolute;
+  left: 0.55rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--search-icon-color);
+  pointer-events: none;
+}
+
+.chirpy-search-cancel {
+  border: 0;
+  background: transparent;
+  color: var(--link-color);
+  cursor: pointer;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  display: none;
+}
+
+@media (max-width: 849px) {
+  .chirpy-search-wrap.is-open .chirpy-search-cancel {
+    display: inline;
+  }
+}
+
+/* content row */
+.chirpy-content-row {
+  display: flex;
+  flex-grow: 1;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.chirpy-main {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
+  padding: 0 1rem 2rem;
+  min-width: 0;
+}
+
+@media (min-width: 992px) {
+  .chirpy-main {
+    width: 91.666%;
+    max-width: 91.666%;
+  }
+}
+
+@media (min-width: 1200px) {
+  .chirpy-main {
+    width: 75%;
+    max-width: 75%;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+.chirpy-panel {
+  display: none;
+  width: 25%;
+  max-width: 25%;
+  padding-left: 0.5rem;
+  color: var(--text-muted-color);
+}
+
+/* show right panel earlier so「文章内容」大纲更易见 */
+@media (min-width: 992px) {
+  .chirpy-panel {
+    display: block;
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+  .chirpy-main {
+    width: 72%;
+    max-width: 72%;
+  }
+  .chirpy-panel {
+    width: 28%;
+    max-width: 28%;
+  }
+}
+
+/* article outline */
+.chirpy-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chirpy-toc-item {
+  line-height: 1.45;
+  margin: 0.15rem 0;
+  overflow: visible;
+  white-space: normal;
+}
+
+.chirpy-toc-link {
+  display: block;
+  padding: 0.28rem 0 0.28rem 0.65rem;
+  border-left: 2px solid transparent;
+  color: var(--text-muted-color);
+  text-decoration: none;
+  font-size: 0.9rem;
+  word-break: break-word;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.chirpy-toc-link:hover {
+  color: var(--link-hover);
+  border-left-color: var(--link-hover);
+}
+
+/* scrollspy：当前阅读位置 */
+.chirpy-toc-link.is-active {
+  color: var(--heading-color, var(--text-color));
+  font-weight: 600;
+  border-left-color: var(--link-color, #0056b2);
+  background: color-mix(in srgb, var(--link-color, #0056b2) 8%, transparent);
+}
+
+.chirpy-toc .chirpy-panel-heading {
+  margin-bottom: 0.35rem;
+}
+
+.chirpy-toc-mobile summary {
+  list-style: none;
+}
+
+.chirpy-toc-mobile summary::-webkit-details-marker {
+  display: none;
+}
+
+.chirpy-panel .access {
+  margin-top: 1.5rem;
+  position: sticky;
+  /* topbar 高 3rem + 一点间距，避免滚动时被顶栏盖住 */
+  top: calc(3rem + 0.75rem);
+  max-height: calc(100vh - 3rem - 1.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  z-index: 10;
+}
+
+.chirpy-toc {
+  padding-bottom: 1rem;
+}
+
+.chirpy-panel-heading {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
+  line-height: inherit;
+  color: var(--label-color);
+}
+
+.chirpy-panel-list {
+  list-style: none;
+  padding: 0 0 0.25rem 0.25rem;
+  margin: 0.5rem 0 1.5rem;
+}
+
+.chirpy-panel-list li {
+  line-height: 1.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chirpy-panel-list a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.chirpy-panel-list a:hover {
+  color: var(--link-hover);
+  border-bottom: 1px solid var(--link-hover);
+}
+
+.chirpy-post-tag {
+  display: inline-block;
+  line-height: 1.05rem;
+  font-size: 0.85rem;
+  border-radius: 0.8rem;
+  padding: 0.3rem 0.5rem;
+  margin: 0 0.35rem 0.5rem 0;
+  border: 1px solid var(--tag-border);
+  color: var(--link-color);
+  text-decoration: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.chirpy-post-tag:hover {
+  background: var(--tag-hover);
+  border-color: var(--tag-hover);
+}
+
+/* post list cards */
+.chirpy-post-list {
+  margin-top: 2rem;
+  flex-grow: 1;
+  padding: 0 0.25rem;
+}
+
+@media (min-width: 850px) {
+  .chirpy-post-list {
+    margin-top: 2.5rem;
+  }
+}
+
+.chirpy-card {
+  display: block;
+  margin-bottom: 1.25rem;
+  border-radius: 10px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden;
+  transition: background 0.25s ease;
+}
+
+.chirpy-card:hover {
+  text-decoration: none;
+  background: var(--card-hover-bg);
+}
+
+.chirpy-card-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .chirpy-card-body {
+    padding: 1.75rem 1.75rem 1.25rem;
+  }
+}
+
+.chirpy-card-title {
+  margin: 0.5rem 0;
+  color: var(--heading-color) !important;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.chirpy-card-text {
+  color: var(--text-muted-color) !important;
+  margin: 0 0 0.75rem;
+  flex: 1;
+  line-height: 1.5;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* 简述：公式/加粗/行内代码，无链接无标题 */
+.chirpy-card-text .markdown-summary .md-summary-code,
+.markdown-summary .md-summary-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0.05em 0.3em;
+  border-radius: 0.25rem;
+  background: color-mix(in oklab, var(--text-muted-color, #6c757d) 12%, transparent);
+}
+
+.chirpy-card-text .markdown-summary .katex,
+.markdown-summary .katex {
+  font-size: 1em;
+}
+
+.chirpy-post-meta {
+  display: flex;
+  align-items: flex-end;
+  flex-grow: 1;
+  color: var(--text-muted-color) !important;
+  font-size: 0.9rem;
+  gap: 0.25rem;
+}
+
+.chirpy-post-meta .meta-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.35rem;
+  margin-right: auto;
+}
+
+.chirpy-post-meta svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-right: 0.15rem;
+  vertical-align: -0.1em;
+  opacity: 0.85;
+}
+
+.chirpy-post-meta .meta-sep {
+  margin-left: 1rem;
+}
+
+@media (min-width: 768px) {
+  .chirpy-post-meta .meta-sep {
+    margin-left: 1.75rem;
+  }
+}
+
+/* article page */
+.chirpy-article header h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--heading-color);
+  line-height: 1.25;
+}
+
+.chirpy-article .post-meta {
+  margin-top: 1.5rem;
+  color: var(--text-muted-color);
+  font-size: 0.95rem;
+}
+
+.chirpy-article .post-meta span + span::before {
+  content: '•';
+  padding: 0 0.25rem;
+}
+
+.chirpy-article .post-desc {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--text-muted-color);
+  margin-top: 0.75rem;
+}
+
+.chirpy-prose {
+  margin-top: 2rem;
+  color: var(--text-color);
+  line-height: 1.75;
+  font-size: 1.05rem;
+}
+
+.chirpy-prose a {
+  color: var(--link-color);
+  text-decoration: none;
+  border-bottom: 1px solid var(--link-underline-color);
+}
+
+.chirpy-prose a:hover {
+  color: var(--link-hover) !important;
+  border-bottom-color: var(--link-hover);
+}
+
+.chirpy-prose h2 {
+  margin: 2.5rem 0 1.25rem;
+  font-size: 1.54rem;
+  color: var(--heading-color);
+}
+
+.chirpy-prose h3 {
+  margin: 2rem 0 1rem;
+  font-size: 1.36rem;
+  color: var(--heading-color);
+}
+
+.chirpy-prose h4 {
+  margin: 2rem 0 1rem;
+  font-size: 1.18rem;
+  color: var(--heading-color);
+}
+
+.chirpy-prose p {
+  margin: 0 0 1rem;
+}
+
+.chirpy-prose blockquote {
+  margin: 0 0 1rem;
+  padding-left: 1rem;
+  border-left: 0.125rem solid var(--main-border-color);
+  color: var(--text-muted-color);
+}
+
+.chirpy-prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.35rem;
+}
+
+.chirpy-prose pre {
+  border-radius: 10px;
+  overflow: auto;
+}
+
+/* archives */
+.chirpy-archives {
+  letter-spacing: 0.03rem;
+  margin-top: 1.5rem;
+  padding-left: 0.5rem;
+}
+
+.chirpy-archives .year {
+  height: 3.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--heading-color);
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-left: -4px;
+  padding-left: 0.25rem;
+}
+
+.chirpy-archives .year::before {
+  content: '';
+  width: 4px;
+  height: 72px;
+  position: absolute;
+  left: 79px;
+  bottom: 16px;
+  background: var(--timeline-color);
+}
+
+.chirpy-archives .year::after {
+  content: '';
+  display: inline-block;
+  position: relative;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  left: 21.5px;
+  border: 3px solid var(--timeline-node-bg);
+  background: var(--timeline-year-dot-color);
+  box-shadow: 0 0 2px 0 #c2c6cc;
+  z-index: 1;
+}
+
+.chirpy-archives ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.chirpy-archives ul li {
+  font-size: 1.1rem;
+  line-height: 3rem;
+  position: relative;
+  padding-left: 0;
+}
+
+.chirpy-archives ul li::before {
+  content: '';
+  width: 4px;
+  position: absolute;
+  top: 0;
+  left: 77px;
+  height: 3.1rem;
+  background: var(--timeline-color);
+}
+
+.chirpy-archives .date {
+  white-space: nowrap;
+  display: inline-block;
+  position: relative;
+  right: 0.5rem;
+  width: 4.5rem;
+  text-align: right;
+  color: var(--text-muted-color);
+  font-family: Lato, sans-serif;
+  font-size: 0.95rem;
+}
+
+.chirpy-archives a {
+  margin-left: 2.5rem;
+  position: relative;
+  top: 0.1rem;
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+.chirpy-archives a:hover {
+  color: var(--link-hover);
+}
+
+.chirpy-archives a::before {
+  content: '';
+  display: inline-block;
+  position: relative;
+  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  float: left;
+  top: 1.35rem;
+  left: 71px;
+  background: var(--timeline-node-bg);
+  box-shadow: 0 0 3px 0 #c2c6cc;
+  z-index: 1;
+}
+
+/* categories list page */
+.chirpy-cat-card {
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--main-border-color);
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--card-bg);
+}
+
+.chirpy-cat-header {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: var(--heading-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chirpy-cat-header span {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--text-muted-color);
+}
+
+/* footer */
+.chirpy-footer {
+  margin-top: 3rem;
+  padding: 1.25rem 1rem 1.5rem;
+  border-top: 1px solid var(--main-border-color);
+  background: var(--main-bg);
+  color: var(--text-muted-color);
+  font-size: 0.9rem;
+}
+
+.chirpy-footer-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 100%;
+}
+
+@media (min-width: 992px) {
+  .chirpy-footer-inner {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.chirpy-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.chirpy-footer a:hover {
+  color: var(--link-hover);
+  border-bottom: 1px solid var(--link-hover);
+}
+
+/* mask */
+.chirpy-mask {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgb(0 0 0 / 0.35);
+}
+
+.chirpy-shell[data-sidebar-open='1'] .chirpy-mask {
+  display: block;
+}
+
+@media (min-width: 850px) {
+  .chirpy-mask {
+    display: none !important;
+  }
+}
+
+/* back to top */
+.chirpy-back-top {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 35;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: 1px solid var(--btn-border-color);
+  background: var(--card-bg);
+  color: var(--text-muted-color);
+  box-shadow: var(--card-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.chirpy-back-top.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* pagination */
+.chirpy-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 2rem 0 1rem;
+  flex-wrap: wrap;
+}
+
+.chirpy-page-btn {
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.6rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.chirpy-page-btn:hover:not(:disabled) {
+  box-shadow: inset var(--btn-border-color) 0 0 0 1px;
+}
+
+.chirpy-page-btn.is-active {
+  background: var(--btn-paginator-hover-color);
+}
+
+.chirpy-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* empty / loading */
+.chirpy-empty {
+  margin-top: 3rem;
+  text-align: center;
+  color: var(--text-muted-color);
+  padding: 2rem 1rem;
+}
+
+/* live search results (Chirpy-like) */
+.chirpy-search-results {
+  min-height: 50vh;
+  flex: 1;
+}
+
+.chirpy-search-results h2 a {
+  color: var(--heading-color);
+  text-decoration: none;
+}
+
+.chirpy-search-results h2 a:hover {
+  color: var(--link-hover);
+}
+
+/* desktop: always show search field in topbar */
+@media (min-width: 850px) {
+  .chirpy-search-wrap {
+    display: flex !important;
+    position: relative;
+    max-width: 16rem;
+  }
+  .chirpy-search-cancel {
+    display: none !important;
+  }
+  .chirpy-shell[data-search-mode='1'] .chirpy-breadcrumb {
+    display: none;
+  }
+}
+
+/* owner manage strip inside chirpy */
+.chirpy-owner-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  padding: 0 0.25rem;
+}
+
+.chirpy-owner-bar a {
+  font-size: 0.85rem;
+  color: var(--link-color);
+  text-decoration: none;
+  border: 1px solid var(--btn-border-color);
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.65rem;
+  background: var(--card-bg);
+}
+
+.chirpy-owner-bar a:hover {
+  background: var(--sidebar-hover-bg);
+}
+
+/*
+ * Keep all user-visible Chirpy copy selectable. Some upstream-inspired
+ * navigation styles and utility classes disable selection; reset that at the
+ * theme boundary so it cannot affect the rest of the public blog. Code line
+ * numbers stay excluded by the more specific `.markdown-body .md-code-ln`
+ * rule, which keeps copied snippets clean.
+ */
+[data-blog-theme='chirpy'],
+[data-blog-theme='chirpy'] * {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+[data-blog-theme='chirpy'] ::selection {
+  color: var(--selection-color);
+  background: var(--selection-bg);
+}

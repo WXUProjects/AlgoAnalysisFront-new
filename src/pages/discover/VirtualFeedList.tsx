@@ -5,7 +5,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { FeedCard, FeedCardSkeleton } from './FeedCard'
 import type { DiscoverStreamItem, PreviewTarget } from './types'
 
-const ESTIMATE_ROW = 168
+const ESTIMATE_ROW = 120
 const OVERSCAN = 6
 
 type Props = {
@@ -99,12 +99,13 @@ export function VirtualFeedList({
         })}
       </div>
 
-      <div className="flex justify-center border-t py-3">
+      <div className="flex justify-center border-t py-2">
         {hasMore ? (
           <Button
             type="button"
             variant="outline"
             size="sm"
+            className="h-7 text-xs"
             disabled={loading}
             onClick={onLoadMore}
           >
@@ -112,7 +113,7 @@ export function VirtualFeedList({
             加载更多
           </Button>
         ) : items.length > 0 ? (
-          <p className="text-sm text-muted-foreground">已经到底了</p>
+          <p className="text-xs text-muted-foreground">已经到底了</p>
         ) : null}
       </div>
 

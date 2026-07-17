@@ -4,10 +4,21 @@ import { normalizeStaticUrl } from '@/lib/static-url'
 
 function normalizeProfile(raw: Record<string, unknown>): UserProfile {
   const spiders = Array.isArray(raw.spiders)
-    ? (raw.spiders as Record<string, unknown>[]).map((s) => ({
-        platform: str(s.platform),
-        username: str(s.username),
-      }))
+    ? (raw.spiders as Record<string, unknown>[]).map((s) => {
+        // 后端 hasRating 可能缺省；有有效 rating 时仍展示
+        const rating = num(s.rating)
+        const hasRatingFlag =
+          s.hasRating === undefined ? undefined : bool(s.hasRating)
+        const hasRating =
+          hasRatingFlag === true ||
+          (hasRatingFlag !== false && Number.isFinite(rating) && rating > 0)
+        return {
+          platform: str(s.platform),
+          username: str(s.username),
+          rating,
+          hasRating,
+        }
+      })
     : []
   const lastSyncRaw = raw.lastSyncAt
   const lastSyncAt =

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Link,
   useNavigate,
@@ -6,8 +6,10 @@ import {
   useParams,
 } from 'react-router-dom'
 import {
+  ClockIcon,
   EyeIcon,
   HeartIcon,
+  LinkIcon,
   LockIcon,
   MessageCircleIcon,
   Trash2Icon,
@@ -17,16 +19,25 @@ import {
   createBlogComment,
   deleteBlogComment,
   getBlogArticle,
+  listBlogByUsername,
   listBlogComments,
   toggleBlogLike,
   unlockBlogArticle,
 } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
 import { MarkdownBody } from '@/components/markdown-body'
+import { MarkdownSummary } from '@/components/markdown-summary'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
+import { ArticleToc } from '@/components/blog/article-toc'
+import {
+  BLOG_NEW_TAB_PROPS,
+  buildArticleOutline,
+  ensureOutlineAnchors,
+  estimateReadMinutes,
+} from '@/lib/blog-nav'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogArticle as BlogArticleType, BlogComment } from '@shared/api'
 
@@ -34,7 +45,14 @@ const unlockKey = (id: number) => `blog-unlock-${id}`
 
 export function BlogArticlePage() {
   const { username = '', slug = '' } = useParams()
-  const { isOwner } = useOutletContext<BlogOutletContext>()
+  const {
+    isOwner,
+    theme,
+    setBreadcrumb,
+    setPanelExtra,
+    setShowPanel,
+    categories,
+  } = useOutletContext<BlogOutletContext>()
   const { isLogin, user } = useAuth()
   const navigate = useNavigate()
 
@@ -45,13 +63,15 @@ export function BlogArticlePage() {
   const [comments, setComments] = useState<BlogComment[]>([])
   const [commentText, setCommentText] = useState('')
   const [posting, setPosting] = useState(false)
+  const [related, setRelated] = useState<BlogArticleType[]>([])
+  const bodyRef = useRef<HTMLDivElement>(null)
 
   const load = async (unlockToken?: string) => {
     setLoading(true)
     const stored =
       unlockToken ||
       (typeof sessionStorage !== 'undefined'
-        ? sessionStorage.getItem(unlockKey(0)) // placeholder, fixed after first load
+        ? sessionStorage.getItem(unlockKey(0))
         : null)
     void stored
     const tokenFromStore =
@@ -68,7 +88,6 @@ export function BlogArticlePage() {
       setLoading(false)
       return
     }
-    // re-fetch unlock from id-specific key if first pass had no id
     if (res.data.requiresPassword && !res.data.canSeeBody) {
       const t =
         typeof sessionStorage !== 'undefined'
@@ -85,7 +104,12 @@ export function BlogArticlePage() {
           setLoading(false)
           if (again.data.canSeeBody) {
             void loadComments(again.data.id)
+            void loadRelated(again.data)
           }
+          setBreadcrumb([
+            { label: '首页', to: `/blog/${username}` },
+            { label: again.data.title },
+          ])
           return
         }
       }
@@ -94,7 +118,12 @@ export function BlogArticlePage() {
     setLoading(false)
     if (res.data.canSeeBody) {
       void loadComments(res.data.id)
+      void loadRelated(res.data)
     }
+    setBreadcrumb([
+      { label: '首页', to: `/blog/${username}` },
+      { label: res.data.title },
+    ])
   }
 
   const loadComments = async (articleId: number) => {
@@ -102,10 +131,70 @@ export function BlogArticlePage() {
     if (res.success && res.data) setComments(res.data.list)
   }
 
+  const loadRelated = async (a: BlogArticleType) => {
+    const res = await listBlogByUsername({
+      username,
+      page: 1,
+      pageSize: 8,
+      categoryId: a.categoryId || undefined,
+    })
+    if (!res.success || !res.data) {
+      setRelated([])
+      return
+    }
+    setRelated(res.data.list.filter((x) => x.id !== a.id).slice(0, 4))
+  }
+
   useEffect(() => {
     void load()
+    return () => {
+      setPanelExtra(null)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username, slug])
+
+  const toc = useMemo(
+    () =>
+      article?.canSeeBody
+        ? buildArticleOutline(article.content || '', article.title)
+        : [],
+    [article?.canSeeBody, article?.content, article?.title],
+  )
+
+  // Inject anchor ids for bold-fallback / missing heading ids after MD render
+  useEffect(() => {
+    if (!article?.canSeeBody || toc.length === 0) return
+    const apply = () => ensureOutlineAnchors(bodyRef.current, toc)
+    apply()
+    // MarkdownBody async-highlight may rewrite DOM shortly after
+    const t1 = window.setTimeout(apply, 120)
+    const t2 = window.setTimeout(apply, 480)
+    return () => {
+      window.clearTimeout(t1)
+      window.clearTimeout(t2)
+    }
+  }, [article?.canSeeBody, article?.content, toc])
+
+  // Right panel TOC for Chirpy / Mizuki (scrollspy lives inside ArticleToc)
+  useEffect(() => {
+    if (theme.themeId !== 'chirpy' && theme.themeId !== 'mizuki') {
+      setPanelExtra(null)
+      return
+    }
+    setShowPanel(true)
+    if (toc.length === 0) {
+      setPanelExtra(null)
+      return
+    }
+    setPanelExtra(
+      <ArticleToc
+        toc={toc}
+        getBody={() => bodyRef.current}
+        variant={theme.themeId === 'mizuki' ? 'mizuki' : 'chirpy'}
+      />,
+    )
+    return () => setPanelExtra(null)
+  }, [toc, theme.themeId, setPanelExtra, setShowPanel])
 
   async function handleUnlock(e: React.FormEvent) {
     e.preventDefault()
@@ -126,6 +215,7 @@ export function BlogArticlePage() {
     setArticle(res.data)
     toast.success('已解锁')
     void loadComments(res.data.id)
+    void loadRelated(res.data)
   }
 
   async function handleLike() {
@@ -195,6 +285,15 @@ export function BlogArticlePage() {
     }
   }
 
+  async function handleCopyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      toast.success('链接已复制')
+    } catch {
+      toast.error('复制失败，请手动复制地址栏')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -210,6 +309,386 @@ export function BlogArticlePage() {
         <Button variant="outline" asChild>
           <Link to={`/blog/${username}`}>返回列表</Link>
         </Button>
+      </div>
+    )
+  }
+
+  const catName = categories.find((c) => c.id === article.categoryId)?.name
+  const isChirpy = theme.themeId === 'chirpy'
+  const isMizuki = theme.themeId === 'mizuki'
+  const published = new Date(
+    (article.publishedAt || article.createdAt) * 1000,
+  ).toLocaleString('zh-CN')
+  const readMin = estimateReadMinutes(article.content)
+  const editHref = `/blog/${username}/manage/edit/${article.id}`
+
+  const unlockBlock =
+    article.requiresPassword && !article.canSeeBody ? (
+      <div
+        className={
+          isChirpy
+            ? 'mt-6 rounded-[10px] bg-[var(--card-bg)] p-6 shadow-[var(--card-shadow)]'
+            : isMizuki
+              ? 'mz-section-card'
+              : 'rounded-xl border bg-card p-6 shadow-sm'
+        }
+      >
+        <div className="mb-3 flex items-center gap-2 font-medium">
+          <LockIcon className="size-4 text-primary" />
+          这篇文章需要密码
+        </div>
+        <p className="mb-4 text-sm text-muted-foreground">
+          输入作者设置的访问密码后即可阅读全文
+        </p>
+        <form onSubmit={handleUnlock} className="flex flex-wrap gap-2">
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="访问密码"
+            className="max-w-xs"
+            autoComplete="off"
+          />
+          <Button type="submit" disabled={unlocking}>
+            {unlocking ? '验证中…' : '解锁'}
+          </Button>
+        </form>
+      </div>
+    ) : null
+
+  const mobileToc =
+    isChirpy && article.canSeeBody && toc.length > 0 ? (
+      <details className="chirpy-toc-mobile mb-6 rounded-[10px] border border-[var(--main-border-color)] bg-[var(--card-bg)] p-3 xl:hidden">
+        <summary className="cursor-pointer select-none font-semibold text-[var(--label-color)]">
+          文章内容
+        </summary>
+        <ul className="chirpy-toc-list mt-2">
+          {toc.map((item) => (
+            <li
+              key={item.id}
+              className="chirpy-toc-item"
+              style={{
+                paddingLeft: `${Math.max(0, item.level - 1) * 0.7}rem`,
+              }}
+            >
+              <a
+                href={item.id === 'article-top' ? '#' : `#${item.id}`}
+                className="chirpy-toc-link"
+                onClick={(e) => {
+                  e.preventDefault()
+                  if (item.id === 'article-top') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                    return
+                  }
+                  ensureOutlineAnchors(bodyRef.current, toc)
+                  document
+                    .getElementById(item.id)
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+              >
+                {item.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
+    ) : null
+
+  const bodyBlock =
+    !article.requiresPassword || article.canSeeBody ? (
+      isChirpy ? (
+        <div ref={bodyRef} className="chirpy-prose content" id="article-body">
+          {mobileToc}
+          <MarkdownBody
+            content={article.content || ''}
+            mode="markdown"
+            emptyText="（空文章）"
+            className="prose-blog"
+          />
+        </div>
+      ) : isMizuki ? (
+        <div ref={bodyRef} className="mz-prose" id="article-body">
+          <MarkdownBody
+            content={article.content || ''}
+            mode="markdown"
+            emptyText="（空文章）"
+            className="prose-blog"
+          />
+        </div>
+      ) : (
+        <div ref={bodyRef} className="rounded-xl border bg-card p-6 shadow-sm">
+          <MarkdownBody
+            content={article.content || ''}
+            mode="markdown"
+            emptyText="（空文章）"
+            className="prose-blog text-[15px] leading-relaxed"
+          />
+        </div>
+      )
+    ) : null
+
+  const shareBlock = article.canSeeBody ? (
+    <div
+      className={
+        isChirpy
+          ? 'post-tail-wrapper mt-12 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--main-border-color)] pb-6'
+          : isMizuki
+            ? 'mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-[var(--mz-line)] pt-4'
+            : 'flex flex-wrap items-center justify-between gap-3 border-t pt-4'
+      }
+    >
+      <div className="text-sm text-muted-foreground">
+        {catName ? <span>分类：{catName}</span> : null}
+      </div>
+      <button
+        type="button"
+        onClick={() => void handleCopyLink()}
+        className="inline-flex items-center gap-1.5 text-sm text-[var(--link-color,var(--primary))] hover:underline"
+      >
+        <LinkIcon className="size-3.5" />
+        复制链接
+      </button>
+    </div>
+  ) : null
+
+  const relatedBlock =
+    article.canSeeBody && related.length > 0 ? (
+      <section
+        id="related-posts"
+        className={
+          isChirpy
+            ? 'mt-10 space-y-3'
+            : isMizuki
+              ? 'mz-section-card space-y-3'
+              : 'mt-6 space-y-3 rounded-xl border bg-card p-5'
+        }
+      >
+        <h3
+          className={
+            isChirpy
+              ? 'text-[1.1rem] font-semibold text-[var(--label-color)]'
+              : isMizuki
+                ? 'text-base font-semibold text-[var(--mz-text-90)]'
+                : 'text-base font-semibold'
+          }
+        >
+          相关文章
+        </h3>
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {related.map((a) => (
+            <li key={a.id}>
+              <Link
+                to={`/blog/${username}/${a.slug}`}
+                className={
+                  isChirpy
+                    ? 'block rounded-[10px] bg-[var(--card-bg)] p-3 shadow-[var(--card-shadow)] transition hover:bg-[var(--card-hover-bg)]'
+                    : isMizuki
+                      ? 'block rounded-[var(--mz-radius-sm)] bg-[var(--mz-btn-bg)] p-3 transition hover:bg-[var(--mz-btn-bg-hover)]'
+                      : 'block rounded-lg border p-3 hover:border-primary/40'
+                }
+              >
+                <h4 className="line-clamp-2 font-medium">{a.title}</h4>
+                {a.summary ? (
+                  <div className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                    <MarkdownSummary content={a.summary} />
+                  </div>
+                ) : null}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ) : null
+
+  const commentsBlock = article.canSeeBody ? (
+    <section
+      className={
+        isChirpy
+          ? 'mt-10 space-y-4 rounded-[10px] bg-[var(--card-bg)] p-6 shadow-[var(--card-shadow)]'
+          : isMizuki
+            ? 'mz-section-card mt-0 space-y-4'
+            : 'space-y-4 rounded-xl border bg-card p-6 shadow-sm'
+      }
+    >
+      <h2 className="text-lg font-semibold">评论</h2>
+      <form onSubmit={handleComment} className="space-y-2">
+        <Textarea
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          placeholder={isLogin ? '写下你的想法…' : '登录后即可评论'}
+          rows={3}
+          disabled={!isLogin}
+        />
+        <div className="flex justify-end">
+          <Button type="submit" disabled={!isLogin || posting} size="sm">
+            {posting ? '发送中…' : '发送评论'}
+          </Button>
+        </div>
+      </form>
+      <ul className="divide-y">
+        {comments.length === 0 ? (
+          <li className="py-6 text-center text-sm text-muted-foreground">
+            还没有评论，来抢沙发吧
+          </li>
+        ) : (
+          comments.map((c) => (
+            <li key={c.id} className="flex gap-3 py-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium">
+                    {c.author?.name || c.author?.username || '用户'}
+                  </span>
+                  <time className="text-xs text-muted-foreground">
+                    {new Date(c.createdAt * 1000).toLocaleString('zh-CN')}
+                  </time>
+                </div>
+                <p className="mt-1 whitespace-pre-wrap text-sm">{c.content}</p>
+              </div>
+              {(user?.userId === c.userId || isOwner) && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 text-muted-foreground"
+                  onClick={() => void handleDeleteComment(c.id)}
+                  aria-label="删除评论"
+                >
+                  <Trash2Icon className="size-3.5" />
+                </Button>
+              )}
+            </li>
+          ))
+        )}
+      </ul>
+    </section>
+  ) : null
+
+  if (isChirpy) {
+    return (
+      <article className="chirpy-article px-1 pt-4">
+        {article.coverUrl ? (
+          <div className="mb-6 overflow-hidden rounded-[10px]">
+            <img
+              src={article.coverUrl}
+              alt=""
+              className="aspect-[21/9] w-full object-cover"
+            />
+          </div>
+        ) : null}
+        <header>
+          <h1>{article.title}</h1>
+          {/* 摘要字段保留，正文页不渲染；只在列表卡片展示 */}
+          <div className="post-meta flex flex-wrap items-center gap-y-1">
+            <span>
+              <Link to={`/blog/${username}`}>@{username}</Link>
+            </span>
+            <span>
+              <time>{published}</time>
+            </span>
+            {catName ? <span>{catName}</span> : null}
+            <span className="inline-flex items-center gap-1">
+              <ClockIcon className="size-3.5" />
+              约 {readMin} 分钟
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <EyeIcon className="size-3.5" />
+              {article.viewCount ?? 0}
+            </span>
+            <button
+              type="button"
+              onClick={() => void handleLike()}
+              className={`inline-flex items-center gap-1 ${
+                article.liked ? 'text-[var(--link-color)]' : ''
+              }`}
+            >
+              <HeartIcon
+                className={`size-3.5 ${article.liked ? 'fill-current' : ''}`}
+              />
+              {article.likeCount ?? 0}
+            </button>
+            <span className="inline-flex items-center gap-1">
+              <MessageCircleIcon className="size-3.5" />
+              {article.commentCount ?? 0}
+            </span>
+            {isOwner && (
+              <span>
+                <a href={editHref} {...BLOG_NEW_TAB_PROPS}>
+                  编辑
+                </a>
+              </span>
+            )}
+          </div>
+        </header>
+        {unlockBlock}
+        {bodyBlock}
+        {shareBlock}
+        {relatedBlock}
+        {commentsBlock}
+      </article>
+    )
+  }
+
+  if (isMizuki) {
+    return (
+      <div className="space-y-4">
+        <article className="mz-article">
+          {article.coverUrl ? (
+            <div className="mb-6 overflow-hidden rounded-[var(--mz-radius-sm)]">
+              <img
+                src={article.coverUrl}
+                alt=""
+                className="aspect-[21/9] w-full object-cover"
+              />
+            </div>
+          ) : null}
+          <header>
+            <h1>{article.title}</h1>
+            <div className="mz-article-meta">
+              <span>
+                <Link to={`/blog/${username}`}>@{username}</Link>
+              </span>
+              <span>
+                <time>{published}</time>
+              </span>
+              {catName ? <span>{catName}</span> : null}
+              <span className="inline-flex items-center gap-1">
+                <ClockIcon className="size-3.5" />
+                约 {readMin} 分钟
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <EyeIcon className="size-3.5" />
+                {article.viewCount ?? 0}
+              </span>
+              <button
+                type="button"
+                onClick={() => void handleLike()}
+                className={`inline-flex items-center gap-1 ${
+                  article.liked ? 'text-[var(--mz-primary)]' : ''
+                }`}
+              >
+                <HeartIcon
+                  className={`size-3.5 ${article.liked ? 'fill-current' : ''}`}
+                />
+                {article.likeCount ?? 0}
+              </button>
+              <span className="inline-flex items-center gap-1">
+                <MessageCircleIcon className="size-3.5" />
+                {article.commentCount ?? 0}
+              </span>
+              {isOwner && (
+                <span>
+                  <a href={editHref} {...BLOG_NEW_TAB_PROPS}>
+                    编辑
+                  </a>
+                </span>
+              )}
+            </div>
+          </header>
+          {unlockBlock}
+          {bodyBlock}
+          {shareBlock}
+        </article>
+        {relatedBlock}
+        {commentsBlock}
       </div>
     )
   }
@@ -232,23 +711,20 @@ export function BlogArticlePage() {
             @{username}
           </Link>
           <span>·</span>
-          <time>
-            {new Date(
-              (article.publishedAt || article.createdAt) * 1000,
-            ).toLocaleString('zh-CN')}
-          </time>
+          <time>{published}</time>
+          <span>·</span>
+          <span className="inline-flex items-center gap-1">
+            <ClockIcon className="size-3.5" />约 {readMin} 分钟
+          </span>
           {isOwner && (
             <Button variant="link" size="sm" className="h-auto p-0" asChild>
-              <Link to={`/blog/${username}/manage/edit/${article.id}`}>
+              <a href={editHref} {...BLOG_NEW_TAB_PROPS}>
                 编辑
-              </Link>
+              </a>
             </Button>
           )}
         </div>
         <h1 className="text-3xl font-bold tracking-tight">{article.title}</h1>
-        {article.summary ? (
-          <p className="text-muted-foreground">{article.summary}</p>
-        ) : null}
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <EyeIcon className="size-4" />
@@ -273,95 +749,11 @@ export function BlogArticlePage() {
         </div>
       </header>
 
-      {article.requiresPassword && !article.canSeeBody ? (
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="mb-3 flex items-center gap-2 font-medium">
-            <LockIcon className="size-4 text-primary" />
-            这篇文章需要密码
-          </div>
-          <p className="mb-4 text-sm text-muted-foreground">
-            输入作者设置的访问密码后即可阅读全文
-          </p>
-          <form onSubmit={handleUnlock} className="flex flex-wrap gap-2">
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="访问密码"
-              className="max-w-xs"
-              autoComplete="off"
-            />
-            <Button type="submit" disabled={unlocking}>
-              {unlocking ? '验证中…' : '解锁'}
-            </Button>
-          </form>
-        </div>
-      ) : (
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <MarkdownBody
-            content={article.content || ''}
-            mode="markdown"
-            emptyText="（空文章）"
-            className="prose-blog text-[15px] leading-relaxed"
-          />
-        </div>
-      )}
-
-      {article.canSeeBody && (
-        <section className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">评论</h2>
-          <form onSubmit={handleComment} className="space-y-2">
-            <Textarea
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder={isLogin ? '写下你的想法…' : '登录后即可评论'}
-              rows={3}
-              disabled={!isLogin}
-            />
-            <div className="flex justify-end">
-              <Button type="submit" disabled={!isLogin || posting} size="sm">
-                {posting ? '发送中…' : '发送评论'}
-              </Button>
-            </div>
-          </form>
-          <ul className="divide-y">
-            {comments.length === 0 ? (
-              <li className="py-6 text-center text-sm text-muted-foreground">
-                还没有评论，来抢沙发吧
-              </li>
-            ) : (
-              comments.map((c) => (
-                <li key={c.id} className="flex gap-3 py-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="font-medium">
-                        {c.author?.name || c.author?.username || '用户'}
-                      </span>
-                      <time className="text-xs text-muted-foreground">
-                        {new Date(c.createdAt * 1000).toLocaleString('zh-CN')}
-                      </time>
-                    </div>
-                    <p className="mt-1 whitespace-pre-wrap text-sm">
-                      {c.content}
-                    </p>
-                  </div>
-                  {(user?.userId === c.userId || isOwner) && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="shrink-0 text-muted-foreground"
-                      onClick={() => void handleDeleteComment(c.id)}
-                      aria-label="删除评论"
-                    >
-                      <Trash2Icon className="size-3.5" />
-                    </Button>
-                  )}
-                </li>
-              ))
-            )}
-          </ul>
-        </section>
-      )}
+      {unlockBlock}
+      {bodyBlock}
+      {shareBlock}
+      {relatedBlock}
+      {commentsBlock}
     </article>
   )
 }

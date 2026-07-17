@@ -1,61 +1,89 @@
-import { useEffect, useMemo, useState } from 'react'
 import {
-  Link,
-  NavLink,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
+import {
   Outlet,
+  useLocation,
   useNavigate,
   useParams,
 } from 'react-router-dom'
-import {
-  ArrowLeftIcon,
-  BarChart3Icon,
-  BookOpenIcon,
-  FolderOpenIcon,
-  LogInIcon,
-  NewspaperIcon,
-  PenLineIcon,
-} from 'lucide-react'
-import { listBlogByUsername } from '@/api/blog'
+import { listBlogByUsername, listBlogCategories } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
-import { ThemeToggle } from '@/components/theme-toggle'
+import { ChirpyShell } from '@/components/blog/chirpy-shell'
+import { MizukiShell } from '@/components/blog/mizuki-shell'
+import { SimpleShell } from '@/components/blog/simple-shell'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
   blogThemeStyle,
   resolveBlogTheme,
   type BlogThemeContext,
 } from '@/lib/blog-theme'
-import { cn } from '@/lib/utils'
+import { resolvePageTitle } from '@/lib/page-title'
 import { MotionProvider } from '@/motion/MotionContext'
-import type { BlogAuthor } from '@shared/api'
+import type {
+  BlogArticle,
+  BlogAuthor,
+  BlogCategory,
+} from '@shared/api'
+import '@/styles/blog-chirpy.css'
+import '@/styles/blog-mizuki.css'
 
 export type BlogOutletContext = {
   username: string
   author: BlogAuthor | null
   isOwner: boolean
   theme: BlogThemeContext
+  categories: BlogCategory[]
+  recentPosts: BlogArticle[]
   refreshMeta: () => Promise<void>
+  setBreadcrumb: (items: { label: string; to?: string }[]) => void
+  setShowPanel: (show: boolean) => void
+  /** Chirpy right-panel slot (e.g. article TOC) */
+  setPanelExtra: (node: React.ReactNode) => void
 }
 
 /**
  * Independent blog shell — not AppLayout.
- * Return-to-main control + owner-only manage tabs; login → main site.
+ * Default theme: Chirpy；可选简约 / Mizuki。
  */
 export function BlogLayout() {
   const { username = '' } = useParams<{ username: string }>()
   const { isLogin, user, ready } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
   const [author, setAuthor] = useState<BlogAuthor | null>(null)
   const [isOwner, setIsOwner] = useState(false)
   const [themeEnabled, setThemeEnabled] = useState(false)
+  const [themeId, setThemeId] = useState<string>('chirpy')
+  const [subtitle, setSubtitle] = useState('')
+  const [socialLinks, setSocialLinks] = useState<
+    BlogThemeContext['socialLinks']
+  >([])
+  const [categories, setCategories] = useState<BlogCategory[]>([])
+  const [recentPosts, setRecentPosts] = useState<BlogArticle[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [breadcrumb, setBreadcrumb] = useState<
+    { label: string; to?: string }[]
+  >([{ label: '首页' }])
+  const [showPanel, setShowPanel] = useState(true)
+  const [panelExtra, setPanelExtra] = useState<ReactNode>(null)
 
-  const refreshMeta = async () => {
+  const refreshMeta = useCallback(async () => {
     if (!username) return
-    const res = await listBlogByUsername({ username, page: 1, pageSize: 1 })
+    const [res, cats] = await Promise.all([
+      listBlogByUsername({ username, page: 1, pageSize: 8 }),
+      listBlogCategories(username),
+    ])
     if (!res.success || !res.data) {
       setError(res.message || '找不到这个博客')
       setAuthor(null)
@@ -66,7 +94,12 @@ export function BlogLayout() {
     setAuthor(res.data.author)
     setIsOwner(res.data.isOwner)
     setThemeEnabled(res.data.themeEnabled)
-  }
+    setThemeId(res.data.themeId || 'chirpy')
+    setSubtitle(res.data.subtitle || '')
+    setSocialLinks(res.data.socialLinks || [])
+    setRecentPosts(res.data.list || [])
+    setCategories(cats.data || [])
+  }, [username])
 
   useEffect(() => {
     let cancelled = false
@@ -78,161 +111,155 @@ export function BlogLayout() {
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- username / auth ready
-  }, [username, ready, isLogin, user?.userId])
+  }, [username, ready, isLogin, user?.userId, refreshMeta])
+
+  // default breadcrumb from path
+  // Note: do NOT clear panelExtra on article routes — child owns TOC and parent
+  // effects run after children, which used to wipe the outline every time.
+  useEffect(() => {
+    const base = `/blog/${username}`
+    const path = location.pathname
+    // Mizuki keeps profile sidebar on secondary pages; Chirpy hides right panel
+    const secondaryPanel = themeId === 'mizuki'
+    if (path === base || path === `${base}/`) {
+      setBreadcrumb([{ label: '首页' }])
+      setShowPanel(true)
+      setPanelExtra(null)
+      return
+    }
+    if (path.startsWith(`${base}/categories`)) {
+      setBreadcrumb([
+        { label: '首页', to: base },
+        { label: '分类' },
+      ])
+      setShowPanel(secondaryPanel)
+      setPanelExtra(null)
+      return
+    }
+    if (path.startsWith(`${base}/archives`)) {
+      setBreadcrumb([
+        { label: '首页', to: base },
+        { label: '归档' },
+      ])
+      setShowPanel(secondaryPanel)
+      setPanelExtra(null)
+      return
+    }
+    if (path.startsWith(`${base}/about`)) {
+      setBreadcrumb([
+        { label: '首页', to: base },
+        { label: '关于' },
+      ])
+      setShowPanel(secondaryPanel)
+      setPanelExtra(null)
+      return
+    }
+    // article page — keep right panel; BlogArticle fills 文章内容 outline
+    setShowPanel(true)
+  }, [location.pathname, username, themeId])
 
   const theme = useMemo(
-    () => resolveBlogTheme({ enabled: themeEnabled }),
-    [themeEnabled],
+    () =>
+      resolveBlogTheme({
+        themeId,
+        subtitle,
+        socialLinks,
+        enabled: themeEnabled,
+      }),
+    [themeId, subtitle, socialLinks, themeEnabled],
   )
   const themeStyle = blogThemeStyle(theme)
-
   const displayName = author?.name || author?.username || username
-  const loginHref = `/login?redirect=${encodeURIComponent(`/blog/${username}`)}`
+  const pageTitle = resolvePageTitle(location.pathname) || '博客'
+  // 博客用博主名作品牌后缀，更易辨认标签页
+  useDocumentTitle(pageTitle, displayName || '博客')
 
   const outletCtx: BlogOutletContext = {
     username,
     author,
     isOwner,
     theme,
+    categories,
+    recentPosts,
     refreshMeta,
+    setBreadcrumb,
+    setShowPanel,
+    setPanelExtra,
   }
+
+  const body = loading ? (
+    <div className="flex justify-center py-20">
+      <Spinner className="size-6" />
+    </div>
+  ) : error ? (
+    <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
+      <p className="mb-4">{error}</p>
+      <Button variant="outline" onClick={() => navigate('/')}>
+        回主站首页
+      </Button>
+    </div>
+  ) : (
+    <Outlet context={outletCtx} />
+  )
 
   return (
     <MotionProvider>
       <TooltipProvider delayDuration={300}>
         <div
-          className="flex min-h-svh flex-col bg-background text-foreground"
           style={themeStyle}
           data-blog-shell="1"
+          data-blog-theme={theme.themeId}
           data-blog-theme-enabled={theme.enabled ? '1' : '0'}
         >
-          <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur-md">
-            <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
-              <Link
-                to={`/blog/${username}`}
-                className="flex min-w-0 items-center gap-2 font-semibold tracking-tight"
-              >
-                <BookOpenIcon className="size-4 shrink-0 text-primary" />
-                <span className="truncate">{displayName} 的博客</span>
-              </Link>
-              <div className="ml-auto flex items-center gap-1.5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5 text-muted-foreground"
-                  asChild
-                >
-                  <Link to="/blog-plaza">
-                    <NewspaperIcon className="size-3.5" />
-                    <span className="hidden sm:inline">博客广场</span>
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5 text-muted-foreground"
-                  onClick={() => navigate('/')}
-                >
-                  <ArrowLeftIcon className="size-3.5" />
-                  <span className="hidden sm:inline">返回主站</span>
-                </Button>
-                <ThemeToggle />
-                {!ready ? null : isLogin ? (
-                  <span className="hidden text-xs text-muted-foreground sm:inline">
-                    {user?.username}
-                  </span>
-                ) : (
-                  <Button variant="outline" size="sm" asChild className="gap-1.5">
-                    <Link to={loginHref}>
-                      <LogInIcon className="size-3.5" />
-                      登录
-                    </Link>
-                  </Button>
-                )}
-              </div>
-            </div>
-            <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 pb-2">
-              <BlogTab to={`/blog/${username}`} end>
-                文章
-              </BlogTab>
-              {isOwner && (
-                <>
-                  <BlogTab to={`/blog/${username}/manage`}>
-                    <PenLineIcon className="size-3.5" />
-                    文章管理
-                  </BlogTab>
-                  <BlogTab to={`/blog/${username}/manage/analytics`}>
-                    <BarChart3Icon className="size-3.5" />
-                    数据
-                  </BlogTab>
-                  <BlogTab to={`/blog/${username}/manage/categories`}>
-                    <FolderOpenIcon className="size-3.5" />
-                    分类
-                  </BlogTab>
-                </>
-              )}
-            </nav>
-          </header>
-
-          <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
-            {loading ? (
-              <div className="flex justify-center py-20">
-                <Spinner className="size-6" />
-              </div>
-            ) : error ? (
-              <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
-                <p className="mb-4">{error}</p>
-                <Button variant="outline" onClick={() => navigate('/')}>
-                  回主站首页
-                </Button>
-              </div>
-            ) : (
-              <Outlet context={outletCtx} />
-            )}
-          </main>
-
-          <footer className="border-t py-6 text-center text-xs text-muted-foreground">
-            <span className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-              <Link to="/blog-plaza" className="hover:text-foreground">
-                博客广场
-              </Link>
-              <span aria-hidden>·</span>
-              <Link to="/" className="hover:text-foreground">
-                返回 GoAlgo
-              </Link>
-            </span>
-          </footer>
+          {theme.themeId === 'chirpy' ? (
+            <ChirpyShell
+              username={username}
+              author={author}
+              displayName={displayName}
+              subtitle={theme.subtitle}
+              socialLinks={theme.socialLinks}
+              isOwner={isOwner}
+              breadcrumb={breadcrumb}
+              recentPosts={recentPosts}
+              categories={categories}
+              showPanel={showPanel && !loading && !error}
+              panelExtra={panelExtra}
+            >
+              {body}
+            </ChirpyShell>
+          ) : theme.themeId === 'mizuki' ? (
+            <MizukiShell
+              username={username}
+              author={author}
+              displayName={displayName}
+              subtitle={theme.subtitle}
+              socialLinks={theme.socialLinks}
+              isOwner={isOwner}
+              recentPosts={recentPosts}
+              categories={categories}
+              showSidebar={showPanel && !loading && !error}
+              panelExtra={panelExtra}
+              showBanner={
+                !loading &&
+                !error &&
+                (location.pathname === `/blog/${username}` ||
+                  location.pathname === `/blog/${username}/`)
+              }
+            >
+              {body}
+            </MizukiShell>
+          ) : (
+            <SimpleShell
+              username={username}
+              displayName={displayName}
+              isOwner={isOwner}
+            >
+              {body}
+            </SimpleShell>
+          )}
           <Toaster />
         </div>
       </TooltipProvider>
     </MotionProvider>
-  )
-}
-
-function BlogTab({
-  to,
-  end,
-  children,
-}: {
-  to: string
-  end?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <NavLink
-      to={to}
-      end={end}
-      className={({ isActive }) =>
-        cn(
-          'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors',
-          isActive
-            ? 'bg-primary/10 font-medium text-primary'
-            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-        )
-      }
-    >
-      {children}
-    </NavLink>
   )
 }

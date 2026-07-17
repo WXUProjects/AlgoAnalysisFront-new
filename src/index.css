@@ -182,6 +182,19 @@
   }
 }
 
+/* 列表/卡片简述：公式 + 加粗 + 行内代码（无链接/标题） */
+.markdown-summary .md-summary-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0.05em 0.3em;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--border) 45%, transparent);
+}
+
+.markdown-summary .katex {
+  font-size: 1em;
+}
+
 /* 题面 Markdown：1:1 对齐旧版 Detail.vue .content-md */
 .markdown-body {
   line-height: 1.7;

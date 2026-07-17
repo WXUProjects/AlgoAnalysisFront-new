@@ -54,8 +54,9 @@ export function BlogEditor() {
   const [password, setPassword] = useState('')
   const [recommend, setRecommend] = useState(false)
   const [syncToMainProfile, setSyncToMainProfile] = useState(false)
-  const [categoryId, setCategoryId] = useState<string>('none')
+  const [categoryId, setCategoryId] = useState<string>('')
   const [orgIds, setOrgIds] = useState<number[]>([])
+  const [orgDefaulted, setOrgDefaulted] = useState(false)
   const [categories, setCategories] = useState<BlogCategory[]>([])
 
   useEffect(() => {
@@ -63,6 +64,22 @@ export function BlogEditor() {
       if (res.data) setCategories(res.data)
     })
   }, [])
+
+  // 无分类时回落到「默认」分类（去掉「未分类」选项）
+  useEffect(() => {
+    if (categoryId || !categories.length) return
+    if (!isNew && loading) return
+    const def = categories.find((c) => c.isDefault) || categories[0]
+    if (def) setCategoryId(String(def.id))
+  }, [categories, categoryId, isNew, loading])
+
+  // 新建文章：默认勾选公共域（仅初始化一次，用户取消后不强制回勾）
+  useEffect(() => {
+    if (!isNew || orgDefaulted || !orgs.length) return
+    const pub = orgs.find((o) => o.isSystem || o.slug === 'public')
+    if (pub) setOrgIds([pub.id])
+    setOrgDefaulted(true)
+  }, [isNew, orgs, orgDefaulted])
 
   useEffect(() => {
     if (isNew || !isOwner) return
@@ -85,8 +102,9 @@ export function BlogEditor() {
       setVisibility((a.visibility as BlogVisibility) || 'public')
       setRecommend(Boolean(a.recommend))
       setSyncToMainProfile(Boolean(a.syncToMainProfile))
-      setCategoryId(a.categoryId ? String(a.categoryId) : 'none')
+      setCategoryId(a.categoryId ? String(a.categoryId) : '')
       setOrgIds(a.orgIds || [])
+      setOrgDefaulted(true)
       setLoading(false)
     })()
     return () => {
@@ -146,8 +164,7 @@ export function BlogEditor() {
       clearPassword: visibility !== 'password',
       recommend: visibility === 'public' ? recommend : false,
       syncToMainProfile,
-      categoryId:
-        categoryId === 'none' ? null : Number(categoryId) || null,
+      categoryId: Number(categoryId) || null,
       orgIds,
     }
     const res = isNew
@@ -159,6 +176,7 @@ export function BlogEditor() {
       return
     }
     toast.success(isNew ? '已发布' : '已保存')
+    // 后台设置内打开博客正文：本页跳转
     navigate(`/blog/${username}/${res.data.slug}`)
   }
 
@@ -210,15 +228,18 @@ export function BlogEditor() {
         </Field>
         <Field>
           <FieldLabel>分类</FieldLabel>
-          <Select value={categoryId} onValueChange={setCategoryId}>
+          <Select
+            value={categoryId || undefined}
+            onValueChange={setCategoryId}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="未分类" />
+              <SelectValue placeholder="选择分类" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">未分类</SelectItem>
               {categories.map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>
                   {c.name}
+                  {c.isDefault ? '（默认）' : ''}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -230,7 +251,7 @@ export function BlogEditor() {
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
             rows={2}
-            placeholder="列表卡片上的简介；不填则自动截取正文"
+            placeholder="列表卡片上的简介；不填则列表不展示摘要"
           />
         </Field>
         <Field className="sm:col-span-2">
@@ -298,9 +319,9 @@ export function BlogEditor() {
         </label>
         {orgs.length > 0 && (
           <div className="space-y-2">
-            <p className="text-sm font-medium">同步到组织</p>
+            <p className="text-sm font-medium">同步到组织发现</p>
             <p className="text-xs text-muted-foreground">
-              勾选私有组织时，会自动同步到公共域
+              勾选后会出现在对应组织的发现页。勾选校队时，会一并出现在公共域发现里。
             </p>
             <div className="flex flex-wrap gap-3">
               {orgs.map((o) => (
