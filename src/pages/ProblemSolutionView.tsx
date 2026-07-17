@@ -13,6 +13,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { CommunityReportDialog } from '@/components/community-report-dialog'
 import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
+import { ProblemComments } from '@/components/problem-community'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -227,9 +228,18 @@ export function ProblemSolutionView() {
 
       <Card className="gap-3 py-4">
         <CardContent className="px-4">
-          <MarkdownBody content={solution.contentMd || ''} mode="auto" />
+          <MarkdownBody
+            content={solution.contentMd || ''}
+            mode="markdown"
+            emptyText="暂无题解内容"
+          />
         </CardContent>
       </Card>
+
+      <ProblemComments
+        problemId={problemId || solution.problemId}
+        solutionId={solution.id}
+      />
 
       <CommunityReportDialog
         open={reportOpen}

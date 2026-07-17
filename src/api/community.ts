@@ -18,6 +18,7 @@ function normComment(raw: Record<string, unknown>): ProblemCommentItem {
   return {
     id: num(raw.id),
     problemId: num(raw.problemId),
+    solutionId: num(raw.solutionId) || undefined,
     userId: num(raw.userId),
     username: str(raw.username),
     name: str(raw.name),
@@ -62,12 +63,20 @@ function listFrom(res: ApiResult<unknown>): Record<string, unknown>[] {
 }
 
 export async function listProblemComments(params: {
-  problemId: number | string
+  /** 题目讨论：传 problemId（不含题解评论） */
+  problemId?: number | string
+  /** 题解评论：传 solutionId（可只传此项） */
+  solutionId?: number | string
   page?: number
   pageSize?: number
 }): Promise<ApiResult<{ list: ProblemCommentItem[]; total: number; page: number; pageSize: number }>> {
   const res = await get<unknown>(endpoints.core.problem.commentList, {
-    problemId: params.problemId,
+    ...(params.problemId != null && params.problemId !== ''
+      ? { problemId: params.problemId }
+      : {}),
+    ...(params.solutionId != null && params.solutionId !== ''
+      ? { solutionId: params.solutionId }
+      : {}),
     page: params.page ?? 1,
     pageSize: params.pageSize ?? 20,
   })
@@ -85,11 +94,13 @@ export async function listProblemComments(params: {
 }
 
 export async function createProblemComment(body: {
-  problemId: number
+  problemId?: number
+  /** 挂在用户题解下；省略/0 为题目讨论 */
+  solutionId?: number
   content: string
   /** 回复某条评论；0/省略为顶层 */
   parentId?: number
-  /** 非公共域时可选：额外写入公共域发现流（仅顶层） */
+  /** 非公共域时可选：额外写入公共域发现流（仅题目顶层） */
   syncToPublic?: boolean
 }): Promise<ApiResult<ProblemCommentItem | null>> {
   const res = await post<Record<string, unknown>>(endpoints.core.problem.commentCreate, body)

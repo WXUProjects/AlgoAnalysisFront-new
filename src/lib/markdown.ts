@@ -254,10 +254,18 @@ export async function renderMarkdownAsync(md: string): Promise<string> {
   return renderMarkdown(md)
 }
 
-/** 粗判内容是否更像 HTML（公告富文本） */
+/**
+ * 粗判内容是否更像 HTML（公告/紧急通知等历史富文本）。
+ * 仅匹配常见 HTML 标签，避免把 Markdown 代码里的 `<bits/...>`、`a < b` 等误判为 HTML，
+ * 否则 mode=auto 会跳过 Markdown 渲染，题解/题面里的 C++ 代码块会原样显示。
+ */
 export function looksLikeHtml(src: string): boolean {
   if (!src) return false
-  return /<\/?[a-z][\s\S]*>/i.test(src.trim())
+  const s = src.trim()
+  // 常见块/行内标签；不含通用 `<ident>`，以免误伤模板/头文件/比较符
+  return /<\/?(?:p|div|span|br|hr|h[1-6]|ul|ol|li|table|thead|tbody|tfoot|tr|th|td|a|img|strong|em|b|i|u|s|del|sub|sup|blockquote|pre|code|section|article|header|footer|nav|main|figure|figcaption|details|summary|abbr|kbd)\b[^>]*>/i.test(
+    s,
+  )
 }
 
 let turndown: TurndownService | null = null

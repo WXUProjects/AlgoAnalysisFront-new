@@ -203,7 +203,7 @@ export const endpoints = {
       report: `${API_PREFIX}/core/problem/report`,
     },
     activity: {
-      /** 发现页动态（组织隔离） */
+      /** 发现页动态：公共域全站聚合；私有域按组织隔离 */
       feed: `${API_PREFIX}/core/activity/feed`,
     },
     user: {
@@ -828,10 +828,12 @@ export interface NotificationListRes {
 /** 社区互动目标类型 */
 export type CommunityTargetType = 'comment' | 'solution'
 
-/** 题目评论（全站可见；支持层级；list 返回树形 replies） */
+/** 题目/题解评论（全站可见；支持层级；list 返回树形 replies） */
 export interface ProblemCommentItem {
   id: number
   problemId: number
+  /** 所属用户题解；0/缺省=题目讨论 */
+  solutionId?: number
   userId: number
   username: string
   name: string
@@ -885,7 +887,7 @@ export interface CommunityReportResult {
   alreadyReported?: boolean
 }
 
-/** 发现页动态（组织隔离） */
+/** 发现页动态类型（公共域全站聚合；私有域按组织隔离） */
 export type ActivityFeedType = 'comment' | 'solution' | string
 
 export interface ActivityFeedItem {

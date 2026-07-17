@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { listActivityFeed } from '@/api/community'
 import { getRank } from '@/api/statistic'
+import { useAuth } from '@/auth/AuthContext'
 import { mergeCursorPage } from '@/lib/discover-feed'
 import {
   Empty,
@@ -19,8 +20,12 @@ import type { DiscoverStreamItem, PreviewTarget } from './types'
 /**
  * Recommend / Discover surface — high-signal activity (题解/讨论) + rank-backed signal.
  * Decoupled from chronological Feed; no inject into Feed array.
+ * 公共域：后端全站聚合；私有域：仅本组织。
  */
 export function RecommendStream() {
+  const { currentOrg } = useAuth()
+  const isPublicOrg =
+    !currentOrg || Boolean(currentOrg.isSystem) || currentOrg.slug === 'public'
   const [items, setItems] = useState<DiscoverStreamItem[]>([])
   const [hasMore, setHasMore] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -87,7 +92,7 @@ export function RecommendStream() {
   useEffect(() => {
     setItems([])
     void loadMore(true)
-  }, [loadMore])
+  }, [loadMore, currentOrg?.id])
 
   // Warm rank endpoint so right rail / empty paths share cache-friendly hit
   useEffect(() => {
@@ -122,7 +127,9 @@ export function RecommendStream() {
               </EmptyMedia>
               <EmptyTitle>还没有可推荐的内容</EmptyTitle>
               <EmptyDescription>
-                组织内有新的题解或讨论后，会优先出现在这里。也可切换到「动态」看提交时间线。
+                {isPublicOrg
+                  ? '全站有新的题解或讨论后，会出现在这里。也可切换到「动态」看提交时间线。'
+                  : '本组织有新的题解或讨论后，会出现在这里。也可切换到「动态」看提交时间线。'}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

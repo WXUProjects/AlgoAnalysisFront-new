@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge, formatSubmitStatus } from '@/components/status-badge'
@@ -19,8 +19,29 @@ type FeedCardProps = {
   onPreview: (target: PreviewTarget) => void
 }
 
-/** 提交/题解预览卡：信息行 + 标题 + 摘要，无互动条 */
+/** 题解/讨论/提交 → 详情页路径；无关联题目时返回 null */
+function getDetailHref(item: DiscoverStreamItem): string | null {
+  const submit = item.submit
+  const activity = item.activity
+  if (submit?.problemId) return `/question-bank/detail/${submit.problemId}`
+  if (activity?.problemId) {
+    if (item.kind === 'solution' || item.kind === 'share') {
+      return `/question-bank/detail/${activity.problemId}/solution/${activity.refId}`
+    }
+    return `/question-bank/detail/${activity.problemId}?tab=comments`
+  }
+  return null
+}
+
+function previewTargetFor(item: DiscoverStreamItem): PreviewTarget {
+  if (item.kind === 'submit') return { type: 'submit', item }
+  if (item.kind === 'comment') return { type: 'comments', item }
+  return { type: 'activity', item }
+}
+
+/** 提交/题解预览卡：信息行 + 标题 + 摘要；整卡可点进详情 */
 export function FeedCard({ item, onPreview }: FeedCardProps) {
+  const navigate = useNavigate()
   const [expanded, setExpanded] = useState(false)
   const collapse = shouldCollapseContent(item.body, 6)
   const { preview } = excerptContent(item.body, 6)
@@ -34,11 +55,43 @@ export function FeedCard({ item, onPreview }: FeedCardProps) {
   const submitUrl = submit
     ? getSubmitLink(submit.platform, submit.contest, submit.submitId)
     : null
+  const detailHref = getDetailHref(item)
+
+  function openItem() {
+    if (detailHref) {
+      navigate(detailHref)
+      return
+    }
+    onPreview(previewTargetFor(item))
+  }
+
+  /** 点在作者/外链/按钮上不触发整卡进入 */
+  function handleCardClick(e: MouseEvent<HTMLElement>) {
+    const el = e.target as HTMLElement
+    if (el.closest('a, button, [role="button"]')) return
+    openItem()
+  }
+
+  function handleCardKeyDown(e: KeyboardEvent<HTMLElement>) {
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    const el = e.target as HTMLElement
+    if (el !== e.currentTarget) return
+    e.preventDefault()
+    openItem()
+  }
 
   return (
     <article
       data-discover-card=""
-      className="flex flex-col gap-2 border-b px-1 py-4 last:border-b-0 sm:px-2"
+      role="link"
+      tabIndex={0}
+      aria-label={`打开：${item.title}`}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      className={cn(
+        'flex cursor-pointer flex-col gap-2 rounded-md border-b px-1 py-4 last:border-b-0 sm:px-2',
+        'transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      )}
     >
       <div className="flex items-center gap-2.5">
         <Avatar size="sm" className="size-8">
@@ -67,22 +120,8 @@ export function FeedCard({ item, onPreview }: FeedCardProps) {
       </div>
 
       <h3 className="text-[15px] font-semibold leading-snug tracking-tight">
-        {submit?.problemId ? (
-          <Link
-            to={`/question-bank/detail/${submit.problemId}`}
-            className="hover:underline"
-          >
-            {item.title}
-          </Link>
-        ) : item.activity?.problemId ? (
-          <Link
-            to={
-              item.kind === 'solution' || item.kind === 'share'
-                ? `/question-bank/detail/${item.activity.problemId}/solution/${item.activity.refId}`
-                : `/question-bank/detail/${item.activity.problemId}?tab=comments`
-            }
-            className="hover:underline"
-          >
+        {detailHref ? (
+          <Link to={detailHref} className="hover:underline">
             {item.title}
           </Link>
         ) : (
@@ -148,11 +187,7 @@ export function FeedCard({ item, onPreview }: FeedCardProps) {
           className="self-start text-xs font-medium text-sky-600 hover:underline dark:text-sky-400"
           onClick={() => {
             if (!expanded) {
-              onPreview(
-                item.kind === 'submit'
-                  ? { type: 'submit', item }
-                  : { type: 'activity', item },
-              )
+              onPreview(previewTargetFor(item))
             }
             setExpanded((v) => !v)
           }}

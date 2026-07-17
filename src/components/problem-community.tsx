@@ -43,6 +43,16 @@ type SharedProps = {
   className?: string
 }
 
+type CommentsProps = {
+  /** 题目 id；题解评论时也可由 solution 反查，建议仍传入便于文案/同步 */
+  problemId: number
+  /** 传入则挂在该题解下，与题目讨论隔离 */
+  solutionId?: number
+  className?: string
+  /** 卡片标题，默认「讨论」/ 题解下为「评论」 */
+  title?: string
+}
+
 /** 用户题解侧栏：挂在题面右侧（桌面）或「题解」Tab（移动端） */
 export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
   const { isLogin, user, isSiteAdmin } = useAuth()
@@ -248,11 +258,20 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
   )
 }
 
-/** 题目评论区：全站可见，支持层级回复 / 点赞 / 举报 */
-export function ProblemComments({ problemId, className }: SharedProps) {
+/** 题目讨论 / 题解评论：全站可见，支持层级回复 / 点赞 / 举报 */
+export function ProblemComments({
+  problemId,
+  solutionId,
+  className,
+  title,
+}: CommentsProps) {
   const { isLogin, user, isSiteAdmin, currentOrg } = useAuth()
   const isPublicOrg =
     Boolean(currentOrg?.isSystem) || currentOrg?.slug === 'public'
+  const onSolution = Boolean(solutionId && solutionId > 0)
+  /** 题解评论不写发现流，也不提供「同步公共域」 */
+  const canSyncPublic = !onSolution && !isPublicOrg
+  const heading = title ?? (onSolution ? '评论' : '讨论')
 
   const [comments, setComments] = useState<ProblemCommentItem[]>([])
   const [cTotal, setCTotal] = useState(0)
@@ -267,13 +286,27 @@ export function ProblemComments({ problemId, className }: SharedProps) {
     null,
   )
 
+  // 切换题目/题解时回到第一页
+  useEffect(() => {
+    setCPage(1)
+    setReplyTo(null)
+    setCDraft('')
+    setSyncToPublic(false)
+  }, [problemId, solutionId])
+
   const loadComments = useCallback(async () => {
-    const res = await listProblemComments({ problemId, page: cPage, pageSize: 10 })
+    const res = await listProblemComments({
+      ...(onSolution
+        ? { solutionId: solutionId!, problemId }
+        : { problemId }),
+      page: cPage,
+      pageSize: 10,
+    })
     if (res.success && res.data) {
       setComments(res.data.list)
       setCTotal(res.data.total)
     }
-  }, [problemId, cPage])
+  }, [problemId, solutionId, onSolution, cPage])
 
   useEffect(() => {
     void loadComments()
@@ -286,10 +319,11 @@ export function ProblemComments({ problemId, className }: SharedProps) {
       return
     }
     const isReply = Boolean(replyTo)
-    const didSyncPublic = !isReply && !isPublicOrg && syncToPublic
+    const didSyncPublic = !isReply && canSyncPublic && syncToPublic
     setCSending(true)
     const res = await createProblemComment({
       problemId,
+      ...(onSolution ? { solutionId: solutionId! } : {}),
       content,
       parentId: replyTo?.id || 0,
       syncToPublic: didSyncPublic,
@@ -368,10 +402,12 @@ export function ProblemComments({ problemId, className }: SharedProps) {
       <CardHeader className="border-b px-4 py-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <MessageSquareIcon className="size-4 text-muted-foreground" />
-          讨论
+          {heading}
         </CardTitle>
-        {!isPublicOrg ? (
+        {canSyncPublic ? (
           <CardDescription>可选再同步到公共域</CardDescription>
+        ) : onSolution ? (
+          <CardDescription>针对这篇题解的讨论</CardDescription>
         ) : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-3 p-4">
@@ -402,26 +438,28 @@ export function ProblemComments({ problemId, className }: SharedProps) {
               placeholder={
                 replyTo
                   ? `回复 ${replyTo.name || replyTo.username || ''}…`
-                  : '写点想法，可用 @用户名 提醒他人…'
+                  : onSolution
+                    ? '写点想法，可用 @用户名 提醒他人…'
+                    : '写点想法，可用 @用户名 提醒他人…'
               }
               maxLength={2000}
               rows={3}
             />
             <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
-              {!replyTo && !isPublicOrg ? (
+              {!replyTo && canSyncPublic ? (
                 <Field
                   orientation="horizontal"
                   className="mr-auto w-auto max-w-full gap-2"
                 >
                   <Switch
-                    id="comment-sync-public"
+                    id={`comment-sync-public${onSolution ? `-s${solutionId}` : ''}`}
                     size="sm"
                     checked={syncToPublic}
                     onCheckedChange={setSyncToPublic}
                   />
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <FieldLabel
-                      htmlFor="comment-sync-public"
+                      htmlFor={`comment-sync-public${onSolution ? `-s${solutionId}` : ''}`}
                       className="cursor-pointer"
                     >
                       同步到公共域
@@ -480,7 +518,7 @@ export function ProblemComments({ problemId, className }: SharedProps) {
           ))}
           {!comments.length && (
             <li className="px-3 py-8 text-center text-sm text-muted-foreground">
-              还没有评论，来抢沙发吧
+              {onSolution ? '还没有评论，来聊一聊这篇题解吧' : '还没有评论，来抢沙发吧'}
             </li>
           )}
         </ul>
