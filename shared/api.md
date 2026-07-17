@@ -52,6 +52,8 @@
 }
 ```
 - `wasDormant`：登录前处于不活跃休眠；为 true 时后端会入队**全量**爬虫，`message` 会提示同步中  
+- `inactiveDays`：距上次活跃的整天数（登录前计算；无记录则按注册时间）；≥3 天时 `message` 为欢迎回来文案  
+
 - `syncStarted`：是否已触发唤醒入队  
 
 **不活跃休眠（成本）**
@@ -60,7 +62,7 @@
 |----|------|
 | 阈值 | `site_configs.inactive_days`，默认 14，站管可改 1–365 |
 | 主信号 | `users.last_login_at`（登录写；VisitPing 登录用户 1h 节流写） |
-| 豁免 | 站管 / `sync_exempt` / 组织 staff / 组织 `force_sync` / plan∈{team,pro} |
+| 豁免 | 站管 / `sync_exempt`（站管开始终同步）/ 组织 staff / 组织 `force_sync`（永不冻结）/ plan∈{team,pro}；**任一豁免则不受休眠与不活跃筛选约束** |
 | 休眠效果 | 定时爬虫、AI 总结、邮件、画像预热跳过；登录唤醒全量爬 |
 
 相关 API：`POST /user/site/config`（`inactiveDays`+`setInactiveDays`）、`POST /user/org/update`（`forceSync` 仅站管）、`POST /user/profile/set-sync-exempt`
@@ -115,7 +117,7 @@
 | GET | `/user/profile/get-by-id` | 否 | query: `userId`；公共域受隐私约束，私人域组织内隐私配置失效 |
 | GET | `/user/profile/get-by-username` | 否 | query: `username` 精确匹配；返回同 get-by-id |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` 模糊（用户名/昵称） |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称），**`dormantOnly=true` 仅不活跃（已暂停同步）用户**（与 `dormant` 判定一致）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开）、`problemFetchEnabled`/`problemAiEnabled`（题面爬取/AI 有效状态）、`createdAt`（注册时间 unix 秒）、`spiderIntervalMin`/`aiSummaryIntervalMin`（有效定时间隔）、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`（是否站管个人覆盖）、`syncExempt`/`lastLoginAt`/`dormant`（休眠相关） |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称），**`dormantOnly=true`（或 `dormant=true`）仅「已暂停同步」用户**：`last_login` 空/超时 **且** 无豁免（站管、`sync_exempt` 始终同步、组织 staff、组织 `force_sync` 永不冻结、plan∈team|pro）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开）、`problemFetchEnabled`/`problemAiEnabled`（题面爬取/AI 有效状态）、`createdAt`（注册时间 unix 秒）、`spiderIntervalMin`/`aiSummaryIntervalMin`（有效定时间隔）、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`（是否站管个人覆盖）、`syncExempt`/`lastLoginAt`/`dormant`（休眠相关，与筛选同规则） |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新头像/邮箱；`name` 已忽略（昵称改「我的组织」）；邮箱变更须 `emailCode`（`purpose=change_email`） |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
@@ -483,7 +485,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/spider/set` | 是 | 绑定 OJ 账号（仅全量同步该平台） |
 | POST | `/core/spider/update` | 是(站点管理员) | 手动全量同步单用户全部已绑定平台 |
 | POST | `/core/spider/update-all` | 是(站点管理员) | 全站用户全量更新 |
-| GET | `/core/spider/submit-inventory` | 是(站点管理员) | 真实入库库存：`submitLogsTotal` / `submitLogsRealTotal` / `countedSubmitIdsTotal` / `oldestTime` / `newestTime` |
+| GET | `/core/spider/submit-inventory` | 是(站点管理员) | 真实入库库存：`submitLogsTotal` / `submitLogsRealTotal` / `oldestTime` / `newestTime`（`countedSubmitIdsTotal` 已废弃恒为 0） |
 | POST | `/core/spider/purge-submits-and-recrawl` | 是(站点管理员) | **硬清**训练数据并全量重爬；body `{ confirm: "PURGE_SUBMITS" }`。删：`submit_logs`（真假全删）、账本、日汇总、AC 预聚合、`contest_logs`、提醒发送日志 + 相关 Redis。**保留**：`platforms`、题库、公告/紧急通知、比赛日历赛程与订阅；用户账号在 user 库不动 |
 
 **SetSpiderReq**

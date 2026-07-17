@@ -44,11 +44,17 @@ export function Login() {
     setPending(false)
     if (res.success) {
       const msg = res.message || '登录成功'
+      const days = res.data?.inactiveDays
       if (res.data?.wasDormant) {
         toast.message(msg, {
-          description: '正在后台同步你的做题数据，可能需要几分钟；完成后请刷新页面查看。',
+          description:
+            days && days > 0
+              ? `你已经有 ${days} 天没登录了。正在后台同步做题数据，完成后请刷新页面查看。`
+              : '正在后台同步你的做题数据，可能需要几分钟；完成后请刷新页面查看。',
           duration: 8000,
         })
+      } else if (days && days >= 3) {
+        toast.success(msg || `欢迎回来！你已经有 ${days} 天没登录了。`)
       } else {
         toast.success(msg)
       }

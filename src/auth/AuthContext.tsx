@@ -50,7 +50,11 @@ interface AuthState {
   ) => Promise<{
     success: boolean
     message: string
-    data?: { wasDormant?: boolean; syncStarted?: boolean } | null
+    data?: {
+      wasDormant?: boolean
+      syncStarted?: boolean
+      inactiveDays?: number
+    } | null
   }>
   logout: () => void
   sync: () => Promise<void>
@@ -199,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ? {
               wasDormant: res.data.wasDormant,
               syncStarted: res.data.syncStarted,
+              inactiveDays: res.data.inactiveDays,
             }
           : null,
       }

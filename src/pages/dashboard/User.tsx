@@ -435,8 +435,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
       ? `${currentOrg.name} · 成员`
       : '组织成员'
   const desc = isSite
-    ? '管理全站用户与所属组织。不活跃用户会暂停自动同步，可在列表中筛选查看。'
-    : '当前组织成员。不活跃成员会暂停自动同步，可在列表中筛选查看。'
+    ? '管理全站用户与所属组织。长期未登录会暂停自动同步；组织开启永不冻结或个人始终同步的用户不受影响。'
+    : '当前组织成员。长期未登录会暂停自动同步；组织永不冻结或个人始终同步的成员不受影响。'
 
   return (
     <PageShell className="gap-3">
@@ -557,7 +557,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                               站点管理员
                             </Badge>
                           )}
-                          {u.dormant && (
+                          {u.dormant ? (
                             <Badge
                               variant="outline"
                               className="text-[10px] border-destructive/40 text-destructive"
@@ -565,7 +565,15 @@ function UserListPage({ scope }: { scope: UserScope }) {
                             >
                               已暂停同步
                             </Badge>
-                          )}
+                          ) : !u.lastLoginAt ? (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px]"
+                              title="尚未记录最近活跃时间，筛选「不活跃」时会列出"
+                            >
+                              未记录活跃
+                            </Badge>
+                          ) : null}
                           {u.syncExempt && (
                             <Badge variant="secondary" className="text-[10px]">
                               始终同步
@@ -811,7 +819,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                         站点管理员
                       </Badge>
                     )}
-                    {detailUser.dormant && (
+                    {detailUser.dormant ? (
                       <Badge
                         variant="outline"
                         className="text-[10px] border-destructive/40 text-destructive"
@@ -819,7 +827,15 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       >
                         已暂停同步
                       </Badge>
-                    )}
+                    ) : !detailUser.lastLoginAt ? (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px]"
+                        title="尚未记录最近活跃时间"
+                      >
+                        未记录活跃
+                      </Badge>
+                    ) : null}
                     {detailUser.syncExempt && (
                       <Badge variant="secondary" className="text-[10px]">
                         始终同步

@@ -84,7 +84,7 @@ export function DashboardOps() {
     const d = res.data
     toast.success(
       res.message ||
-        `已清空：明细 ${d?.deletedSubmitLogs ?? 0} · 账本 ${d?.deletedLedger ?? 0} · 已入队 ${d?.enqueuedUsers ?? 0} 人`,
+        `已清空：明细 ${d?.deletedSubmitLogs ?? 0} · 已入队 ${d?.enqueuedUsers ?? 0} 人`,
     )
     setConfirm('')
     void load()
@@ -120,13 +120,13 @@ export function DashboardOps() {
           </CardHeader>
           <CardContent>
             {loading && !inv ? (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {Array.from({ length: 4 }).map((_, i) => (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} className="h-20 w-full" />
                 ))}
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <Metric
                   label="提交明细总行数"
                   value={inv?.submitLogsTotal}
@@ -136,11 +136,6 @@ export function DashboardOps() {
                   label="计入提交统计"
                   value={inv?.submitLogsRealTotal}
                   hint="不含力扣占位记录"
-                />
-                <Metric
-                  label="已计入账本"
-                  value={inv?.countedSubmitIdsTotal}
-                  hint="已计入统计的提交（避免重复同步多算）"
                 />
                 <Metric
                   label="明细时间范围"

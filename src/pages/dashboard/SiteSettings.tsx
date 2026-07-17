@@ -102,7 +102,6 @@ export function DashboardSiteSettings() {
   const [recentJobs, setRecentJobs] = useState<BackupJob[]>([])
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [downloading, setDownloading] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [importConfirm, setImportConfirm] = useState('')
   const [importFile, setImportFile] = useState<File | null>(null)
@@ -347,11 +346,9 @@ export function DashboardSiteSettings() {
     if (job.success && job.data) setActiveJob(job.data)
   }
 
-  async function handleDownload(jobId: number) {
-    setDownloading(true)
-    const res = await downloadBackupJob(jobId)
-    setDownloading(false)
-    if (res.success) toast.success('开始下载')
+  function handleDownload(jobId: number) {
+    const res = downloadBackupJob(jobId)
+    if (res.success) toast.success('已开始下载')
     else toast.error(res.message || '下载失败，请稍后重试')
   }
 
@@ -742,12 +739,8 @@ export function DashboardSiteSettings() {
                       <Button
                         type="button"
                         size="sm"
-                        disabled={downloading}
-                        onClick={() => void handleDownload(activeJob.id)}
+                        onClick={() => handleDownload(activeJob.id)}
                       >
-                        {downloading ? (
-                          <Spinner data-icon="inline-start" />
-                        ) : null}
                         下载备份包
                         {activeJob.fileSize
                           ? `（${formatBytes(activeJob.fileSize)}）`
@@ -780,8 +773,7 @@ export function DashboardSiteSettings() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          disabled={downloading}
-                          onClick={() => void handleDownload(j.id)}
+                          onClick={() => handleDownload(j.id)}
                         >
                           下载
                         </Button>

@@ -54,10 +54,17 @@ export async function login(
       const syncStarted = Boolean(
         data.syncStarted ?? (data as { sync_started?: boolean }).sync_started,
       )
+      const inactiveDaysRaw =
+        data.inactiveDays ?? (data as { inactive_days?: number }).inactive_days
+      const inactiveDays =
+        typeof inactiveDaysRaw === 'number' && Number.isFinite(inactiveDaysRaw)
+          ? Math.max(0, Math.floor(inactiveDaysRaw))
+          : undefined
       const normalized: LoginRes = {
         ...data,
         wasDormant,
         syncStarted,
+        inactiveDays,
       }
       return {
         success: true,

@@ -236,6 +236,8 @@ export interface LoginRes {
   wasDormant?: boolean
   /** 是否已入队全量爬虫 */
   syncStarted?: boolean
+  /** 距上次活跃整天数（登录前） */
+  inactiveDays?: number
 }
 
 export interface RegisterReq {

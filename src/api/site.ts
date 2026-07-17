@@ -1,12 +1,8 @@
 import { endpoints, type BackupJob, type BackupScope } from '@shared/api'
-import { get, post, del, str, num, http, type ApiResult } from '@/lib/http'
+import { get, post, del, str, num, type ApiResult } from '@/lib/http'
 import { jwt } from '@/lib/jwt'
 import { normalizeStaticUrl } from '@/lib/static-url'
-import {
-  UX_DOWNLOAD_FAILED,
-  UX_UPLOAD_FAILED,
-  sanitizeUserMessage,
-} from '@/lib/ux-copy'
+import { UX_UPLOAD_FAILED, sanitizeUserMessage } from '@/lib/ux-copy'
 
 export type { BackupJob, BackupScope }
 
@@ -407,52 +403,28 @@ export async function deleteBackupJob(id: number): Promise<ApiResult<null>> {
   return { success: true, message: 'ok', data: null }
 }
 
-/** 下载导出完成的 zip（触发浏览器保存） */
-export async function downloadBackupJob(id: number): Promise<ApiResult<null>> {
-  try {
-    const res = await http.get(endpoints.user.site.backup.download(id), {
-      responseType: 'blob',
-      timeout: 600_000,
-      headers: jwt.isValid()
-        ? { Authorization: `Bearer ${jwt.token}` }
-        : undefined,
-    })
-    const blob = res.data as Blob
-    const cd = String(res.headers['content-disposition'] || '')
-    let name = `goalgo-backup-${id}.zip`
-    const m = /filename="?([^";]+)"?/i.exec(cd)
-    if (m?.[1]) name = m[1]
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = name
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
-    return { success: true, message: 'ok', data: null }
-  } catch (e) {
-    const err = e as { response?: { data?: Blob }; message?: string }
-    // try parse JSON error from blob
-    if (err.response?.data instanceof Blob) {
-      try {
-        const text = await err.response.data.text()
-        const j = JSON.parse(text) as { message?: string }
-        return {
-          success: false,
-          message: sanitizeUserMessage(j.message, UX_DOWNLOAD_FAILED),
-          data: null,
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-    return {
-      success: false,
-      message: sanitizeUserMessage(err.message, UX_DOWNLOAD_FAILED),
-      data: null,
-    }
+/**
+ * 下载导出完成的 zip：直接唤起浏览器下载。
+ * 不经 JS/axios 缓冲整包（否则大文件会一直转圈）。
+ * 鉴权：会话 Cookie；并带 access_token 兜底（浏览器原生下载无法设 Authorization）。
+ */
+export function downloadBackupJob(id: number): ApiResult<null> {
+  if (!jwt.isValid()) {
+    return { success: false, message: '请先登录后再下载', data: null }
   }
+  const url = new URL(
+    endpoints.user.site.backup.download(id),
+    window.location.origin,
+  )
+  url.searchParams.set('access_token', jwt.token)
+  // 同源 GET + 后端 Content-Disposition: attachment → 浏览器直接走系统下载栏
+  const a = document.createElement('a')
+  a.href = url.pathname + url.search
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  return { success: true, message: 'ok', data: null }
 }
 
 /** 站点访问概览（仅站点管理员） */

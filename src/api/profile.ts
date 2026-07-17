@@ -180,7 +180,8 @@ export async function listProfiles(
     pageSize,
     ...(scope ? { scope } : {}),
     ...(kw ? { keyword: kw } : {}),
-    ...(opts?.dormantOnly ? { dormantOnly: true } : {}),
+    // 同时传 dormantOnly 与 dormant，兼容 query 绑定差异
+    ...(opts?.dormantOnly ? { dormantOnly: true, dormant: true } : {}),
   })
   // list 可能无 success 字段，裸 { list, total }
   const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>

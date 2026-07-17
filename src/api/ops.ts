@@ -4,7 +4,6 @@ import { get, post, num, str, type ApiResult } from '@/lib/http'
 export interface SubmitInventory {
   submitLogsTotal: number
   submitLogsRealTotal: number
-  countedSubmitIdsTotal: number
   oldestTime: number
   newestTime: number
 }
@@ -20,7 +19,6 @@ export async function getSubmitInventory(): Promise<ApiResult<SubmitInventory>> 
     data: {
       submitLogsTotal: num(raw.submitLogsTotal),
       submitLogsRealTotal: num(raw.submitLogsRealTotal),
-      countedSubmitIdsTotal: num(raw.countedSubmitIdsTotal),
       oldestTime: num(raw.oldestTime),
       newestTime: num(raw.newestTime),
     },
@@ -29,7 +27,6 @@ export async function getSubmitInventory(): Promise<ApiResult<SubmitInventory>> 
 
 export interface PurgeSubmitsResult {
   deletedSubmitLogs: number
-  deletedLedger: number
   deletedDaily: number
   deletedAc: number
   enqueuedUsers: number
@@ -50,7 +47,6 @@ export async function purgeSubmitsAndRecrawl(
     ...res,
     data: {
       deletedSubmitLogs: num(raw.deletedSubmitLogs),
-      deletedLedger: num(raw.deletedLedger),
       deletedDaily: num(raw.deletedDaily),
       deletedAc: num(raw.deletedAc),
       enqueuedUsers: num(raw.enqueuedUsers),
