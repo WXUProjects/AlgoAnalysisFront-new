@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner'
 import { getProfileById } from '@/api/profile'
 import { getSubmitLogs } from '@/api/submitLog'
+import { listActivityFeed } from '@/api/community'
 import { getRank } from '@/api/statistic'
 import {
   followUser,
@@ -22,6 +23,7 @@ import {
 } from '@/api/social'
 import { discoverOrgs, joinOrg } from '@/api/org'
 import type {
+  ActivityFeedItem,
   OrgDiscoverItem,
   SocialUser,
   StatisticRankItem,
@@ -249,6 +251,7 @@ export function Discover() {
               followingOnly={followingOnly}
               setSearchParams={setSearchParams}
             />
+            {!userMode && !followingOnly && <CommunityActivityPanel />}
           </TabsContent>
           {!userMode && (
             <>
@@ -728,6 +731,133 @@ function FeedPanel({
               <p className="text-sm text-muted-foreground">已经到底了</p>
             )
           )}
+        </CardFooter>
+      )}
+    </Card>
+  )
+}
+
+/** 评论 / 题解发现流（组织隔离，服务端按 JWT orgId 过滤） */
+function CommunityActivityPanel() {
+  const [type, setType] = useState<'all' | 'comment' | 'solution'>('all')
+  const [page, setPage] = useState(1)
+  const [list, setList] = useState<ActivityFeedItem[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const pageSize = 10
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    void listActivityFeed({
+      page,
+      pageSize,
+      type: type === 'all' ? undefined : type,
+    }).then((res) => {
+      if (cancelled) return
+      setLoading(false)
+      if (!res.success || !res.data) {
+        setList([])
+        setTotal(0)
+        return
+      }
+      setList(res.data.list)
+      setTotal(res.data.total)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [page, type])
+
+  return (
+    <Card className="gap-0 overflow-hidden py-0">
+      <CardHeader className="border-b px-4 py-3">
+        <CardTitle className="text-base">讨论与题解</CardTitle>
+        <CardDescription>
+          本组织成员发布的评论与题解（仅当前组织可见）
+        </CardDescription>
+        <CardAction>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={type}
+            onValueChange={(v) => {
+              if (!v) return
+              setType(v as 'all' | 'comment' | 'solution')
+              setPage(1)
+            }}
+          >
+            <ToggleGroupItem value="all">全部</ToggleGroupItem>
+            <ToggleGroupItem value="comment">评论</ToggleGroupItem>
+            <ToggleGroupItem value="solution">题解</ToggleGroupItem>
+          </ToggleGroup>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="divide-y p-0">
+        {loading && (
+          <div className="space-y-2 p-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        )}
+        {!loading &&
+          list.map((a) => (
+            <div key={a.id} className="flex flex-col gap-1 px-4 py-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  to={a.username ? `/profile/${a.username}` : `/profile?id=${a.userId}`}
+                  className="font-medium hover:underline"
+                >
+                  {a.name || a.username || `用户${a.userId}`}
+                </Link>
+                <Badge variant="secondary" className="h-5 text-[10px]">
+                  {a.type === 'solution' ? '题解' : '评论'}
+                </Badge>
+                {a.problemId > 0 && (
+                  <Link
+                    to={
+                      a.type === 'solution'
+                        ? `/question-bank/detail/${a.problemId}?tab=solutions&solutionId=${a.refId}`
+                        : `/question-bank/detail/${a.problemId}?tab=comments`
+                    }
+                    className="text-sky-600 hover:underline dark:text-sky-400"
+                  >
+                    {a.problemTitle || `题目 #${a.problemId}`}
+                  </Link>
+                )}
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {formatTime(a.createdAt)}
+                </span>
+              </div>
+              <p className="line-clamp-2 text-muted-foreground">
+                {a.type === 'solution' ? a.title : a.excerpt || a.title}
+              </p>
+            </div>
+          ))}
+        {!loading && list.length === 0 && (
+          <Empty className="py-10">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <ActivityIcon />
+              </EmptyMedia>
+              <EmptyTitle>还没有讨论动态</EmptyTitle>
+              <EmptyDescription>
+                在题目下发评论或题解后，会同步到这里（仅本组织）
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
+      </CardContent>
+      {total > pageSize && (
+        <CardFooter className="border-t py-3">
+          <Pagination
+            page={page}
+            total={total}
+            pageSize={pageSize}
+            onChange={setPage}
+          />
         </CardFooter>
       )}
     </Card>

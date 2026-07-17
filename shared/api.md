@@ -149,6 +149,37 @@
 
 **动态 / 题库过滤**（core）：`submit-log/get-by-id` 支持 `followingOnly`；`problem/list` 与 `problem/submissions` 支持 `followingOnly`。
 
+### Notification（站内信）
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| GET | `/user/notification/list` | 是 | query: `page`, `pageSize` → `{ list, total, page, pageSize, unreadCount }` |
+| GET | `/user/notification/unread-count` | 是 | `{ unreadCount }` |
+| POST | `/user/notification/read` | 是 | body: `{ ids: number[] }` 标记已读 |
+| POST | `/user/notification/read-all` | 是 | 全部标记已读 |
+
+**NotificationItem**
+```json
+{
+  "id": 1,
+  "type": "mention|problem_edit_approved|problem_edit_rejected|org_join_approved|org_join_rejected",
+  "title": "有人提到了你",
+  "body": "alice 在评论中 @ 了你",
+  "actorId": 2,
+  "refType": "comment|solution|problem_edit|org_join",
+  "refId": 10,
+  "problemId": 3,
+  "payload": "{}",
+  "isRead": false,
+  "createdAt": 1710000000
+}
+```
+
+触发来源：
+- 题面/标签修改审核通过或驳回 → 通知申请人
+- 组织加入申请通过或驳回 → 通知申请人
+- 评论/题解中 `@username` → 通知被 @ 用户
+
 ### Upload / Site
 
 | Method | Path | Auth | 说明 |
@@ -585,7 +616,18 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/core/problem/tags` | 否 | 标签聚合 `?limit=`，返回 `{ tag, count }[]` |
 | GET | `/core/problem/get` | 否 | query: `id` |
 | GET | `/core/problem/following-status` | 是 | query: `problemId` → 关注用户对本题 `AC|TRIED|NONE` |
-| GET | `/core/problem/submissions` | 否 | query: `problemId`, `page`, `pageSize`, `userId?`, `followingOnly?`（不受域限制）, `status?`=`AC` |
+| GET | `/core/problem/submissions` | 否 | query: `problemId`, `page`, `pageSize`, `userId?`, `followingOnly?`（不受域限制）, `status?`=`AC`；返回 `data` + **`total`**（服务端分页） |
+| GET | `/core/problem/comment/list` | 否 | query: `problemId`, `page`, `pageSize` → 题目评论（**全站可见，不做组织隔离**） |
+| POST | `/core/problem/comment/create` | 是 | body: `{ problemId, content }`；支持 `@username`；同步发现流（当前组织） |
+| POST | `/core/problem/comment/delete` | 是 | body: `{ id }` 本人或站管 |
+| GET | `/core/problem/solution/list` | 否 | query: `problemId`, `page`, `pageSize` → **用户题解**列表（全站；非 AI `solutions`） |
+| GET | `/core/problem/solution/get` | 否 | query: `id` → 题解全文 `contentMd` |
+| POST | `/core/problem/solution/create` | 是 | body: `{ problemId, title, contentMd }`；Markdown；`@username`；同步发现流 |
+| POST | `/core/problem/solution/update` | 是 | body: `{ id, title, contentMd }` 本人或站管 |
+| POST | `/core/problem/solution/delete` | 是 | body: `{ id }` 本人或站管 |
+| GET | `/core/activity/feed` | 否（建议登录） | query: `page`, `pageSize`, `type?`=`comment\|solution` → 发现动态（**按 JWT 当前组织隔离**） |
+| GET | `/core/user/recent-comments` | 否 | query: `userId`, `limit?` → 用户近期评论（资料页） |
+| GET | `/core/user/recent-solutions` | 否 | query: `userId`, `limit?` → 用户近期题解（资料页） |
 | GET | `/core/problem/user-profile` | 否 | query: `userId` 做题画像 |
 | GET | `/core/problem/progress` | 是(管理员) | 爬取/分析进度 |
 | POST | `/core/problem/backfill` | 是(管理员) | 近6月提交回填入队；body: `{ limit }`；**仅组织用户提交**的题才爬题面/跑 AI；纯公共域/散户只入库（前端「题面准备中」） |
@@ -717,6 +759,43 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 **MyPendingEdit** `GET /core/problem/my-pending-edit?problemId=1`
 ```json
 { "code": 0, "message": "success", "hasPending": true, "data": { /* ProblemEditInfo */ } }
+```
+
+### 题目评论 / 用户题解 / 发现同步
+
+- **评论、题解挂在题目上，全站可见**（list 不按 org 过滤）。
+- **发现流 `activity/feed` 按组织隔离**：创建时写入作者 JWT `orgId`；列表只返回当前组织条目。
+- 题解 `contentMd` 按题面规格渲染（GFM + 公式）；与 AI `ProblemInfo.solutions` 无关。
+- `@username` 在创建时解析并写站内通知。
+
+**Comment list** `GET /core/problem/comment/list?problemId=1&page=1&pageSize=20`
+```json
+{
+  "success": true,
+  "list": [{
+    "id": 1, "problemId": 1, "userId": 2, "username": "alice", "name": "Alice",
+    "avatar": "", "content": "不错 @bob", "createdAt": 1710000000
+  }],
+  "total": 1, "page": 1, "pageSize": 20
+}
+```
+
+**Solution create** `POST /core/problem/solution/create`
+```json
+{ "problemId": 1, "title": "差分思路", "contentMd": "## 思路\n$O(n)$" }
+```
+
+**Activity feed** `GET /core/activity/feed?page=1&pageSize=20&type=comment`
+```json
+{
+  "success": true,
+  "list": [{
+    "id": 1, "orgId": 3, "userId": 2, "username": "alice", "name": "Alice",
+    "type": "comment", "refId": 10, "problemId": 1, "problemTitle": "A+B",
+    "title": "不错", "excerpt": "不错", "createdAt": 1710000000
+  }],
+  "total": 1, "page": 1, "pageSize": 20
+}
 ```
 
 ---

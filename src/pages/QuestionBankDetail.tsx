@@ -18,6 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
 import { MarkdownEditor } from '@/components/markdown-editor'
+import { Pagination } from '@/components/pagination'
+import { ProblemCommunity } from '@/components/problem-community'
 import { TagInput } from '@/components/tag-input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -61,6 +63,9 @@ export function QuestionBankDetail() {
   const { isLogin, isSiteAdmin } = useAuth()
   const [problem, setProblem] = useState<ProblemInfo | null>(null)
   const [subs, setSubs] = useState<Record<string, unknown>[]>([])
+  const [subsTotal, setSubsTotal] = useState(0)
+  const [subsPage, setSubsPage] = useState(1)
+  const [subsPageSize, setSubsPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [hasPending, setHasPending] = useState(false)
   const [followingOnly, setFollowingOnly] = useState(false)
@@ -87,8 +92,8 @@ export function QuestionBankDetail() {
       getProblem(id),
       getProblemSubmissions({
         problemId: id,
-        page: 1,
-        pageSize: 50,
+        page: subsPage,
+        pageSize: subsPageSize,
         followingOnly: followingOnly || undefined,
         status: acOnly ? 'AC' : undefined,
       }),
@@ -99,7 +104,10 @@ export function QuestionBankDetail() {
       return
     }
     setProblem(pRes.data)
-    if (sRes.success) setSubs(sRes.data || [])
+    if (sRes.success && sRes.data) {
+      setSubs(sRes.data.list || [])
+      setSubsTotal(sRes.data.total || 0)
+    }
 
     if (isLogin && !isSiteAdmin) {
       const pend = await getMyPendingProblemEdit(id)
@@ -107,7 +115,7 @@ export function QuestionBankDetail() {
     } else {
       setHasPending(false)
     }
-  }, [id, isLogin, isSiteAdmin, followingOnly, acOnly])
+  }, [id, isLogin, isSiteAdmin, followingOnly, acOnly, subsPage, subsPageSize])
 
   useEffect(() => {
     void load()
@@ -474,11 +482,13 @@ export function QuestionBankDetail() {
         </CardContent>
       </Card>
 
+      <ProblemCommunity problemId={problem.id} />
+
       {problem.solutions.length > 0 && (
         <Card className="gap-3 py-4">
           <CardHeader className="px-4">
-            <CardTitle className="text-base">推荐解法</CardTitle>
-            <CardDescription>由 AI 生成，仅供参考</CardDescription>
+            <CardTitle className="text-base">AI 推荐解法</CardTitle>
+            <CardDescription>由 AI 生成，仅供参考（与用户题解栏无关）</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 px-4 sm:grid-cols-2">
             {problem.solutions.map((s, i) => (
@@ -504,7 +514,10 @@ export function QuestionBankDetail() {
                   type="button"
                   size="sm"
                   variant={followingOnly ? 'default' : 'outline'}
-                  onClick={() => setFollowingOnly((v) => !v)}
+                  onClick={() => {
+                    setSubsPage(1)
+                    setFollowingOnly((v) => !v)
+                  }}
                 >
                   {followingOnly ? '只看关注 · 开' : '只看关注'}
                 </Button>
@@ -512,7 +525,10 @@ export function QuestionBankDetail() {
                   type="button"
                   size="sm"
                   variant={acOnly ? 'default' : 'outline'}
-                  onClick={() => setAcOnly((v) => !v)}
+                  onClick={() => {
+                    setSubsPage(1)
+                    setAcOnly((v) => !v)
+                  }}
                 >
                   {acOnly ? '仅通过 · 开' : '仅通过'}
                 </Button>
@@ -609,6 +625,20 @@ export function QuestionBankDetail() {
                   )}
                 </TableBody>
               </Table>
+              {subsTotal > 0 && (
+                <div className="border-t px-3 py-2">
+                  <Pagination
+                    page={subsPage}
+                    total={subsTotal}
+                    pageSize={subsPageSize}
+                    onChange={setSubsPage}
+                    onPageSizeChange={(n) => {
+                      setSubsPageSize(n)
+                      setSubsPage(1)
+                    }}
+                  />
+                </div>
+              )}
             </TabsContent>
             {isLogin && (
               <TabsContent value="following" className="mt-0">

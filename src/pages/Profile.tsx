@@ -11,6 +11,10 @@ import {
 } from '@/api/social'
 import { getHeatmap } from '@/api/statistic'
 import { getSubmitLogs } from '@/api/submitLog'
+import {
+  listUserRecentComments,
+  listUserRecentSolutions,
+} from '@/api/community'
 import { listContests } from '@/api/contest'
 import { getProblemUserProfile } from '@/api/problem'
 import type {
@@ -18,6 +22,8 @@ import type {
   HeatmapItem,
   ProblemUserProfile,
   UserProfile,
+  UserRecentCommentItem,
+  UserRecentSolutionItem,
 } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { AlgoProfileChart } from '@/components/charts/algo-profile-chart'
@@ -71,6 +77,12 @@ export function Profile() {
   const [activities, setActivities] = useState<
     import('@shared/api').SubmitLogItem[]
   >([]) // 最近动态
+  const [recentComments, setRecentComments] = useState<UserRecentCommentItem[]>(
+    [],
+  )
+  const [recentSolutions, setRecentSolutions] = useState<
+    UserRecentSolutionItem[]
+  >([])
   const [contests, setContests] = useState<ContestItem[]>([])
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -139,19 +151,22 @@ export function Profile() {
     setTargetId(pf.userId)
     const uid = pf.userId
     const end = todayYmd()
-    const [hSubmit, acts, cont, algoRes, countsRes, relRes] = await Promise.all([
-      getHeatmap({
-        startDate: '20230101',
-        endDate: end,
-        isAc: false,
-        userId: uid,
-      }),
-      getSubmitLogs({ userId: uid, cursor: -1, limit: 10 }),
-      listContests({ userId: uid, limit: 5, offset: 0 }),
-      getProblemUserProfile(uid),
-      getSocialCounts(uid),
-      isLogin ? getSocialRelation(uid) : Promise.resolve(null),
-    ])
+    const [hSubmit, acts, cont, algoRes, countsRes, relRes, rcRes, rsRes] =
+      await Promise.all([
+        getHeatmap({
+          startDate: '20230101',
+          endDate: end,
+          isAc: false,
+          userId: uid,
+        }),
+        getSubmitLogs({ userId: uid, cursor: -1, limit: 10 }),
+        listContests({ userId: uid, limit: 5, offset: 0 }),
+        getProblemUserProfile(uid),
+        getSocialCounts(uid),
+        isLogin ? getSocialRelation(uid) : Promise.resolve(null),
+        listUserRecentComments({ userId: uid, limit: 8 }),
+        listUserRecentSolutions({ userId: uid, limit: 8 }),
+      ])
     if (signal?.cancelled) return
     setLoading(false)
 
@@ -166,6 +181,8 @@ export function Profile() {
     if (relRes && relRes.success && relRes.data) {
       setIsFollowing(relRes.data.isFollowing)
     }
+    if (rcRes.success) setRecentComments(rcRes.data || [])
+    if (rsRes.success) setRecentSolutions(rsRes.data || [])
   }, [routeUsername, queryId, user?.userId, isLogin, navigate])
 
   useEffect(() => {
@@ -614,6 +631,67 @@ export function Profile() {
               ) : (
                 <p className="text-sm text-muted-foreground">暂时还没有动态</p>
               )}
+            </CardContent>
+          </Card>
+
+          <Card className="gap-3 py-4">
+            <CardHeader className="px-4">
+              <CardTitle className="text-base">近期评论与题解</CardTitle>
+              <CardDescription>在题目下发表的讨论内容</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 px-4">
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted-foreground">
+                  评论
+                </p>
+                {recentComments.length ? (
+                  <ul className="divide-y rounded-lg border">
+                    {recentComments.map((c) => (
+                      <li key={c.id} className="px-3 py-2 text-sm">
+                        <Link
+                          to={`/question-bank/detail/${c.problemId}?tab=comments`}
+                          className="font-medium text-sky-600 hover:underline dark:text-sky-400"
+                        >
+                          {c.problemTitle || `题目 #${c.problemId}`}
+                        </Link>
+                        <p className="mt-0.5 line-clamp-2 text-muted-foreground">
+                          {c.content}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          {formatTime(c.createdAt)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">暂无评论</p>
+                )}
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted-foreground">
+                  题解
+                </p>
+                {recentSolutions.length ? (
+                  <ul className="divide-y rounded-lg border">
+                    {recentSolutions.map((s) => (
+                      <li key={s.id} className="px-3 py-2 text-sm">
+                        <Link
+                          to={`/question-bank/detail/${s.problemId}?tab=solutions&solutionId=${s.id}`}
+                          className="font-medium text-sky-600 hover:underline dark:text-sky-400"
+                        >
+                          {s.title}
+                        </Link>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {s.problemTitle || `题目 #${s.problemId}`} ·{' '}
+                          {formatTime(s.createdAt)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">暂无题解</p>
+                )}
+              </div>
             </CardContent>
           </Card>
 

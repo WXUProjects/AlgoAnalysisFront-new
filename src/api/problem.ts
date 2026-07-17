@@ -150,18 +150,19 @@ export async function getProblemSubmissions(params: {
   followingOnly?: boolean
   /** 空=全部；AC=仅通过 */
   status?: string
-}): Promise<ApiResult<Record<string, unknown>[]>> {
+}): Promise<ApiResult<{ list: Record<string, unknown>[]; total: number }>> {
   const res = await get<Record<string, unknown>[]>(endpoints.core.problem.submissions, {
     problemId: params.problemId,
     page: params.page ?? 1,
-    pageSize: params.pageSize ?? 50,
+    pageSize: params.pageSize ?? 20,
     ...(params.userId !== undefined ? { userId: params.userId } : {}),
     ...(params.followingOnly ? { followingOnly: true } : {}),
     ...(params.status ? { status: params.status } : {}),
   })
-  if (!res.success) return { ...res, data: [] }
-  const list = Array.isArray(res.data) ? res.data : []
-  return { ...res, data: list }
+  if (!res.success) return { ...res, data: { list: [], total: 0 } }
+  const raw = (res.raw ?? {}) as Record<string, unknown>
+  const list = Array.isArray(res.data) ? res.data : Array.isArray(raw.data) ? (raw.data as Record<string, unknown>[]) : []
+  return { ...res, data: { list, total: num(raw.total) } }
 }
 
 export async function getProblemFollowingStatus(

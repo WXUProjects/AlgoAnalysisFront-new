@@ -22,6 +22,7 @@ import { trackPageVisit } from '@/lib/visit-tracker'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
 import { EmergencyDialogHost } from '@/components/emergency-dialog'
+import { NotificationInbox } from '@/components/notification-inbox'
 import { PrivacySetupDialog } from '@/components/privacy-setup-dialog'
 import { SiteFooter } from '@/components/site-footer'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -403,6 +404,9 @@ export function AppLayout() {
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
             <AnimatedTitle className="text-base font-semibold">{title}</AnimatedTitle>
+            <div className="ml-auto flex items-center gap-1">
+              <NotificationInbox enabled={isLogin} />
+            </div>
           </header>
           {showLoginBanner && (
             <div className="shrink-0 border-b bg-muted/50 px-4 py-2.5 text-center text-sm text-muted-foreground">

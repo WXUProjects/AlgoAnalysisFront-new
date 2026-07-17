@@ -107,6 +107,12 @@ export const endpoints = {
       mine: `${API_PREFIX}/user/paste/mine`,
       delete: `${API_PREFIX}/user/paste/delete`,
     },
+    notification: {
+      list: `${API_PREFIX}/user/notification/list`,
+      unreadCount: `${API_PREFIX}/user/notification/unread-count`,
+      read: `${API_PREFIX}/user/notification/read`,
+      readAll: `${API_PREFIX}/user/notification/read-all`,
+    },
   },
   core: {
     submitLog: {
@@ -175,6 +181,24 @@ export const endpoints = {
       reviewEdit: `${API_PREFIX}/core/problem/review-edit`,
       /** 当前用户对该题的待审申请 */
       myPendingEdit: `${API_PREFIX}/core/problem/my-pending-edit`,
+      /** 题目评论（全站可见） */
+      commentList: `${API_PREFIX}/core/problem/comment/list`,
+      commentCreate: `${API_PREFIX}/core/problem/comment/create`,
+      commentDelete: `${API_PREFIX}/core/problem/comment/delete`,
+      /** 用户题解（全站可见；非 AI solutions） */
+      solutionList: `${API_PREFIX}/core/problem/solution/list`,
+      solutionGet: `${API_PREFIX}/core/problem/solution/get`,
+      solutionCreate: `${API_PREFIX}/core/problem/solution/create`,
+      solutionUpdate: `${API_PREFIX}/core/problem/solution/update`,
+      solutionDelete: `${API_PREFIX}/core/problem/solution/delete`,
+    },
+    activity: {
+      /** 发现页动态（组织隔离） */
+      feed: `${API_PREFIX}/core/activity/feed`,
+    },
+    user: {
+      recentComments: `${API_PREFIX}/core/user/recent-comments`,
+      recentSolutions: `${API_PREFIX}/core/user/recent-solutions`,
     },
   },
   agent: {
@@ -707,6 +731,103 @@ export interface PasteCreateReq {
   content: string
   language?: string
   expire?: PasteExpire
+}
+
+/** 站内通知类型 */
+export type NotificationType =
+  | 'problem_edit_approved'
+  | 'problem_edit_rejected'
+  | 'org_join_approved'
+  | 'org_join_rejected'
+  | 'mention'
+  | string
+
+export interface NotificationItem {
+  id: number
+  type: NotificationType
+  title: string
+  body: string
+  actorId: number
+  refType: string
+  refId: number
+  problemId: number
+  payload?: string
+  isRead: boolean
+  createdAt: number
+}
+
+export interface NotificationListRes {
+  list: NotificationItem[]
+  total: number
+  page: number
+  pageSize: number
+  unreadCount: number
+}
+
+/** 题目评论（全站可见） */
+export interface ProblemCommentItem {
+  id: number
+  problemId: number
+  userId: number
+  username: string
+  name: string
+  avatar?: string
+  content: string
+  createdAt: number
+}
+
+/** 用户题解列表项（非 AI SolutionMeta） */
+export interface ProblemUserSolutionItem {
+  id: number
+  problemId: number
+  userId: number
+  username: string
+  name: string
+  avatar?: string
+  title: string
+  excerpt?: string
+  contentMd?: string
+  createdAt: number
+  updatedAt?: number
+}
+
+/** 发现页动态（组织隔离） */
+export type ActivityFeedType = 'comment' | 'solution' | string
+
+export interface ActivityFeedItem {
+  id: number
+  orgId: number
+  userId: number
+  username: string
+  name: string
+  avatar?: string
+  type: ActivityFeedType
+  refId: number
+  problemId: number
+  problemTitle?: string
+  platform?: string
+  title: string
+  excerpt: string
+  createdAt: number
+}
+
+export interface UserRecentCommentItem {
+  id: number
+  problemId: number
+  problemTitle?: string
+  platform?: string
+  content: string
+  createdAt: number
+}
+
+export interface UserRecentSolutionItem {
+  id: number
+  problemId: number
+  problemTitle?: string
+  platform?: string
+  title: string
+  excerpt?: string
+  createdAt: number
 }
 
 /** 站点备份 scope；`all` 表示全量。后续可在 UI 做多选。 */
