@@ -52,12 +52,10 @@ export function DashboardOrgSettings() {
   const [brandLogo, setBrandLogo] = useState('')
   const [logoUploading, setLogoUploading] = useState(false)
   const [joinMode, setJoinMode] = useState('auto')
-  const [enableAiSummary, setEnableAiSummary] = useState(true)
   const [enableAiEmail, setEnableAiEmail] = useState(true)
   const [enableAiWeeklyEmail, setEnableAiWeeklyEmail] = useState(true)
   const [enableSpider, setEnableSpider] = useState(true)
   const [spiderInterval, setSpiderInterval] = useState(60)
-  const [aiInterval, setAiInterval] = useState(180)
   const [emailSchedule, setEmailSchedule] = useState('30 7 * * *')
   const [inviteCode, setInviteCode] = useState('')
   const [members, setMembers] = useState<OrgMemberInfo[]>([])
@@ -92,12 +90,10 @@ export function DashboardOrgSettings() {
     setBrandTitle(currentOrg?.brandTitle || '')
     setBrandLogo(currentOrg?.brandLogo || '')
     setJoinMode(currentOrg?.joinMode || 'auto')
-    setEnableAiSummary(currentOrg?.enableAiSummary !== false)
     setEnableAiEmail(currentOrg?.enableAiEmail !== false)
     setEnableAiWeeklyEmail(currentOrg?.enableAiWeeklyEmail !== false)
     setEnableSpider(currentOrg?.enableSpider !== false)
     setSpiderInterval(currentOrg?.spiderIntervalMin || 60)
-    setAiInterval(currentOrg?.aiSummaryIntervalMin || 180)
     setEmailSchedule(currentOrg?.aiEmailSchedule || '30 7 * * *')
     void getInvite(orgId).then((r) => {
       if (r.inviteCode) setInviteCode(r.inviteCode)
@@ -144,14 +140,12 @@ export function DashboardOrgSettings() {
       brandLogo,
       brandFavicon: currentOrg?.brandFavicon || '',
       joinMode,
-      enableAiSummary,
       enableAiEmail,
       enableAiWeeklyEmail,
       enableSpider,
     }
     if (isAdmin) {
       payload.spiderIntervalMin = spiderInterval
-      payload.aiSummaryIntervalMin = aiInterval
       payload.aiEmailSchedule = emailSchedule
     }
     const res = await updateOrg(payload)
@@ -200,10 +194,6 @@ export function DashboardOrgSettings() {
             </Select>
           </div>
           <div className="flex items-center justify-between">
-            <Label>训练小结</Label>
-            <Switch checked={enableAiSummary} onCheckedChange={setEnableAiSummary} />
-          </div>
-          <div className="flex items-center justify-between">
             <Label>日报邮件（由组织开通）</Label>
             <Switch checked={enableAiEmail} onCheckedChange={setEnableAiEmail} />
           </div>
@@ -229,14 +219,6 @@ export function DashboardOrgSettings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>训练小结生成间隔（分钟）</Label>
-                <Input
-                  type="number"
-                  value={aiInterval}
-                  onChange={(e) => setAiInterval(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-2">
                 <Label>日报发送时间</Label>
                 <Input
                   value={emailSchedule}
@@ -251,8 +233,8 @@ export function DashboardOrgSettings() {
           )}
           {!isAdmin && (
             <p className="text-xs text-muted-foreground">
-              由站点管理员配置：数据同步每 {spiderInterval} 分钟 · 训练小结每{' '}
-              {aiInterval} 分钟 · 日报发送：{emailSchedule || '—'}
+              由站点管理员配置：数据同步每 {spiderInterval} 分钟 · 日报发送：
+              {emailSchedule || '—'}
             </p>
           )}
           <Button onClick={() => void save()}>保存设置</Button>

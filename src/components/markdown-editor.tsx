@@ -1,10 +1,12 @@
 import {
   useCallback,
+  useEffect,
   useId,
   useRef,
   useState,
   type KeyboardEvent,
   type ReactNode,
+  type UIEvent,
 } from 'react'
 import {
   BoldIcon,
@@ -47,12 +49,35 @@ export type MarkdownEditorProps = {
   placeholder?: string
   /** 预览模式：markdown 强制 MD；auto 兼容历史 HTML */
   previewMode?: 'markdown' | 'auto'
-  /** 非全页时的最小高度 */
+  /** 非全页时的固定高度（内容在编辑器内滚动，不撑开父容器） */
   minHeight?: number
 }
 
 /**
+ * 按比例把源码区滚动同步到预览区。
+ * 预览异步渲染后高度可能变化，故在 value 变化后也会再同步一次。
+ */
+function syncPreviewScroll(
+  source: HTMLElement | null,
+  target: HTMLElement | null,
+) {
+  if (!source || !target) return
+  const srcMax = source.scrollHeight - source.clientHeight
+  const tgtMax = target.scrollHeight - target.clientHeight
+  if (tgtMax <= 0) {
+    target.scrollTop = 0
+    return
+  }
+  if (srcMax <= 0) {
+    target.scrollTop = 0
+    return
+  }
+  target.scrollTop = (source.scrollTop / srcMax) * tgtMax
+}
+
+/**
  * 正式 Markdown 编辑器：左侧源码 · 右侧实时预览（GFM / 代码高亮 / KaTeX）。
+ * 文字在编辑器内滚动，不依赖父容器；预览按比例跟随编辑区滚动。
  */
 export function MarkdownEditor({
   value,
@@ -65,6 +90,7 @@ export function MarkdownEditor({
   minHeight = 320,
 }: MarkdownEditorProps) {
   const taRef = useRef<HTMLTextAreaElement>(null)
+  const previewScrollRef = useRef<HTMLDivElement>(null)
   const [pane, setPane] = useState<PaneMode>('split')
   const editorId = useId()
 
@@ -181,20 +207,38 @@ export function MarkdownEditor({
     [disabled, wrapSelection, value, onChange],
   )
 
-  // 外部 value 变化时保持光标（受控组件默认行为足够）
-
   const showEdit = pane === 'split' || pane === 'edit'
   const showPreview = pane === 'split' || pane === 'preview'
+
+  const handleEditorScroll = useCallback((e: UIEvent<HTMLTextAreaElement>) => {
+    syncPreviewScroll(e.currentTarget, previewScrollRef.current)
+  }, [])
+
+  // 内容 / 分栏变化或预览异步渲染后，按当前编辑区比例同步预览滚动
+  useEffect(() => {
+    if (!showEdit || !showPreview) return
+    const preview = previewScrollRef.current
+    if (!preview) return
+
+    const sync = () => syncPreviewScroll(taRef.current, preview)
+    sync()
+    const ro = new ResizeObserver(sync)
+    ro.observe(preview)
+    const child = preview.firstElementChild
+    if (child) ro.observe(child)
+    return () => ro.disconnect()
+  }, [value, pane, showEdit, showPreview])
 
   return (
     <TooltipProvider delayDuration={300}>
       <div
         className={cn(
-          'flex flex-col overflow-hidden rounded-md border bg-background',
-          fullPage && 'h-full min-h-0 flex-1 rounded-none border-0 border-t',
+          'flex min-h-0 flex-col overflow-hidden rounded-md border bg-background',
+          // fullPage：填满父级剩余高度，内容在编辑器内滚动
+          fullPage && 'h-full min-h-0 flex-1',
           className,
         )}
-        style={!fullPage ? { minHeight } : undefined}
+        style={!fullPage ? { height: minHeight, maxHeight: minHeight } : undefined}
       >
         {/* 工具栏 */}
         <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-b bg-muted/30 px-1.5 py-1">
@@ -320,19 +364,19 @@ export function MarkdownEditor({
           </div>
         </div>
 
-        {/* 分栏主体 */}
+        {/* 分栏主体：高度锁死，内部各自滚动 */}
         <div
           className={cn(
-            'grid min-h-0 flex-1',
-            pane === 'split' && 'grid-cols-1 md:grid-cols-2',
-            pane !== 'split' && 'grid-cols-1',
+            'grid min-h-0 flex-1 overflow-hidden',
+            pane === 'split' &&
+              'grid-cols-1 grid-rows-2 md:grid-cols-2 md:grid-rows-1',
+            pane !== 'split' && 'grid-cols-1 grid-rows-1',
           )}
-          style={!fullPage ? { minHeight: Math.max(minHeight - 42, 240) } : undefined}
         >
           {showEdit && (
             <div
               className={cn(
-                'flex h-full min-h-0 flex-col overflow-hidden',
+                'flex min-h-0 flex-col overflow-hidden',
                 showPreview &&
                   pane === 'split' &&
                   'border-b md:border-b-0 md:border-r',
@@ -345,6 +389,7 @@ export function MarkdownEditor({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 onKeyDown={onKeyDown}
+                onScroll={handleEditorScroll}
                 disabled={disabled}
                 placeholder={placeholder}
                 spellCheck={false}
@@ -352,12 +397,12 @@ export function MarkdownEditor({
                 autoCorrect="off"
                 autoComplete="off"
                 className={cn(
-                  'h-full min-h-0 w-full flex-1 resize-none bg-transparent px-3 py-2.5',
+                  // h-0 + flex-1：在 flex 列中强制占满剩余高度并内部滚动
+                  'h-0 min-h-0 w-full flex-1 resize-none overflow-y-auto overscroll-contain bg-transparent px-3 py-2.5',
                   'font-mono text-[13px] leading-relaxed text-foreground',
                   'placeholder:text-muted-foreground/60',
                   'outline-none focus-visible:outline-none',
                   'disabled:cursor-not-allowed disabled:opacity-60',
-                  !fullPage && 'min-h-[240px]',
                 )}
                 aria-label="Markdown 源码"
               />
@@ -365,13 +410,11 @@ export function MarkdownEditor({
           )}
 
           {showPreview && (
-            <div className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/15">
+            <div className="flex min-h-0 flex-col overflow-hidden bg-muted/15">
               <PaneLabel>预览</PaneLabel>
               <div
-                className={cn(
-                  'min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2.5',
-                  !fullPage && 'min-h-[240px]',
-                )}
+                ref={previewScrollRef}
+                className="h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2.5"
               >
                 <MarkdownBody
                   content={value}

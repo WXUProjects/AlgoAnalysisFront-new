@@ -6,6 +6,7 @@ import { getProfileById, getProfileByUsername } from '@/api/profile'
 import {
   followUser,
   getSocialCounts,
+  getSocialIdentity,
   getSocialRelation,
   unfollowUser,
 } from '@/api/social'
@@ -21,6 +22,7 @@ import type {
   ContestItem,
   HeatmapItem,
   ProblemUserProfile,
+  SocialUser,
   UserProfile,
   UserRecentCommentItem,
   UserRecentSolutionItem,
@@ -29,6 +31,10 @@ import { useAuth } from '@/auth/AuthContext'
 import { AlgoProfileChart } from '@/components/charts/algo-profile-chart'
 import { HeatmapSimple } from '@/components/heatmap-simple'
 import { PageShell } from '@/components/page-shell'
+import {
+  UserIdentity,
+  resolveDisplayName,
+} from '@/components/user-identity'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,6 +74,8 @@ export function Profile() {
   const queryId = searchParams.get('id')
 
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  /** 域感知主展示名 + 共属组织徽章 */
+  const [identity, setIdentity] = useState<SocialUser | null>(null)
   const [targetId, setTargetId] = useState(0)
   const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
@@ -109,6 +117,7 @@ export function Profile() {
   const load = useCallback(async (signal?: { cancelled: boolean }) => {
     setLoading(true)
     setDenied(false)
+    setIdentity(null)
     setAcHeat([])
     setAcHeatLoaded(false)
     setHeatTab('submit')
@@ -151,22 +160,32 @@ export function Profile() {
     setTargetId(pf.userId)
     const uid = pf.userId
     const end = todayYmd()
-    const [hSubmit, acts, cont, algoRes, countsRes, relRes, rcRes, rsRes] =
-      await Promise.all([
-        getHeatmap({
-          startDate: '20230101',
-          endDate: end,
-          isAc: false,
-          userId: uid,
-        }),
-        getSubmitLogs({ userId: uid, cursor: -1, limit: 10 }),
-        listContests({ userId: uid, limit: 5, offset: 0 }),
-        getProblemUserProfile(uid),
-        getSocialCounts(uid),
-        isLogin ? getSocialRelation(uid) : Promise.resolve(null),
-        listUserRecentComments({ userId: uid, limit: 8 }),
-        listUserRecentSolutions({ userId: uid, limit: 8 }),
-      ])
+    const [
+      hSubmit,
+      acts,
+      cont,
+      algoRes,
+      countsRes,
+      relRes,
+      rcRes,
+      rsRes,
+      idRes,
+    ] = await Promise.all([
+      getHeatmap({
+        startDate: '20230101',
+        endDate: end,
+        isAc: false,
+        userId: uid,
+      }),
+      getSubmitLogs({ userId: uid, cursor: -1, limit: 10 }),
+      listContests({ userId: uid, limit: 5, offset: 0 }),
+      getProblemUserProfile(uid),
+      getSocialCounts(uid),
+      isLogin ? getSocialRelation(uid) : Promise.resolve(null),
+      listUserRecentComments({ userId: uid, limit: 8 }),
+      listUserRecentSolutions({ userId: uid, limit: 8 }),
+      getSocialIdentity(uid),
+    ])
     if (signal?.cancelled) return
     setLoading(false)
 
@@ -183,6 +202,15 @@ export function Profile() {
     }
     if (rcRes.success) setRecentComments(rcRes.data || [])
     if (rsRes.success) setRecentSolutions(rsRes.data || [])
+    if (idRes.success && idRes.data) {
+      setIdentity(idRes.data)
+      // 主展示名以 identity 为准（当前域 / 公共域）
+      setProfile((prev) =>
+        prev
+          ? { ...prev, name: idRes.data!.name || prev.name }
+          : prev,
+      )
+    }
   }, [routeUsername, queryId, user?.userId, isLogin, navigate])
 
   useEffect(() => {
@@ -255,7 +283,13 @@ export function Profile() {
     )
   }
 
-  const displayName = profile.name || profile.username
+  const identityView: SocialUser = identity || {
+    userId: profile.userId,
+    username: profile.username,
+    name: profile.name,
+    avatar: profile.avatar,
+  }
+  const displayName = resolveDisplayName(identityView)
   const avatarSrc = profile.avatar || '/images/defaultAvatar.png'
 
   async function handleToggleFollow() {
@@ -288,13 +322,14 @@ export function Profile() {
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1 lg:text-center">
-                <h2 className="truncate text-base font-semibold tracking-tight sm:text-lg lg:text-xl">
-                  {displayName}
-                </h2>
-                <p className="truncate text-xs text-muted-foreground sm:text-sm">
-                  @{profile.username}
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs sm:text-sm">
+                <UserIdentity
+                  user={identityView}
+                  linkToProfile={false}
+                  size="lg"
+                  nameClassName="font-semibold tracking-tight"
+                  className="lg:items-center"
+                />
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs sm:text-sm lg:justify-center">
                   <Link
                     to={`/social/${profile.username}?tab=following`}
                     className="hover:underline"

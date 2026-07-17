@@ -140,11 +140,21 @@
 |--------|------|------|------|
 | POST | `/user/social/follow` | 是 | body: `{ userId }` 关注 |
 | POST | `/user/social/unfollow` | 是 | body: `{ userId }` 取消关注 |
-| GET | `/user/social/following` | 否 | query: `userId`, `page`, `pageSize` → 关注列表 |
+| GET | `/user/social/following` | 否 | query: `userId`, `page`, `pageSize` → 关注列表（项见 SocialUser） |
 | GET | `/user/social/followers` | 否 | query: `userId`, `page`, `pageSize` → 粉丝列表 |
 | GET | `/user/social/counts` | 否 | query: `userId` → `{ followingCount, followerCount }` |
 | GET | `/user/social/relation` | 否（可选 JWT） | query: `userId` → `{ isFollowing, isFollower }` |
-| GET | `/user/social/search` | 否 | query: `q`, `page`, `pageSize` → 搜索用户 |
+| GET | `/user/social/search` | 否 | query: `q`, `page`, `pageSize` → 模糊搜用户（用户名/昵称/当前域与共属域称呼） |
+| GET | `/user/social/identity` | 否（可选 JWT） | query: `userId` → 单用户域感知展示（同 SocialUser） |
+
+**SocialUser 展示规则**（关注/粉丝/搜索/identity，依赖观众 JWT 当前组织）：
+
+| 字段 | 说明 |
+|------|------|
+| `name` | **主展示名**：目标在**当前域** → 该域 `org_display_name`（空则 username）；**不在当前域** → 公共域昵称（`users.name`，空则 username） |
+| `inCurrentOrg` | 目标是否属于观众当前组织 |
+| `sharedOrgs` | 双方共属、且**非当前观看域**的组织列表 `{ orgId, orgName, displayName }`（**含公共域**；切换到校队后仍会标公共域与其他共属校队）；观众不在的组织**绝不**出现（隐私边界） |
+| `username` / `avatar` | 账号与头像 |
 | GET | `/user/privacy/get` | 是 | 本人隐私：`privacyConfigured`, `allowPublicProfile`(默认 true), `allowPublicFeed`(默认 true) |
 | POST | `/user/privacy/update` | 是 | body: `{ allowPublicProfile?, allowPublicFeed? }`；保存后 `privacyConfigured=true` |
 | GET | `/user/privacy/status` | 否（可选 JWT） | `{ privacyConfigured }`；未登录视为 true（不弹窗） |

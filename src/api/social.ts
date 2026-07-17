@@ -1,6 +1,7 @@
 import {
   endpoints,
   type PrivacySettings,
+  type SharedOrgAlias,
   type SocialCounts,
   type SocialListRes,
   type SocialRelation,
@@ -9,12 +10,25 @@ import {
 import { get, post, num, str, bool, type ApiResult } from '@/lib/http'
 import { normalizeStaticUrl } from '@/lib/static-url'
 
+function normalizeSharedOrgs(raw: unknown): SharedOrgAlias[] {
+  if (!Array.isArray(raw)) return []
+  return (raw as Record<string, unknown>[])
+    .map((a) => ({
+      orgId: num(a.orgId),
+      orgName: str(a.orgName),
+      displayName: str(a.displayName),
+    }))
+    .filter((a) => a.orgId > 0 && a.displayName)
+}
+
 function normalizeUser(raw: Record<string, unknown>): SocialUser {
   return {
     userId: num(raw.userId),
     username: str(raw.username),
     name: str(raw.name),
     avatar: normalizeStaticUrl(str(raw.avatar)),
+    inCurrentOrg: raw.inCurrentOrg === undefined ? undefined : bool(raw.inCurrentOrg),
+    sharedOrgs: normalizeSharedOrgs(raw.sharedOrgs),
   }
 }
 
@@ -102,6 +116,39 @@ export async function searchUsers(
 ): Promise<ApiResult<SocialListRes>> {
   const res = await get(endpoints.user.social.search, { q, page, pageSize })
   return parseList(res)
+}
+
+/** 单用户域感知展示名（资料页标题等） */
+export async function getSocialIdentity(
+  userId: number,
+): Promise<ApiResult<SocialUser>> {
+  const res = await get<Record<string, unknown>>(endpoints.user.social.identity, {
+    userId,
+  })
+  // http 层：body.data → res.data；无 data 字段时 rest 落在 res.data
+  const rawBody = (res.raw ?? {}) as Record<string, unknown>
+  const dataRaw = (
+    res.data && typeof res.data === 'object' && 'userId' in (res.data as object)
+      ? res.data
+      : rawBody.data && typeof rawBody.data === 'object'
+        ? rawBody.data
+        : res.data
+  ) as Record<string, unknown> | null
+  if (!dataRaw || (dataRaw.userId === undefined && dataRaw.username === undefined)) {
+    return {
+      success: false,
+      message: res.message || '找不到该用户',
+      data: null,
+      status: res.status,
+    }
+  }
+  return {
+    success: true,
+    message: res.message || 'ok',
+    data: normalizeUser(dataRaw),
+    raw: res.raw,
+    status: res.status,
+  }
 }
 
 export async function getPrivacy(): Promise<ApiResult<PrivacySettings>> {

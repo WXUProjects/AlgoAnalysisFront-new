@@ -442,7 +442,7 @@ export function DashboardSiteSettings() {
           <CardHeader className="px-4 pb-0">
             <CardTitle>长期未登录休眠</CardTitle>
             <CardDescription>
-              超过指定天数未登录的用户，将暂停自动同步、训练小结与邮件，以节省资源。再次登录后会自动全量同步。
+              超过指定天数未登录的用户，将暂停自动同步与邮件，以节省资源。再次登录后会自动全量同步。
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4">
@@ -559,9 +559,9 @@ export function DashboardSiteSettings() {
 
         <Card className="gap-3 py-4">
           <CardHeader className="px-4 pb-0">
-            <CardTitle>训练小结所用模型</CardTitle>
+            <CardTitle>日报 / 周报所用模型</CardTitle>
             <CardDescription>
-              用于个人日报、周报与近期训练总结
+              用于自动生成个人日报与周报邮件
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4">

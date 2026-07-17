@@ -122,7 +122,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [togglingKey, setTogglingKey] = useState<string | null>(null)
   const [detailUser, setDetailUser] = useState<UserListItem | null>(null)
   const [spiderIntervalDraft, setSpiderIntervalDraft] = useState('')
-  const [aiIntervalDraft, setAiIntervalDraft] = useState('')
   const [savingIntervals, setSavingIntervals] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
   const [clearingDormant, setClearingDormant] = useState(false)
@@ -322,53 +321,28 @@ function UserListPage({ scope }: { scope: UserScope }) {
   function openDetail(u: UserListItem) {
     setDetailUser(u)
     setSpiderIntervalDraft(String(u.spiderIntervalMin ?? 60))
-    setAiIntervalDraft(String(u.aiSummaryIntervalMin ?? 180))
   }
 
-  async function saveSyncIntervals(mode: 'save' | 'clearSpider' | 'clearAi' | 'clearBoth') {
+  async function saveSyncIntervals(mode: 'save' | 'clearSpider') {
     if (!detailUser || !isAdmin) return
     let spiderIntervalMin = Number(spiderIntervalDraft)
-    let aiSummaryIntervalMin = Number(aiIntervalDraft)
-    let setSpider = false
-    let setAi = false
     if (mode === 'save') {
-      setSpider = true
-      setAi = true
       if (
         !Number.isFinite(spiderIntervalMin) ||
         spiderIntervalMin < 5 ||
         spiderIntervalMin > 10080
       ) {
-        toast.error('爬取间隔须为 5–10080 分钟')
+        toast.error('同步间隔须为 5–10080 分钟')
         return
       }
-      if (
-        !Number.isFinite(aiSummaryIntervalMin) ||
-        aiSummaryIntervalMin < 5 ||
-        aiSummaryIntervalMin > 10080
-      ) {
-        toast.error('AI 总结间隔须为 5–10080 分钟')
-        return
-      }
-    } else if (mode === 'clearSpider') {
-      setSpider = true
-      spiderIntervalMin = 0
-    } else if (mode === 'clearAi') {
-      setAi = true
-      aiSummaryIntervalMin = 0
     } else {
-      setSpider = true
-      setAi = true
       spiderIntervalMin = 0
-      aiSummaryIntervalMin = 0
     }
     setSavingIntervals(true)
     const res = await setSyncIntervals({
       userId: detailUser.userId,
-      setSpider,
-      setAi,
+      setSpider: true,
       spiderIntervalMin,
-      aiSummaryIntervalMin,
     })
     setSavingIntervals(false)
     if (!res.success) {
@@ -387,7 +361,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
       if (next) {
         setDetailUser(next)
         setSpiderIntervalDraft(String(next.spiderIntervalMin ?? 60))
-        setAiIntervalDraft(String(next.aiSummaryIntervalMin ?? 180))
       }
     }
   }
@@ -1153,29 +1126,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     disabled={savingIntervals}
                   />
                 </Field>
-                <Field>
-                  <FieldLabel htmlFor="ai-interval">
-                    训练小结生成间隔（分钟）
-                    {detailUser.aiSummaryIntervalOverridden ? (
-                      <Badge variant="secondary" className="ml-2 font-normal">
-                        站管指定
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="ml-2 font-normal">
-                        组织默认
-                      </Badge>
-                    )}
-                  </FieldLabel>
-                  <Input
-                    id="ai-interval"
-                    type="number"
-                    min={5}
-                    max={10080}
-                    value={aiIntervalDraft}
-                    onChange={(e) => setAiIntervalDraft(e.target.value)}
-                    disabled={savingIntervals}
-                  />
-                </Field>
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
@@ -1192,18 +1142,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     disabled={savingIntervals || !detailUser.spiderIntervalOverridden}
                     onClick={() => void saveSyncIntervals('clearSpider')}
                   >
-                    清除爬取覆盖
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={
-                      savingIntervals || !detailUser.aiSummaryIntervalOverridden
-                    }
-                    onClick={() => void saveSyncIntervals('clearAi')}
-                  >
-                    清除 AI 覆盖
+                    清除同步覆盖
                   </Button>
                 </div>
               </FieldGroup>

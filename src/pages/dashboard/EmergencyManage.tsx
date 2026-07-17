@@ -304,29 +304,30 @@ export function DashboardEmergencyManage() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="flex! max-h-[92vh] w-full max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
+        <DialogContent className="flex! h-[min(92vh,820px)] max-h-[92vh] w-full max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
           <DialogHeader className="shrink-0 border-b px-5 py-4">
             <DialogTitle>
               {editing ? '编辑紧急通知' : '新建紧急通知'}
             </DialogTitle>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-            <FieldGroup className="gap-3">
-              <Field className="gap-1.5">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4">
+            <FieldGroup className="flex min-h-0 flex-1 flex-col gap-3">
+              <Field className="shrink-0 gap-1.5">
                 <FieldLabel>标题</FieldLabel>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} />
               </Field>
-              <Field className="flex-row items-center justify-between gap-3">
+              <Field className="shrink-0 flex-row items-center justify-between gap-3">
                 <FieldLabel>启用（保存后立即展示）</FieldLabel>
                 <Switch checked={enabled} onCheckedChange={setEnabled} />
               </Field>
-              <Field className="gap-1.5">
-                <FieldLabel>正文</FieldLabel>
+              <Field className="flex min-h-0 flex-1 flex-col gap-1.5">
+                <FieldLabel className="shrink-0">正文</FieldLabel>
                 <MarkdownEditor
                   value={content}
                   onChange={setContent}
                   previewMode="auto"
-                  minHeight={360}
+                  fullPage
+                  className="min-h-0 flex-1"
                   placeholder={
                     '用 Markdown 编写通知…\n\n支持 **粗体**、列表、链接与 $公式$'
                   }

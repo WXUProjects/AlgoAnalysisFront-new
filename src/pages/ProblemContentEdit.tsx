@@ -195,11 +195,10 @@ export function ProblemContentEdit() {
         onChange={setContentInput}
         disabled={saving}
         previewMode="markdown"
-        minHeight={560}
+        minHeight={640}
         placeholder={
           '用 Markdown 编写题面…\n\n## 题目描述\n\n支持代码块、表格与 $LaTeX$ 公式'
         }
-        className="min-h-[min(70vh,640px)]"
       />
     </PageShell>
   )

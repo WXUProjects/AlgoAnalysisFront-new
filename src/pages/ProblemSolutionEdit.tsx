@@ -228,11 +228,10 @@ export function ProblemSolutionEdit() {
         onChange={setSContent}
         disabled={saving}
         previewMode="markdown"
-        minHeight={560}
+        minHeight={640}
         placeholder={
           '用 Markdown 写题解…\n\n## 思路\n\n支持代码块与 $公式$\n\n可用 @username 提醒他人'
         }
-        className="min-h-[min(70vh,640px)]"
       />
     </PageShell>
   )

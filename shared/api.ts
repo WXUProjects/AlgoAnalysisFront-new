@@ -43,6 +43,8 @@ export const endpoints = {
       counts: `${API_PREFIX}/user/social/counts`,
       relation: `${API_PREFIX}/user/social/relation`,
       search: `${API_PREFIX}/user/social/search`,
+      /** 单用户域感知展示名 + 共属组织徽章 */
+      identity: `${API_PREFIX}/user/social/identity`,
     },
     privacy: {
       get: `${API_PREFIX}/user/privacy/get`,
@@ -317,12 +319,28 @@ export interface UserProfile {
   lastSyncAt?: number
 }
 
-/** 关注/粉丝/搜索列表项 */
+/** 双方共属的其他组织内称呼（仅公共域视图返回；观众须同属该组织） */
+export interface SharedOrgAlias {
+  orgId: number
+  orgName: string
+  /** 目标用户在该组织的对外称呼 */
+  displayName: string
+}
+
+/** 关注/粉丝/搜索/资料展示身份 */
 export interface SocialUser {
   userId: number
   username: string
+  /** 主展示名：当前域称呼；不在当前域则为公共域昵称 */
   name: string
   avatar: string
+  /** 是否属于观众当前组织 */
+  inCurrentOrg?: boolean
+  /**
+   * 双方共属、且非当前域的组织徽章（含公共域）。
+   * 切换到校队后也会返回「公共域 · 昵称」及其他共属校队。
+   */
+  sharedOrgs?: SharedOrgAlias[]
 }
 
 export interface SocialListRes {

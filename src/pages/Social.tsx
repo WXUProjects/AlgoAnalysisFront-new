@@ -4,6 +4,7 @@ import { SearchIcon, UserPlusIcon, UserMinusIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   followUser,
+  getSocialIdentity,
   getSocialRelation,
   listFollowers,
   listFollowing,
@@ -15,6 +16,10 @@ import type { SocialUser } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
+import {
+  UserIdentity,
+  resolveDisplayName,
+} from '@/components/user-identity'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -64,14 +69,20 @@ export function Social() {
     setQInput(qParam)
   }, [qParam])
 
-  // 解析目标用户
+  // 解析目标用户（主展示名走域感知 identity）
   useEffect(() => {
     let cancelled = false
     async function resolve() {
       if (!username) {
         if (user) {
           setTargetUserId(user.userId)
-          setTargetName(user.name || user.username)
+          const idRes = await getSocialIdentity(user.userId)
+          if (cancelled) return
+          setTargetName(
+            idRes.success && idRes.data
+              ? resolveDisplayName(idRes.data)
+              : user.name || user.username,
+          )
         } else {
           setTargetUserId(0)
           setTargetName('')
@@ -82,7 +93,13 @@ export function Social() {
       if (cancelled) return
       if (res.success && res.data) {
         setTargetUserId(res.data.userId)
-        setTargetName(res.data.name || res.data.username)
+        const idRes = await getSocialIdentity(res.data.userId)
+        if (cancelled) return
+        setTargetName(
+          idRes.success && idRes.data
+            ? resolveDisplayName(idRes.data)
+            : res.data.name || res.data.username,
+        )
       } else {
         setTargetUserId(0)
         setTargetName('')
@@ -268,7 +285,7 @@ export function Social() {
               className="max-w-sm"
               value={qInput}
               onChange={(e) => setQInput(e.target.value)}
-              placeholder="用户名或昵称"
+              placeholder="用户名、昵称或队内称呼"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
@@ -308,7 +325,7 @@ export function Social() {
           )}
           {!loading &&
             list.map((u) => {
-              const display = u.name || u.username
+              const display = resolveDisplayName(u)
               const following = relationMap[u.userId]
               const selfRow = Boolean(user && u.userId === user.userId)
               return (
@@ -323,17 +340,7 @@ export function Social() {
                     />
                     <AvatarFallback>{display.slice(0, 1)}</AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      to={`/profile/${u.username}`}
-                      className="truncate font-medium hover:underline"
-                    >
-                      {display}
-                    </Link>
-                    <p className="truncate text-xs text-muted-foreground">
-                      @{u.username}
-                    </p>
-                  </div>
+                  <UserIdentity user={u} className="flex-1" />
                   {isLogin && !selfRow && (
                     <Button
                       type="button"

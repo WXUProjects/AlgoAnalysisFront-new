@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { UserMinusIcon, UserPlusIcon, UsersIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -10,6 +9,10 @@ import {
 } from '@/api/social'
 import type { SocialUser } from '@shared/api'
 import { Pagination } from '@/components/pagination'
+import {
+  UserIdentity,
+  resolveDisplayName,
+} from '@/components/user-identity'
 import { useListQueryState } from '@/hooks/use-list-query-state'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -161,7 +164,7 @@ export function DiscoverSearchResults({
           )}
           {!loading &&
             list.map((u) => {
-              const display = u.name || u.username
+              const display = resolveDisplayName(u)
               const following = relationMap[u.userId]
               const selfRow = Boolean(userId && u.userId === userId)
               return (
@@ -176,17 +179,7 @@ export function DiscoverSearchResults({
                     />
                     <AvatarFallback>{display.slice(0, 1)}</AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      to={`/profile/${u.username}`}
-                      className="truncate font-medium hover:underline"
-                    >
-                      {display}
-                    </Link>
-                    <p className="truncate text-xs text-muted-foreground">
-                      @{u.username}
-                    </p>
-                  </div>
+                  <UserIdentity user={u} className="flex-1" />
                   {isLogin && !selfRow && (
                     <Button
                       type="button"

@@ -12,6 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -128,15 +129,16 @@ export function HotAllSheet({ open, onOpenChange }: Props) {
                       <TableCell className="tabular-nums text-muted-foreground">
                         {rank}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-0">
                         <Link
                           to={`/question-bank/detail/${p.id}`}
-                          className="font-medium hover:underline"
+                          className="block truncate font-medium hover:underline"
                           onClick={() => onOpenChange(false)}
+                          title={p.title || p.externalId || `题目 ${p.id}`}
                         >
                           {p.title || p.externalId || `题目 ${p.id}`}
                         </Link>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
                           {[
                             platformLabel(p.platform),
                             p.difficulty || '',
@@ -145,6 +147,24 @@ export function HotAllSheet({ open, onOpenChange }: Props) {
                             .filter(Boolean)
                             .join(' · ')}
                         </p>
+                        {p.tags?.length ? (
+                          <div className="mt-1 flex min-w-0 flex-nowrap gap-1 overflow-hidden">
+                            {p.tags.slice(0, 4).map((t) => (
+                              <Badge
+                                key={t}
+                                variant="outline"
+                                className="h-5 max-w-[7rem] shrink-0 truncate px-1.5 text-[10px] font-normal text-muted-foreground"
+                              >
+                                {t}
+                              </Badge>
+                            ))}
+                            {p.tags.length > 4 ? (
+                              <span className="shrink-0 text-[10px] leading-5 text-muted-foreground">
+                                +{p.tags.length - 4}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {item.solverCount}

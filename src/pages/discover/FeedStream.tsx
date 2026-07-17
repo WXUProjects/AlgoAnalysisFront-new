@@ -32,6 +32,11 @@ type Props = {
   followingOnly: boolean
   feedScope: FeedScope
   selfUserId?: number
+  /**
+   * 发现页 Tab 已标「提交动态」时隐藏卡片标题，避免竖排重复；
+   * 查看他人动态（无 Tab）时保留标题。
+   */
+  hideTitle?: boolean
 }
 
 /**
@@ -44,6 +49,7 @@ export function FeedStream({
   followingOnly,
   feedScope,
   selfUserId,
+  hideTitle = false,
 }: Props) {
   const [items, setItems] = useState<SubmitLogItem[]>([])
   const [hasMore, setHasMore] = useState(true)
@@ -126,11 +132,15 @@ export function FeedStream({
   return (
     <Card data-discover-feed-stream="" className="gap-0 overflow-hidden py-0">
       <CardHeader className="border-b px-4 py-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <ActivityIcon className="size-4 text-muted-foreground" />
-          提交动态
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
+        {hideTitle ? null : (
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ActivityIcon className="size-4 text-muted-foreground" />
+            提交动态
+          </CardTitle>
+        )}
+        <CardDescription className={hideTitle ? 'text-sm' : undefined}>
+          {description}
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col divide-y p-0">
         {initialLoading &&

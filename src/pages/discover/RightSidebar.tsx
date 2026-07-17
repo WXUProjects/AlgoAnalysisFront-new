@@ -17,6 +17,7 @@ import type {
   StatisticRankItem,
 } from '@shared/api'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -320,13 +321,34 @@ export function RightSidebar({ isLogin, selfUserId }: Props) {
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="line-clamp-2 text-sm font-medium leading-snug">
+                    <p
+                      className="truncate text-sm font-medium leading-snug"
+                      title={p.title || p.externalId || `题目 ${p.id}`}
+                    >
                       {p.title || p.externalId || `题目 ${p.id}`}
                     </p>
                     {meta ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground">
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
                         {meta}
                       </p>
+                    ) : null}
+                    {p.tags?.length ? (
+                      <div className="mt-1 flex min-w-0 flex-nowrap gap-1 overflow-hidden">
+                        {p.tags.slice(0, 3).map((t) => (
+                          <Badge
+                            key={t}
+                            variant="outline"
+                            className="h-5 max-w-[6.5rem] shrink-0 truncate px-1.5 text-[10px] font-normal text-muted-foreground"
+                          >
+                            {t}
+                          </Badge>
+                        ))}
+                        {p.tags.length > 3 ? (
+                          <span className="shrink-0 text-[10px] leading-5 text-muted-foreground">
+                            +{p.tags.length - 3}
+                          </span>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                 </Link>

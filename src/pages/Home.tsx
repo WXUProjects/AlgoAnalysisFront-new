@@ -10,12 +10,10 @@ import {
   TrophyIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { getRecentSummary } from '@/api/agent'
 import { listBulletins } from '@/api/bulletin'
 import { getProblemUserProfile } from '@/api/problem'
 import { getHeatmap, getPeriod } from '@/api/statistic'
 import type {
-  AgentSummaryData,
   BulletinInfo,
   HeatmapItem,
   PeriodData,
@@ -38,7 +36,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import { formatTime, todayYmd } from '@/lib/format'
-import { OJ_PLATFORMS } from '@/lib/link'
 
 const OJ_LINKS = [
   {
@@ -110,10 +107,11 @@ function OjLink({
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="group flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-[border-color,background-color,box-shadow] duration-200 ease-out hover:border-primary/40 hover:bg-muted/40 hover:shadow-sm"
+      title={desc}
+      className="group flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 transition-[border-color,background-color,box-shadow] duration-200 ease-out hover:border-primary/40 hover:bg-muted/40 hover:shadow-sm lg:gap-3 lg:px-3 lg:py-2.5"
       {...hoverHandlers}
     >
-      <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background p-1">
+      <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background p-1 lg:size-11">
         <img
           src={icon}
           alt=""
@@ -123,8 +121,11 @@ function OjLink({
         />
       </div>
       <div className="min-w-0">
-        <p className="text-sm font-medium leading-tight">{label}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{desc}</p>
+        <p className="truncate text-sm font-medium leading-tight">{label}</p>
+        {/* PC 竖排有空间展示说明；移动端两列只保留名称 */}
+        <p className="mt-0.5 hidden text-xs text-muted-foreground line-clamp-1 lg:block">
+          {desc}
+        </p>
       </div>
     </a>
   )
@@ -191,7 +192,7 @@ function StatCard({
 }
 
 export function Home() {
-  const { isLogin, isMemberLike, ready, user, orgs } = useAuth()
+  const { isLogin, isMemberLike, ready, user } = useAuth()
   const [period, setPeriod] = useState<PeriodData | null>(null)
   const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
@@ -199,14 +200,9 @@ export function Home() {
   const [acHeatLoading, setAcHeatLoading] = useState(false)
   const [heatTab, setHeatTab] = useState<'submit' | 'ac'>('submit')
   const [bulletins, setBulletins] = useState<BulletinInfo[]>([])
-  const [summary, setSummary] = useState<AgentSummaryData | null>(null)
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [mode, setMode] = useState<'submit' | 'ac'>('ac')
-
-  // 所在组织任一开启 AI 总结才展示；未登录保留入口提示
-  const showAiSummary =
-    !isLogin || orgs.some((o) => o.enableAiSummary !== false)
 
   useEffect(() => {
     // 等待鉴权就绪，避免登录态闪烁双请求
@@ -237,22 +233,12 @@ export function Home() {
         }),
       ]
       if (isLogin && user) {
-        if (showAiSummary) {
-          tasks.push(
-            getRecentSummary(user.userId).then((res) => {
-              if (!cancelled && res.success) setSummary(res.data)
-            }),
-          )
-        } else {
-          setSummary(null)
-        }
         tasks.push(
           getProblemUserProfile(user.userId).then((res) => {
             if (!cancelled && res.success) setAlgo(res.data)
           }),
         )
       } else {
-        setSummary(null)
         setAlgo(null)
       }
       await Promise.all(tasks)
@@ -262,7 +248,7 @@ export function Home() {
     return () => {
       cancelled = true
     }
-  }, [ready, isLogin, user, showAiSummary])
+  }, [ready, isLogin, user])
 
   useEffect(() => {
     // 勿把 acHeatLoading 放进 deps：setLoading 会触发 cleanup 把请求标 cancelled，导致永远卡在 Skeleton
@@ -321,14 +307,14 @@ export function Home() {
             <CardTitle className="text-base">快捷入口</CardTitle>
           </div>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-2 px-4 sm:grid-cols-2">
+        <CardContent className="grid grid-cols-2 gap-2 px-4 lg:grid-cols-1">
           {OJ_LINKS.map((o) => (
             <OjLink key={o.href} href={o.href} label={o.label} desc={o.desc} icon={o.icon} />
           ))}
           {isLogin && isMemberLike && (
             <Link
               to="/change-profile"
-              className="flex items-center justify-center rounded-lg border border-dashed px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted/40"
+              className="col-span-2 flex items-center justify-center rounded-lg border border-dashed px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted/40 lg:col-span-1"
             >
               绑定 OJ 账号
             </Link>
@@ -414,9 +400,8 @@ export function Home() {
         </div>
       </section>
 
-      {/* ② 主从双栏 — 对齐旧版 dashboard-grid 2fr | 1fr；移动端快捷入口沉底 */}
+      {/* ② 主从双栏 — 左：热力图/画像；右：公告/快捷入口 */}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
-        {/* 左：热力图 → 算法画像（桌面端快捷入口在左栏底部） */}
         <div className="flex min-w-0 flex-col gap-4">
           <Card className="gap-3 py-4">
             <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 px-4 space-y-0">
@@ -472,13 +457,9 @@ export function Home() {
               </CardContent>
             </Card>
           )}
-
-          <div className="hidden xl:block">
-            <QuickLinks />
-          </div>
         </div>
 
-        {/* 右：公告 → AI 总结 */}
+        {/* 右：公告 → 快捷入口 */}
         <div className="flex min-w-0 flex-col gap-4">
           <Card className="gap-3 py-4">
             <CardHeader className="flex flex-row items-center justify-between px-4 space-y-0">
@@ -535,64 +516,6 @@ export function Home() {
             </CardContent>
           </Card>
 
-          {showAiSummary && (
-            <Card className="gap-3 py-4">
-              <CardHeader className="px-4">
-                <div className="flex items-center gap-2">
-                  <SparklesIcon className="size-4 text-muted-foreground" />
-                  <CardTitle className="text-base">训练小结</CardTitle>
-                </div>
-                <CardDescription>
-                  {isLogin
-                    ? summary?.updateTime
-                      ? `更新于 ${formatTime(summary.updateTime)}`
-                      : '根据近期训练数据生成'
-                    : '登录后可查看个人训练小结'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="px-4">
-                {!isLogin ? (
-                  <p className="text-sm text-muted-foreground">
-                    <Link
-                      to="/login"
-                      className="text-foreground underline-offset-4 hover:underline"
-                    >
-                      登录
-                    </Link>
-                    后可查看训练小结与算法画像。支持绑定：
-                    {OJ_PLATFORMS.map((p) => p.label).join(' / ')}
-                  </p>
-                ) : loading ? (
-                  <div className="flex flex-col gap-2">
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                  </div>
-                ) : (
-                  <>
-                    <ul className="flex flex-col gap-2 text-sm">
-                      {(summary?.msg || []).map((m, i) => (
-                        <li
-                          key={i}
-                          className="rounded-md border bg-muted/20 px-3 py-2 leading-relaxed"
-                        >
-                          {m}
-                        </li>
-                      ))}
-                      {!summary?.msg?.length && (
-                        <li className="text-muted-foreground">暂无训练小结</li>
-                      )}
-                    </ul>
-                    <p className="mt-3 text-[11px] text-muted-foreground">
-                      由 AI 生成，请自行判断是否准确。
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        <div className="xl:hidden">
           <QuickLinks />
         </div>
       </div>

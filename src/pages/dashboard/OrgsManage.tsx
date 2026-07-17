@@ -58,13 +58,11 @@ export function DashboardOrgsManage() {
 
   const [brandTitle, setBrandTitle] = useState('')
   const [joinMode, setJoinMode] = useState('auto')
-  const [enableAiSummary, setEnableAiSummary] = useState(true)
   const [enableAiEmail, setEnableAiEmail] = useState(true)
   const [enableAiWeeklyEmail, setEnableAiWeeklyEmail] = useState(true)
   const [enableSpider, setEnableSpider] = useState(true)
   const [forceSync, setForceSync] = useState(false)
   const [spiderInterval, setSpiderInterval] = useState(60)
-  const [aiInterval, setAiInterval] = useState(180)
   const [emailSchedule, setEmailSchedule] = useState('30 7 * * *')
   const [status, setStatus] = useState('active')
   const [seatLimit, setSeatLimit] = useState(50)
@@ -85,13 +83,11 @@ export function DashboardOrgsManage() {
     if (!selected) return
     setBrandTitle(selected.brandTitle || '')
     setJoinMode(selected.joinMode || 'auto')
-    setEnableAiSummary(selected.enableAiSummary !== false)
     setEnableAiEmail(selected.enableAiEmail !== false)
     setEnableAiWeeklyEmail(selected.enableAiWeeklyEmail !== false)
     setEnableSpider(selected.enableSpider !== false)
     setForceSync(!!selected.forceSync)
     setSpiderInterval(selected.spiderIntervalMin || 60)
-    setAiInterval(selected.aiSummaryIntervalMin || 180)
     setEmailSchedule(selected.aiEmailSchedule || '30 7 * * *')
     setStatus(selected.status || 'active')
     setSeatLimit(selected.seatLimit && selected.seatLimit > 0 ? selected.seatLimit : 50)
@@ -116,13 +112,11 @@ export function DashboardOrgsManage() {
       brandLogo: selected.brandLogo || '',
       brandFavicon: selected.brandFavicon || '',
       joinMode,
-      enableAiSummary,
       enableAiEmail,
       enableAiWeeklyEmail,
       enableSpider,
       forceSync,
       spiderIntervalMin: spiderInterval,
-      aiSummaryIntervalMin: aiInterval,
       aiEmailSchedule: emailSchedule,
       status,
       name: selected.name,
@@ -337,10 +331,6 @@ export function DashboardOrgsManage() {
                     </p>
                   </div>
                   <div className="flex items-center justify-between">
-                    <Label>AI 总结</Label>
-                    <Switch checked={enableAiSummary} onCheckedChange={setEnableAiSummary} />
-                  </div>
-                  <div className="flex items-center justify-between">
                     <Label>日报邮件（由组织开通）</Label>
                     <Switch checked={enableAiEmail} onCheckedChange={setEnableAiEmail} />
                   </div>
@@ -370,14 +360,6 @@ export function DashboardOrgsManage() {
                       type="number"
                       value={spiderInterval}
                       onChange={(e) => setSpiderInterval(Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>训练小结生成间隔（分钟）</Label>
-                    <Input
-                      type="number"
-                      value={aiInterval}
-                      onChange={(e) => setAiInterval(Number(e.target.value))}
                     />
                   </div>
                   <div className="space-y-2">
