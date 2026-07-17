@@ -46,7 +46,7 @@ export function Login() {
       const msg = res.message || '登录成功'
       if (res.data?.wasDormant) {
         toast.message(msg, {
-          description: '全量同步可能需要几分钟，完成后请刷新页面查看最新数据。',
+          description: '正在后台同步你的做题数据，可能需要几分钟；完成后请刷新页面查看。',
           duration: 8000,
         })
       } else {
@@ -54,7 +54,7 @@ export function Login() {
       }
       navigate(postLoginPath(redirectParam), { replace: true })
     } else {
-      toast.error(res.message || '登录失败')
+      toast.error(res.message || '登录失败，请检查账号密码后重试')
     }
   }
 
@@ -63,7 +63,7 @@ export function Login() {
       <Card className="w-full max-w-sm gap-4 py-4 motion-lift">
         <CardHeader className="gap-1 px-4">
           <CardTitle>登录</CardTitle>
-          <CardDescription>使用账号或邮箱登录 GoAlgo</CardDescription>
+          <CardDescription>使用账号或邮箱登录</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <CardContent className="px-4">

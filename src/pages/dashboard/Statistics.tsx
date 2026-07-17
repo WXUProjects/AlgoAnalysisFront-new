@@ -147,7 +147,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     const res = await updateAllSpiders()
     setUpdating(false)
     if (res.success) toast.success(res.message || '已开始全站同步')
-    else toast.error(res.message || '全站同步失败')
+    else toast.error(res.message || '全站同步失败，请稍后重试')
   }
 
   const cards: {
@@ -225,7 +225,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>同步全站 OJ 数据？</AlertDialogTitle>
+                <AlertDialogTitle>确认同步全站做题数据？</AlertDialogTitle>
                 <AlertDialogDescription>
                   将为所有用户同步各平台最新数据，过程可能较久，请确认后继续。
                 </AlertDialogDescription>
@@ -267,7 +267,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       <Card className="gap-3 py-4">
         <CardHeader className="px-4">
           <CardTitle className="text-base">近 30 日趋势</CardTitle>
-          <CardDescription>提交数与 AC 数对比</CardDescription>
+          <CardDescription>提交次数与通过次数对比</CardDescription>
         </CardHeader>
         <CardContent className="px-2">
           {loading ? (

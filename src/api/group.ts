@@ -62,7 +62,7 @@ export async function getGroup(id: number): Promise<ApiResult<GroupInfo>> {
   if (!res.success && !res.data) return { ...res, data: null }
   const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
   if (raw.id === undefined && raw.name === undefined) {
-    return { success: false, message: res.message || '获取分组失败', data: null }
+    return { success: false, message: res.message || '分组加载失败，请稍后重试', data: null }
   }
   return { success: true, message: res.message || 'ok', data: normalizeGroup(raw) }
 }

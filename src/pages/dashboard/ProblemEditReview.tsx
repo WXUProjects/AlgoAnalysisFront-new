@@ -87,7 +87,7 @@ export function DashboardProblemEditReview() {
     })
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '加载审核列表失败')
+      toast.error(res.message || '审核列表加载失败，请稍后重试')
       return
     }
     setList(res.data.list)
@@ -109,7 +109,7 @@ export function DashboardProblemEditReview() {
     })
     setActing(false)
     if (!res.success) {
-      toast.error(res.message || '操作失败')
+      toast.error(res.message || '操作未完成，请稍后重试')
       return
     }
     toast.success(res.message || (approve ? '已通过' : '已驳回'))
@@ -128,7 +128,7 @@ export function DashboardProblemEditReview() {
         <CardHeader className="px-4">
           <CardTitle className="text-base">题库修改审核</CardTitle>
           <CardDescription>
-            审核用户提交的标签与题面修改。通过后立即生效；标签非空的题目将不再自动分析。
+            审核用户提交的标签与题面修改。通过后立即生效；已有标签的题目将不再自动分析。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3 px-4">
@@ -238,7 +238,7 @@ export function DashboardProblemEditReview() {
                       colSpan={6}
                       className="py-10 text-center text-muted-foreground"
                     >
-                      暂无申请
+                      暂无待审申请
                     </TableCell>
                   </TableRow>
                 )}
@@ -348,7 +348,7 @@ export function DashboardProblemEditReview() {
                         value={reviewNote}
                         onChange={(e) => setReviewNote(e.target.value)}
                         rows={2}
-                        placeholder="通过或驳回时的说明"
+                        placeholder="通过或驳回时的备注（可选）"
                       />
                     </Field>
                   </FieldGroup>

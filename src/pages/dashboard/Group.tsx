@@ -161,7 +161,7 @@ export function DashboardGroup() {
       setEditOpen(false)
       void loadList()
       if (selectedId !== null) void loadDetail(selectedId)
-    } else toast.error(res.message || '保存失败')
+    } else toast.error(res.message || '保存失败，请稍后重试')
   }
 
   async function handleDelete(id: number) {
@@ -170,7 +170,7 @@ export function DashboardGroup() {
       toast.success(res.message || '已删除')
       if (selectedId === id) setSelectedId(null)
       void loadList()
-    } else toast.error(res.message || '删除失败')
+    } else toast.error(res.message || '删除失败，请稍后重试')
   }
 
   async function handleAdd(userId: number) {
@@ -263,7 +263,7 @@ export function DashboardGroup() {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>删除该分组？</AlertDialogTitle>
+                        <AlertDialogTitle>确认删除该分组？</AlertDialogTitle>
                         <AlertDialogDescription>
                           成员将移至「默认分组」。默认分组不可删除。
                         </AlertDialogDescription>
@@ -374,7 +374,7 @@ export function DashboardGroup() {
                   {!members.length && (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground">
-                        暂无成员
+                        暂时还没有成员
                       </TableCell>
                     </TableRow>
                   )}

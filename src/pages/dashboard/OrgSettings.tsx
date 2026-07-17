@@ -129,11 +129,11 @@ export function DashboardOrgSettings() {
     const res = await uploadImage(file, 'site')
     setLogoUploading(false)
     if (!res.success || !res.data?.url) {
-      toast.error(res.message || '上传失败')
+      toast.error(res.message || '上传失败，请稍后重试')
       return
     }
     setBrandLogo(res.data.url)
-    toast.success('上传成功，请点保存')
+    toast.success('已上传，请点保存生效')
   }
 
   async function save() {
@@ -158,12 +158,12 @@ export function DashboardOrgSettings() {
     if (res.success) {
       toast.success('已保存')
       await refreshOrgs()
-    } else toast.error(res.message || '保存失败')
+    } else toast.error(res.message || '保存失败，请稍后重试')
   }
 
   if (!isAdmin && !isOrgAdmin) {
     return (
-      <div className="p-6 text-sm text-muted-foreground">需要团队管理员或站点管理员权限。</div>
+      <div className="p-6 text-sm text-muted-foreground">需要团队管理员或站点管理员才能访问。</div>
     )
   }
 
@@ -200,15 +200,15 @@ export function DashboardOrgSettings() {
             </Select>
           </div>
           <div className="flex items-center justify-between">
-            <Label>AI 总结</Label>
+            <Label>训练小结</Label>
             <Switch checked={enableAiSummary} onCheckedChange={setEnableAiSummary} />
           </div>
           <div className="flex items-center justify-between">
-            <Label>日报邮件（组织授权）</Label>
+            <Label>日报邮件（由组织开通）</Label>
             <Switch checked={enableAiEmail} onCheckedChange={setEnableAiEmail} />
           </div>
           <div className="flex items-center justify-between">
-            <Label>周报邮件（教练/队长/管理员）</Label>
+            <Label>周报邮件（教练 / 队长 / 管理员）</Label>
             <Switch
               checked={enableAiWeeklyEmail}
               onCheckedChange={setEnableAiWeeklyEmail}
@@ -229,7 +229,7 @@ export function DashboardOrgSettings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>AI 总结间隔（分钟）</Label>
+                <Label>训练小结生成间隔（分钟）</Label>
                 <Input
                   type="number"
                   value={aiInterval}
@@ -241,17 +241,17 @@ export function DashboardOrgSettings() {
                 <Input
                   value={emailSchedule}
                   onChange={(e) => setEmailSchedule(e.target.value)}
-                  placeholder="例如 30 7 * * *（每天 7:30）"
+                  placeholder="例如 30 7 * * *，表示每天 7:30"
                 />
                 <p className="text-xs text-muted-foreground">
-                  填写定时表达式，例如每天 7:30 为 30 7 * * *
+                  填写定时表达式。例如每天 7:30 写作 30 7 * * *
                 </p>
               </div>
             </>
           )}
           {!isAdmin && (
             <p className="text-xs text-muted-foreground">
-              由站点管理员配置：数据同步每 {spiderInterval} 分钟 · AI 小结每{' '}
+              由站点管理员配置：数据同步每 {spiderInterval} 分钟 · 训练小结每{' '}
               {aiInterval} 分钟 · 日报发送：{emailSchedule || '—'}
             </p>
           )}
@@ -262,7 +262,7 @@ export function DashboardOrgSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">团队识别码</CardTitle>
-          <CardDescription>分享给队员用于加入本组织。</CardDescription>
+          <CardDescription>把识别码发给队员，即可申请加入本组织。</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
           <code className="rounded bg-muted px-3 py-2 text-sm">{inviteCode || '—'}</code>
@@ -334,7 +334,7 @@ export function DashboardOrgSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">搜索用户加入本组织</CardTitle>
-          <CardDescription>按站内昵称或用户名搜索后加入本组织。</CardDescription>
+          <CardDescription>按昵称或用户名搜索，将用户加入本组织。</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           <Input
@@ -457,7 +457,7 @@ export function DashboardOrgSettings() {
             ))
           )}
           {!membersLoading && !members.length && (
-            <p className="text-sm text-muted-foreground">暂无成员</p>
+            <p className="text-sm text-muted-foreground">暂时还没有成员</p>
           )}
           <Pagination
             page={memberPage}

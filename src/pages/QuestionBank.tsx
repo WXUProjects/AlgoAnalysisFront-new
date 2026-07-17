@@ -169,7 +169,7 @@ export function QuestionBank() {
       if (cancelled) return
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '加载题库失败')
+        toast.error(res.message || '题库加载失败，请稍后重试')
         return
       }
       setList(res.data.data)
@@ -280,7 +280,7 @@ export function QuestionBank() {
           <Input
             value={keywordInput}
             onChange={(e) => setKeywordInput(e.target.value)}
-            placeholder="搜索标题 / 题号"
+            placeholder="搜索标题或题号"
           />
           <div className="flex flex-wrap gap-1.5">
             {PLATFORMS.map((p) => (
@@ -337,7 +337,7 @@ export function QuestionBank() {
                 className="max-w-xs"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
-                placeholder="搜索标签 / 回车添加"
+                placeholder="搜索标签，回车添加"
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
@@ -562,7 +562,7 @@ export function QuestionBank() {
                 {!list.length && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      暂无题目
+                      没有找到题目，试试调整筛选条件
                     </TableCell>
                   </TableRow>
                 )}

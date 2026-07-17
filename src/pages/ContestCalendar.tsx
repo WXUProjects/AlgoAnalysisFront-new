@@ -114,7 +114,7 @@ export function ContestCalendar() {
     if (id !== requestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '加载赛程失败')
+      toast.error(res.message || '赛程加载失败，请稍后重试')
       return
     }
     setList(res.data.list)
@@ -205,7 +205,7 @@ export function ContestCalendar() {
     })
     setSubSaving(false)
     if (!res.success) {
-      toast.error(res.message || '保存订阅失败')
+      toast.error(res.message || '订阅保存失败，请稍后重试')
       return
     }
     toast.success(enabled ? '订阅成功' : '已取消本场提醒')
@@ -234,7 +234,7 @@ export function ContestCalendar() {
         enabled: false,
       })
       if (!res.success) {
-        toast.error(res.message || '取消失败')
+        toast.error(res.message || '取消失败，请稍后重试')
         return
       }
       toast.success('已取消本场提醒')
@@ -247,7 +247,7 @@ export function ContestCalendar() {
       platform: item.platform,
     })
     if (!res.success) {
-      toast.error(res.message || '取消失败')
+      toast.error(res.message || '取消失败，请稍后重试')
       return
     }
     toast.success('已取消本场提醒')
@@ -267,7 +267,7 @@ export function ContestCalendar() {
       })
       setPlatBusy(null)
       if (!res.success) {
-        toast.error(res.message || '取消失败')
+        toast.error(res.message || '取消失败，请稍后重试')
         return
       }
       toast.success(`已取消 ${plat.platformName} 平台订阅`)
@@ -282,7 +282,7 @@ export function ContestCalendar() {
     })
     setPlatBusy(null)
     if (!res.success) {
-      toast.error(res.message || '订阅失败')
+      toast.error(res.message || '订阅失败，请稍后重试')
       return
     }
     toast.success(`已订阅 ${plat.platformName}（提前 ${advanceLabel(advance)}）`)
@@ -387,9 +387,9 @@ export function ContestCalendar() {
         ) : list.length === 0 ? (
           <Card>
             <CardHeader>
-              <CardTitle>暂无赛程</CardTitle>
+              <CardTitle>暂时还没有赛程</CardTitle>
               <CardDescription>
-                当前筛选条件下没有比赛。数据每 12 小时从综合赛程源与力扣同步一次。
+                当前筛选下没有比赛。赛程约每 12 小时自动更新一次。
               </CardDescription>
             </CardHeader>
           </Card>
@@ -525,7 +525,7 @@ export function ContestCalendar() {
           </DialogHeader>
           <div className="flex flex-col gap-4 py-2">
             {platforms.length === 0 ? (
-              <p className="text-sm text-muted-foreground">暂无平台数据</p>
+              <p className="text-sm text-muted-foreground">暂时还没有平台数据</p>
             ) : (
               platforms.map((p) => {
                 const sub = platformSubMap.get(p.platform)

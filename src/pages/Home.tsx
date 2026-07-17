@@ -178,7 +178,7 @@ export function Home() {
       const tasks: Promise<unknown>[] = [
         getPeriod(uid).then((res) => {
           if (!cancelled && res.success) setPeriod(res.data)
-          else if (!res.success) toast.error(res.message || '统计加载失败')
+          else if (!res.success) toast.error(res.message || '统计加载失败，请稍后重试')
         }),
         getHeatmap({
           startDate: '20230101',
@@ -236,7 +236,7 @@ export function Home() {
         })
         if (cancelled) return
         if (res.success) setAcHeat(res.data || [])
-        else toast.error(res.message || 'AC 热力图加载失败')
+        else toast.error(res.message || '刷题热力图加载失败，请稍后重试')
         setAcHeatLoaded(true)
       } finally {
         if (!cancelled) setAcHeatLoading(false)
@@ -438,7 +438,7 @@ export function Home() {
                   <CardTitle className="text-base">算法画像</CardTitle>
                 </div>
                 <CardDescription>
-                  根据已通过题目与 AI 标签生成
+                  根据你已通过的题目与标签生成
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-4">
@@ -497,7 +497,7 @@ export function Home() {
                   ))}
               {!loading && !bulletins.length && (
                 <p className="py-4 text-center text-sm text-muted-foreground">
-                  暂无公告
+                  暂时还没有公告
                 </p>
               )}
             </CardContent>
@@ -508,14 +508,14 @@ export function Home() {
               <CardHeader className="px-4">
                 <div className="flex items-center gap-2">
                   <SparklesIcon className="size-4 text-muted-foreground" />
-                  <CardTitle className="text-base">AI 总结</CardTitle>
+                  <CardTitle className="text-base">训练小结</CardTitle>
                 </div>
                 <CardDescription>
                   {isLogin
                     ? summary?.updateTime
                       ? `更新于 ${formatTime(summary.updateTime)}`
-                      : '基于近期训练数据'
-                    : '登录后查看个人 AI 总结'}
+                      : '根据近期训练数据生成'
+                    : '登录后可查看个人训练小结'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-4">
@@ -527,7 +527,7 @@ export function Home() {
                     >
                       登录
                     </Link>
-                    后可查看 AI 总结与算法画像。支持绑定：
+                    后可查看训练小结与算法画像。支持绑定：
                     {OJ_PLATFORMS.map((p) => p.label).join(' / ')}
                   </p>
                 ) : loading ? (
@@ -547,11 +547,11 @@ export function Home() {
                         </li>
                       ))}
                       {!summary?.msg?.length && (
-                        <li className="text-muted-foreground">暂无总结</li>
+                        <li className="text-muted-foreground">暂无训练小结</li>
                       )}
                     </ul>
                     <p className="mt-3 text-[11px] text-muted-foreground">
-                      内容由 AI 生成，请仔细甄别。
+                      由 AI 生成，请自行判断是否准确。
                     </p>
                   </>
                 )}

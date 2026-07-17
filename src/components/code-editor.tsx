@@ -36,7 +36,7 @@ export function CodeEditor({
   value,
   onChange,
   language = 'text',
-  placeholder = '在此粘贴代码或文本…',
+  placeholder = '在此粘贴代码或文本',
   className,
   minHeight = 280,
 }: {

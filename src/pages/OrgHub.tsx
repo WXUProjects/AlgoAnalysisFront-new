@@ -40,18 +40,18 @@ export function OrgHub() {
     const res = await joinOrg(code.trim(), orgDisplayName.trim())
     setLoading(false)
     if (res.success) {
-      toast.success(res.message || '操作成功')
+      toast.success(res.message || '已提交加入申请')
       setCode('')
       setOrgDisplayNameInput('')
       await refreshOrgs()
     } else {
-      toast.error(res.message || '加入失败')
+      toast.error(res.message || '加入失败，请稍后重试')
     }
   }
 
   async function handleLeave(orgId: number, name: string, isSystem?: boolean) {
     if (isSystem) {
-      toast.error('公共域不可退出')
+      toast.error('公共域为默认组织，无法退出')
       return
     }
     if (!confirm(`确定退出「${name}」？`)) return
@@ -60,7 +60,7 @@ export function OrgHub() {
       toast.success('已退出组织')
       await refreshOrgs()
     } else {
-      toast.error(res.message || '退出失败')
+      toast.error(res.message || '退出失败，请稍后重试')
     }
   }
 
@@ -91,7 +91,7 @@ export function OrgHub() {
       setEditOrg(null)
       await refreshOrgs()
     } else {
-      toast.error(res.message || '更新失败')
+      toast.error(res.message || '更新失败，请稍后重试')
     }
   }
 
@@ -100,9 +100,9 @@ export function OrgHub() {
       <div>
         <h1 className="text-xl font-semibold">我的组织</h1>
         <p className="text-sm text-muted-foreground">
-          默认加入公共域。可用团队识别码加入其他校队，并切换当前组织。
+          默认在公共域。可用团队识别码加入校队，并切换当前所在组织。
           <strong className="font-medium text-foreground">站内昵称请在下方「修改称呼」中设置</strong>
-          （改公共域称呼即改昵称）；其他校队可单独设置队内名称。
+          （改公共域称呼即改昵称）；加入其他校队后可单独设置队内名称。
         </p>
       </div>
 
@@ -115,7 +115,7 @@ export function OrgHub() {
         </CardHeader>
         <CardContent className="space-y-3">
           {orgs.length === 0 && (
-            <p className="text-sm text-muted-foreground">暂无组织数据，请重新登录。</p>
+            <p className="text-sm text-muted-foreground">暂时读不到组织信息，请重新登录后再试。</p>
           )}
           {orgs.map((o) => (
             <div
@@ -178,7 +178,7 @@ export function OrgHub() {
         <CardHeader>
           <CardTitle className="text-base">加入团队</CardTitle>
           <CardDescription>
-            向团队管理员索取「团队识别码」，并填写你在该团队中使用的名称（仅本队可见）。
+            向管理员索取团队识别码，并填写你在队内显示的名称（仅本队可见）。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -197,11 +197,11 @@ export function OrgHub() {
               id="org-display-name"
               value={orgDisplayName}
               onChange={(e) => setOrgDisplayNameInput(e.target.value)}
-              placeholder="在本团队中展示的称呼"
+              placeholder="在本团队里显示的名字"
               maxLength={32}
             />
             <p className="text-xs text-muted-foreground">
-              仅在该团队内展示；与公共域/站内昵称独立。加入后也可在上方列表中修改。
+              仅在该团队内展示，与公共域昵称互不影响。加入后也可在上方列表中修改。
             </p>
           </div>
           <Button disabled={loading} onClick={() => void handleJoin()} className="sm:w-fit">
@@ -235,7 +235,7 @@ export function OrgHub() {
               id="edit-org-display-name"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              placeholder="例如：真实姓名或队内常用名"
+              placeholder="例如真实姓名或队内常用名"
               maxLength={32}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') void handleSaveDisplayName()

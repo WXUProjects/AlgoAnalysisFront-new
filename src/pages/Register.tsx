@@ -60,7 +60,7 @@ export function Register() {
       toast.success(res.message || '验证码已发送')
       setCooldown(60)
     } else {
-      toast.error(res.message || '发送失败')
+      toast.error(res.message || '发送失败，请稍后重试')
     }
   }
 
@@ -78,7 +78,7 @@ export function Register() {
       toast.success(res.message || '注册成功')
       navigate('/login', { replace: true })
     } else {
-      toast.error(res.message || '注册失败')
+      toast.error(res.message || '注册失败，请稍后重试')
     }
   }
 
@@ -87,7 +87,7 @@ export function Register() {
       <Card className="w-full max-w-sm gap-4 py-4 motion-lift">
         <CardHeader className="gap-1 px-4">
           <CardTitle>注册</CardTitle>
-          <CardDescription>创建 GoAlgo 账号，需邮箱验证</CardDescription>
+          <CardDescription>创建账号，需完成邮箱验证</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <CardContent className="px-4">
@@ -139,7 +139,7 @@ export function Register() {
                   id="reg-name"
                   value={form.name}
                   onChange={(e) => update('name', e.target.value)}
-                  placeholder="站内展示用"
+                  placeholder="其他人看到的称呼"
                   disabled={pending}
                   maxLength={32}
                 />
@@ -155,7 +155,7 @@ export function Register() {
                   autoComplete="email"
                   value={form.email}
                   onChange={(e) => update('email', e.target.value)}
-                  placeholder="用于接收验证码与登录"
+                  placeholder="用于接收验证码，也可用于登录"
                   disabled={pending}
                 />
               </Field>

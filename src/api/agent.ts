@@ -27,7 +27,7 @@ export async function getRecentSummary(
       }
     }
   } catch {
-    parsed = { msg: [str(raw.msg || raw.message || '暂无总结')], updateTime: '' }
+    parsed = { msg: [str(raw.msg || raw.message || '暂无训练小结')], updateTime: '' }
   }
 
   return { success: true, message: str(raw.msg || 'ok'), data: parsed }

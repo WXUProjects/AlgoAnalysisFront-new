@@ -128,7 +128,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     const res = await listProfiles(page, pageSize, scope)
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '加载用户失败')
+      toast.error(res.message || '用户列表加载失败，请稍后重试')
       return
     }
     setList(res.data.list)
@@ -171,7 +171,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
       toast.success(res.message || '已更新分组')
       setEditUser(null)
       void load()
-    } else toast.error(res.message || '更新失败')
+    } else toast.error(res.message || '更新失败，请稍后重试')
   }
 
   async function handleToggleSiteAdmin(u: UserListItem) {
@@ -188,7 +188,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
         cur && cur.userId === u.userId ? { ...cur, isSiteAdmin: next } : cur,
       )
       void load()
-    } else toast.error(res.message || '操作失败')
+    } else toast.error(res.message || '操作未完成，请稍后重试')
   }
 
   async function handleToggleSyncExempt(u: UserListItem) {
@@ -199,7 +199,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     const res = await setSyncExempt(u.userId, next)
     setTogglingKey(null)
     if (res.success) {
-      toast.success(next ? '已标记永不休眠' : '已取消永不休眠')
+      toast.success(next ? '已标记永不休眠（始终参与同步）' : '已取消永不休眠（始终参与同步）')
       setList((prev) =>
         prev.map((row) =>
           row.userId === u.userId
@@ -212,19 +212,19 @@ function UserListPage({ scope }: { scope: UserScope }) {
           ? { ...cur, syncExempt: next, dormant: next ? false : cur.dormant }
           : cur,
       )
-    } else toast.error(res.message || '操作失败')
+    } else toast.error(res.message || '操作未完成，请稍后重试')
   }
 
   async function handleDelete(userId: number) {
     if (userId === 2) {
-      toast.error('该账号为系统保留账号，无法删除')
+      toast.error('该账号为系统保留，无法删除')
       return
     }
     const res = await deleteUser(userId)
     if (res.success) {
       toast.success(res.message || '已移除该用户')
       void load()
-    } else toast.error(res.message || '删除失败')
+    } else toast.error(res.message || '删除失败，请稍后重试')
   }
 
   async function handleSyncOj(userId: number) {
@@ -232,7 +232,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     const res = await updateSpider(userId)
     setSyncingId(null)
     if (res.success) toast.success(res.message || '已开始同步该用户的 OJ 数据')
-    else toast.error(res.message || '同步失败')
+    else toast.error(res.message || '同步失败，请稍后重试')
   }
 
   function openDetail(u: UserListItem) {
@@ -288,7 +288,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     })
     setSavingIntervals(false)
     if (!res.success) {
-      toast.error(res.message || '保存间隔失败')
+      toast.error(res.message || '同步间隔保存失败，请稍后重试')
       return
     }
     toast.success(res.message || '已更新同步间隔')
@@ -335,8 +335,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
         res.message ||
           (kind === 'fetch'
             ? checked
-              ? '已开启题面爬取'
-              : '已关闭题面爬取'
+              ? '已开启抓取题面'
+              : '已关闭抓取题面'
             : checked
               ? '已开启题面 AI'
               : '已关闭题面 AI'),
@@ -357,7 +357,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
             : { ...cur, problemAiEnabled: !checked }
           : cur,
       )
-      toast.error(res.message || '设置失败')
+      toast.error(res.message || '设置失败，请稍后重试')
     }
   }
 
@@ -410,7 +410,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
             : { ...row, emailWeeklyEnabled: !checked }
         }),
       )
-      toast.error(res.message || '设置失败')
+      toast.error(res.message || '设置失败，请稍后重试')
     }
   }
 
@@ -421,8 +421,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
       ? `${currentOrg.name} · 成员`
       : '组织成员'
   const desc = isSite
-    ? '全站用户与所属组织；日报/周报可直接开关，题面爬取与 AI 见用户详情'
-    : '当前组织成员；可查看并在权限允许时开关日报/周报接收'
+    ? '管理全站用户与所属组织。可直接开关日报/周报；题面抓取与分析见用户详情。'
+    : '当前组织成员。可查看名单，并在权限允许时开关日报/周报。'
 
   return (
     <PageShell className="gap-3">
@@ -486,7 +486,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                           )}
                           {u.syncExempt && (
                             <Badge variant="secondary" className="text-[10px]">
-                              永不休眠
+                              永不休眠（始终参与同步）
                             </Badge>
                           )}
                         </div>
@@ -713,7 +713,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
               用户详情 · {detailUser?.name || detailUser?.username}
             </DialogTitle>
             <DialogDescription>
-              站点级操作与题面流水线开关。默认仅非公共域组织成员触发题面爬取与
+              站点级操作与题面流水线开关。默认仅非公共域组织成员触发抓取题面与
               AI；可对个人强制开/关。
             </DialogDescription>
           </DialogHeader>
@@ -743,7 +743,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     )}
                     {detailUser.syncExempt && (
                       <Badge variant="secondary" className="text-[10px]">
-                        永不休眠
+                        永不休眠（始终参与同步）
                       </Badge>
                     )}
                   </div>
@@ -801,7 +801,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                   </Badge>
                 ))}
                 {!(detailUser.orgs || []).length && (
-                  <span className="text-xs text-muted-foreground">无组织信息</span>
+                  <span className="text-xs text-muted-foreground">暂时还没有组织信息</span>
                 )}
               </div>
 
@@ -811,7 +811,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 {isAdmin && (
                   <Field orientation="horizontal">
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
-                      <FieldLabel htmlFor="sync-exempt">永不休眠</FieldLabel>
+                      <FieldLabel htmlFor="sync-exempt">永不休眠（始终参与同步）</FieldLabel>
                       <FieldDescription>
                         跳过不活跃判定，后台定时任务始终对该用户生效
                       </FieldDescription>
@@ -830,9 +830,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 )}
                 <Field orientation="horizontal">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <FieldLabel htmlFor="pipeline-fetch">题面爬取</FieldLabel>
+                    <FieldLabel htmlFor="pipeline-fetch">抓取题面</FieldLabel>
                     <FieldDescription>
-                      开启后，该用户近窗提交可触发题面爬取
+                      开启后，该用户近窗提交可触发抓取题面
                     </FieldDescription>
                   </div>
                   <Switch
@@ -848,7 +848,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 </Field>
                 <Field orientation="horizontal">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <FieldLabel htmlFor="pipeline-ai">题面 AI 分析</FieldLabel>
+                    <FieldLabel htmlFor="pipeline-ai">AI 分析题面</FieldLabel>
                     <FieldDescription>
                       开启后，该用户近窗提交可触发题面 AI（与爬取独立）
                     </FieldDescription>
@@ -900,7 +900,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="ai-interval">
-                    AI 总结间隔（分钟）
+                    训练小结生成间隔（分钟）
                     {detailUser.aiSummaryIntervalOverridden ? (
                       <Badge variant="secondary" className="ml-2 font-normal">
                         站管指定
@@ -1013,7 +1013,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>彻底删除用户？</AlertDialogTitle>
+                      <AlertDialogTitle>确认彻底删除该用户？</AlertDialogTitle>
                       <AlertDialogDescription>
                         确认删除用户「{detailUser.username}」？将清空其组织关系、粘贴板、OJ
                         绑定、提交与比赛记录，且无法恢复。

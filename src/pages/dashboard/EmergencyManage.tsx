@@ -75,7 +75,7 @@ export function DashboardEmergencyManage() {
     const res = await listEmergencies(page, pageSize)
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '加载紧急通知失败')
+      toast.error(res.message || '紧急通知加载失败，请稍后重试')
       return
     }
     setList(res.data.list)
@@ -124,7 +124,7 @@ export function DashboardEmergencyManage() {
       toast.success(res.message || '已保存')
       setOpen(false)
       void load()
-    } else toast.error(res.message || '保存失败')
+    } else toast.error(res.message || '保存失败，请稍后重试')
   }
 
   async function handleDelete(id: number) {
@@ -132,7 +132,7 @@ export function DashboardEmergencyManage() {
     if (res.success) {
       toast.success(res.message || '已删除')
       void load()
-    } else toast.error(res.message || '删除失败')
+    } else toast.error(res.message || '删除失败，请稍后重试')
   }
 
   return (
@@ -210,7 +210,7 @@ export function DashboardEmergencyManage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>删除紧急通知？</AlertDialogTitle>
+                              <AlertDialogTitle>确认删除这条紧急通知？</AlertDialogTitle>
                               <AlertDialogDescription>
                                 「{item.title}」将被删除。
                               </AlertDialogDescription>
@@ -268,11 +268,11 @@ export function DashboardEmergencyManage() {
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} />
               </Field>
               <Field className="flex-row items-center justify-between gap-3">
-                <FieldLabel>立即生效</FieldLabel>
+                <FieldLabel>启用（保存后立即展示）</FieldLabel>
                 <Switch checked={enabled} onCheckedChange={setEnabled} />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel>展示顺序（越小越先）</FieldLabel>
+                <FieldLabel>展示顺序（数字越小越靠前）</FieldLabel>
                 <Input
                   type="number"
                   value={sortOrder}

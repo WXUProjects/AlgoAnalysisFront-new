@@ -118,7 +118,7 @@ export function CodeToImage() {
       downloadDataUrl(dataUrl, `code-${Date.now()}.png`)
       toast.success('已下载 PNG')
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : '导出失败')
+      toast.error('导出失败，请稍后重试')
     } finally {
       setExporting(false)
     }
@@ -149,10 +149,10 @@ export function CodeToImage() {
       if (ok) toast.success('已复制到剪贴板')
       else {
         downloadDataUrl(dataUrl, `code-${Date.now()}.png`)
-        toast.message('浏览器不支持复制图片，已改为下载')
+        toast.message('当前浏览器无法复制图片，已改为下载文件')
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : '复制失败')
+      toast.error('复制失败，请稍后重试')
     } finally {
       setExporting(false)
     }
@@ -206,7 +206,7 @@ export function CodeToImage() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">代码</CardTitle>
-              <CardDescription>粘贴或编辑后，下方实时预览。</CardDescription>
+              <CardDescription>粘贴或编辑代码后，下方会实时预览。</CardDescription>
             </CardHeader>
             <CardContent>
               <Textarea
@@ -214,7 +214,7 @@ export function CodeToImage() {
                 onChange={(e) => setCode(e.target.value)}
                 className="min-h-40 font-mono text-sm"
                 spellCheck={false}
-                placeholder="在此粘贴代码…"
+                placeholder="在此粘贴代码"
               />
             </CardContent>
           </Card>
@@ -377,7 +377,7 @@ export function CodeToImage() {
         <Card className="h-fit lg:sticky lg:top-4">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">外观</CardTitle>
-            <CardDescription>主题、字体与导出参数。</CardDescription>
+            <CardDescription>调整主题、字体和导出参数。</CardDescription>
           </CardHeader>
           <CardContent>
             <FieldGroup className="gap-4">

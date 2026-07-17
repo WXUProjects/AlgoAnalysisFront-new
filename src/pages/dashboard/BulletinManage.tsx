@@ -74,7 +74,7 @@ export function DashboardBulletinManage() {
     const res = await listBulletins(page, pageSize)
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '加载公告失败')
+      toast.error(res.message || '公告加载失败，请稍后重试')
       return
     }
     setList(res.data.list)
@@ -124,7 +124,7 @@ export function DashboardBulletinManage() {
       toast.success(res.message || '已保存')
       setOpen(false)
       void load()
-    } else toast.error(res.message || '保存失败')
+    } else toast.error(res.message || '保存失败，请稍后重试')
   }
 
   async function handleDelete(id: number) {
@@ -132,7 +132,7 @@ export function DashboardBulletinManage() {
     if (res.success) {
       toast.success(res.message || '已删除')
       void load()
-    } else toast.error(res.message || '删除失败')
+    } else toast.error(res.message || '删除失败，请稍后重试')
   }
 
   return (
@@ -200,7 +200,7 @@ export function DashboardBulletinManage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>删除公告？</AlertDialogTitle>
+                              <AlertDialogTitle>确认删除这条公告？</AlertDialogTitle>
                               <AlertDialogDescription>
                                 「{b.title}」将被删除。
                               </AlertDialogDescription>

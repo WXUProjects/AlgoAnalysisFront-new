@@ -124,7 +124,7 @@ export function DashboardProblemProgress() {
     const res = await getProblemProgress()
     if (!silent) setLoading(false)
     if (!res.success || !res.data) {
-      if (!silent) toast.error(res.message || '加载进度失败')
+      if (!silent) toast.error(res.message || '进度加载失败，请稍后重试')
       return
     }
     setData(res.data)
@@ -157,7 +157,7 @@ export function DashboardProblemProgress() {
     if (res.success) {
       toast.success(res.message || `${label}成功`)
       void load(true)
-    } else toast.error(res.message || `${label}失败`)
+    } else toast.error(res.message || `${label}失败，请稍后重试`)
   }
 
   async function handleToggleAnalyze() {
@@ -179,7 +179,7 @@ export function DashboardProblemProgress() {
     }
     writeHiddenPermIds(next)
     setHiddenPermIds(next)
-    toast.success('已清除永久失败列表显示（题目仍为永久失败）')
+    toast.success('已从列表隐藏这些永久失败记录（题目状态未变）')
   }
 
   const visibleFailedPerm = useMemo(() => {
@@ -285,7 +285,7 @@ export function DashboardProblemProgress() {
               </AlertDialog>
             </ActionTip>
 
-            <ActionTip tip="检查近 6 个月的提交，把缺题面或缺分析的题目补进处理列表（不会清空现有任务）">
+            <ActionTip tip="检查近 6 个月的提交，把缺少题面或分析的题目加入处理列表（不会清空现有任务）">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button type="button" size="sm" variant="outline" disabled={busy}>
@@ -320,7 +320,7 @@ export function DashboardProblemProgress() {
               </AlertDialog>
             </ActionTip>
 
-            <ActionTip tip="清空当前排队任务后，按题目状态重新排队。不会改动已有 AI 标签">
+            <ActionTip tip="清空当前排队后，按题目状态重新排队；不会改动已有标签">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button type="button" size="sm" variant="outline" disabled={busy}>
@@ -448,7 +448,7 @@ export function DashboardProblemProgress() {
           <CardTitle className="text-base">近期失败</CardTitle>
           {isAdmin && (
             <CardAction>
-              <ActionTip tip="只重试近 6 个月内可恢复的失败题目，永久失败不会重试">
+              <ActionTip tip="只重试近 6 个月内可恢复的失败题目；永久失败的不会重试">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -497,7 +497,7 @@ export function DashboardProblemProgress() {
             </CardDescription>
             {isAdmin && (
               <CardAction>
-                <ActionTip tip="从本页列表中隐藏当前永久失败记录，不会改动题目状态，也不会重新排队">
+                <ActionTip tip="仅从本页列表隐藏这些永久失败记录，不改变题目状态，也不会重新排队">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button type="button" size="sm" variant="outline" disabled={busy}>

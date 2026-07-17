@@ -74,7 +74,7 @@ export function ContestDetails() {
     })
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '加载榜单失败')
+      toast.error(res.message || '榜单加载失败，请稍后重试')
       return
     }
     setList(res.data.list)

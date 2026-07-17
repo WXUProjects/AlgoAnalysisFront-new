@@ -35,21 +35,21 @@ const tools: LinkItem[] = [
     kind: 'internal',
     to: '/tools/paste',
     title: '粘贴板',
-    desc: '分享代码、日志或配置：生成链接发给别人，支持语法高亮与有效期。',
+    desc: '生成链接分享代码或文本，支持语法高亮，并可设置有效期。',
     icon: ClipboardPasteIcon,
   },
   {
     kind: 'internal',
     to: '/tools/code-image',
     title: '代码转图片',
-    desc: '把代码导出成 Carbon 风格精美图片，支持主题、字体、行号与语言自动识别。',
+    desc: '把代码导出成精美图片，可调主题、字体、行号，并自动识别语言。',
     icon: CameraIcon,
   },
   {
     kind: 'external',
     href: 'https://guadart.fun/',
     title: 'Guadart 生图站',
-    desc: '作者维护的 AI 绘图站，支持多种主流模型。欢迎体验，也是对 GoAlgo 的一份支持。',
+    desc: '作者维护的 AI 绘图站，支持多种模型。欢迎体验，也是对 GoAlgo 的支持。',
     icon: ImageIcon,
     badge: '推荐',
   },
@@ -60,14 +60,14 @@ const friendLinks: LinkItem[] = [
     kind: 'external',
     href: 'https://xcpc.link/',
     title: 'XCPC Link',
-    desc: '算法竞赛资源导航：OJ、ICPC/CCPC 赛程、榜单工具、模板与社区入口，覆盖选手、教练与出题人。',
+    desc: '算法竞赛资源导航：OJ、赛程、榜单、模板与社区，适合选手、教练与出题人。',
     icon: CompassIcon,
   },
   {
     kind: 'external',
     href: 'https://acmer.info/',
     title: 'ACMer.info',
-    desc: '面向 ACMer 的导航站：整理群组、博客、资料与比赛信息，开源共建、持续更新。',
+    desc: '面向竞赛选手的导航站，整理群组、博客、资料与比赛信息，持续更新。',
     icon: BookOpenIcon,
   },
 ]
@@ -174,13 +174,13 @@ export function ToolsHub() {
     <PageShell className="mx-auto w-full max-w-2xl gap-8 p-6">
       <Section
         title="工具"
-        subtitle="常用小工具合集，后续会继续增加。"
+        subtitle="常用小工具合集，之后还会继续增加。"
         items={tools}
         isLogin={isLogin}
       />
       <Section
         title="友情链接"
-        subtitle="算法竞赛相关导航与资源站，新窗口打开。"
+        subtitle="竞赛相关导航与资源站，将在新窗口打开。"
         items={friendLinks}
         isLogin={isLogin}
       />

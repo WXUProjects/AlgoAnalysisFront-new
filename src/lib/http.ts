@@ -4,6 +4,13 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios'
 import { jwt } from '@/lib/jwt'
+import {
+  UX_FORBIDDEN,
+  UX_NETWORK,
+  UX_REQUEST_FAILED,
+  UX_SERVICE_UNAVAILABLE,
+  sanitizeUserMessage,
+} from '@/lib/ux-copy'
 
 export interface ApiResult<T = unknown> {
   success: boolean
@@ -60,7 +67,7 @@ http.interceptors.response.use(
   (res) => res,
   (error: AxiosError) => {
     const status = error.response?.status
-    // 仅 401 视为会话失效；业务权限不足用 403 + body.message，不应清登录
+    // 仅 401 视为会话失效；业务暂无权限执行此操作用 403 + body.message，不应清登录
     if (status === 401 && jwt.token) {
       fireAuthExpired()
     }
@@ -86,7 +93,8 @@ export async function request<T = unknown>(
     // { success, message, data? | rest }
     if ('success' in body) {
       const success = Boolean(body.success)
-      const message = String(body.message ?? (success ? 'ok' : '请求失败'))
+      const rawMsg = body.message != null ? String(body.message) : success ? 'ok' : UX_REQUEST_FAILED
+      const message = success ? rawMsg : sanitizeUserMessage(rawMsg, UX_REQUEST_FAILED)
       if ('data' in body) {
         return { success, message, data: body.data as T, raw: body, status: res.status }
       }
@@ -103,7 +111,15 @@ export async function request<T = unknown>(
     // { code: 0|"0", data, message?, total? }
     if ('code' in body) {
       const success = isSuccessCode(body.code)
-      const message = String(body.message ?? body.msg ?? (success ? 'ok' : '请求失败'))
+      const rawMsg =
+        body.message != null
+          ? String(body.message)
+          : body.msg != null
+            ? String(body.msg)
+            : success
+              ? 'ok'
+              : UX_REQUEST_FAILED
+      const message = success ? rawMsg : sanitizeUserMessage(rawMsg, UX_REQUEST_FAILED)
       if ('data' in body) {
         return { success, message, data: body.data as T, raw: body, status: res.status }
       }
@@ -128,15 +144,16 @@ export async function request<T = unknown>(
     const status = error.response?.status
     const body = error.response?.data
     // Kratos: { code, reason, message }；网关 404 常只有 HTML/空
-    const message =
+    const raw =
       (typeof body?.message === 'string' && body.message) ||
       (typeof body?.reason === 'string' && body.reason) ||
       (status === 404
-        ? '接口不存在或尚未部署，请确认后端已更新'
+        ? UX_SERVICE_UNAVAILABLE
         : status === 403
-          ? '权限不足'
+          ? UX_FORBIDDEN
           : error.message) ||
-      '网络错误，请稍后重试'
+      UX_NETWORK
+    const message = sanitizeUserMessage(raw, UX_NETWORK)
     return { success: false, message, data: null, status }
   }
 }

@@ -142,7 +142,7 @@ export function AppLayout() {
     if (!orgId || orgId === user?.orgId) return
     const res = await switchOrg(orgId)
     if (res.success) toast.success('已切换组织')
-    else toast.error(res.message || '切换失败')
+    else toast.error(res.message || '切换失败，请稍后重试')
   }
 
   return (

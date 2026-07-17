@@ -65,7 +65,7 @@ export async function getProfileByUsername(
   if (!byName.success || !byName.data?.length) {
     return {
       success: false,
-      message: res.message || byName.message || '用户不存在',
+      message: res.message || byName.message || '找不到该用户',
       data: null,
     }
   }
@@ -74,7 +74,7 @@ export async function getProfileByUsername(
     (u) => u.username.toLowerCase() === uname.toLowerCase(),
   )
   if (!exact) {
-    return { success: false, message: '用户不存在', data: null }
+    return { success: false, message: '找不到该用户', data: null }
   }
   return getProfileById(exact.userId)
 }
@@ -119,7 +119,7 @@ export async function setEmailEnabled(
   return post(endpoints.user.profile.setEmailEnabled, { userId, enabled, kind })
 }
 
-/** 站点管理员：题面爬取 / 题面 AI 个人覆盖 */
+/** 站点管理员：抓取题面 / 题面 AI 个人覆盖 */
 export async function setProblemPipeline(
   userId: number,
   enabled: boolean,
@@ -148,7 +148,7 @@ export async function setSyncIntervals(body: {
   })
 }
 
-/** 站点管理员：永不休眠 */
+/** 站点管理员：永不休眠（始终参与同步） */
 export async function setSyncExempt(
   userId: number,
   exempt: boolean,

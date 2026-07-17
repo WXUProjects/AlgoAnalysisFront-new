@@ -341,7 +341,7 @@ function DiscoverSearchResults({
 
   async function toggleFollow(u: SocialUser) {
     if (!isLogin) {
-      toast.error('请先登录')
+      toast.error('请先登录后再继续')
       return
     }
     if (userId && u.userId === userId) return
@@ -352,7 +352,7 @@ function DiscoverSearchResults({
       : await followUser(u.userId)
     setBusyId(0)
     if (!res.success) {
-      toast.error(res.message || '操作失败')
+      toast.error(res.message || '操作未完成，请稍后重试')
       return
     }
     setRelationMap((m) => ({ ...m, [u.userId]: !following }))
@@ -391,7 +391,7 @@ function DiscoverSearchResults({
                 <EmptyMedia variant="icon">
                   <UsersIcon />
                 </EmptyMedia>
-                <EmptyTitle>没有匹配的用户</EmptyTitle>
+                <EmptyTitle>没有找到匹配的用户</EmptyTitle>
                 <EmptyDescription>
                   换个关键词试试，或返回继续浏览动态与组织
                 </EmptyDescription>
@@ -515,7 +515,7 @@ function FeedPanel({
       loadingRef.current = false
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '加载动态失败')
+        toast.error(res.message || '动态加载失败，请稍后重试')
         return
       }
       const list = res.data
@@ -626,11 +626,11 @@ function FeedPanel({
               <EmptyMedia variant="icon">
                 <ActivityIcon />
               </EmptyMedia>
-              <EmptyTitle>暂无动态</EmptyTitle>
+              <EmptyTitle>暂时还没有动态</EmptyTitle>
               <EmptyDescription>
                 {followingOnly
-                  ? '关注队友后，这里会显示他们的提交'
-                  : '组织内有新提交时会出现在这里'}
+                  ? '关注队友后，这里会显示他们的提交动态'
+                  : '组织内有新的提交时会出现在这里'}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -725,7 +725,7 @@ function FeedPanel({
             </Button>
           ) : (
             items.length > 0 && (
-              <p className="text-sm text-muted-foreground">没有更多了</p>
+              <p className="text-sm text-muted-foreground">已经到底了</p>
             )
           )}
         </CardFooter>
@@ -759,7 +759,7 @@ function RankPanel() {
       if (cancelled) return
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '加载排行失败')
+        toast.error(res.message || '排行加载失败，请稍后重试')
         setList([])
         setTotal(0)
         return
@@ -843,7 +843,7 @@ function RankPanel() {
                         <EmptyMedia variant="icon">
                           <TrophyIcon />
                         </EmptyMedia>
-                        <EmptyTitle>暂无排行数据</EmptyTitle>
+                        <EmptyTitle>暂时还没有排行</EmptyTitle>
                         <EmptyDescription>
                           近 7 日有提交后会出现在这里
                         </EmptyDescription>
@@ -902,7 +902,7 @@ function OrgsPanel({
     const res = await discoverOrgs({ page, pageSize, q })
     setLoading(false)
     if (!res.success) {
-      toast.error(res.message || '加载组织失败')
+      toast.error(res.message || '组织列表加载失败，请稍后重试')
       setList([])
       setTotal(0)
       return
@@ -920,7 +920,7 @@ function OrgsPanel({
     const res = await switchOrg(org.id)
     setSwitching(0)
     if (!res.success) {
-      toast.error(res.message || '切换失败')
+      toast.error(res.message || '切换失败，请稍后重试')
       return
     }
     toast.success(`已切换到「${org.name}」`)
@@ -942,10 +942,10 @@ function OrgsPanel({
     const res = await joinOrg(inviteCode.trim(), displayName.trim())
     setJoining(false)
     if (!res.success) {
-      toast.error(res.message || '加入失败')
+      toast.error(res.message || '加入失败，请稍后重试')
       return
     }
-    toast.success(res.message || '已提交')
+    toast.success(res.message || '已提交加入申请')
     setJoinTarget(null)
     setInviteCode('')
     setDisplayName('')
@@ -1066,7 +1066,7 @@ function OrgsPanel({
                     <EmptyMedia variant="icon">
                       <Building2Icon />
                     </EmptyMedia>
-                    <EmptyTitle>暂无组织</EmptyTitle>
+                    <EmptyTitle>暂时还没有组织</EmptyTitle>
                     <EmptyDescription>
                       {q ? '没有匹配的组织名称' : '暂时没有可展示的组织'}
                     </EmptyDescription>
@@ -1119,7 +1119,7 @@ function OrgsPanel({
                 id="join-name"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="在组织内显示的名字"
+                placeholder="在组织里显示的名字"
               />
             </div>
           </div>

@@ -9,7 +9,7 @@ export function ImageUploadTile({
   uploading,
   sizeClass,
   onFile,
-  hint = 'jpg / png / webp / svg，点击预览区即可上传',
+  hint = '支持 jpg / png / webp / svg，点击预览区即可上传',
 }: {
   label: string
   value: string

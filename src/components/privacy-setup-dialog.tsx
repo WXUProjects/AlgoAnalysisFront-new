@@ -53,7 +53,7 @@ export function PrivacySetupDialog() {
     const res = await updatePrivacy({ allowPublicProfile, allowPublicFeed })
     setSaving(false)
     if (!res.success) {
-      toast.error(res.message || '保存失败，请重试')
+      toast.error(res.message || '保存失败，请稍后重试')
       return
     }
     toast.success('隐私设置已保存')
@@ -79,7 +79,7 @@ export function PrivacySetupDialog() {
         <DialogHeader>
           <DialogTitle>设置公共域隐私</DialogTitle>
           <DialogDescription>
-            首次使用需要确认你在公共域的展示偏好。加入私人组织后，这些设置不会影响组织内成员的可见性。
+            请先确认你在公共域的展示方式。加入校队后，这些设置不会限制队内成员查看。
           </DialogDescription>
         </DialogHeader>
         <FieldGroup className="gap-4">
@@ -87,7 +87,7 @@ export function PrivacySetupDialog() {
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <FieldLabel htmlFor="privacy-profile">允许他人查看个人资料</FieldLabel>
               <FieldDescription>
-                关闭后，公共域访客和其他用户将无法打开你的资料页（默认允许）。
+                关闭后，公共域中的其他人将无法打开你的资料页（默认允许）。
               </FieldDescription>
             </div>
             <Switch
@@ -100,7 +100,7 @@ export function PrivacySetupDialog() {
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <FieldLabel htmlFor="privacy-feed">出现在公共域动态</FieldLabel>
               <FieldDescription>
-                关闭后，你的提交不会出现在公共域的动态流中（默认加入）。
+                关闭后，公共域动态里不会再出现你的提交（默认会出现）。
               </FieldDescription>
             </div>
             <Switch

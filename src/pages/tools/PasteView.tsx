@@ -57,7 +57,7 @@ export function PasteView() {
       toast.success('已复制全文')
       window.setTimeout(() => setCopied(false), 1500)
     } catch {
-      toast.error('复制失败')
+      toast.error('复制失败，请稍后重试')
     }
   }
 
@@ -66,7 +66,7 @@ export function PasteView() {
       await navigator.clipboard.writeText(window.location.href)
       toast.success('已复制链接')
     } catch {
-      toast.error('复制失败')
+      toast.error('复制失败，请稍后重试')
     }
   }
 

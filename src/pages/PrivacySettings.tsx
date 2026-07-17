@@ -27,7 +27,7 @@ export function PrivacySettings() {
       if (cancelled) return
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '加载失败')
+        toast.error(res.message || '加载失败，请稍后重试')
         return
       }
       setAllowPublicProfile(res.data.allowPublicProfile)
@@ -43,7 +43,7 @@ export function PrivacySettings() {
     const res = await updatePrivacy({ allowPublicProfile, allowPublicFeed })
     setSaving(false)
     if (!res.success) {
-      toast.error(res.message || '保存失败')
+      toast.error(res.message || '保存失败，请稍后重试')
       return
     }
     toast.success('已保存')
@@ -54,7 +54,7 @@ export function PrivacySettings() {
       <div>
         <h2 className="text-lg font-semibold">隐私设置</h2>
         <p className="text-sm text-muted-foreground">
-          仅作用于公共域。在私人组织中，这些选项不会限制组织内成员查看你的资料与动态。
+          只影响公共域。在校队等私人组织里，队友仍可查看你的资料与动态。
         </p>
       </div>
 
@@ -62,7 +62,7 @@ export function PrivacySettings() {
         <CardHeader className="px-4">
           <CardTitle className="text-base">公共域展示</CardTitle>
           <CardDescription>
-            未登录访客与公共域浏览时遵循以下选择
+            决定公共域里别人能看到你的哪些内容
           </CardDescription>
         </CardHeader>
         <CardContent className="px-4">
@@ -77,7 +77,7 @@ export function PrivacySettings() {
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <FieldLabel htmlFor="set-profile">允许他人查看个人资料</FieldLabel>
                   <FieldDescription>
-                    关闭后，公共域中他人无法打开你的资料页
+                    关闭后，公共域中的其他人将无法打开你的资料页
                   </FieldDescription>
                 </div>
                 <Switch
@@ -90,7 +90,7 @@ export function PrivacySettings() {
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <FieldLabel htmlFor="set-feed">出现在公共域动态</FieldLabel>
                   <FieldDescription>
-                    关闭后，你的提交不会进入公共域动态流
+                    关闭后，公共域动态里不会再出现你的提交
                   </FieldDescription>
                 </div>
                 <Switch

@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <CardHeader>
               <CardTitle>{this.props.fallbackTitle || '页面出了点问题'}</CardTitle>
               <CardDescription>
-                请刷新重试。若反复出现，请联系管理员。
+                请刷新后重试。若反复出现，可联系管理员。
               </CardDescription>
             </CardHeader>
             <CardContent className="flex gap-2">
@@ -71,8 +71,8 @@ export function RouteErrorFallback() {
     <div className="flex flex-1 items-center justify-center p-8">
       <Card className="max-w-md w-full">
         <CardHeader>
-          <CardTitle>加载失败</CardTitle>
-          <CardDescription>页面无法打开，请返回首页或刷新重试。</CardDescription>
+          <CardTitle>页面加载失败</CardTitle>
+          <CardDescription>请返回首页或刷新后重试。</CardDescription>
         </CardHeader>
         <CardContent className="flex gap-2">
           <Button onClick={() => window.location.reload()}>刷新</Button>

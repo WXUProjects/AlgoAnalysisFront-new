@@ -27,7 +27,7 @@ export async function createPaste(
   if (!res.success || !data?.slug) {
     return {
       success: false,
-      message: res.message || str(raw.message, '创建失败'),
+      message: res.message || str(raw.message, '创建失败，请稍后重试'),
       data: null,
     }
   }
@@ -46,7 +46,7 @@ export async function getPaste(slug: string): Promise<ApiResult<PasteInfo>> {
   if ((!res.success && !data?.slug) || !data?.slug) {
     return {
       success: false,
-      message: res.message || str(raw.message, '获取失败'),
+      message: res.message || str(raw.message, '加载失败，请稍后重试'),
       data: null,
     }
   }
@@ -79,7 +79,7 @@ export async function listMyPastes(): Promise<ApiResult<PasteInfo[]>> {
   if (listRaw === null) {
     return {
       success: false,
-      message: res.message || '加载失败',
+      message: res.message || '加载失败，请稍后重试',
       data: null,
       status: res.status,
       raw: res.raw,
@@ -89,7 +89,7 @@ export async function listMyPastes(): Promise<ApiResult<PasteInfo[]>> {
   if (!res.success && listRaw.length === 0 && res.status && res.status >= 400) {
     return {
       success: false,
-      message: res.message || '加载失败',
+      message: res.message || '加载失败，请稍后重试',
       data: null,
       status: res.status,
       raw: res.raw,

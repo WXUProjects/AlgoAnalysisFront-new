@@ -14,14 +14,15 @@ import { http, type ApiResult } from '@/lib/http'
 import { jwt } from '@/lib/jwt'
 import { hashPassword } from '@/lib/hash'
 import { getProfileById } from '@/api/profile'
+import { sanitizeUserMessage } from '@/lib/ux-copy'
 
 function errMessage(err: unknown, fallback: string): string {
-  return (
+  const raw =
     (err as { response?: { data?: { message?: string } }; message?: string })
       .response?.data?.message ||
     (err as { message?: string }).message ||
     fallback
-  )
+  return sanitizeUserMessage(raw, fallback)
 }
 
 export async function login(
@@ -66,11 +67,11 @@ export async function login(
     }
     return {
       success: false,
-      message: data?.message || '登录失败',
+      message: data?.message || '登录失败，请检查账号密码后重试',
       data: null,
     }
   } catch (err) {
-    return { success: false, message: errMessage(err, '登录失败'), data: null }
+    return { success: false, message: errMessage(err, '登录失败，请检查账号密码后重试'), data: null }
   }
 }
 
@@ -90,11 +91,11 @@ export async function sendCode(
     const data = res.data
     return {
       success: Boolean(data?.success),
-      message: data?.message || (data?.success ? '验证码已发送' : '发送失败'),
+      message: data?.message || (data?.success ? '验证码已发送' : '发送失败，请稍后重试'),
       data: data ?? null,
     }
   } catch (err) {
-    return { success: false, message: errMessage(err, '发送失败'), data: null }
+    return { success: false, message: errMessage(err, '发送失败，请稍后重试'), data: null }
   }
 }
 
@@ -160,11 +161,11 @@ export async function register(input: {
     const data = res.data
     return {
       success: Boolean(data?.success),
-      message: data?.message || (data?.success ? '注册成功' : '注册失败'),
+      message: data?.message || (data?.success ? '注册成功' : '注册失败，请稍后重试'),
       data: data ?? null,
     }
   } catch (err) {
-    return { success: false, message: errMessage(err, '注册失败'), data: null }
+    return { success: false, message: errMessage(err, '注册失败，请稍后重试'), data: null }
   }
 }
 
@@ -193,11 +194,11 @@ export async function changePassword(input: {
     const data = res.data
     return {
       success: Boolean(data?.success),
-      message: data?.message || (data?.success ? '密码已更新' : '修改失败'),
+      message: data?.message || (data?.success ? '密码已更新' : '修改失败，请稍后重试'),
       data: data ?? null,
     }
   } catch (err) {
-    return { success: false, message: errMessage(err, '修改失败'), data: null }
+    return { success: false, message: errMessage(err, '修改失败，请稍后重试'), data: null }
   }
 }
 
@@ -232,11 +233,11 @@ export async function resetPassword(input: {
     return {
       success: Boolean(data?.success),
       message:
-        data?.message || (data?.success ? '密码已重置' : '重置失败'),
+        data?.message || (data?.success ? '密码已重置' : '密码重置失败，请稍后重试'),
       data: data ?? null,
     }
   } catch (err) {
-    return { success: false, message: errMessage(err, '重置失败'), data: null }
+    return { success: false, message: errMessage(err, '密码重置失败，请稍后重试'), data: null }
   }
 }
 
@@ -247,7 +248,7 @@ export async function fetchProfileById(
   return getProfileById(userId)
 }
 
-/** 根据当前登录态重签 JWT（任命后刷新页面可同步权限） */
+/** 用当前登录态换新令牌（角色变更后刷新，权限才能同步到界面） */
 export async function refreshToken(): Promise<ApiResult<LoginRes>> {
   try {
     const res = await http.post<LoginRes>(endpoints.user.auth.refresh, {})
@@ -262,11 +263,11 @@ export async function refreshToken(): Promise<ApiResult<LoginRes>> {
     }
     return {
       success: false,
-      message: data?.message || '刷新失败',
+      message: data?.message || '刷新失败，请稍后重试',
       data: null,
     }
   } catch (err) {
-    return { success: false, message: errMessage(err, '刷新失败'), data: null }
+    return { success: false, message: errMessage(err, '刷新失败，请稍后重试'), data: null }
   }
 }
 

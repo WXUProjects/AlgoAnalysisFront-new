@@ -50,7 +50,7 @@ export function ContestRecords() {
     if (id !== requestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '加载比赛失败')
+      toast.error(res.message || '比赛列表加载失败，请稍后重试')
       return
     }
     setList(res.data.list)
@@ -144,7 +144,7 @@ export function ContestRecords() {
         {!loading && !list.length && (
           <Card className="py-4">
             <CardContent className="px-4 text-sm text-muted-foreground">
-              暂无比赛
+              暂时还没有比赛记录
             </CardContent>
           </Card>
         )}

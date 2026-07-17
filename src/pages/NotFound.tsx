@@ -16,11 +16,11 @@ export function NotFound() {
       <Card className="w-full max-w-md text-center motion-lift">
         <CardHeader>
           <CardTitle>404</CardTitle>
-          <CardDescription>页面不存在</CardDescription>
+          <CardDescription>找不到该页面</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            你访问的路径不存在，或已被移除。
+            你访问的页面不存在，或已被移除。
           </p>
         </CardContent>
         <CardFooter className="justify-center">

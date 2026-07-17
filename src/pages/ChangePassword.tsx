@@ -41,7 +41,7 @@ export function ChangePassword() {
       setNewPasswordConfirm('')
       navigate(isMemberLike ? '/change-profile' : '/admin', { replace: true })
     } else {
-      toast.error(res.message || '修改失败')
+      toast.error(res.message || '密码修改失败，请稍后重试')
     }
   }
 

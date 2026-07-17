@@ -319,7 +319,7 @@ export function About() {
         </CardHeader>
         <CardContent className="flex flex-col gap-2 text-sm text-muted-foreground">
           <p>
-            你现在看到的是系统默认的公共空间。若已有校队识别码，可在「我的组织」里加入；新组织一般由站点管理员创建与管理。
+            你现在看到的是默认的公共空间。若已有校队识别码，可在「我的组织」里加入；新组织一般由站点管理员创建与管理。
           </p>
           <Separator className="my-2" />
           <p>

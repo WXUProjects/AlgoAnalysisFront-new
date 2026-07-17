@@ -86,7 +86,7 @@ export function Social() {
       } else {
         setTargetUserId(0)
         setTargetName('')
-        toast.error(res.message || '用户不存在')
+        toast.error(res.message || '找不到该用户')
       }
     }
     void resolve()
@@ -101,7 +101,7 @@ export function Social() {
       const res = await searchUsers(qParam, page, pageSize)
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '搜索失败')
+        toast.error(res.message || '搜索失败，请稍后重试')
         setList([])
         setTotal(0)
         return
@@ -122,7 +122,7 @@ export function Social() {
         : await listFollowing(targetUserId, page, pageSize)
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '加载失败')
+      toast.error(res.message || '用户列表加载失败，请稍后重试')
       setList([])
       setTotal(0)
       return
@@ -210,7 +210,7 @@ export function Social() {
 
   async function toggleFollow(u: SocialUser) {
     if (!isLogin) {
-      toast.error('请先登录')
+      toast.error('请先登录后再继续')
       return
     }
     if (user && u.userId === user.userId) return
@@ -221,7 +221,7 @@ export function Social() {
       : await followUser(u.userId)
     setBusyId(0)
     if (!res.success) {
-      toast.error(res.message || '操作失败')
+      toast.error(res.message || '操作未完成，请稍后重试')
       return
     }
     setRelationMap((m) => ({ ...m, [u.userId]: !following }))
@@ -303,7 +303,7 @@ export function Social() {
             ))}
           {!loading && !list.length && (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-              暂无用户
+              没有找到相关用户
             </p>
           )}
           {!loading &&

@@ -102,7 +102,7 @@ export function ChangeProfile() {
       toast.success(res.message || '验证码已发送，请查收新邮箱')
       setCodeCooldown(60)
     } else {
-      toast.error(res.message || '发送失败')
+      toast.error(res.message || '发送失败，请稍后重试')
     }
   }
 
@@ -134,7 +134,7 @@ export function ChangeProfile() {
       setEmailCode('')
       await sync()
     } else {
-      toast.error(res.message || '更新失败')
+      toast.error(res.message || '更新失败，请稍后重试')
     }
   }
 
@@ -146,13 +146,13 @@ export function ChangeProfile() {
     }
     if (kind === 'daily') {
       if (checked && profile && profile.emailAllowedByOrg === false) {
-        toast.error('当前没有组织为你开通日报邮件权限')
+        toast.error('当前没有组织为你开通日报邮件，无法开启')
         return
       }
       setEmailOn(checked)
     } else {
       if (checked && profile && profile.emailWeeklyAllowedByOrg === false) {
-        toast.error('当前没有组织为你开通周报权限（需为教练/队长/团队管理员）')
+        toast.error('当前没有组织为你开通周报（需教练/队长或管理员权限）')
         return
       }
       setWeeklyOn(checked)
@@ -164,7 +164,7 @@ export function ChangeProfile() {
     } else {
       if (kind === 'daily') setEmailOn(!checked)
       else setWeeklyOn(!checked)
-      toast.error(res.message || '设置失败')
+      toast.error(res.message || '设置失败，请稍后重试')
     }
   }
 
@@ -186,7 +186,7 @@ export function ChangeProfile() {
       toast.success(res.message || '绑定成功')
       await sync()
     } else {
-      toast.error(res.message || '绑定失败')
+      toast.error(res.message || '绑定失败，请稍后重试')
     }
   }
 
@@ -195,7 +195,7 @@ export function ChangeProfile() {
       <Card className="gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>编辑资料</CardTitle>
-          <CardDescription>修改头像、绑定邮箱与邮件通知。昵称请在「我的组织」中修改。</CardDescription>
+          <CardDescription>管理头像、邮箱与邮件通知。要改昵称，请到「我的组织」。</CardDescription>
         </CardHeader>
         <form onSubmit={handleSaveProfile}>
           <CardContent className="px-4">
@@ -224,7 +224,7 @@ export function ChangeProfile() {
                             const res = await uploadImage(file, 'avatar')
                             setUploading(false)
                             if (!res.success || !res.data?.url) {
-                              toast.error(res.message || '上传失败')
+                              toast.error(res.message || '上传失败，请稍后重试')
                               return
                             }
                             setAvatar(res.data.url)
@@ -233,7 +233,7 @@ export function ChangeProfile() {
                         />
                       </label>
                     </Button>
-                    <p className="text-xs text-muted-foreground">jpg/png/webp，≤3MB</p>
+                    <p className="text-xs text-muted-foreground">支持 jpg / png / webp，不超过 3MB</p>
                   </div>
                 </div>
               </Field>
@@ -252,13 +252,13 @@ export function ChangeProfile() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  公共域称呼即站内昵称；其他校队可单独设置队内名称。
+                  公共域显示站内昵称；加入其他校队后，可单独设置队内称呼。
                 </p>
               </Field>
 
               {!boundEmail ? (
                 <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-foreground">
-                  账号尚未绑定邮箱。旧版迁移用户请在此填写并验证邮箱，否则无法接收比赛订阅与日报邮件。
+                  尚未绑定邮箱。请填写并验证邮箱，否则无法接收比赛订阅与日报邮件。
                 </div>
               ) : null}
 
@@ -273,16 +273,16 @@ export function ChangeProfile() {
                     setEmailCode('')
                   }}
                   disabled={saving}
-                  placeholder="用于订阅提醒、找回密码"
+                  placeholder="用于接收提醒和找回密码"
                   autoComplete="email"
                 />
                 {boundEmail && !emailChanged ? (
-                  <p className="text-xs text-muted-foreground">已绑定。更换邮箱需向新地址发送验证码。</p>
+                  <p className="text-xs text-muted-foreground">已绑定。更换邮箱时，需向新地址发送验证码。</p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
                     {emailChanged
-                      ? '邮箱已修改，请向新邮箱发送验证码后再保存。'
-                      : '填写常用邮箱并完成验证后即可接收订阅通知。'}
+                      ? '邮箱已更改，请向新邮箱发送验证码后再保存。'
+                      : '填写并验证常用邮箱后，即可接收订阅与提醒。'}
                   </p>
                 )}
               </Field>
@@ -334,11 +334,11 @@ export function ChangeProfile() {
                 </div>
                 {profile?.emailAllowedByOrg === false ? (
                   <p className="text-xs text-muted-foreground">
-                    没有组织开通日报邮件权限时无法开启；权限被关闭后将自动关闭。
+                    当前没有组织为你开通日报邮件，无法开启；组织关闭权限后会自动关掉。
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    默认关闭。开启后将按组织策略发送训练日报。
+                    默认关闭。开启后，你会按所在组织的安排收到训练日报。
                   </p>
                 )}
               </Field>
@@ -357,11 +357,11 @@ export function ChangeProfile() {
                 </div>
                 {profile?.emailWeeklyAllowedByOrg === false ? (
                   <p className="text-xs text-muted-foreground">
-                    需在组织中为教练 / 队长 / 团队管理员，且组织开启周报，才可接收。
+                    需具备教练、队长或管理员身份，且组织已开启周报，才能接收。
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    与日报分开设置；每周一发送本队训练周报（面向教练、队长与团队管理员）。
+                    与日报分开设置。开启后，每周一发送本队训练周报（面向教练、队长与管理员）。
                   </p>
                 )}
               </Field>
@@ -385,7 +385,7 @@ export function ChangeProfile() {
         <CardHeader className="gap-1 px-4">
           <CardTitle>绑定 OJ</CardTitle>
           <CardDescription>
-            绑定 AtCoder / 洛谷 / 牛客 / Codeforces / QOJ / 力扣后，系统会按计划自动同步提交与比赛数据
+            绑定常用 OJ 账号后，平台会自动同步你的提交与比赛记录
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleBindOj}>
@@ -434,7 +434,7 @@ export function ChangeProfile() {
                   autoComplete="off"
                 />
                 <FieldDescription>
-                  填错会导致无法同步数据，请对照上方示例从个人主页复制。
+                  请按上方示例从个人主页复制；填错将无法同步做题数据。
                 </FieldDescription>
               </Field>
             </FieldGroup>
@@ -451,7 +451,7 @@ export function ChangeProfile() {
       <Card className="gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>账号安全</CardTitle>
-          <CardDescription>修改登录密码，或通过邮箱找回</CardDescription>
+          <CardDescription>修改登录密码，或通过邮箱找回密码</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2 px-4">
           <Button type="button" variant="outline" asChild>

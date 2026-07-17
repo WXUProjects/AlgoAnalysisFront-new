@@ -146,7 +146,7 @@ export function DashboardAccessAnalytics() {
       if (res.success && res.data) setData(res.data)
       else {
         setData(null)
-        if (!silent) toast.error(res.message || '加载访问统计失败')
+        if (!silent) toast.error(res.message || '访问统计加载失败，请稍后重试')
       }
       setLoading(false)
       setRefreshing(false)
@@ -233,7 +233,7 @@ export function DashboardAccessAnalytics() {
     {
       label: '昨日活跃',
       value: y?.dau,
-      hint: y?.date || '昨日 DAU',
+      hint: y?.date || '昨日日活',
     },
     {
       label: `近 ${days} 日新增`,
@@ -259,7 +259,7 @@ export function DashboardAccessAnalytics() {
       label: '今日独立 IP',
       value: t?.uniqueIp,
       delta: delta(t?.uniqueIp, y?.uniqueIp),
-      hint: data?.clientIpAvailable ? '已解析真实 IP' : '依赖反代头',
+      hint: data?.clientIpAvailable ? '已解析访客 IP' : '未能解析真实 IP 时可能不准',
     },
     {
       label: `近 ${days} 日 PV`,
@@ -272,7 +272,7 @@ export function DashboardAccessAnalytics() {
     {
       label: '今日 API 请求',
       value: data?.apiRequestsToday,
-      hint: 'user / core / agent 合计',
+      hint: '今日接口访问合计',
     },
     {
       label: '并发峰值',
@@ -282,7 +282,7 @@ export function DashboardAccessAnalytics() {
     {
       label: '当前并发',
       value: data?.apiInflight,
-      hint: '进行中的请求',
+      hint: '当前进行中的请求',
     },
     {
       label: '爬虫入队',
@@ -363,21 +363,21 @@ export function DashboardAccessAnalytics() {
       </section>
 
       <section className="space-y-2">
-        <h4 className="text-sm font-medium">技术指标</h4>
+        <h4 className="text-sm font-medium">服务指标</h4>
         <MetricGrid items={techCardsFixed} loading={loading} />
       </section>
 
       <Card className="gap-3 py-4">
         <CardHeader className="px-4">
-          <CardTitle className="text-base">趋势 · PV / DAU / UV / 独立 IP</CardTitle>
-          <CardDescription>近 {days} 日自建日汇总</CardDescription>
+          <CardTitle className="text-base">趋势：浏览量 / 日活 / 访客 / 独立 IP</CardTitle>
+          <CardDescription>近 {days} 日访问汇总</CardDescription>
         </CardHeader>
         <CardContent className="px-2">
           {loading ? (
             <Skeleton className="h-72 w-full" />
           ) : trendData.length === 0 ? (
             <p className="px-2 text-sm text-muted-foreground">
-              暂无数据。部署后用户浏览页面将自动累计。
+              暂时还没有数据。站点上线后，用户浏览会自动累计。
             </p>
           ) : (
             <div className="h-72 w-full">
@@ -410,16 +410,16 @@ export function DashboardAccessAnalytics() {
 
       <Card className="gap-3 py-4">
         <CardHeader className="px-4">
-          <CardTitle className="text-base">趋势 · 每日新增注册</CardTitle>
+          <CardTitle className="text-base">趋势：每日新增注册</CardTitle>
           <CardDescription>
-            近 {days} 日按自然日统计的新注册账号（上海时区）
+            近 {days} 日每日新增注册（按自然日）
           </CardDescription>
         </CardHeader>
         <CardContent className="px-2">
           {loading ? (
             <Skeleton className="h-64 w-full" />
           ) : registerData.length === 0 ? (
-            <p className="px-2 text-sm text-muted-foreground">暂无注册趋势数据</p>
+            <p className="px-2 text-sm text-muted-foreground">暂时还没有注册趋势数据</p>
           ) : (
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -460,14 +460,14 @@ export function DashboardAccessAnalytics() {
       <div className="grid gap-3 lg:grid-cols-2">
         <Card className="gap-3 py-4">
           <CardHeader className="px-4">
-            <CardTitle className="text-base">服务使用分布</CardTitle>
-            <CardDescription>今日访客使用的功能模块（按页面归类）</CardDescription>
+            <CardTitle className="text-base">功能使用分布</CardTitle>
+            <CardDescription>今天访客使用过的功能（按页面归类）</CardDescription>
           </CardHeader>
           <CardContent className="px-2">
             {loading ? (
               <Skeleton className="h-56 w-full" />
             ) : catData.length === 0 ? (
-              <p className="px-2 text-sm text-muted-foreground">今日暂无模块访问数据</p>
+              <p className="px-2 text-sm text-muted-foreground">今天还没有功能访问数据</p>
             ) : (
               <div className="h-56 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -502,7 +502,7 @@ export function DashboardAccessAnalytics() {
         <Card className="gap-3 py-4">
           <CardHeader className="px-4">
             <CardTitle className="text-base">热门页面</CardTitle>
-            <CardDescription>今日 PV 最高路径</CardDescription>
+            <CardDescription>今天访问最多的页面</CardDescription>
           </CardHeader>
           <CardContent className="px-0">
             {loading ? (
@@ -512,7 +512,7 @@ export function DashboardAccessAnalytics() {
                 ))}
               </div>
             ) : !data?.topPaths?.length ? (
-              <p className="px-4 text-sm text-muted-foreground">暂无页面数据</p>
+              <p className="px-4 text-sm text-muted-foreground">暂时还没有页面访问数据</p>
             ) : (
               <Table>
                 <TableHeader>

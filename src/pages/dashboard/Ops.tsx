@@ -51,7 +51,7 @@ export function DashboardOps() {
     const res = await getSubmitInventory()
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '加载提交库存失败')
+      toast.error(res.message || '提交数据加载失败，请稍后重试')
       return
     }
     setInv(res.data)
@@ -78,7 +78,7 @@ export function DashboardOps() {
     const res = await purgeSubmitsAndRecrawl(CONFIRM_TOKEN)
     setPurging(false)
     if (!res.success) {
-      toast.error(res.message || '操作失败')
+      toast.error(res.message || '操作未完成，请稍后重试')
       return
     }
     const d = res.data
@@ -103,7 +103,7 @@ export function DashboardOps() {
         <Card>
           <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 space-y-0">
             <div>
-              <CardTitle className="text-base">提交库存</CardTitle>
+              <CardTitle className="text-base">提交数据</CardTitle>
               <CardDescription>
                 直接统计数据库行数，不是今日增量
               </CardDescription>
@@ -130,17 +130,17 @@ export function DashboardOps() {
                 <Metric
                   label="提交明细总行数"
                   value={inv?.submitLogsTotal}
-                  hint="submit_logs（含力扣合成）"
+                  hint="提交明细（含力扣合成记录）"
                 />
                 <Metric
                   label="计入提交统计"
                   value={inv?.submitLogsRealTotal}
-                  hint="排除 lc-ac / lc-prob"
+                  hint="不含力扣占位记录"
                 />
                 <Metric
                   label="已计入账本"
                   value={inv?.countedSubmitIdsTotal}
-                  hint="counted_submit_ids（防全量重爬双计）"
+                  hint="已计入统计的提交（避免重复同步多算）"
                 />
                 <Metric
                   label="明细时间范围"
@@ -163,15 +163,14 @@ export function DashboardOps() {
               <Badge variant="destructive">不可撤销</Badge>
             </div>
             <CardDescription className="leading-relaxed">
-              <strong className="text-foreground">硬删除</strong>
-              全部训练相关数据：提交明细（真/假/合成）、统计账本、日汇总、AC
-              预聚合、OJ 比赛记录、提醒发送日志，并清空相关缓存。随后按已绑定
-              OJ 全量重爬。
+              <strong className="text-foreground">彻底删除</strong>
+              全部训练相关数据：提交明细、统计、日汇总、刷题热力、比赛记录、提醒日志，并清空相关缓存。随后按已绑定
+              OJ 账号重新全量同步。
               <br />
               <strong className="text-foreground">
-                保留：用户账号、OJ 绑定、题库、公告/紧急通知、比赛日历赛程与订阅、站点运维配置。
+                保留：用户账号、OJ 绑定、题库、公告/紧急通知、比赛日历与订阅、站点配置。
               </strong>
-              重爬期间数字会先归零再回升。
+              同步期间数字会先归零再回升。
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -204,13 +203,13 @@ export function DashboardOps() {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>确认硬清训练数据？</AlertDialogTitle>
+                  <AlertDialogTitle>确认清空全部训练数据？</AlertDialogTitle>
                   <AlertDialogDescription className="space-y-2">
                     <span className="block">
-                      将硬删提交、统计、比赛记录等（题库与 OJ 绑定保留），并后台全量重爬。无法撤销。
+                      将彻底删除提交、统计、比赛记录等（题库与 OJ 绑定保留），并在后台重新全量同步。此操作无法撤销。
                     </span>
                     <span className="block text-muted-foreground">
-                      请确认已做好备份，且当前不在业务高峰期。
+                      请确认已做好备份，且当前不在使用高峰期。
                     </span>
                   </AlertDialogDescription>
                 </AlertDialogHeader>

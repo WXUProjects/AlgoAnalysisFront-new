@@ -20,10 +20,8 @@ const toneClass: Record<StatusTone, string> = {
 }
 
 /**
- * 生产 submit_logs 全量 status → 标准 ACM 展示名。
+ * 各 OJ 提交状态 → 用户可见的统一 ACM 展示名。
  * 映射不到则返回原串（trim 后）；空串视为 Judging。
- *
- * 数据来源：algo_core_data.submit_logs DISTINCT status（2026-07-16）
  */
 const ACM_STATUS_MAP: Record<string, string> = {
   // —— Accepted ——

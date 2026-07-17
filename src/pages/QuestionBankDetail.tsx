@@ -95,7 +95,7 @@ export function QuestionBankDetail() {
     ])
     setLoading(false)
     if (!pRes.success || !pRes.data) {
-      toast.error(pRes.message || '加载题目失败')
+      toast.error(pRes.message || '题目加载失败，请稍后重试')
       return
     }
     setProblem(pRes.data)
@@ -123,7 +123,7 @@ export function QuestionBankDetail() {
       if (res.success && res.data) setFollowStatus(res.data)
       else {
         setFollowStatus([])
-        if (!res.success) toast.error(res.message || '加载关注进度失败')
+        if (!res.success) toast.error(res.message || '关注进度加载失败，请稍后重试')
       }
     })
     return () => {
@@ -192,7 +192,7 @@ export function QuestionBankDetail() {
       })
       setSaving(false)
       if (!res.success) {
-        toast.error(res.message || '保存失败')
+        toast.error(res.message || '保存失败，请稍后重试')
         return
       }
       toast.success(res.message || '标签已更新')
@@ -209,7 +209,7 @@ export function QuestionBankDetail() {
     })
     setSaving(false)
     if (!res.success) {
-      toast.error(res.message || '提交失败')
+      toast.error(res.message || '提交失败，请稍后重试')
       return
     }
     toast.success(res.message || '已提交审核')
@@ -234,7 +234,7 @@ export function QuestionBankDetail() {
       })
       setSaving(false)
       if (!res.success) {
-        toast.error(res.message || '保存失败')
+        toast.error(res.message || '保存失败，请稍后重试')
         return
       }
       toast.success(res.message || '题面已更新')
@@ -252,7 +252,7 @@ export function QuestionBankDetail() {
     })
     setSaving(false)
     if (!res.success) {
-      toast.error(res.message || '提交失败')
+      toast.error(res.message || '提交失败，请稍后重试')
       return
     }
     toast.success(res.message || '已提交审核')
@@ -303,7 +303,7 @@ export function QuestionBankDetail() {
             <Input
               value={titleInput}
               onChange={(e) => setTitleInput(e.target.value)}
-              placeholder="题目标题（可选，留空不改）"
+              placeholder="题目标题（可选，不填则不改）"
               className="max-w-xl"
               disabled={saving}
             />
@@ -321,7 +321,7 @@ export function QuestionBankDetail() {
         <div className="shrink-0 border-b px-4 py-2">
           <p className="text-sm text-muted-foreground">
             {isSiteAdmin
-              ? '编辑题面。保存后立即生效；若标签为空，系统会继续尝试自动分析标签。'
+              ? '编辑题面，保存后立即生效。若题目还没有标签，系统会继续尝试自动分析。'
               : '编辑题面。提交后由站点管理员审核通过才会展示。'}
           </p>
         </div>
@@ -334,7 +334,7 @@ export function QuestionBankDetail() {
                 id="edit-content-note"
                 value={noteInput}
                 onChange={(e) => setNoteInput(e.target.value)}
-                placeholder="简要说明修改原因，方便审核"
+                placeholder="简要说明修改原因，便于审核"
                 rows={2}
                 disabled={saving}
               />
@@ -469,7 +469,7 @@ export function QuestionBankDetail() {
           <MarkdownBody
             content={problem.contentMd || ''}
             mode="auto"
-            emptyText="题面准备中，请稍后刷新；也可登录后补充题面"
+            emptyText="题面准备中，请稍后刷新；登录后也可自行补充题面"
           />
         </CardContent>
       </Card>
@@ -478,7 +478,7 @@ export function QuestionBankDetail() {
         <Card className="gap-3 py-4">
           <CardHeader className="px-4">
             <CardTitle className="text-base">推荐解法</CardTitle>
-            <CardDescription>AI 生成，仅供参考</CardDescription>
+            <CardDescription>由 AI 生成，仅供参考</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 px-4 sm:grid-cols-2">
             {problem.solutions.map((s, i) => (
@@ -666,7 +666,7 @@ export function QuestionBankDetail() {
                             colSpan={2}
                             className="text-center text-muted-foreground"
                           >
-                            还没有关注任何人，或接口暂不可用
+                            还没有关注的人，或暂时无法加载关注列表
                           </TableCell>
                         </TableRow>
                       )}
@@ -685,7 +685,7 @@ export function QuestionBankDetail() {
             <DialogTitle>{isSiteAdmin ? '修改标签' : '建议修改标签'}</DialogTitle>
             <DialogDescription>
               {isSiteAdmin
-                ? '点选已有标签，或输入后回车新建。保存后立即生效；有标签后系统不再自动分析该题标签。'
+                ? '点选已有标签，或输入后回车新建。保存后立即生效；有标签后不再自动分析该题。'
                 : '点选已有标签，或输入后回车新建。提交后由站点管理员审核才会更新。'}
             </DialogDescription>
           </DialogHeader>

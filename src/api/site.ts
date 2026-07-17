@@ -2,6 +2,11 @@ import { endpoints, type BackupJob, type BackupScope } from '@shared/api'
 import { get, post, del, str, num, http, type ApiResult } from '@/lib/http'
 import { jwt } from '@/lib/jwt'
 import { normalizeStaticUrl } from '@/lib/static-url'
+import {
+  UX_DOWNLOAD_FAILED,
+  UX_UPLOAD_FAILED,
+  sanitizeUserMessage,
+} from '@/lib/ux-copy'
 
 export type { BackupJob, BackupScope }
 
@@ -27,7 +32,7 @@ export type SiteAdminConfig = SiteConfig & {
   aiAnalyzeModel: string
   aiAnalyzeSecretMasked: string
   aiAnalyzeSecretSet: boolean
-  /** 不活跃天数阈值，默认 14 */
+  /** 超过多少天未登录视为不活跃阈值，默认 14 */
   inactiveDays: number
 }
 
@@ -87,7 +92,7 @@ export async function getSiteAdminConfig(): Promise<ApiResult<SiteAdminConfig>> 
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
     return {
       success: false,
-      message: str(raw.message, '加载失败'),
+      message: str(raw.message, '加载失败，请稍后重试'),
       data: null,
     }
   }
@@ -121,7 +126,7 @@ export async function updateSiteConfig(body: {
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
     return {
       success: false,
-      message: str(raw.message, '保存失败'),
+      message: str(raw.message, '保存失败，请稍后重试'),
       data: null,
     }
   }
@@ -142,7 +147,7 @@ export async function testSiteEmail(body: {
   const ok = Boolean(raw?.success) || (typeof raw?.code === 'number' && raw.code === 0)
   return {
     success: ok,
-    message: str(raw?.message, ok ? '测试邮件已发送' : '发送失败'),
+    message: str(raw?.message, ok ? '测试邮件已发送' : '发送失败，请稍后重试'),
     data: ok ? { success: true } : null,
   }
 }
@@ -293,11 +298,15 @@ export async function startBackupExport(
   if (!res.success) return { ...res, data: null }
   const raw = pickRaw(res)
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
-    return { success: false, message: str(raw.message, '创建导出失败'), data: null }
+    return { success: false, message: str(raw.message, '导出任务创建失败，请稍后重试'), data: null }
   }
   const jobId = num(raw?.jobId, 0) || 0
   if (!jobId) {
-    return { success: false, message: str(raw?.message, '未返回任务 id'), data: null }
+    return {
+      success: false,
+      message: str(raw?.message, '创建任务失败，请稍后重试'),
+      data: null,
+    }
   }
   return { ...res, data: { jobId } }
 }
@@ -328,7 +337,7 @@ export async function startBackupImport(
     if (typeof body.code === 'number' && body.code !== 0) {
       return {
         success: false,
-        message: str(body.message, '创建导入失败'),
+        message: str(body.message, '导入任务创建失败，请稍后重试'),
         data: null,
       }
     }
@@ -341,13 +350,20 @@ export async function startBackupImport(
     }
     const jobId = num(body.jobId, 0) || 0
     if (!jobId) {
-      return { success: false, message: str(body.message, '未返回任务 id'), data: null }
+      return {
+        success: false,
+        message: str(body.message, '创建任务失败，请稍后重试'),
+        data: null,
+      }
     }
     return { success: true, message: str(body.message, 'ok'), data: { jobId } }
   } catch (e) {
     return {
       success: false,
-      message: e instanceof Error ? e.message : '上传失败',
+      message: sanitizeUserMessage(
+        e instanceof Error ? e.message : undefined,
+        UX_UPLOAD_FAILED,
+      ),
       data: null,
     }
   }
@@ -358,11 +374,11 @@ export async function getBackupJob(id: number): Promise<ApiResult<BackupJob>> {
   if (!res.success) return { ...res, data: null }
   const raw = pickRaw(res)
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
-    return { success: false, message: str(raw.message, '加载失败'), data: null }
+    return { success: false, message: str(raw.message, '加载失败，请稍后重试'), data: null }
   }
   const job = normalizeBackupJob(raw?.job ?? raw)
   if (!job) {
-    return { success: false, message: '任务数据无效', data: null }
+    return { success: false, message: '任务信息异常，请稍后重试', data: null }
   }
   return { ...res, data: job }
 }
@@ -372,7 +388,7 @@ export async function listBackupJobs(): Promise<ApiResult<BackupJob[]>> {
   if (!res.success) return { ...res, data: null }
   const raw = pickRaw(res)
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
-    return { success: false, message: str(raw.message, '加载失败'), data: null }
+    return { success: false, message: str(raw.message, '加载失败，请稍后重试'), data: null }
   }
   const list = Array.isArray(raw?.jobs) ? raw!.jobs : []
   return {
@@ -386,7 +402,7 @@ export async function deleteBackupJob(id: number): Promise<ApiResult<null>> {
   if (!res.success) return { ...res, data: null }
   const raw = pickRaw(res)
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
-    return { success: false, message: str(raw.message, '删除失败'), data: null }
+    return { success: false, message: str(raw.message, '删除失败，请稍后重试'), data: null }
   }
   return { success: true, message: 'ok', data: null }
 }
@@ -422,14 +438,18 @@ export async function downloadBackupJob(id: number): Promise<ApiResult<null>> {
       try {
         const text = await err.response.data.text()
         const j = JSON.parse(text) as { message?: string }
-        return { success: false, message: j.message || '下载失败', data: null }
+        return {
+          success: false,
+          message: sanitizeUserMessage(j.message, UX_DOWNLOAD_FAILED),
+          data: null,
+        }
       } catch {
         /* ignore */
       }
     }
     return {
       success: false,
-      message: err.message || '下载失败',
+      message: sanitizeUserMessage(err.message, UX_DOWNLOAD_FAILED),
       data: null,
     }
   }
@@ -445,7 +465,7 @@ export async function getAccessStats(days = 30): Promise<ApiResult<AccessStats>>
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
     return {
       success: false,
-      message: str(raw.message, '加载失败'),
+      message: str(raw.message, '加载失败，请稍后重试'),
       data: null,
     }
   }

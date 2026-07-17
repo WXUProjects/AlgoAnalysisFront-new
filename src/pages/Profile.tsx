@@ -119,7 +119,7 @@ export function Profile() {
     if (!pRes.success || !pRes.data) {
       setLoading(false)
       setProfile(null)
-      const msg = pRes.message || '加载资料失败'
+      const msg = pRes.message || '资料加载失败，请稍后重试'
       if (msg.includes('隐私') || msg.includes('禁止') || msg.includes('未开放')) {
         setDenied(true)
       } else {
@@ -191,7 +191,7 @@ export function Profile() {
         })
         if (cancelled) return
         if (res.success) setAcHeat(res.data || [])
-        else toast.error(res.message || 'AC 热力图加载失败')
+        else toast.error(res.message || '刷题热力图加载失败，请稍后重试')
         setAcHeatLoaded(true)
       } finally {
         if (!cancelled) setAcHeatLoading(false)
@@ -231,7 +231,7 @@ export function Profile() {
           <CardContent className="px-4 text-sm text-muted-foreground">
             {denied
               ? '该用户未开放公共域个人资料'
-              : '用户不存在'}
+              : '找不到该用户'}
           </CardContent>
         </Card>
       </PageShell>
@@ -249,7 +249,7 @@ export function Profile() {
       : await followUser(profile.userId)
     setFollowBusy(false)
     if (!res.success) {
-      toast.error(res.message || '操作失败')
+      toast.error(res.message || '操作未完成，请稍后重试')
       return
     }
     setIsFollowing(!isFollowing)
@@ -612,7 +612,7 @@ export function Profile() {
                   })}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">暂无动态</p>
+                <p className="text-sm text-muted-foreground">暂时还没有动态</p>
               )}
             </CardContent>
           </Card>
@@ -621,7 +621,7 @@ export function Profile() {
             <CardHeader className="px-4">
               <CardTitle className="text-base">算法画像</CardTitle>
               <CardDescription>
-                根据已通过题目与 AI 标签生成
+                根据你已通过的题目与标签生成
               </CardDescription>
             </CardHeader>
             <CardContent className="px-4">
@@ -682,7 +682,7 @@ export function Profile() {
                 </div>
               ))}
               {!contests.length && (
-                <p className="text-sm text-muted-foreground">暂无比赛</p>
+                <p className="text-sm text-muted-foreground">暂时还没有比赛</p>
               )}
             </CardContent>
           </Card>

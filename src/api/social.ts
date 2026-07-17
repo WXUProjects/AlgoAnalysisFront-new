@@ -28,7 +28,7 @@ function parseList(res: ApiResult<unknown>): ApiResult<SocialListRes> {
   const ok = res.success || raw.list !== undefined || Array.isArray(res.data)
   return {
     success: ok,
-    message: res.message || (ok ? 'ok' : '加载失败'),
+    message: res.message || (ok ? 'ok' : '加载失败，请稍后重试'),
     data: {
       total: num(raw.total, listRaw.length),
       list: listRaw.map(normalizeUser),

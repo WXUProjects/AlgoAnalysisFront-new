@@ -74,7 +74,7 @@ export function DashboardOrgsManage() {
     const res = await listMyOrgs({ all: true })
     setLoading(false)
     if (res.success) setOrgs(res.list)
-    else toast.error(res.message || '加载组织失败')
+    else toast.error(res.message || '组织列表加载失败，请稍后重试')
   }, [])
 
   useEffect(() => {
@@ -103,7 +103,7 @@ export function DashboardOrgsManage() {
 
   if (!isAdmin) {
     return (
-      <div className="p-6 text-sm text-muted-foreground">仅站点管理员可访问。</div>
+      <div className="p-6 text-sm text-muted-foreground">仅站点管理员可使用此功能。</div>
     )
   }
 
@@ -134,7 +134,7 @@ export function DashboardOrgsManage() {
       await load()
       await refreshOrgs()
       if (res.data) setSelected(res.data)
-    } else toast.error(res.message || '保存失败')
+    } else toast.error(res.message || '保存失败，请稍后重试')
   }
 
   async function handleDeleteOrg() {
@@ -147,7 +147,7 @@ export function DashboardOrgsManage() {
       setSelected(null)
       await load()
       await refreshOrgs()
-    } else toast.error(res.message || '删除失败')
+    } else toast.error(res.message || '删除失败，请稍后重试')
   }
 
   return (
@@ -155,7 +155,7 @@ export function DashboardOrgsManage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">创建组织</CardTitle>
-            <CardDescription>无需切换当前组织即可开通校队。</CardDescription>
+            <CardDescription>不用切换当前组织，也能直接创建校队。</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-2">
@@ -198,7 +198,7 @@ export function DashboardOrgsManage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">全部组织</CardTitle>
-              <CardDescription>点击一行编辑参数与成员。</CardDescription>
+              <CardDescription>点选一行即可编辑设置与成员。</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               {loading && (
@@ -207,7 +207,7 @@ export function DashboardOrgsManage() {
                 </div>
               )}
               {!loading && orgs.length === 0 && (
-                <p className="text-sm text-muted-foreground">暂无组织</p>
+                <p className="text-sm text-muted-foreground">暂时还没有组织</p>
               )}
               {!loading &&
                 orgs.map((o) => (
@@ -247,9 +247,9 @@ export function DashboardOrgsManage() {
                   {selected ? `编辑：${selected.name}` : '选择左侧组织'}
                 </CardTitle>
                 {selected?.isSystem ? (
-                  <CardDescription>公共域为默认组织，不可删除。</CardDescription>
+                  <CardDescription>公共域是默认组织，不能删除。</CardDescription>
                 ) : selected ? (
-                  <CardDescription>修改参数后点保存；删除在右侧。</CardDescription>
+                  <CardDescription>改完设置后点保存；需要删除时用右侧按钮。</CardDescription>
                 ) : null}
               </div>
               {selected && !selected.isSystem && (
@@ -261,7 +261,7 @@ export function DashboardOrgsManage() {
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>删除组织「{selected.name}」？</AlertDialogTitle>
+                      <AlertDialogTitle>确认删除组织「{selected.name}」？</AlertDialogTitle>
                       <AlertDialogDescription>
                         删除后成员将回到公共域，组织内分组与加入申请一并清除。此操作不可在本页撤销。
                       </AlertDialogDescription>
@@ -285,7 +285,7 @@ export function DashboardOrgsManage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {!selected && (
-                <p className="text-sm text-muted-foreground">从左侧列表选择一个组织。</p>
+                <p className="text-sm text-muted-foreground">请从左侧选择一个组织。</p>
               )}
               {selected && (
                 <>
@@ -341,11 +341,11 @@ export function DashboardOrgsManage() {
                     <Switch checked={enableAiSummary} onCheckedChange={setEnableAiSummary} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <Label>日报邮件（组织授权）</Label>
+                    <Label>日报邮件（由组织开通）</Label>
                     <Switch checked={enableAiEmail} onCheckedChange={setEnableAiEmail} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <Label>周报邮件（教练/队长/管理员）</Label>
+                    <Label>周报邮件（教练 / 队长 / 管理员）</Label>
                     <Switch
                       checked={enableAiWeeklyEmail}
                       onCheckedChange={setEnableAiWeeklyEmail}
@@ -357,7 +357,7 @@ export function DashboardOrgsManage() {
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 flex-col gap-0.5">
-                      <Label>强制同步（跳过休眠）</Label>
+                      <Label>强制同步（不因长期未登录而暂停）</Label>
                       <span className="text-xs text-muted-foreground">
                         集训/比赛期：本组织成员不因不活跃暂停后台同步
                       </span>
@@ -373,7 +373,7 @@ export function DashboardOrgsManage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>AI 总结间隔（分钟）</Label>
+                    <Label>训练小结生成间隔（分钟）</Label>
                     <Input
                       type="number"
                       value={aiInterval}
@@ -385,7 +385,7 @@ export function DashboardOrgsManage() {
                     <Input
                       value={emailSchedule}
                       onChange={(e) => setEmailSchedule(e.target.value)}
-                      placeholder="例如 30 7 * * *（每天 7:30）"
+                      placeholder="例如 30 7 * * *，表示每天 7:30"
                     />
                   </div>
                   <div className="flex flex-wrap gap-2">

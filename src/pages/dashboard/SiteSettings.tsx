@@ -154,7 +154,7 @@ export function DashboardSiteSettings() {
                 : '导入完成，请刷新页面',
             )
           } else {
-            toast.error(res.data.errorDetail || res.data.message || '任务失败')
+            toast.error(res.data.errorDetail || res.data.message || '任务失败，请稍后重试')
           }
         }
       }, 2000)
@@ -171,7 +171,7 @@ export function DashboardSiteSettings() {
       if (cancelled) return
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '加载站点配置失败')
+        toast.error(res.message || '站点配置加载失败，请稍后重试')
         return
       }
       const d = res.data
@@ -215,12 +215,12 @@ export function DashboardSiteSettings() {
     const res = await uploadImage(file, 'site')
     setUploading(null)
     if (!res.success || !res.data?.url) {
-      toast.error(res.message || '上传失败')
+      toast.error(res.message || '上传失败，请稍后重试')
       return
     }
     if (kind === 'logo') setLogo(res.data.url)
     else setFavicon(res.data.url)
-    toast.success('上传成功，请点保存')
+    toast.success('已上传，请点保存生效')
   }
 
   function secretPayload(
@@ -282,7 +282,7 @@ export function DashboardSiteSettings() {
         setAiSecretSet(again.data.aiAnalyzeSecretSet)
       }
     } else {
-      toast.error(res.message || '保存失败')
+      toast.error(res.message || '保存失败，请稍后重试')
     }
   }
 
@@ -304,7 +304,7 @@ export function DashboardSiteSettings() {
     })
     setTesting(false)
     if (res.success) toast.success(res.message || '测试邮件已发送')
-    else toast.error(res.message || '发送失败')
+    else toast.error(res.message || '发送失败，请稍后重试')
   }
 
   async function handleExport() {
@@ -312,10 +312,10 @@ export function DashboardSiteSettings() {
     const res = await startBackupExport(['all'])
     if (!res.success || !res.data?.jobId) {
       setExporting(false)
-      toast.error(res.message || '创建导出失败')
+      toast.error(res.message || '导出任务创建失败，请稍后重试')
       return
     }
-    toast.success('导出已在后台开始，可离开本页稍后再来下载')
+    toast.success('导出已在后台开始，可稍后回来下载')
     startPoll(res.data.jobId)
     const job = await getBackupJob(res.data.jobId)
     if (job.success && job.data) setActiveJob(job.data)
@@ -338,10 +338,10 @@ export function DashboardSiteSettings() {
     if (fileInputRef.current) fileInputRef.current.value = ''
     if (!res.success || !res.data?.jobId) {
       setImporting(false)
-      toast.error(res.message || '创建导入失败')
+      toast.error(res.message || '导入任务创建失败，请稍后重试')
       return
     }
-    toast.message('导入进行中，请勿关闭站点服务…')
+    toast.message('正在导入，请勿关闭页面或中断服务…')
     startPoll(res.data.jobId)
     const job = await getBackupJob(res.data.jobId)
     if (job.success && job.data) setActiveJob(job.data)
@@ -352,7 +352,7 @@ export function DashboardSiteSettings() {
     const res = await downloadBackupJob(jobId)
     setDownloading(false)
     if (res.success) toast.success('开始下载')
-    else toast.error(res.message || '下载失败')
+    else toast.error(res.message || '下载失败，请稍后重试')
   }
 
   if (loading) {
@@ -381,7 +381,7 @@ export function DashboardSiteSettings() {
         <Card className="gap-3 py-4">
           <CardHeader className="px-4 pb-0">
             <CardTitle>站点品牌</CardTitle>
-            <CardDescription>站点名称、Logo 与浏览器图标</CardDescription>
+            <CardDescription>设置站点显示名称、Logo 和浏览器标签图标</CardDescription>
           </CardHeader>
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
@@ -443,15 +443,15 @@ export function DashboardSiteSettings() {
 
         <Card className="gap-3 py-4">
           <CardHeader className="px-4 pb-0">
-            <CardTitle>不活跃休眠</CardTitle>
+            <CardTitle>长期未登录休眠</CardTitle>
             <CardDescription>
-              超过指定天数未登录/访问的用户将暂停定时爬虫、AI 总结与邮件，以节省资源。登录后自动全量同步。
+              超过指定天数未登录的用户，将暂停自动同步、训练小结与邮件，以节省资源。再次登录后会自动全量同步。
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
               <Field className="gap-1.5">
-                <FieldLabel htmlFor="inactive-days">不活跃天数</FieldLabel>
+                <FieldLabel htmlFor="inactive-days">超过多少天未登录视为不活跃</FieldLabel>
                 <Input
                   id="inactive-days"
                   type="number"
@@ -462,7 +462,7 @@ export function DashboardSiteSettings() {
                   placeholder="14"
                 />
                 <p className="text-xs text-muted-foreground">
-                  默认 14 天，范围 1–365。站点管理员、组织教练/队长、付费组织、强制同步组织及「永不休眠」用户不受影响。
+                  默认 14 天，范围 1–365。站点管理员、教练/队长、付费组织、强制同步组织，以及标记为「永不休眠」的用户不受影响。
                 </p>
               </Field>
             </FieldGroup>
@@ -473,7 +473,7 @@ export function DashboardSiteSettings() {
           <CardHeader className="px-4 pb-0">
             <CardTitle>邮件发送设置</CardTitle>
             <CardDescription>
-              用于注册验证码、密码找回与 AI 日报/周报。保存后立即生效。
+              用于验证码、找回密码与训练日报/周报。保存后立即生效。
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4">
@@ -515,7 +515,7 @@ export function DashboardSiteSettings() {
                   value={smtpPassword}
                   onChange={(e) => setSmtpPassword(e.target.value)}
                   placeholder={
-                    smtpPasswordSet ? '已保存，留空表示不修改' : '邮箱密码或授权码'
+                    smtpPasswordSet ? '已保存；留空表示不修改' : '邮箱密码或授权码'
                   }
                   autoComplete="new-password"
                   onFocus={() => {
@@ -523,7 +523,7 @@ export function DashboardSiteSettings() {
                   }}
                 />
                 <p className="text-xs text-muted-foreground">
-                  显示为圆点表示已保存。清空并保存可删除密码。
+                  显示为圆点表示已保存过。清空后再保存可删除密码。
                 </p>
               </Field>
               <Field className="gap-1.5">
@@ -542,7 +542,7 @@ export function DashboardSiteSettings() {
                     id="smtp-test-to"
                     value={testTo}
                     onChange={(e) => setTestTo(e.target.value)}
-                    placeholder="接收测试邮件的邮箱"
+                    placeholder="用来接收测试邮件的邮箱"
                     className="flex-1"
                   />
                   <Button
@@ -562,7 +562,7 @@ export function DashboardSiteSettings() {
 
         <Card className="gap-3 py-4">
           <CardHeader className="px-4 pb-0">
-            <CardTitle>AI 总结模型</CardTitle>
+            <CardTitle>训练小结所用模型</CardTitle>
             <CardDescription>
               用于个人日报、周报与近期训练总结
             </CardDescription>
@@ -575,18 +575,18 @@ export function DashboardSiteSettings() {
                   id="agent-model"
                   value={agentModel}
                   onChange={(e) => setAgentModel(e.target.value)}
-                  placeholder="请填写模型名称"
+                  placeholder="模型名称"
                 />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel htmlFor="agent-secret">密钥（API Key）</FieldLabel>
+                <FieldLabel htmlFor="agent-secret">密钥</FieldLabel>
                 <Input
                   id="agent-secret"
                   type="password"
                   value={agentSecret}
                   onChange={(e) => setAgentSecret(e.target.value)}
                   placeholder={
-                    agentSecretSet ? '已保存，留空表示不修改' : '请填写密钥'
+                    agentSecretSet ? '已保存；留空表示不修改' : '请填写密钥'
                   }
                   autoComplete="new-password"
                   onFocus={() => {
@@ -600,7 +600,7 @@ export function DashboardSiteSettings() {
 
         <Card className="gap-3 py-4">
           <CardHeader className="px-4 pb-0">
-            <CardTitle>题库 AI 分析</CardTitle>
+            <CardTitle>题库智能分析</CardTitle>
             <CardDescription>
               用于题面整理与标签分析的 AI 服务
             </CardDescription>
@@ -608,12 +608,12 @@ export function DashboardSiteSettings() {
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
               <Field className="gap-1.5">
-                <FieldLabel htmlFor="ai-endpoint">接口地址</FieldLabel>
+                <FieldLabel htmlFor="ai-endpoint">服务地址</FieldLabel>
                 <Input
                   id="ai-endpoint"
                   value={aiEndpoint}
                   onChange={(e) => setAiEndpoint(e.target.value)}
-                  placeholder="请填写服务商提供的接口地址"
+                  placeholder="服务商提供的接口地址"
                 />
               </Field>
               <Field className="gap-1.5">
@@ -622,18 +622,18 @@ export function DashboardSiteSettings() {
                   id="ai-model"
                   value={aiModel}
                   onChange={(e) => setAiModel(e.target.value)}
-                  placeholder="请填写模型名称"
+                  placeholder="模型名称"
                 />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel htmlFor="ai-secret">密钥（API Key）</FieldLabel>
+                <FieldLabel htmlFor="ai-secret">密钥</FieldLabel>
                 <Input
                   id="ai-secret"
                   type="password"
                   value={aiSecret}
                   onChange={(e) => setAiSecret(e.target.value)}
                   placeholder={
-                    aiSecretSet ? '已保存，留空表示不修改' : '请填写密钥'
+                    aiSecretSet ? '已保存；留空表示不修改' : '请填写密钥'
                   }
                   autoComplete="new-password"
                   onFocus={() => {
@@ -656,9 +656,9 @@ export function DashboardSiteSettings() {
           <CardHeader className="px-4 pb-0">
             <CardTitle>数据备份与恢复</CardTitle>
             <CardDescription>
-              导出全部站点数据（用户、组织、题库、提交记录、上传文件等）。导出在后台慢慢进行，完成后可下载；导入将
-              <span className="font-medium text-destructive"> 覆盖现有数据 </span>
-              以完美复现备份时状态。后续可支持按用户 / 题库 / 提交等粒度导出。
+              导出站点数据（用户、组织、题库、提交与上传文件等），后台完成后可下载。导入将
+              <span className="font-medium text-destructive">覆盖现有数据</span>
+              ，恢复为备份时的状态。
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4 px-4">
@@ -797,7 +797,7 @@ export function DashboardSiteSettings() {
       <AlertDialog open={importOpen} onOpenChange={setImportOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认导入并覆盖数据？</AlertDialogTitle>
+            <AlertDialogTitle>确认导入并覆盖现有数据？</AlertDialogTitle>
             <AlertDialogDescription>
               导入将按备份包清空并重写对应表（用户密码哈希、提交记录、题库等均会被替换）。此操作不可撤销。请先确认已有可用备份。目标环境的配置加密密钥须与导出时一致。
             </AlertDialogDescription>
