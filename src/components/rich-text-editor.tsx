@@ -24,7 +24,7 @@ interface RichTextEditorProps {
   onChange: (html: string) => void
   className?: string
   disabled?: boolean
-  /** 全页模式：工具栏 sticky，编辑区撑满剩余高度 */
+  /** 全页模式：工具栏占位不滚动，正文区域独立滚动（勿用 sticky，会盖住正文） */
   fullPage?: boolean
   placeholder?: string
 }
@@ -51,9 +51,7 @@ export function RichTextEditor({
       attributes: {
         class: cn(
           'prose prose-sm dark:prose-invert max-w-none outline-none',
-          fullPage
-            ? 'min-h-full px-4 py-4'
-            : 'min-h-32 px-3 py-2',
+          fullPage ? 'min-h-full px-4 py-4' : 'min-h-32 px-3 py-2',
         ),
         ...(placeholder ? { 'data-placeholder': placeholder } : {}),
       },
@@ -89,9 +87,7 @@ export function RichTextEditor({
   const toolbar = (
     <div
       className={cn(
-        'flex flex-wrap gap-1 border-b bg-background p-1.5',
-        // 顶栏已 sticky 放保存按钮；工具栏贴在顶栏下方，避免叠在一起
-        fullPage && 'sticky top-[3.4rem] z-10 border-t',
+        'flex shrink-0 flex-wrap gap-1 border-b bg-background p-1.5',
       )}
     >
       <ToolbarBtn
@@ -195,19 +191,21 @@ export function RichTextEditor({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-md border bg-background',
-        fullPage &&
-          'flex min-h-[calc(100svh-10rem)] flex-1 flex-col rounded-none border-0 border-t',
+        'rounded-md border bg-background',
+        fullPage
+          ? 'flex min-h-0 flex-1 flex-col overflow-hidden rounded-none border-0 border-t'
+          : 'overflow-hidden',
         className,
       )}
     >
       {toolbar}
+      {/* 正文为唯一滚动容器；工具栏 shrink-0 占位，绝不 sticky 盖住内容 */}
       <EditorContent
         editor={editor}
         className={cn(
           'focus-within:outline-none [&_.tiptap]:outline-none',
           fullPage
-            ? 'min-h-0 flex-1 [&_.tiptap]:min-h-[calc(100svh-14rem)]'
+            ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain'
             : 'min-h-32 [&_.tiptap]:min-h-32',
         )}
       />

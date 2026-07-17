@@ -2,26 +2,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ExternalLinkIcon, UserPlusIcon, UserMinusIcon } from 'lucide-react'
 import { toast } from 'sonner'
-import {
-  listProfiles,
-  getProfileById,
-  getProfileByUsername,
-} from '@/api/profile'
+import { getProfileById, getProfileByUsername } from '@/api/profile'
 import {
   followUser,
   getSocialCounts,
   getSocialRelation,
   unfollowUser,
 } from '@/api/social'
-import { getHeatmap, getPeriod } from '@/api/statistic'
+import { getHeatmap } from '@/api/statistic'
 import { getSubmitLogs } from '@/api/submitLog'
 import { listContests } from '@/api/contest'
 import { getProblemUserProfile } from '@/api/problem'
 import type {
   ContestItem,
   HeatmapItem,
-  PeriodData,
-  PeriodItem,
   ProblemUserProfile,
   UserProfile,
 } from '@shared/api'
@@ -59,146 +53,6 @@ import { formatTime, todayYmd } from '@/lib/format'
 import { getPlatformHomeLink, getSubmitLink, OJ_PLATFORMS } from '@/lib/link'
 import { cn } from '@/lib/utils'
 
-type StatRow = {
-  title: string
-  value: number
-  ave: number
-  grow?: number
-  /** 覆盖主数值展示（如生涯 AC 的「次数 / 题数」） */
-  display?: string
-}
-
-function buildRows(
-  user: PeriodItem | undefined,
-  global: PeriodItem | undefined,
-  userCount: number,
-  kind: 'ac' | 'submit',
-  acRate: number,
-  globalAcRate: number,
-  problemCount: number,
-  problemCountAve: number,
-): StatRow[] {
-  const u = user
-  const g = global
-  const n = Math.max(userCount, 1)
-  const ave = (v: number | undefined) => (v ?? 0) / n
-  const prefix = kind === 'ac' ? 'AC' : '提交'
-  // AC 次数 ≥ 去重题数（每题至少 1 次）
-  const acRaw = Math.max(u?.totalRaw ?? problemCount, problemCount)
-  const acRawAve = Math.max(
-    g?.totalRaw != null ? ave(g.totalRaw) : problemCountAve,
-    problemCountAve,
-  )
-  return [
-    {
-      title: kind === 'ac' ? '生涯 AC' : `总${prefix}`,
-      value: kind === 'ac' ? acRaw : (u?.total ?? 0),
-      ave: kind === 'ac' ? acRawAve : ave(g?.total),
-      display: kind === 'ac' ? `${acRaw} 次 · ${problemCount} 题` : undefined,
-    },
-    {
-      title: `今日${prefix}`,
-      value: u?.today ?? 0,
-      ave: ave(g?.today),
-    },
-    {
-      title: `本周${prefix}`,
-      value: u?.thisWeek ?? 0,
-      ave: ave(g?.thisWeek),
-      grow: (u?.thisWeek ?? 0) - (u?.lastWeek ?? 0),
-    },
-    {
-      title: `本月${prefix}`,
-      value: u?.thisMonth ?? 0,
-      ave: ave(g?.thisMonth),
-      grow: (u?.thisMonth ?? 0) - (u?.lastMonth ?? 0),
-    },
-    {
-      title: `今年${prefix}`,
-      value: u?.thisYear ?? 0,
-      ave: ave(g?.thisYear),
-      grow: (u?.thisYear ?? 0) - (u?.lastYear ?? 0),
-    },
-    {
-      title: 'AC 率',
-      value: acRate,
-      ave: globalAcRate,
-    },
-  ]
-}
-
-function StatBarRow({ row }: { row: StatRow }) {
-  // 用 max 定标：本人与人均同一把尺子，比「求和」更直观
-  const scale = Math.max(row.value, row.ave, 0)
-  const pct = scale > 0 ? Math.min(100, (row.value / scale) * 100) : 0
-  const avePct = scale > 0 ? Math.min(100, (row.ave / scale) * 100) : 0
-  const isRate = row.title === 'AC 率'
-  const display = row.display
-    ? row.display
-    : isRate
-      ? `${row.value.toFixed(2)}%`
-      : String(Math.round(row.value * 100) / 100)
-  const aveDisplay = isRate
-    ? `${row.ave.toFixed(2)}%`
-    : String(Math.round(row.ave * 100) / 100)
-
-  const growClass = cn(
-    'text-xs font-medium tabular-nums',
-    row.grow !== undefined && row.grow > 0 && 'text-destructive',
-    row.grow !== undefined && row.grow < 0 && 'text-emerald-600 dark:text-emerald-400',
-    row.grow === 0 && 'text-muted-foreground',
-  )
-  const growText =
-    row.grow === undefined ? null : row.grow > 0 ? `+${row.grow}` : String(row.grow)
-
-  // 移动端竖排：标题+数值 → 固定高度进度条 → 人均文案
-  // 桌面横排：标题 | 条 | 数值。进度条父级用固定 px 高度 + absolute 填充，避免移动端 h-full 塌缩。
-  return (
-    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-      <div className="flex min-w-0 items-baseline justify-between gap-2 sm:w-[4.5rem] sm:shrink-0 sm:flex-col sm:justify-center sm:gap-0">
-        <div className="truncate text-sm text-muted-foreground">{row.title}</div>
-        <div className="flex shrink-0 items-center gap-1.5 tabular-nums sm:hidden">
-          <span className="text-base font-semibold leading-none">{display}</span>
-          {growText !== null && <span className={growClass}>{growText}</span>}
-        </div>
-      </div>
-
-      <div className="min-w-0 w-full flex-1">
-        <div
-          className="relative w-full"
-          style={{ height: 12 }}
-          role="progressbar"
-          aria-label={row.title}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(pct)}
-        >
-          <div className="absolute inset-0 rounded-full bg-muted" />
-          <div
-            className="absolute left-0 top-0 bottom-0 rounded-full bg-sky-500 transition-[width] duration-500 ease-out"
-            style={{ width: `${pct}%` }}
-          />
-          {row.ave > 0 && (
-            <div
-              className="pointer-events-none absolute top-[-3px] bottom-[-3px] z-10 w-0.5 -translate-x-1/2 rounded-full bg-destructive"
-              style={{ left: `${avePct}%` }}
-              title={`全站人均 ${aveDisplay}`}
-            />
-          )}
-        </div>
-        <p className="mt-1 text-[11px] leading-none text-muted-foreground sm:hidden">
-          人均 {aveDisplay}
-        </p>
-      </div>
-
-      <div className="hidden w-[5.5rem] shrink-0 items-center justify-end gap-1.5 tabular-nums sm:flex">
-        <span className="text-sm font-semibold">{display}</span>
-        {growText !== null && <span className={growClass}>{growText}</span>}
-      </div>
-    </div>
-  )
-}
-
 export function Profile() {
   const { user, isLogin, logout } = useAuth()
   const { username: routeUsername } = useParams<{ username?: string }>()
@@ -209,9 +63,6 @@ export function Profile() {
 
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [targetId, setTargetId] = useState(0)
-  const [period, setPeriod] = useState<PeriodData | null>(null)
-  const [globalPeriod, setGlobalPeriod] = useState<PeriodData | null>(null)
-  const [userCount, setUserCount] = useState(1)
   const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
   const [acHeatLoaded, setAcHeatLoaded] = useState(false)
@@ -223,7 +74,6 @@ export function Profile() {
   const [contests, setContests] = useState<ContestItem[]>([])
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [mode, setMode] = useState<'submit' | 'ac'>('ac')
   const [followingCount, setFollowingCount] = useState(0)
   const [followerCount, setFollowerCount] = useState(0)
   const [isFollowing, setIsFollowing] = useState(false)
@@ -289,20 +139,7 @@ export function Profile() {
     setTargetId(pf.userId)
     const uid = pf.userId
     const end = todayYmd()
-    const [
-      periodRes,
-      globalRes,
-      listRes,
-      hSubmit,
-      acts,
-      cont,
-      algoRes,
-      countsRes,
-      relRes,
-    ] = await Promise.all([
-      getPeriod(uid),
-      getPeriod(-1),
-      listProfiles(1, 1),
+    const [hSubmit, acts, cont, algoRes, countsRes, relRes] = await Promise.all([
       getHeatmap({
         startDate: '20230101',
         endDate: end,
@@ -318,11 +155,6 @@ export function Profile() {
     if (signal?.cancelled) return
     setLoading(false)
 
-    if (periodRes.success) setPeriod(periodRes.data)
-    if (globalRes.success) setGlobalPeriod(globalRes.data)
-    if (listRes.success && listRes.data) {
-      setUserCount(Math.max(listRes.data.total, 1))
-    }
     if (hSubmit.success) setSubmitHeat(hSubmit.data || [])
     if (acts.success) setActivities(acts.data || [])
     if (cont.success) setContests(cont.data?.list || [])
@@ -376,43 +208,6 @@ export function Profile() {
     toast.success('已退出登录')
     navigate('/login', { replace: true })
   }
-
-  const acRate =
-    period && period.submit.total > 0
-      ? (period.ac.total / period.submit.total) * 100
-      : 0
-  const globalAcRate =
-    globalPeriod && globalPeriod.submit.total > 0
-      ? (globalPeriod.ac.total / globalPeriod.submit.total) * 100
-      : 0
-
-  const statRows = useMemo(() => {
-    const n = Math.max(userCount, 1)
-    const problemCount = period?.ac.total ?? 0
-    const problemCountAve = (globalPeriod?.ac.total ?? 0) / n
-    if (mode === 'ac') {
-      return buildRows(
-        period?.ac,
-        globalPeriod?.ac,
-        userCount,
-        'ac',
-        acRate,
-        globalAcRate,
-        problemCount,
-        problemCountAve,
-      )
-    }
-    return buildRows(
-      period?.submit,
-      globalPeriod?.submit,
-      userCount,
-      'submit',
-      acRate,
-      globalAcRate,
-      problemCount,
-      problemCountAve,
-    )
-  }, [mode, period, globalPeriod, userCount, acRate, globalAcRate])
 
   if (loading) {
     return (
@@ -695,32 +490,8 @@ export function Profile() {
           )}
         </aside>
 
-        {/* 右栏：数据 / 热力 / 动态 / 画像 / 比赛 */}
+        {/* 右栏：热力 / 动态 / 画像 / 比赛 */}
         <div className="flex min-w-0 flex-col gap-4">
-          <Card className="gap-3 py-4">
-            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 px-4 space-y-0">
-              <CardTitle className="text-base">数据</CardTitle>
-              <Tabs
-                value={mode}
-                onValueChange={(v) => setMode(v as 'submit' | 'ac')}
-              >
-                <TabsList>
-                  <TabsTrigger value="ac">AC</TabsTrigger>
-                  <TabsTrigger value="submit">提交</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3.5 px-4 sm:gap-3">
-              {statRows.map((row) => (
-                <StatBarRow key={row.title} row={row} />
-              ))}
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                蓝条为本人 · 红线为全站人均（{userCount} 人）
-                <span className="sm:hidden"> · 下方数字为人均参考</span>
-              </p>
-            </CardContent>
-          </Card>
-
           <Card className="gap-3 py-4">
             <CardHeader className="px-4">
               <CardTitle className="text-base">热力图</CardTitle>

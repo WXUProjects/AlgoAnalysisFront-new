@@ -131,6 +131,21 @@ export function QuestionBankDetail() {
     }
   }, [id, isLogin, subTab])
 
+  // 全屏编辑时锁住底层滚动，避免控制栏与正文错位
+  useEffect(() => {
+    if (!editingContent) return
+    const html = document.documentElement
+    const body = document.body
+    const prevHtml = html.style.overflow
+    const prevBody = body.style.overflow
+    html.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    return () => {
+      html.style.overflow = prevHtml
+      body.style.overflow = prevBody
+    }
+  }, [editingContent])
+
   function openTagsEdit() {
     if (!problem) return
     if (!isLogin) {
@@ -269,74 +284,73 @@ export function QuestionBankDetail() {
   const contentEmpty = !problem.contentMd?.trim()
   const tagsEmpty = !problem.tags.length
 
-  // ── 全页题面编辑 ──────────────────────────────────────────
+  // ── 全屏题面编辑：fixed 盖住布局，控制栏不 sticky，仅正文区滚动 ──
+  // 避免 sticky 工具栏叠在正文上，也避开 AppLayout 高度链 / 页脚干扰
   if (editingContent) {
     return (
-      <PageShell className="min-h-0 gap-0 p-0" stagger={false}>
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="sticky top-0 z-20 flex flex-wrap items-center gap-2 border-b bg-background px-4 py-3">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={closeContentEdit}
+      <div className="fixed inset-0 z-50 flex flex-col bg-background">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={closeContentEdit}
+            disabled={saving}
+          >
+            取消
+          </Button>
+          <div className="min-w-0 flex-1">
+            <Input
+              value={titleInput}
+              onChange={(e) => setTitleInput(e.target.value)}
+              placeholder="题目标题（可选，留空不改）"
+              className="max-w-xl"
               disabled={saving}
-            >
-              取消
-            </Button>
-            <div className="min-w-0 flex-1">
-              <Input
-                value={titleInput}
-                onChange={(e) => setTitleInput(e.target.value)}
-                placeholder="题目标题（可选，留空不改）"
-                className="max-w-xl"
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void submitContent()}
+            disabled={saving}
+          >
+            {saving ? '提交中…' : isSiteAdmin ? '保存' : '提交审核'}
+          </Button>
+        </div>
+
+        <div className="shrink-0 border-b px-4 py-2">
+          <p className="text-sm text-muted-foreground">
+            {isSiteAdmin
+              ? '编辑题面。保存后立即生效；若标签为空，系统会继续尝试自动分析标签。'
+              : '编辑题面。提交后由站点管理员审核通过才会展示。'}
+          </p>
+        </div>
+
+        {!isSiteAdmin && (
+          <div className="shrink-0 border-b px-4 py-2">
+            <Field>
+              <FieldLabel htmlFor="edit-content-note">说明（可选）</FieldLabel>
+              <Textarea
+                id="edit-content-note"
+                value={noteInput}
+                onChange={(e) => setNoteInput(e.target.value)}
+                placeholder="简要说明修改原因，方便审核"
+                rows={2}
                 disabled={saving}
               />
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => void submitContent()}
-              disabled={saving}
-            >
-              {saving ? '提交中…' : isSiteAdmin ? '保存' : '提交审核'}
-            </Button>
+            </Field>
           </div>
+        )}
 
-          <div className="border-b px-4 py-2">
-            <p className="text-sm text-muted-foreground">
-              {isSiteAdmin
-                ? '编辑题面。保存后立即生效；若标签为空，系统会继续尝试自动分析标签。'
-                : '编辑题面。提交后由站点管理员审核通过才会展示。'}
-            </p>
-          </div>
-
-          {!isSiteAdmin && (
-            <div className="border-b px-4 py-2">
-              <Field>
-                <FieldLabel htmlFor="edit-content-note">说明（可选）</FieldLabel>
-                <Textarea
-                  id="edit-content-note"
-                  value={noteInput}
-                  onChange={(e) => setNoteInput(e.target.value)}
-                  placeholder="简要说明修改原因，方便审核"
-                  rows={2}
-                  disabled={saving}
-                />
-              </Field>
-            </div>
-          )}
-
-          <RichTextEditor
-            fullPage
-            value={contentInput}
-            onChange={setContentInput}
-            disabled={saving}
-            placeholder="在这里编写题面…"
-            className="min-h-0 flex-1"
-          />
-        </div>
-      </PageShell>
+        <RichTextEditor
+          fullPage
+          value={contentInput}
+          onChange={setContentInput}
+          disabled={saving}
+          placeholder="在这里编写题面…"
+          className="min-h-0 flex-1"
+        />
+      </div>
     )
   }
 
