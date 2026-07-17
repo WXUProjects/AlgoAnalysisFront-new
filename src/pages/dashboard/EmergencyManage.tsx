@@ -10,7 +10,8 @@ import type { EmergencyInfo } from '@shared/api'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { useListQueryState } from '@/hooks/use-list-query-state'
-import { RichTextEditor } from '@/components/rich-text-editor'
+import { MarkdownEditor } from '@/components/markdown-editor'
+import { toMarkdownSource } from '@/lib/markdown'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -97,7 +98,7 @@ export function DashboardEmergencyManage() {
   function openEdit(item: EmergencyInfo) {
     setEditing(item)
     setTitle(item.title)
-    setContent(item.content)
+    setContent(toMarkdownSource(item.content))
     setEnabled(item.enabled)
     setSortOrder(item.sortOrder)
     setOpen(true)
@@ -254,35 +255,45 @@ export function DashboardEmergencyManage() {
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="flex! max-h-[92vh] w-full max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
+          <DialogHeader className="shrink-0 border-b px-5 py-4">
             <DialogTitle>
               {editing ? '编辑紧急通知' : '新建紧急通知'}
             </DialogTitle>
           </DialogHeader>
-          <FieldGroup className="gap-3">
-            <Field className="gap-1.5">
-              <FieldLabel>标题</FieldLabel>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-            </Field>
-            <Field className="flex-row items-center justify-between gap-3">
-              <FieldLabel>立即生效</FieldLabel>
-              <Switch checked={enabled} onCheckedChange={setEnabled} />
-            </Field>
-            <Field className="gap-1.5">
-              <FieldLabel>展示顺序（越小越先）</FieldLabel>
-              <Input
-                type="number"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(Number(e.target.value) || 0)}
-              />
-            </Field>
-            <Field className="gap-1.5">
-              <FieldLabel>正文</FieldLabel>
-              <RichTextEditor value={content} onChange={setContent} />
-            </Field>
-          </FieldGroup>
-          <DialogFooter>
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            <FieldGroup className="gap-3">
+              <Field className="gap-1.5">
+                <FieldLabel>标题</FieldLabel>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              </Field>
+              <Field className="flex-row items-center justify-between gap-3">
+                <FieldLabel>立即生效</FieldLabel>
+                <Switch checked={enabled} onCheckedChange={setEnabled} />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel>展示顺序（越小越先）</FieldLabel>
+                <Input
+                  type="number"
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(Number(e.target.value) || 0)}
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel>正文</FieldLabel>
+                <MarkdownEditor
+                  value={content}
+                  onChange={setContent}
+                  previewMode="auto"
+                  minHeight={360}
+                  placeholder={
+                    '用 Markdown 编写通知…\n\n支持 **粗体**、列表、链接与 $公式$'
+                  }
+                />
+              </Field>
+            </FieldGroup>
+          </div>
+          <DialogFooter className="shrink-0 border-t px-5 py-3">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               取消
             </Button>

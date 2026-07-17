@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { createPaste, listMyPastes, deletePaste } from '@/api/paste'
@@ -29,7 +29,7 @@ import {
 import { formatTime } from '@/lib/format'
 
 export function PasteCreate() {
-  const { isLogin } = useAuth()
+  const { isLogin, ready } = useAuth()
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -41,20 +41,42 @@ export function PasteCreate() {
   const [saving, setSaving] = useState(false)
   const [mine, setMine] = useState<PasteInfo[]>([])
   const [mineLoading, setMineLoading] = useState(false)
+  const [mineError, setMineError] = useState<string | null>(null)
+  /** 忽略过期的并发请求结果，避免后返回的失败把已成功列表冲掉 */
+  const mineReqSeq = useRef(0)
 
   const resolvedLanguage = language === 'auto' ? detected : language
 
   const loadMine = useCallback(async () => {
-    if (!isLogin) return
+    if (!ready || !isLogin) return
+    const seq = ++mineReqSeq.current
     setMineLoading(true)
+    setMineError(null)
     const res = await listMyPastes()
+    if (seq !== mineReqSeq.current) return
     setMineLoading(false)
-    if (res.success && res.data) setMine(res.data)
-  }, [isLogin])
+    if (res.success && Array.isArray(res.data)) {
+      setMine(res.data)
+      setMineError(null)
+      return
+    }
+    // 失败时不要静默显示「还没有发布过」
+    setMineError(res.message || '加载失败')
+  }, [ready, isLogin])
 
   useEffect(() => {
     void loadMine()
   }, [loadMine])
+
+  // 切回标签页时补拉一次（鉴权刚恢复 / 上次静默失败时）
+  useEffect(() => {
+    if (!ready || !isLogin) return
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void loadMine()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [ready, isLogin, loadMine])
 
   useEffect(() => {
     if (language !== 'auto') return
@@ -204,38 +226,65 @@ export function PasteCreate() {
             <CardDescription>仅本人可见列表；他人只能通过链接打开。</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {mineLoading ? (
+            {mineLoading && !mine.length ? (
               <p className="text-sm text-muted-foreground">加载中…</p>
+            ) : mineError && !mine.length ? (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-destructive">{mineError}</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void loadMine()}
+                >
+                  重试
+                </Button>
+              </div>
             ) : !mine.length ? (
               <p className="text-sm text-muted-foreground">还没有发布过</p>
             ) : (
-              mine.map((p) => (
-                <div
-                  key={p.slug}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
-                >
-                  <div className="min-w-0">
-                    <Link
-                      to={`/p/${p.slug}`}
-                      className="font-medium text-primary hover:underline"
+              <>
+                {mineError ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>刷新失败：{mineError}</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => void loadMine()}
                     >
-                      {p.title || p.slug}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">
-                      {languageLabel(p.language)}
-                      {p.createdAt ? ` · ${formatTime(String(p.createdAt))}` : ''}
-                    </p>
+                      重试
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void handleDelete(p.slug)}
+                ) : null}
+                {mine.map((p) => (
+                  <div
+                    key={p.slug}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
                   >
-                    删除
-                  </Button>
-                </div>
-              ))
+                    <div className="min-w-0">
+                      <Link
+                        to={`/p/${p.slug}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {p.title || p.slug}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        {languageLabel(p.language)}
+                        {p.createdAt ? ` · ${formatTime(String(p.createdAt))}` : ''}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void handleDelete(p.slug)}
+                    >
+                      删除
+                    </Button>
+                  </div>
+                ))}
+              </>
             )}
           </CardContent>
         </Card>

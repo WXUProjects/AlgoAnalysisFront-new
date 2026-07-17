@@ -61,15 +61,38 @@ export async function getPaste(slug: string): Promise<ApiResult<PasteInfo>> {
 export async function listMyPastes(): Promise<ApiResult<PasteInfo[]>> {
   const res = await get<Record<string, unknown>>(endpoints.user.paste.mine)
   const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
-  const listRaw = (Array.isArray(raw.list) ? raw.list : []) as Record<
-    string,
-    unknown
-  >[]
-  if (!res.success && !Array.isArray(raw.list)) {
+  // 兼容 { list } / { data: [] } / { data: { list } }
+  const nested =
+    raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)
+      ? (raw.data as Record<string, unknown>)
+      : null
+  const listRaw = (
+    Array.isArray(raw.list)
+      ? raw.list
+      : Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(nested?.list)
+          ? nested.list
+          : null
+  ) as Record<string, unknown>[] | null
+
+  if (listRaw === null) {
     return {
       success: false,
       message: res.message || '加载失败',
       data: null,
+      status: res.status,
+      raw: res.raw,
+    }
+  }
+  // 即使业务 code 非 0，只要解析出 list 也展示（避免把失败当成「空列表」）
+  if (!res.success && listRaw.length === 0 && res.status && res.status >= 400) {
+    return {
+      success: false,
+      message: res.message || '加载失败',
+      data: null,
+      status: res.status,
+      raw: res.raw,
     }
   }
   return {
@@ -77,6 +100,7 @@ export async function listMyPastes(): Promise<ApiResult<PasteInfo[]>> {
     message: res.message || 'ok',
     data: listRaw.map((x) => normalizePaste(x, false)),
     raw: res.raw,
+    status: res.status,
   }
 }
 

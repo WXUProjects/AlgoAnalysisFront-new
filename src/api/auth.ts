@@ -39,14 +39,29 @@ export async function login(
   }
 
   try {
-    const res = await http.post<LoginRes>(endpoints.user.auth.login, body)
+    const res = await http.post<LoginRes & Record<string, unknown>>(
+      endpoints.user.auth.login,
+      body,
+    )
     const data = res.data
     if (data?.success && data.jwtToken) {
       jwt.setNewToken(data.jwtToken)
+      // 兼容 wasDormant / was_dormant
+      const wasDormant = Boolean(
+        data.wasDormant ?? (data as { was_dormant?: boolean }).was_dormant,
+      )
+      const syncStarted = Boolean(
+        data.syncStarted ?? (data as { sync_started?: boolean }).sync_started,
+      )
+      const normalized: LoginRes = {
+        ...data,
+        wasDormant,
+        syncStarted,
+      }
       return {
         success: true,
         message: data.message || '登录成功',
-        data,
+        data: normalized,
       }
     }
     return {

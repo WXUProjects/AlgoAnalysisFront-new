@@ -62,6 +62,7 @@ export function DashboardOrgsManage() {
   const [enableAiEmail, setEnableAiEmail] = useState(true)
   const [enableAiWeeklyEmail, setEnableAiWeeklyEmail] = useState(true)
   const [enableSpider, setEnableSpider] = useState(true)
+  const [forceSync, setForceSync] = useState(false)
   const [spiderInterval, setSpiderInterval] = useState(60)
   const [aiInterval, setAiInterval] = useState(180)
   const [emailSchedule, setEmailSchedule] = useState('30 7 * * *')
@@ -88,6 +89,7 @@ export function DashboardOrgsManage() {
     setEnableAiEmail(selected.enableAiEmail !== false)
     setEnableAiWeeklyEmail(selected.enableAiWeeklyEmail !== false)
     setEnableSpider(selected.enableSpider !== false)
+    setForceSync(!!selected.forceSync)
     setSpiderInterval(selected.spiderIntervalMin || 60)
     setAiInterval(selected.aiSummaryIntervalMin || 180)
     setEmailSchedule(selected.aiEmailSchedule || '30 7 * * *')
@@ -118,6 +120,7 @@ export function DashboardOrgsManage() {
       enableAiEmail,
       enableAiWeeklyEmail,
       enableSpider,
+      forceSync,
       spiderIntervalMin: spiderInterval,
       aiSummaryIntervalMin: aiInterval,
       aiEmailSchedule: emailSchedule,
@@ -351,6 +354,15 @@ export function DashboardOrgsManage() {
                   <div className="flex items-center justify-between">
                     <Label>定时同步</Label>
                     <Switch checked={enableSpider} onCheckedChange={setEnableSpider} />
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <Label>强制同步（跳过休眠）</Label>
+                      <span className="text-xs text-muted-foreground">
+                        集训/比赛期：本组织成员不因不活跃暂停后台同步
+                      </span>
+                    </div>
+                    <Switch checked={forceSync} onCheckedChange={setForceSync} />
                   </div>
                   <div className="space-y-2">
                     <Label>数据同步间隔（分钟）</Label>

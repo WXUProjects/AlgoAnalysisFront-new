@@ -1,5 +1,6 @@
 import { marked, type Tokens } from 'marked'
 import katex from 'katex'
+import TurndownService from 'turndown'
 import 'katex/dist/katex.min.css'
 import { highlightWith, loadHljs, mapHljsLang } from '@/lib/code-hl'
 
@@ -259,22 +260,52 @@ export function looksLikeHtml(src: string): boolean {
   return /<\/?[a-z][\s\S]*>/i.test(src.trim())
 }
 
+let turndown: TurndownService | null = null
+
+function getTurndown(): TurndownService {
+  if (turndown) return turndown
+  const td = new TurndownService({
+    headingStyle: 'atx',
+    codeBlockStyle: 'fenced',
+    bulletListMarker: '-',
+    emDelimiter: '*',
+    strongDelimiter: '**',
+  })
+  td.addRule('strikethrough', {
+    filter: ['del', 's', 'strike'] as unknown as TurndownService.Filter,
+    replacement: (content) => `~~${content}~~`,
+  })
+  turndown = td
+  return td
+}
+
 /**
- * 把 Markdown 转成 TipTap 可编辑的 HTML（不做 KaTeX，公式以原文保留）。
- * 已是 HTML 则原样返回。
+ * 历史富文本 HTML → Markdown（公告/紧急通知编辑兼容）。
  */
-export function markdownToEditorHtml(src: string): string {
-  if (!src?.trim()) return ''
-  if (looksLikeHtml(src)) return src
+export function htmlToMarkdown(html: string): string {
+  if (!html?.trim()) return ''
   try {
-    return marked.parse(src, { async: false }) as string
+    return getTurndown().turndown(html).trim()
   } catch {
-    return src
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br>')
+    return html
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .trim()
   }
+}
+
+/**
+ * 编辑器入参：HTML 自动转 Markdown，已是 MD 原样。
+ */
+export function toMarkdownSource(src: string): string {
+  if (!src?.trim()) return ''
+  if (looksLikeHtml(src)) return htmlToMarkdown(src)
+  return src
 }
 
 /**

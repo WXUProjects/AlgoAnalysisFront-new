@@ -43,7 +43,15 @@ export function Login() {
     const res = await login(username, password)
     setPending(false)
     if (res.success) {
-      toast.success(res.message || '登录成功')
+      const msg = res.message || '登录成功'
+      if (res.data?.wasDormant) {
+        toast.message(msg, {
+          description: '全量同步可能需要几分钟，完成后请刷新页面查看最新数据。',
+          duration: 8000,
+        })
+      } else {
+        toast.success(msg)
+      }
       navigate(postLoginPath(redirectParam), { replace: true })
     } else {
       toast.error(res.message || '登录失败')

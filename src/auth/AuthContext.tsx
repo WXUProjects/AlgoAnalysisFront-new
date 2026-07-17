@@ -44,7 +44,14 @@ interface AuthState {
   orgs: OrgInfo[]
   currentOrg: OrgInfo | null
   ready: boolean
-  login: (username: string, password: string) => Promise<{ success: boolean; message: string }>
+  login: (
+    username: string,
+    password: string,
+  ) => Promise<{
+    success: boolean
+    message: string
+    data?: { wasDormant?: boolean; syncStarted?: boolean } | null
+  }>
   logout: () => void
   sync: () => Promise<void>
   switchOrg: (orgId: number) => Promise<{ success: boolean; message: string }>
@@ -185,7 +192,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.success) {
         await sync()
       }
-      return { success: res.success, message: res.message }
+      return {
+        success: res.success,
+        message: res.message,
+        data: res.data
+          ? {
+              wasDormant: res.data.wasDormant,
+              syncStarted: res.data.syncStarted,
+            }
+          : null,
+      }
     },
     [sync],
   )

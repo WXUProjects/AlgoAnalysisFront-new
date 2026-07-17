@@ -24,12 +24,12 @@ export default defineConfig({
           if (
             id.includes('katex') ||
             id.includes('markdown-it') ||
-            id.includes('/marked/')
+            id.includes('/marked/') ||
+            id.includes('turndown')
           ) {
             return 'markdown'
           }
           if (id.includes('highlight.js')) return 'syntax-highlighting'
-          if (id.includes('@tiptap') || id.includes('prosemirror')) return 'editor'
           if (id.includes('gsap')) return 'gsap'
           if (id.includes('radix-ui')) return 'radix-ui'
           if (id.includes('lucide-react')) return 'icons'

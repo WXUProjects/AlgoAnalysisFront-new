@@ -43,8 +43,27 @@
 
 **LoginRes**
 ```json
-{ "success": true, "message": "string", "jwtToken": "string" }
+{
+  "success": true,
+  "message": "string",
+  "jwtToken": "string",
+  "wasDormant": false,
+  "syncStarted": false
+}
 ```
+- `wasDormant`：登录前处于不活跃休眠；为 true 时后端会入队**全量**爬虫，`message` 会提示同步中  
+- `syncStarted`：是否已触发唤醒入队  
+
+**不活跃休眠（成本）**
+
+| 项 | 说明 |
+|----|------|
+| 阈值 | `site_configs.inactive_days`，默认 14，站管可改 1–365 |
+| 主信号 | `users.last_login_at`（登录写；VisitPing 登录用户 1h 节流写） |
+| 豁免 | 站管 / `sync_exempt` / 组织 staff / 组织 `force_sync` / plan∈{team,pro} |
+| 休眠效果 | 定时爬虫、AI 总结、邮件、画像预热跳过；登录唤醒全量爬 |
+
+相关 API：`POST /user/site/config`（`inactiveDays`+`setInactiveDays`）、`POST /user/org/update`（`forceSync` 仅站管）、`POST /user/profile/set-sync-exempt`
 **RegisterReq**
 
 ```json
@@ -96,13 +115,14 @@
 | GET | `/user/profile/get-by-id` | 否 | query: `userId`；公共域受隐私约束，私人域组织内隐私配置失效 |
 | GET | `/user/profile/get-by-username` | 否 | query: `username` 精确匹配；返回同 get-by-id |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` 模糊（用户名/昵称） |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开）、`problemFetchEnabled`/`problemAiEnabled`（题面爬取/AI 有效状态）、`createdAt`（注册时间 unix 秒）、`spiderIntervalMin`/`aiSummaryIntervalMin`（有效定时间隔）、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`（是否站管个人覆盖） |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开）、`problemFetchEnabled`/`problemAiEnabled`（题面爬取/AI 有效状态）、`createdAt`（注册时间 unix 秒）、`spiderIntervalMin`/`aiSummaryIntervalMin`（有效定时间隔）、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`（是否站管个人覆盖）、`syncExempt`/`lastLoginAt`/`dormant`（休眠相关） |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新头像/邮箱；`name` 已忽略（昵称改「我的组织」）；邮箱变更须 `emailCode`（`purpose=change_email`） |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
 | POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；本人 / 站点管理员 / **当前组织 staff 管理本组织成员**；无组织授权时不可开启日报/周报 |
 | POST | `/user/profile/set-problem-pipeline` | 是(站点管理员) | body: `{ userId, enabled, kind: fetch\|ai }`；个人覆盖：近窗提交是否触发题面爬取 / 题面 AI（默认按是否非公共域组织） |
 | POST | `/user/profile/set-sync-intervals` | 是(站点管理员) | body: `{ userId, setSpider?, spiderIntervalMin?, setAi?, aiSummaryIntervalMin? }`；个人覆盖爬取/AI 总结间隔（分钟，**优先级最高**）；间隔 `0` 表示清除覆盖回落组织 MIN；范围 5–10080 |
+| POST | `/user/profile/set-sync-exempt` | 是(站点管理员) | body: `{ userId, exempt }`；永不休眠（跳过不活跃判定） |
 | GET | `/user/profile/ids-by-group` | 否 | query: `groupId` |
 | POST | `/user/profile/get-by-ids` | 否 | body: `{ userIds, orgId? }`；`name`=该组织 `org_display_name`（空则 username）；`orgId` 缺省用 JWT 当前组织，再回落公共域 |
 | GET | `/user/profile/non-public-org-user-ids` | 否（内部） | 题面流水线资格：`userIds`/`fetchUserIds`=爬取资格，`aiUserIds`=AI 资格（默认非公共域组织 + 个人覆盖） |
@@ -136,8 +156,8 @@
 | POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc`，返回 `{ url }`（≤3MB 图片）。**url 带真实扩展名**（如 `.png`/`.jpg`） |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
 | GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo） |
-| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI 密钥脱敏） |
-| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI 模型密钥；密钥空串表示不修改 |
+| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI 密钥脱敏 + `inactiveDays`） |
+| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + 可选 `inactiveDays`/`setInactiveDays`；密钥空串表示不修改 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
 | POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
 | GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |

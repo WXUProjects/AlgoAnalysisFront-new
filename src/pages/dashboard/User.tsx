@@ -9,6 +9,7 @@ import {
   setEmailEnabled,
   setProblemPipeline,
   setSiteAdmin,
+  setSyncExempt,
   setSyncIntervals,
 } from '@/api/profile'
 import { updateSpider } from '@/api/spider'
@@ -187,6 +188,30 @@ function UserListPage({ scope }: { scope: UserScope }) {
         cur && cur.userId === u.userId ? { ...cur, isSiteAdmin: next } : cur,
       )
       void load()
+    } else toast.error(res.message || '操作失败')
+  }
+
+  async function handleToggleSyncExempt(u: UserListItem) {
+    if (!isAdmin) return
+    const next = !u.syncExempt
+    const key = `${u.userId}:sync-exempt`
+    setTogglingKey(key)
+    const res = await setSyncExempt(u.userId, next)
+    setTogglingKey(null)
+    if (res.success) {
+      toast.success(next ? '已标记永不休眠' : '已取消永不休眠')
+      setList((prev) =>
+        prev.map((row) =>
+          row.userId === u.userId
+            ? { ...row, syncExempt: next, dormant: next ? false : row.dormant }
+            : row,
+        ),
+      )
+      setDetailUser((cur) =>
+        cur && cur.userId === u.userId
+          ? { ...cur, syncExempt: next, dormant: next ? false : cur.dormant }
+          : cur,
+      )
     } else toast.error(res.message || '操作失败')
   }
 
@@ -454,6 +479,16 @@ function UserListPage({ scope }: { scope: UserScope }) {
                               站点管理员
                             </Badge>
                           )}
+                          {u.dormant && (
+                            <Badge variant="outline" className="text-[10px]">
+                              休眠
+                            </Badge>
+                          )}
+                          {u.syncExempt && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              永不休眠
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>{u.username}</TableCell>
@@ -701,6 +736,16 @@ function UserListPage({ scope }: { scope: UserScope }) {
                         站点管理员
                       </Badge>
                     )}
+                    {detailUser.dormant && (
+                      <Badge variant="outline" className="text-[10px]">
+                        休眠
+                      </Badge>
+                    )}
+                    {detailUser.syncExempt && (
+                      <Badge variant="secondary" className="text-[10px]">
+                        永不休眠
+                      </Badge>
+                    )}
                   </div>
                   <span className="text-sm text-muted-foreground truncate">
                     @{detailUser.username}
@@ -709,6 +754,22 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     注册时间：
                     {detailUser.createdAt
                       ? new Date(detailUser.createdAt * 1000).toLocaleString(
+                          'zh-CN',
+                          {
+                            hour12: false,
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          },
+                        )
+                      : '暂无记录'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    最近活跃：
+                    {detailUser.lastLoginAt
+                      ? new Date(detailUser.lastLoginAt * 1000).toLocaleString(
                           'zh-CN',
                           {
                             hour12: false,
@@ -747,6 +808,26 @@ function UserListPage({ scope }: { scope: UserScope }) {
               <Separator />
 
               <FieldGroup className="gap-4">
+                {isAdmin && (
+                  <Field orientation="horizontal">
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <FieldLabel htmlFor="sync-exempt">永不休眠</FieldLabel>
+                      <FieldDescription>
+                        跳过不活跃判定，后台定时任务始终对该用户生效
+                      </FieldDescription>
+                    </div>
+                    <Switch
+                      id="sync-exempt"
+                      checked={!!detailUser.syncExempt}
+                      disabled={
+                        togglingKey === `${detailUser.userId}:sync-exempt`
+                      }
+                      onCheckedChange={() =>
+                        void handleToggleSyncExempt(detailUser)
+                      }
+                    />
+                  </Field>
+                )}
                 <Field orientation="horizontal">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <FieldLabel htmlFor="pipeline-fetch">题面爬取</FieldLabel>

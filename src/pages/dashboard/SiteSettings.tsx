@@ -90,6 +90,8 @@ export function DashboardSiteSettings() {
   const [aiSecret, setAiSecret] = useState('')
   const [aiSecretSet, setAiSecretSet] = useState(false)
 
+  const [inactiveDays, setInactiveDays] = useState('14')
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -191,6 +193,7 @@ export function DashboardSiteSettings() {
       setAiModel(d.aiAnalyzeModel || '')
       setAiSecret(d.aiAnalyzeSecretSet ? SECRET_PLACEHOLDER : '')
       setAiSecretSet(d.aiAnalyzeSecretSet)
+      setInactiveDays(String(d.inactiveDays || 14))
       const running = await refreshJobs()
       if (!cancelled && running) {
         startPoll(running.id)
@@ -241,6 +244,7 @@ export function DashboardSiteSettings() {
     const agentSec = secretPayload(agentSecret, agentSecretSet)
     const aiSec = secretPayload(aiSecret, aiSecretSet)
 
+    const days = Math.max(1, Math.min(365, Number(inactiveDays) || 14))
     setSaving(true)
     const res = await updateSiteConfig({
       siteTitle: title.trim(),
@@ -260,6 +264,8 @@ export function DashboardSiteSettings() {
       aiAnalyzeModel: aiModel.trim(),
       aiAnalyzeSecret: aiSec.secret,
       clearAiAnalyzeSecret: aiSec.clear,
+      inactiveDays: days,
+      setInactiveDays: true,
     })
     setSaving(false)
     if (res.success) {
@@ -429,6 +435,34 @@ export function DashboardSiteSettings() {
                 />
                 <p className="text-xs text-muted-foreground">
                   留空则使用默认：苏ICP备2025217901号。链接至工信部备案查询。
+                </p>
+              </Field>
+            </FieldGroup>
+          </CardContent>
+        </Card>
+
+        <Card className="gap-3 py-4">
+          <CardHeader className="px-4 pb-0">
+            <CardTitle>不活跃休眠</CardTitle>
+            <CardDescription>
+              超过指定天数未登录/访问的用户将暂停定时爬虫、AI 总结与邮件，以节省资源。登录后自动全量同步。
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4">
+            <FieldGroup className="gap-3">
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="inactive-days">不活跃天数</FieldLabel>
+                <Input
+                  id="inactive-days"
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={inactiveDays}
+                  onChange={(e) => setInactiveDays(e.target.value)}
+                  placeholder="14"
+                />
+                <p className="text-xs text-muted-foreground">
+                  默认 14 天，范围 1–365。站点管理员、组织教练/队长、付费组织、强制同步组织及「永不休眠」用户不受影响。
                 </p>
               </Field>
             </FieldGroup>

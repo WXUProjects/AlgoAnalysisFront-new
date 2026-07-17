@@ -26,6 +26,7 @@ export const endpoints = {
       setEmailEnabled: `${API_PREFIX}/user/profile/set-email-enabled`,
       setProblemPipeline: `${API_PREFIX}/user/profile/set-problem-pipeline`,
       setSyncIntervals: `${API_PREFIX}/user/profile/set-sync-intervals`,
+      setSyncExempt: `${API_PREFIX}/user/profile/set-sync-exempt`,
       idsByGroup: `${API_PREFIX}/user/profile/ids-by-group`,
       getByIds: `${API_PREFIX}/user/profile/get-by-ids`,
       nonPublicOrgUserIds: `${API_PREFIX}/user/profile/non-public-org-user-ids`,
@@ -207,6 +208,10 @@ export interface LoginRes {
   success: boolean
   message: string
   jwtToken: string
+  /** 登录前处于休眠；已触发全量同步 */
+  wasDormant?: boolean
+  /** 是否已入队全量爬虫 */
+  syncStarted?: boolean
 }
 
 export interface RegisterReq {
@@ -349,6 +354,12 @@ export interface UserListItem {
   spiderIntervalOverridden?: boolean
   /** 是否存在站点管理员 AI 总结间隔覆盖 */
   aiSummaryIntervalOverridden?: boolean
+  /** 站管：永不休眠 */
+  syncExempt?: boolean
+  /** 最近活跃 unix 秒 */
+  lastLoginAt?: number
+  /** 当前是否休眠（后台定时已停） */
+  dormant?: boolean
 }
 
 export interface UserListRes {
@@ -392,6 +403,8 @@ export interface OrgInfo {
   spiderIntervalMin?: number
   aiSummaryIntervalMin?: number
   aiEmailSchedule?: string
+  /** 站管：强制同步（跳过成员休眠） */
+  forceSync?: boolean
   myRole?: 'member' | 'coach' | 'captain' | 'org_admin' | string
   /** 我在该组织内的对外称呼（org_members.org_display_name） */
   orgDisplayName?: string

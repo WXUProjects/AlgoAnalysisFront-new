@@ -148,6 +148,14 @@ export async function setSyncIntervals(body: {
   })
 }
 
+/** 站点管理员：永不休眠 */
+export async function setSyncExempt(
+  userId: number,
+  exempt: boolean,
+): Promise<ApiResult<unknown>> {
+  return post(endpoints.user.profile.setSyncExempt, { userId, exempt })
+}
+
 export async function moveGroup(body: {
   userId: number
   groupId: number
@@ -239,6 +247,13 @@ export async function listProfiles(
             u.aiSummaryIntervalOverridden === undefined
               ? undefined
               : bool(u.aiSummaryIntervalOverridden),
+          syncExempt:
+            u.syncExempt === undefined ? undefined : bool(u.syncExempt),
+          lastLoginAt:
+            u.lastLoginAt === undefined || u.lastLoginAt === null
+              ? undefined
+              : num(u.lastLoginAt) || undefined,
+          dormant: u.dormant === undefined ? undefined : bool(u.dormant),
           orgs: orgsRaw.map((o) => ({
             orgId: num(o.orgId),
             name: str(o.name),

@@ -17,7 +17,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
-import { RichTextEditor } from '@/components/rich-text-editor'
+import { MarkdownEditor } from '@/components/markdown-editor'
 import { TagInput } from '@/components/tag-input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -52,7 +52,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime } from '@/lib/format'
 import { getSubmitLink } from '@/lib/link'
 import { num, str } from '@/lib/http'
-import { markdownToEditorHtml } from '@/lib/markdown'
+import { toMarkdownSource } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 
 export function QuestionBankDetail() {
@@ -168,7 +168,7 @@ export function QuestionBankDetail() {
       toast.error('请先登录后再修改')
       return
     }
-    setContentInput(markdownToEditorHtml(problem.contentMd || ''))
+    setContentInput(toMarkdownSource(problem.contentMd || ''))
     setTitleInput(problem.title || '')
     setNoteInput('')
     setEditingContent(true)
@@ -220,7 +220,7 @@ export function QuestionBankDetail() {
   async function submitContent() {
     if (!problem) return
     const content = contentInput.trim()
-    if (!content || content === '<p></p>') {
+    if (!content) {
       toast.error('题面内容不能为空')
       return
     }
@@ -342,12 +342,15 @@ export function QuestionBankDetail() {
           </div>
         )}
 
-        <RichTextEditor
+        <MarkdownEditor
           fullPage
           value={contentInput}
           onChange={setContentInput}
           disabled={saving}
-          placeholder="在这里编写题面…"
+          previewMode="markdown"
+          placeholder={
+            '用 Markdown 编写题面…\n\n## 题目描述\n\n支持代码块、表格与 $LaTeX$ 公式'
+          }
           className="min-h-0 flex-1"
         />
       </div>

@@ -27,6 +27,8 @@ export type SiteAdminConfig = SiteConfig & {
   aiAnalyzeModel: string
   aiAnalyzeSecretMasked: string
   aiAnalyzeSecretSet: boolean
+  /** 不活跃天数阈值，默认 14 */
+  inactiveDays: number
 }
 
 function normalizeBrand(raw: Record<string, unknown> | null | undefined): SiteConfig {
@@ -56,6 +58,7 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     aiAnalyzeModel: str(d.aiAnalyzeModel),
     aiAnalyzeSecretMasked: str(d.aiAnalyzeSecretMasked),
     aiAnalyzeSecretSet: Boolean(d.aiAnalyzeSecretSet),
+    inactiveDays: Math.max(1, Math.min(365, num(d.inactiveDays, 14) || 14)),
   }
 }
 
@@ -109,6 +112,8 @@ export async function updateSiteConfig(body: {
   aiAnalyzeModel?: string
   aiAnalyzeSecret?: string
   clearAiAnalyzeSecret?: boolean
+  inactiveDays?: number
+  setInactiveDays?: boolean
 }): Promise<ApiResult<SiteConfig>> {
   const res = await post<Record<string, unknown>>(endpoints.user.site.config, body)
   if (!res.success) return { ...res, data: null }

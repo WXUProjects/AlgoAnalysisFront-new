@@ -10,7 +10,8 @@ import type { BulletinInfo } from '@shared/api'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { useListQueryState } from '@/hooks/use-list-query-state'
-import { RichTextEditor } from '@/components/rich-text-editor'
+import { MarkdownEditor } from '@/components/markdown-editor'
+import { toMarkdownSource } from '@/lib/markdown'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,7 +96,7 @@ export function DashboardBulletinManage() {
   function openEdit(item: BulletinInfo) {
     setEditing(item)
     setTitle(item.title)
-    setContent(item.content)
+    setContent(toMarkdownSource(item.content))
     setPinned(item.isPinned)
     setOpen(true)
   }
@@ -239,25 +240,35 @@ export function DashboardBulletinManage() {
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="flex! max-h-[92vh] w-full max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
+          <DialogHeader className="shrink-0 border-b px-5 py-4">
             <DialogTitle>{editing ? '编辑公告' : '新建公告'}</DialogTitle>
           </DialogHeader>
-          <FieldGroup className="gap-3">
-            <Field className="gap-1.5">
-              <FieldLabel>标题</FieldLabel>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-            </Field>
-            <Field className="flex-row items-center justify-between gap-3">
-              <FieldLabel>置顶</FieldLabel>
-              <Switch checked={pinned} onCheckedChange={setPinned} />
-            </Field>
-            <Field className="gap-1.5">
-              <FieldLabel>正文</FieldLabel>
-              <RichTextEditor value={content} onChange={setContent} />
-            </Field>
-          </FieldGroup>
-          <DialogFooter>
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            <FieldGroup className="gap-3">
+              <Field className="gap-1.5">
+                <FieldLabel>标题</FieldLabel>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              </Field>
+              <Field className="flex-row items-center justify-between gap-3">
+                <FieldLabel>置顶</FieldLabel>
+                <Switch checked={pinned} onCheckedChange={setPinned} />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel>正文</FieldLabel>
+                <MarkdownEditor
+                  value={content}
+                  onChange={setContent}
+                  previewMode="auto"
+                  minHeight={360}
+                  placeholder={
+                    '用 Markdown 编写公告…\n\n支持 **粗体**、列表、代码与链接'
+                  }
+                />
+              </Field>
+            </FieldGroup>
+          </div>
+          <DialogFooter className="shrink-0 border-t px-5 py-3">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               取消
             </Button>
