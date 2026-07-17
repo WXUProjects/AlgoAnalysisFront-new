@@ -142,10 +142,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [sync])
 
-  // 有效期内活跃则重签短期 JWT；过期则登出
+  // 有效期内活跃则 refresh 滚动续期（后端默认 7 天）；过期则登出
   useEffect(() => {
     let lastRenewAt = 0
-    const RENEW_MIN_INTERVAL_MS = 60 * 60 * 1000 // 续期最多每小时一次
+    // 与后端 7 天 TTL 匹配：活跃时最多每天续一次即可，避免过于频繁
+    const RENEW_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000
 
     const renewIfNeeded = async () => {
       if (!user) return
@@ -170,8 +171,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (document.visibilityState === 'visible') void renewIfNeeded()
     }
     document.addEventListener('visibilitychange', onVis)
-    // 长开标签页：每小时续期
-    const t = window.setInterval(() => void renewIfNeeded(), 60 * 60 * 1000)
+    // 长开标签页：每天尝试续期一次
+    const t = window.setInterval(() => void renewIfNeeded(), 24 * 60 * 60 * 1000)
     return () => {
       document.removeEventListener('visibilitychange', onVis)
       window.clearInterval(t)
