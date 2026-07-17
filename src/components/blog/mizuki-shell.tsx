@@ -41,8 +41,6 @@ type Props = {
   showSidebar?: boolean
   /** Article TOC or other right-rail extras (desktop sidebar) */
   panelExtra?: ReactNode
-  /** Show soft gradient banner (home) */
-  showBanner?: boolean
   children: ReactNode
 }
 
@@ -63,7 +61,6 @@ export function MizukiShell({
   categories = [],
   showSidebar = true,
   panelExtra,
-  showBanner = false,
   children,
 }: Props) {
   const location = useLocation()
@@ -338,19 +335,6 @@ export function MizukiShell({
           </div>
         )}
       </div>
-
-      {showBanner && (
-        <div className="mz-banner" aria-hidden={false}>
-          <div className="mz-banner-content">
-            <h1 className="mz-banner-title">{displayName}</h1>
-            {subtitle ? (
-              <p className="mz-banner-sub">{subtitle}</p>
-            ) : (
-              <p className="mz-banner-sub">@{username} 的博客</p>
-            )}
-          </div>
-        </div>
-      )}
 
       <div className="mz-main-wrap">
         <div className={cn('mz-grid', hasSidebarContent && 'has-sidebar')}>

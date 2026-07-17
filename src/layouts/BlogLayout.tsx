@@ -239,12 +239,6 @@ export function BlogLayout() {
               categories={categories}
               showSidebar={showPanel && !loading && !error}
               panelExtra={panelExtra}
-              showBanner={
-                !loading &&
-                !error &&
-                (location.pathname === `/blog/${username}` ||
-                  location.pathname === `/blog/${username}/`)
-              }
             >
               {body}
             </MizukiShell>

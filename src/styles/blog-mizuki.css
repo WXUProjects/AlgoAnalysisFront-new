@@ -34,8 +34,6 @@
   --mz-btn-bg-hover: oklch(0.9 0.05 var(--mz-hue));
   --mz-btn-plain-hover: oklch(0.95 0.025 var(--mz-hue));
   --mz-enter-btn: oklch(0.95 0.025 var(--mz-hue));
-  --mz-banner-from: oklch(0.72 0.1 var(--mz-hue));
-  --mz-banner-to: oklch(0.55 0.14 calc(var(--mz-hue) + 40));
   --mz-shadow:
     0 1px 2px rgba(0, 0, 0, 0.04),
     0 4px 16px rgba(0, 0, 0, 0.04);
@@ -81,8 +79,6 @@
   --mz-btn-bg-hover: oklch(0.38 0.04 var(--mz-hue));
   --mz-btn-plain-hover: oklch(0.3 0.035 var(--mz-hue));
   --mz-enter-btn: oklch(0.33 0.035 var(--mz-hue));
-  --mz-banner-from: oklch(0.32 0.08 var(--mz-hue));
-  --mz-banner-to: oklch(0.22 0.06 calc(var(--mz-hue) + 40));
   --mz-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   --mz-shadow-hover: 0 4px 18px rgba(0, 0, 0, 0.35);
   --mz-nav-bg: rgba(20, 20, 28, 0.72);
@@ -286,73 +282,6 @@
   flex-direction: column;
   gap: 0.15rem;
   animation: mz-fade-in 180ms var(--mz-ease);
-}
-
-/* ---------- banner (home only, simplified) ---------- */
-
-.mz-banner {
-  position: relative;
-  height: clamp(10rem, 28vh, 16rem);
-  margin: 0.5rem 1rem 0;
-  max-width: calc(var(--mz-page-width) - 2rem);
-  margin-left: auto;
-  margin-right: auto;
-  border-radius: calc(var(--mz-radius) + 0.15rem);
-  overflow: hidden;
-  background: linear-gradient(
-    135deg,
-    var(--mz-banner-from) 0%,
-    var(--mz-banner-to) 55%,
-    oklch(0.65 0.08 calc(var(--mz-hue) + 80)) 100%
-  );
-  box-shadow: var(--mz-shadow);
-}
-
-.mz-banner::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(
-      ellipse 60% 50% at 80% 20%,
-      rgba(255, 255, 255, 0.22),
-      transparent 60%
-    ),
-    radial-gradient(
-      ellipse 40% 40% at 15% 80%,
-      rgba(255, 255, 255, 0.12),
-      transparent 55%
-    );
-  pointer-events: none;
-}
-
-.mz-banner-content {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 1.5rem 1.75rem 1.75rem;
-  color: #fff;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.18);
-}
-
-.mz-banner-title {
-  font-size: clamp(1.5rem, 3.5vw, 2.15rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-  margin: 0;
-  animation: mz-rise 320ms var(--mz-ease) both;
-}
-
-.mz-banner-sub {
-  margin: 0.4rem 0 0;
-  font-size: 0.95rem;
-  opacity: 0.92;
-  max-width: 36rem;
-  animation: mz-rise 360ms 40ms var(--mz-ease) both;
 }
 
 /* ---------- main grid ---------- */
@@ -1117,8 +1046,6 @@
 /* reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .mz-post-card,
-  .mz-banner-title,
-  .mz-banner-sub,
   .mz-article,
   .mz-mobile-panel,
   .mz-search-panel {
