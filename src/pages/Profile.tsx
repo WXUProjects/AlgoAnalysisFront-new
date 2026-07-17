@@ -773,7 +773,7 @@ export function Profile() {
                       navigate(`/contest/${c.id}`)
                     }
                   }}
-                  className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-sm transition-all duration-200 ease-out hover:bg-muted/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-sm transition-[background-color,box-shadow] duration-150 ease-out hover:bg-muted/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <div className="flex items-center gap-2">

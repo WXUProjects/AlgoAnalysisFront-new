@@ -3,21 +3,23 @@ import { Tooltip as TooltipPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 import {
-  animatePopoverIn,
-  animatePopoverOut,
+  animateTooltipIn,
+  animateTooltipOut,
   GSAP_PRESENCE_CLASS,
   presenceStyleVars,
 } from "@/lib/motion"
 import { composeRefs, useGsapPresence } from "@/hooks/use-gsap-presence"
 
 function TooltipProvider({
-  delayDuration = 0,
+  delayDuration = 200,
+  skipDelayDuration = 300,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return (
     <TooltipPrimitive.Provider
       data-slot="tooltip-provider"
       delayDuration={delayDuration}
+      skipDelayDuration={skipDelayDuration}
       {...props}
     />
   )
@@ -44,8 +46,8 @@ function TooltipContent({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
   const { ref: motionRef } = useGsapPresence({
-    onOpen: animatePopoverIn,
-    onClose: animatePopoverOut,
+    onOpen: animateTooltipIn,
+    onClose: animateTooltipOut,
   })
 
   return (
@@ -59,7 +61,7 @@ function TooltipContent({
           "z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md bg-foreground px-3 py-1.5 text-xs text-balance text-background will-change-transform",
           className,
         )}
-        style={{ ...presenceStyleVars("popover"), ...style }}
+        style={{ ...presenceStyleVars("tooltip"), ...style }}
         {...props}
       >
         {children}

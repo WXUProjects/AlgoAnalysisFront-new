@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import {
   animateHoverTransformIn,
   animateHoverTransformOut,
+  canHover,
   MOTION,
 } from '@/lib/motion'
 
@@ -31,9 +32,11 @@ const HeatCell = forwardRef<
       className="size-[10px] cursor-pointer rounded-[2px] bg-border/60 will-change-transform hover:z-10"
       style={count > 0 && bg ? { backgroundColor: bg } : undefined}
       onPointerEnter={(e) => {
-        animateHoverTransformIn(e.currentTarget, {
-          scale: MOTION.hover.heatScale,
-        })
+        if (canHover()) {
+          animateHoverTransformIn(e.currentTarget, {
+            scale: MOTION.hover.heatScale,
+          })
+        }
         onPointerEnter?.(e)
       }}
       onPointerLeave={(e) => {

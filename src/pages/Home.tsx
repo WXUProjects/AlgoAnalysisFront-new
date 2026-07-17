@@ -477,7 +477,7 @@ export function Home() {
                     <Link
                       key={b.id}
                       to={`/bulletin?expand=${b.id}`}
-                      className="flex items-start justify-between gap-2 rounded-md border px-3 py-2 text-sm transition-all duration-200 ease-out hover:bg-muted/40 hover:shadow-sm"
+                      className="flex items-start justify-between gap-2 rounded-md border px-3 py-2 text-sm transition-[background-color,box-shadow] duration-150 ease-out hover:bg-muted/40 hover:shadow-sm"
                     >
                       <span className="flex min-w-0 items-start gap-2">
                         {isSite ? (

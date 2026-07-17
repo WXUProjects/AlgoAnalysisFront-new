@@ -8,7 +8,7 @@ export function Stagger({
   children,
   className,
   ready = true,
-  stagger = 0.05,
+  stagger = 0.04,
 }: {
   children: ReactNode
   className?: string

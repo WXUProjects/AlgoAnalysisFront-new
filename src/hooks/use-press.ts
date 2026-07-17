@@ -4,15 +4,15 @@ import { animatePressIn, animatePressOut, MOTION } from '@/lib/motion'
 type PressOptions = {
   /** 按下缩放，默认 MOTION.press.scale */
   scale?: number
-  /** 按下时略压暗 */
+  /** 保留 API；亮度压暗已移除（性能） */
   dim?: boolean
 }
 
-/** 按下去 / 松手弹回的触感反馈（GSAP） */
+/** 按下去 / 松手弹回的触感反馈（GSAP，仅 scale） */
 export function usePress<T extends HTMLElement = HTMLElement>(
   options: PressOptions = {},
 ) {
-  const { scale = MOTION.press.scale, dim = true } = options
+  const { scale = MOTION.press.scale } = options
   const ref = useRef<T | null>(null)
   const pressed = useRef(false)
 
@@ -20,8 +20,8 @@ export function usePress<T extends HTMLElement = HTMLElement>(
     const el = ref.current
     if (!el) return
     pressed.current = true
-    animatePressIn(el, { scale, dim })
-  }, [scale, dim])
+    animatePressIn(el, { scale })
+  }, [scale])
 
   const pressOut = useCallback(() => {
     const el = ref.current

@@ -123,7 +123,7 @@ function TabsList({
           ref={pillRef}
           aria-hidden
           className="pointer-events-none absolute top-0 left-0 z-0 rounded-md bg-background shadow-sm ring-1 ring-border/40 dark:bg-input/40 dark:ring-input"
-          style={{ opacity: 0, willChange: "transform,width,height" }}
+          style={{ opacity: 0, willChange: "transform" }}
         />
       ) : null}
       {children}

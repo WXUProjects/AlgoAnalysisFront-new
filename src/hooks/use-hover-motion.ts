@@ -4,10 +4,11 @@ import {
   animateHoverLiftOut,
   animateHoverTransformIn,
   animateHoverTransformOut,
+  canHover,
   MOTION,
 } from '@/lib/motion'
 
-/** Card / row hover lift via GSAP */
+/** Card / row hover lift via GSAP (fine pointer only) */
 export function useHoverLift<T extends Element = HTMLElement>(
   options?: { y?: number },
 ) {
@@ -15,6 +16,7 @@ export function useHoverLift<T extends Element = HTMLElement>(
   const y = options?.y ?? MOTION.hover.y
 
   const onPointerEnter = useCallback(() => {
+    if (!canHover()) return
     const el = ref.current
     if (el) animateHoverLiftIn(el, { y })
   }, [y])
@@ -33,13 +35,14 @@ export function useHoverLift<T extends Element = HTMLElement>(
   }
 }
 
-/** Generic hover transform (scale / x / rotation) */
+/** Generic hover transform (scale / x / rotation) — fine pointer only */
 export function useHoverTransform<T extends Element = HTMLElement>(
   vars: { scale?: number; x?: number; y?: number; rotation?: number },
 ) {
   const ref = useRef<T | null>(null)
 
   const onPointerEnter = useCallback(() => {
+    if (!canHover()) return
     const el = ref.current
     if (el) animateHoverTransformIn(el, vars)
   }, [vars.scale, vars.x, vars.y, vars.rotation])

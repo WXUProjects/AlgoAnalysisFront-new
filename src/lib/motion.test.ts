@@ -52,7 +52,8 @@ Object.defineProperty(globalThis, 'performance', {
 
 win.matchMedia = ((query: string) =>
   ({
-    matches: false,
+    // Prefer fine-pointer hover so hover-motion tests exercise the tween path
+    matches: query.includes('hover') || query.includes('pointer'),
     media: query,
     onchange: null,
     addListener() {},
@@ -140,7 +141,6 @@ describe('animateEnter / animateStagger / animateTitle', () => {
     motion.animateTitle(node)
     flush()
     assert.equal(Number(gsap.getProperty(node, 'opacity')), 1)
-    assert.equal(Number(gsap.getProperty(node, 'y')), 0)
   })
 })
 
@@ -214,14 +214,14 @@ describe('overlay / panel / dialog / popover', () => {
 describe('press / hover / switch', () => {
   it('animatePressIn scales down', () => {
     const node = el()
-    motion.animatePressIn(node, { scale: 0.92, dim: false })
+    motion.animatePressIn(node, { scale: 0.97 })
     flush()
-    assert.ok(Math.abs(Number(gsap.getProperty(node, 'scale')) - 0.92) < 0.01)
+    assert.ok(Math.abs(Number(gsap.getProperty(node, 'scale')) - 0.97) < 0.01)
   })
 
   it('animatePressOut returns to scale 1', () => {
     const node = el()
-    motion.animatePressIn(node, { scale: 0.9, dim: false })
+    motion.animatePressIn(node, { scale: 0.97 })
     flush()
     motion.animatePressOut(node)
     flush()
@@ -261,7 +261,6 @@ describe('tab helpers', () => {
     motion.animateTabContent(node)
     flush()
     assert.equal(Number(gsap.getProperty(node, 'opacity')), 1)
-    assert.equal(Number(gsap.getProperty(node, 'y')), 0)
   })
 
   it('animateTabPill sets geometry', () => {
@@ -276,6 +275,15 @@ describe('tab helpers', () => {
     assert.equal(Number(gsap.getProperty(node, 'width')), 80)
     assert.equal(Number(gsap.getProperty(node, 'opacity')), 1)
   })
+
+  it('animateTabPill animates x only when not instant', () => {
+    const node = el()
+    gsap.set(node, { x: 0, y: 0, width: 40, height: 28, opacity: 1 })
+    motion.animateTabPill(node, { x: 20, y: 0, width: 80, height: 28 })
+    flush()
+    assert.equal(Number(gsap.getProperty(node, 'x')), 20)
+    assert.equal(Number(gsap.getProperty(node, 'width')), 80)
+  })
 })
 
 describe('presence helpers', () => {
@@ -283,9 +291,20 @@ describe('presence helpers', () => {
     const v = motion.presenceStyleVars('panel')
     assert.ok(v['--gsap-presence-in-ms']?.endsWith('ms'))
     assert.ok(v['--gsap-presence-out-ms']?.endsWith('ms'))
+    const tip = motion.presenceStyleVars('tooltip')
+    assert.ok(tip['--gsap-presence-out-ms']?.endsWith('ms'))
   })
 
   it('GSAP_PRESENCE_CLASS is stable', () => {
     assert.equal(motion.GSAP_PRESENCE_CLASS, 'gsap-presence')
+  })
+
+  it('MOTION tokens stay within UI budget', () => {
+    assert.ok(motion.MOTION.duration.base <= 0.3)
+    assert.ok(motion.MOTION.duration.panelIn <= 0.3)
+    assert.ok(motion.MOTION.press.scale >= 0.95)
+    assert.ok(motion.MOTION.hover.heatScale <= 1.2)
+    assert.equal(motion.MOTION.ease.sheetOut, 'power2.out')
+    assert.equal(motion.MOTION.ease.pressOut, 'power2.out')
   })
 })

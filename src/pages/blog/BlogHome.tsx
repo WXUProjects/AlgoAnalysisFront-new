@@ -414,7 +414,7 @@ export function BlogHome() {
                     <img
                       src={a.coverUrl}
                       alt=""
-                      className="size-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                      className="size-full object-cover transition-transform duration-200 ease-out motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-[1.02]"
                       loading="lazy"
                     />
                   </div>

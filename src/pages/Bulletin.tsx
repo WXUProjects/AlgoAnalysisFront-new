@@ -97,7 +97,7 @@ export function Bulletin() {
               role="button"
               tabIndex={0}
               className={cn(
-                'cursor-pointer gap-2 py-3 transition-all duration-200 ease-out hover:bg-muted/40 hover:shadow-sm',
+                'cursor-pointer gap-2 py-3 transition-[background-color,box-shadow] duration-150 ease-out hover:bg-muted/40 hover:shadow-sm',
                 site && 'border-primary/30 bg-primary/5',
               )}
               onClick={() => openItem(item)}

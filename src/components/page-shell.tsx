@@ -10,11 +10,12 @@ import { cn } from '@/lib/utils'
 export function PageShell({
   children,
   className,
-  stagger = true,
+  /** 默认关闭：路由高频，全量子元素错落会拖慢仪表盘切换 */
+  stagger = false,
 }: {
   children: ReactNode
   className?: string
-  /** 自动对直接子元素做轻微错落入场 */
+  /** 对直接子元素做轻微错落入场（可选，低频页可开） */
   stagger?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -25,6 +26,7 @@ export function PageShell({
     const el = ref.current
     if (!el) return
 
+    // 短进入：仅轻微方向感 + opacity，不做重 stagger
     animateEnter(el, direction)
 
     if (!stagger) return
@@ -32,7 +34,7 @@ export function PageShell({
       ':scope > [data-stagger-item], :scope > section, :scope > [data-slot="card"]',
     )
     if (items.length > 1) {
-      animateStagger(items, direction, { delay: 0.06, stagger: 0.05 })
+      animateStagger(items, direction, { delay: 0.03, stagger: 0.035 })
     }
   }, [direction, pathname, stagger])
 

@@ -9,59 +9,66 @@ const gsap: typeof gsapImport =
 
 export const MOTION = {
   duration: {
-    fast: 0.18,
-    base: 0.32,
-    slow: 0.45,
-    overlayIn: 0.38,
-    overlayOut: 0.26,
-    panelIn: 0.42,
-    panelOut: 0.28,
-    popoverIn: 0.18,
-    popoverOut: 0.14,
-    dialogIn: 0.22,
-    dialogOut: 0.16,
+    /** ≤300ms UI budget */
+    fast: 0.12,
+    base: 0.2,
+    slow: 0.28,
+    overlayIn: 0.26,
+    overlayOut: 0.18,
+    panelIn: 0.28,
+    panelOut: 0.2,
+    popoverIn: 0.16,
+    popoverOut: 0.12,
+    dialogIn: 0.2,
+    dialogOut: 0.14,
+    tooltipIn: 0.14,
+    tooltipOut: 0.1,
     pressIn: 0.08,
-    pressOut: 0.32,
-    hover: 0.2,
-    switch: 0.2,
-    sidebar: 0.3,
+    pressOut: 0.14,
+    hover: 0.15,
+    switch: 0.16,
+    sidebar: 0.24,
+    tab: 0.16,
+    title: 0.12,
   },
   ease: {
     out: 'power2.out',
     in: 'power2.in',
     inOut: 'power2.inOut',
     soft: 'power3.out',
-    pressOut: 'back.out(2.4)',
+    /** release snap — no bounce on dense dashboard chrome */
+    pressOut: 'power2.out',
     /** approx cubic-bezier(0.32, 0.72, 0, 1) */
     sheet: 'power3.out',
-    sheetOut: 'power2.in',
+    /** exits also ease-out so close feels responsive (never ease-in on UI) */
+    sheetOut: 'power2.out',
   },
   y: {
-    forward: 16,
-    back: -12,
-    lateral: 10,
+    forward: 8,
+    back: -6,
+    lateral: 6,
   },
   press: {
-    scale: 0.94,
-    scaleTab: 0.92,
-    scaleLg: 0.96,
+    scale: 0.97,
+    scaleTab: 0.97,
+    scaleLg: 0.98,
     scaleSidebar: 0.98,
-    dim: 0.92,
+    dim: 0.96,
   },
   hover: {
     y: -2,
-    scale: 1.05,
+    scale: 1.03,
     chevronX: 2,
-    heatScale: 1.5,
+    heatScale: 1.12,
     imageScale: 0.98,
-    rotate: 45,
+    rotate: 0,
   },
   popover: {
-    fromScale: 0.95,
-    fromY: 6,
+    fromScale: 0.96,
+    fromY: 4,
   },
   dialog: {
-    fromScale: 0.95,
+    fromScale: 0.96,
   },
 } as const
 
@@ -71,6 +78,12 @@ export type SheetSide = 'top' | 'right' | 'bottom' | 'left'
 export function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined') return false
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+/** True when the device can hover (skip hover motion on touch) */
+export function canHover(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia('(hover: hover) and (pointer: fine)').matches
 }
 
 /** 路由信息层级：列表浅、详情深，用于进出方向 */
@@ -128,6 +141,24 @@ function instantSet(el: Element, vars: gsap.TweenVars) {
   gsap.set(el, { ...vars, clearProps: undefined })
 }
 
+/** Radix `data-side` → enter offset so menus open toward their trigger */
+function popoverEnterOffset(el: Element): { y: number; x: number } {
+  const side = el.getAttribute('data-side')
+  const d = MOTION.popover.fromY
+  switch (side) {
+    case 'top':
+      return { y: d, x: 0 }
+    case 'bottom':
+      return { y: -d, x: 0 }
+    case 'left':
+      return { y: 0, x: d }
+    case 'right':
+      return { y: 0, x: -d }
+    default:
+      return { y: d, x: 0 }
+  }
+}
+
 export function animateEnter(
   el: Element,
   direction: MotionDirection = 'lateral',
@@ -170,13 +201,13 @@ export function animateStagger(
   killTweens(list)
   gsap.fromTo(
     list,
-    { opacity: 0, y: Math.min(y + 6, 20) },
+    { opacity: 0, y: Math.min(Math.abs(y) + 4, 12) * Math.sign(y || 1) },
     {
       opacity: 1,
       y: 0,
       duration: options?.duration ?? MOTION.duration.base,
-      delay: options?.delay ?? 0.05,
-      stagger: options?.stagger ?? 0.05,
+      delay: options?.delay ?? 0.03,
+      stagger: options?.stagger ?? 0.04,
       ease: MOTION.ease.soft,
       overwrite: true,
       clearProps: 'transform',
@@ -192,14 +223,12 @@ export function animateTitle(el: Element) {
   killTweens(el)
   gsap.fromTo(
     el,
-    { opacity: 0, y: 8 },
+    { opacity: 0 },
     {
       opacity: 1,
-      y: 0,
-      duration: MOTION.duration.fast,
+      duration: MOTION.duration.title,
       ease: MOTION.ease.out,
       overwrite: true,
-      clearProps: 'transform',
     },
   )
 }
@@ -336,29 +365,32 @@ export function animateDialogOut(el: Element) {
     xPercent: -50,
     yPercent: -50,
     duration: MOTION.duration.dialogOut,
-    ease: MOTION.ease.in,
+    ease: MOTION.ease.out,
     overwrite: true,
   })
 }
 
-/** Popover / dropdown / select / tooltip: zoom + fade */
+/** Popover / dropdown / select: zoom + fade from trigger side */
 export function animatePopoverIn(el: Element) {
   killTweens(el)
   if (prefersReducedMotion()) {
-    instantSet(el, { opacity: 1, scale: 1, y: 0 })
+    instantSet(el, { opacity: 1, scale: 1, y: 0, x: 0 })
     return
   }
+  const { y, x } = popoverEnterOffset(el)
   gsap.fromTo(
     el,
     {
       opacity: 0,
       scale: MOTION.popover.fromScale,
-      y: MOTION.popover.fromY,
+      y,
+      x,
     },
     {
       opacity: 1,
       scale: 1,
       y: 0,
+      x: 0,
       duration: MOTION.duration.popoverIn,
       ease: MOTION.ease.out,
       overwrite: true,
@@ -369,30 +401,61 @@ export function animatePopoverIn(el: Element) {
 export function animatePopoverOut(el: Element) {
   killTweens(el)
   if (prefersReducedMotion()) {
-    instantSet(el, { opacity: 0, scale: MOTION.popover.fromScale, y: 0 })
+    instantSet(el, { opacity: 0, scale: MOTION.popover.fromScale, y: 0, x: 0 })
     return
   }
   gsap.to(el, {
     opacity: 0,
     scale: MOTION.popover.fromScale,
     duration: MOTION.duration.popoverOut,
-    ease: MOTION.ease.in,
+    ease: MOTION.ease.out,
     overwrite: true,
   })
 }
 
-/** Press feedback */
+/** Tooltip: opacity only — high frequency, no travel */
+export function animateTooltipIn(el: Element) {
+  killTweens(el)
+  if (prefersReducedMotion()) {
+    instantSet(el, { opacity: 1, scale: 1, y: 0, x: 0 })
+    return
+  }
+  gsap.fromTo(
+    el,
+    { opacity: 0 },
+    {
+      opacity: 1,
+      duration: MOTION.duration.tooltipIn,
+      ease: MOTION.ease.out,
+      overwrite: true,
+    },
+  )
+}
+
+export function animateTooltipOut(el: Element) {
+  killTweens(el)
+  if (prefersReducedMotion()) {
+    instantSet(el, { opacity: 0 })
+    return
+  }
+  gsap.to(el, {
+    opacity: 0,
+    duration: MOTION.duration.tooltipOut,
+    ease: MOTION.ease.out,
+    overwrite: true,
+  })
+}
+
+/** Press feedback — scale only (no filter:brightness) */
 export function animatePressIn(
   el: Element,
   options?: { scale?: number; dim?: boolean },
 ) {
   if (prefersReducedMotion()) return
   const scale = options?.scale ?? MOTION.press.scale
-  const dim = options?.dim ?? true
   killTweens(el)
   gsap.to(el, {
     scale,
-    ...(dim ? { filter: `brightness(${MOTION.press.dim})` } : null),
     duration: MOTION.duration.pressIn,
     ease: MOTION.ease.out,
     overwrite: true,
@@ -401,17 +464,16 @@ export function animatePressIn(
 
 export function animatePressOut(el: Element) {
   if (prefersReducedMotion()) {
-    gsap.set(el, { clearProps: 'transform,filter', scale: 1 })
+    gsap.set(el, { clearProps: 'transform', scale: 1 })
     return
   }
   killTweens(el)
   gsap.to(el, {
     scale: 1,
-    filter: 'brightness(1)',
     duration: MOTION.duration.pressOut,
     ease: MOTION.ease.pressOut,
     overwrite: true,
-    clearProps: 'transform,filter',
+    clearProps: 'transform',
   })
 }
 
@@ -420,7 +482,7 @@ export function animateHoverLiftIn(
   el: Element,
   options?: { y?: number },
 ) {
-  if (prefersReducedMotion()) return
+  if (prefersReducedMotion() || !canHover()) return
   killTweens(el)
   gsap.to(el, {
     y: options?.y ?? MOTION.hover.y,
@@ -450,7 +512,7 @@ export function animateHoverTransformIn(
   el: Element,
   vars: { scale?: number; x?: number; y?: number; rotation?: number },
 ) {
-  if (prefersReducedMotion()) return
+  if (prefersReducedMotion() || !canHover()) return
   killTweens(el)
   gsap.to(el, {
     ...vars,
@@ -497,7 +559,7 @@ export function animateSwitchThumb(
   })
 }
 
-/** Tab content enter (shared tokens) */
+/** Tab content enter — opacity only (high frequency) */
 export function animateTabContent(el: Element) {
   if (prefersReducedMotion()) {
     gsap.set(el, { clearProps: 'all', opacity: 1, y: 0 })
@@ -506,19 +568,19 @@ export function animateTabContent(el: Element) {
   killTweens(el)
   gsap.fromTo(
     el,
-    { opacity: 0, y: 8 },
+    { opacity: 0 },
     {
       opacity: 1,
-      y: 0,
-      duration: MOTION.duration.base - 0.04,
+      duration: MOTION.duration.fast,
       ease: MOTION.ease.out,
       overwrite: true,
-      clearProps: 'transform',
     },
   )
 }
 
-/** Tab indicator pill */
+/**
+ * Tab indicator pill: snap width/height (no layout tween), animate x/y only.
+ */
 export function animateTabPill(
   el: Element,
   rect: { x: number; y: number; width: number; height: number },
@@ -535,13 +597,15 @@ export function animateTabPill(
     })
     return
   }
-  gsap.to(el, {
-    x: rect.x,
-    y: rect.y,
+  gsap.set(el, {
     width: rect.width,
     height: rect.height,
     opacity: 1,
-    duration: MOTION.duration.base + 0.02,
+  })
+  gsap.to(el, {
+    x: rect.x,
+    y: rect.y,
+    duration: MOTION.duration.tab,
     ease: MOTION.ease.soft,
     overwrite: true,
   })
@@ -555,7 +619,7 @@ export const GSAP_PRESENCE_CLASS = 'gsap-presence'
 
 /** Set CSS vars so presence-hold duration ≥ GSAP exit */
 export function presenceStyleVars(
-  kind: 'overlay' | 'panel' | 'dialog' | 'popover',
+  kind: 'overlay' | 'panel' | 'dialog' | 'popover' | 'tooltip',
 ): Record<string, string> {
   const outMs =
     kind === 'overlay'
@@ -564,7 +628,9 @@ export function presenceStyleVars(
         ? MOTION.duration.panelOut * 1000
         : kind === 'dialog'
           ? MOTION.duration.dialogOut * 1000
-          : MOTION.duration.popoverOut * 1000
+          : kind === 'tooltip'
+            ? MOTION.duration.tooltipOut * 1000
+            : MOTION.duration.popoverOut * 1000
   const inMs =
     kind === 'overlay'
       ? MOTION.duration.overlayIn * 1000
@@ -572,7 +638,9 @@ export function presenceStyleVars(
         ? MOTION.duration.panelIn * 1000
         : kind === 'dialog'
           ? MOTION.duration.dialogIn * 1000
-          : MOTION.duration.popoverIn * 1000
+          : kind === 'tooltip'
+            ? MOTION.duration.tooltipIn * 1000
+            : MOTION.duration.popoverIn * 1000
   return {
     '--gsap-presence-in-ms': `${Math.round(inMs)}ms`,
     '--gsap-presence-out-ms': `${Math.round(outMs)}ms`,
