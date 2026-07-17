@@ -59,7 +59,7 @@ const titles: Record<string, string> = {
   '/privacy': '隐私设置',
   '/social': '关注与粉丝',
   '/discover': '发现',
-  '/all-activities': '发现',
+  '/all-activities': '提交动态',
   '/bulletin': '公告',
   '/contest': '比赛',
   '/question-bank': '题库',
@@ -75,6 +75,11 @@ function resolveTitle(pathname: string, brand: string): string {
   if (pathname.startsWith('/profile/')) return '个人资料'
   if (pathname.startsWith('/social')) return '关注与粉丝'
   if (pathname.startsWith('/contest/')) return '比赛详情'
+  if (pathname.includes('/edit-content')) return '编辑题面'
+  if (pathname.includes('/solution/new')) return '写题解'
+  if (pathname.includes('/solution/') && pathname.endsWith('/edit'))
+    return '编辑题解'
+  if (pathname.includes('/solution/')) return '题解'
   if (pathname.startsWith('/question-bank/detail/')) return '题目详情'
   if (pathname.startsWith('/p/')) return '粘贴板'
   if (pathname.startsWith('/tools')) return '工具'
@@ -201,6 +206,21 @@ export function AppLayout() {
                     <SidebarMenuButton
                       asChild
                       isActive={
+                        pathname.startsWith('/discover') ||
+                        pathname.startsWith('/all-activities')
+                      }
+                      tooltip="发现"
+                    >
+                      <NavLink to="/discover">
+                        <ActivityIcon />
+                        <span>发现</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={
                         pathname === '/contest' ||
                         pathname.startsWith('/contest/')
                       }
@@ -221,21 +241,6 @@ export function AppLayout() {
                       <NavLink to="/bulletin">
                         <MegaphoneIcon />
                         <span>公告</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={
-                        pathname.startsWith('/discover') ||
-                        pathname.startsWith('/all-activities')
-                      }
-                      tooltip="发现"
-                    >
-                      <NavLink to="/discover">
-                        <ActivityIcon />
-                        <span>发现</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -329,8 +334,8 @@ export function AppLayout() {
           <SidebarFooter>
             <SidebarSeparator />
             {isLogin && orgs.length > 0 && (
-              <div className="px-2 pb-2">
-                <label className="mb-1 block text-xs text-muted-foreground">
+              <div className="group-data-[collapsible=icon]:hidden">
+                <label className="mb-1 block px-0.5 text-xs text-muted-foreground">
                   当前组织
                 </label>
                 <Select

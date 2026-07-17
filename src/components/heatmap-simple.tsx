@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import {
+  forwardRef,
+  useEffect,
+  useMemo,
+  useState,
+  type HTMLAttributes,
+} from 'react'
 import type { HeatmapItem } from '@shared/api'
 import {
   Tooltip,
@@ -6,6 +12,38 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import {
+  animateHoverTransformIn,
+  animateHoverTransformOut,
+  MOTION,
+} from '@/lib/motion'
+
+const HeatCell = forwardRef<
+  HTMLDivElement,
+  {
+    count: number
+    bg?: string
+  } & HTMLAttributes<HTMLDivElement>
+>(function HeatCell({ count, bg, onPointerEnter, onPointerLeave, ...props }, ref) {
+  return (
+    <div
+      ref={ref}
+      className="size-[10px] cursor-pointer rounded-[2px] bg-border/60 will-change-transform hover:z-10"
+      style={count > 0 && bg ? { backgroundColor: bg } : undefined}
+      onPointerEnter={(e) => {
+        animateHoverTransformIn(e.currentTarget, {
+          scale: MOTION.hover.heatScale,
+        })
+        onPointerEnter?.(e)
+      }}
+      onPointerLeave={(e) => {
+        animateHoverTransformOut(e.currentTarget)
+        onPointerLeave?.(e)
+      }}
+      {...props}
+    />
+  )
+})
 
 interface HeatmapSimpleProps {
   items: HeatmapItem[]
@@ -140,14 +178,7 @@ export function HeatmapSimple({ items, className }: HeatmapSimpleProps) {
                   return (
                     <Tooltip key={key}>
                       <TooltipTrigger asChild>
-                        <div
-                          className="size-[10px] cursor-pointer rounded-[2px] bg-border/60 transition-transform hover:z-10 hover:scale-150"
-                          style={
-                            count > 0
-                              ? { backgroundColor: bg }
-                              : undefined
-                          }
-                        />
+                        <HeatCell count={count} bg={bg} />
                       </TooltipTrigger>
                       <TooltipContent side="top" className="text-xs">
                         <span className="font-medium">{key}</span>

@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import gsap from 'gsap'
+import { MOTION, prefersReducedMotion } from '@/lib/motion'
 import {
   Bar,
   BarChart,
@@ -117,6 +119,7 @@ function ProfilePanels({
   const all = [...row1, ...row2]
   const [index, setIndex] = useState(0)
   const touchX = useRef<number | null>(null)
+  const stackRef = useRef<HTMLDivElement>(null)
   const n = all.length
 
   const go = useCallback(
@@ -129,6 +132,35 @@ function ProfilePanels({
   useEffect(() => {
     setIndex(0)
   }, [n])
+
+  useLayoutEffect(() => {
+    const root = stackRef.current
+    if (!root) return
+    const cards = root.querySelectorAll<HTMLElement>('[data-stack-card]')
+    cards.forEach((el) => {
+      const offset = Number(el.dataset.offset ?? 0)
+      const abs = Math.abs(offset)
+      const xPx = offset * 22
+      const yPx = abs * 10
+      const scale = 1 - abs * 0.08
+      const opacity = abs === 0 ? 1 : abs === 1 ? 0.72 : 0.4
+      gsap.killTweensOf(el)
+      if (prefersReducedMotion()) {
+        gsap.set(el, { x: xPx, y: yPx, scale, opacity, zIndex: 10 - abs })
+        return
+      }
+      gsap.to(el, {
+        x: xPx,
+        y: yPx,
+        scale,
+        opacity,
+        zIndex: 10 - abs,
+        duration: MOTION.duration.base,
+        ease: MOTION.ease.sheet,
+        overwrite: true,
+      })
+    })
+  }, [index, n, all.length])
 
   return (
     <>
@@ -162,9 +194,10 @@ function ProfilePanels({
         </div>
       </div>
 
-      {/* 移动端：牌叠滑动 — 内边距 + 缩放制造堆叠，位移不溢出视口 */}
+      {/* 移动端：牌叠滑动 — GSAP 驱动位移/缩放 */}
       <div className="lg:hidden">
         <div
+          ref={stackRef}
           className="relative mx-auto w-full max-w-md select-none overflow-hidden touch-pan-y overscroll-x-none px-5"
           style={{ height: 300 }}
           onTouchStart={(e) => {
@@ -188,24 +221,17 @@ function ProfilePanels({
             const abs = Math.abs(offset)
             if (abs > 2) return null
             const active = offset === 0
-            // 侧卡用固定 px 位移 + 更大缩放差，堆叠感强但不撑破容器
-            const xPx = offset * 22
-            const yPx = abs * 10
-            const scale = 1 - abs * 0.08
             return (
               <Card
                 key={p.key}
+                data-stack-card=""
+                data-offset={offset}
                 className={cn(
-                  'absolute inset-x-5 top-0 gap-2 py-3 transition-[transform,opacity,box-shadow] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform',
+                  'absolute inset-x-5 top-0 gap-2 py-3 will-change-transform',
                   active
                     ? 'pointer-events-auto shadow-lg ring-1 ring-border/50'
                     : 'pointer-events-none shadow-md',
                 )}
-                style={{
-                  transform: `translate3d(${xPx}px, ${yPx}px, 0) scale(${scale})`,
-                  opacity: abs === 0 ? 1 : abs === 1 ? 0.72 : 0.4,
-                  zIndex: 10 - abs,
-                }}
               >
                 <CardHeader className="flex flex-row items-center justify-between px-4 py-0">
                   <CardTitle className="text-sm font-medium">{p.title}</CardTitle>

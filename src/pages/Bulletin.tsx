@@ -20,6 +20,10 @@ import { cn } from '@/lib/utils'
 
 const DEFAULT_PAGE_SIZE = 10
 
+function isSiteBulletin(item: BulletinInfo) {
+  return !item.scope || item.scope === 'site'
+}
+
 export function Bulletin() {
   const [searchParams, setSearchParams] = useSearchParams()
   const expandId = Number(searchParams.get('expand') || 0)
@@ -85,34 +89,43 @@ export function Bulletin() {
             </CardHeader>
           </Card>
         )}
-        {list.map((item) => (
-          <Card
-            key={item.id}
-            role="button"
-            tabIndex={0}
-            className={cn(
-              'cursor-pointer gap-2 py-3 transition-all duration-200 ease-out hover:bg-muted/40 hover:shadow-sm',
-            )}
-            onClick={() => openItem(item)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                openItem(item)
-              }
-            }}
-          >
-            <CardHeader className="gap-1 px-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="text-base">{item.title}</CardTitle>
-                {item.isPinned && <Badge>置顶</Badge>}
-              </div>
-              <CardDescription>
-                {item.authorName || '匿名'} · {formatTime(item.createdAt)}
-                <span className="ml-2 text-muted-foreground/80">点击查看全文</span>
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        ))}
+        {list.map((item) => {
+          const site = isSiteBulletin(item)
+          return (
+            <Card
+              key={item.id}
+              role="button"
+              tabIndex={0}
+              className={cn(
+                'cursor-pointer gap-2 py-3 transition-all duration-200 ease-out hover:bg-muted/40 hover:shadow-sm',
+                site && 'border-primary/30 bg-primary/5',
+              )}
+              onClick={() => openItem(item)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  openItem(item)
+                }
+              }}
+            >
+              <CardHeader className="gap-1 px-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  {site ? (
+                    <Badge>站点公告</Badge>
+                  ) : (
+                    <Badge variant="secondary">组织公告</Badge>
+                  )}
+                  {item.isPinned && <Badge variant="outline">置顶</Badge>}
+                  <CardTitle className="text-base">{item.title}</CardTitle>
+                </div>
+                <CardDescription>
+                  {item.authorName || '匿名'} · {formatTime(item.createdAt)}
+                  <span className="ml-2 text-muted-foreground/80">点击查看全文</span>
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          )
+        })}
       </div>
       <Pagination
         page={page}
@@ -129,7 +142,7 @@ export function Bulletin() {
         title={active?.title}
         description={
           active
-            ? `${active.authorName || '匿名'} · ${formatTime(active.createdAt)}`
+            ? `${isSiteBulletin(active) ? '站点公告 · ' : '组织公告 · '}${active.authorName || '匿名'} · ${formatTime(active.createdAt)}`
             : undefined
         }
         content={active?.content || ''}

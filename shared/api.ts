@@ -27,6 +27,7 @@ export const endpoints = {
       setProblemPipeline: `${API_PREFIX}/user/profile/set-problem-pipeline`,
       setSyncIntervals: `${API_PREFIX}/user/profile/set-sync-intervals`,
       setSyncExempt: `${API_PREFIX}/user/profile/set-sync-exempt`,
+      clearDormant: `${API_PREFIX}/user/profile/clear-dormant`,
       idsByGroup: `${API_PREFIX}/user/profile/ids-by-group`,
       getByIds: `${API_PREFIX}/user/profile/get-by-ids`,
       nonPublicOrgUserIds: `${API_PREFIX}/user/profile/non-public-org-user-ids`,
@@ -154,10 +155,13 @@ export const endpoints = {
       delete: `${API_PREFIX}/core/emergency/delete`,
       list: `${API_PREFIX}/core/emergency/list`,
       active: `${API_PREFIX}/core/emergency/active`,
+      reorder: `${API_PREFIX}/core/emergency/reorder`,
     },
     problem: {
       list: `${API_PREFIX}/core/problem/list`,
       tags: `${API_PREFIX}/core/problem/tags`,
+      /** 全站热题：近 N 天提交/做题人数/AC 综合热度 */
+      hot: `${API_PREFIX}/core/problem/hot`,
       get: `${API_PREFIX}/core/problem/get`,
       submissions: `${API_PREFIX}/core/problem/submissions`,
       followingStatus: `${API_PREFIX}/core/problem/following-status`,
@@ -309,6 +313,8 @@ export interface UserProfile {
   emailWeeklyAllowedByOrg?: boolean
   roleId?: number
   spiders: SpiderBinding[]
+  /** 最近一次 OJ 数据同步成功时间（unix 秒；0/缺省=尚无记录） */
+  lastSyncAt?: number
 }
 
 /** 关注/粉丝/搜索列表项 */
@@ -596,6 +602,9 @@ export const CONTEST_CALENDAR_ADVANCE_OPTIONS = [
 /** 新建订阅默认提前量（6 小时） */
 export const CONTEST_CALENDAR_DEFAULT_ADVANCE = 360
 
+/** site=站点公告（全员可见）；org=组织公告 */
+export type BulletinScope = 'site' | 'org' | string
+
 export interface BulletinInfo {
   id: number
   title: string
@@ -605,6 +614,10 @@ export interface BulletinInfo {
   isPinned: boolean
   createdAt: number
   updatedAt: number
+  /** site=站点公告；org=组织公告 */
+  scope: BulletinScope
+  /** scope=org 时有值 */
+  orgId: number
 }
 
 export interface EmergencyInfo {
@@ -700,6 +713,30 @@ export interface ProblemListRes {
   total: number
   page: number
   pageSize: number
+}
+
+/** 全站热题一项：题库信息 + 近窗统计 */
+export interface HotProblemItem {
+  problem: ProblemInfo
+  /** 窗口内提交次数 */
+  submitCount: number
+  /** 窗口内做题人数（去重） */
+  solverCount: number
+  /** 窗口内 AC 次数 */
+  acCount: number
+  /** 综合热度分：submit*1 + solver*3 + ac*2 */
+  score: number
+  /** 窗口内最近提交 unix 秒 */
+  lastSubmittedAt: number
+}
+
+export interface HotProblemRes {
+  data: HotProblemItem[]
+  total: number
+  page: number
+  pageSize: number
+  /** 实际统计窗口天数 */
+  days: number
 }
 
 export interface ProblemUserProfile {

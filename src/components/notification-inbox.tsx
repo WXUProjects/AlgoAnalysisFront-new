@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils'
 function notifLink(n: NotificationItem): string | null {
   if (n.problemId > 0) {
     if (n.refType === 'solution' && n.refId > 0) {
-      return `/question-bank/detail/${n.problemId}?tab=solutions&solutionId=${n.refId}`
+      return `/question-bank/detail/${n.problemId}/solution/${n.refId}`
     }
     if (n.refType === 'comment' || n.type === 'mention') {
       return `/question-bank/detail/${n.problemId}?tab=comments`
@@ -107,12 +107,12 @@ export function NotificationInbox({ enabled }: { enabled: boolean }) {
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
-        <SheetHeader>
+      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+        <SheetHeader className="border-b px-4 py-3">
           <SheetTitle>站内通知</SheetTitle>
           <SheetDescription>审核结果、@ 提醒等会显示在这里</SheetDescription>
         </SheetHeader>
-        <div className="flex items-center justify-between px-1 pb-2">
+        <div className="flex items-center justify-between gap-2 border-b px-4 py-2">
           <span className="text-xs text-muted-foreground">
             {unread > 0 ? `${unread} 条未读` : '暂无未读'}
           </span>
@@ -127,14 +127,14 @@ export function NotificationInbox({ enabled }: { enabled: boolean }) {
             全部已读
           </Button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
           {loading && (
-            <p className="px-2 py-6 text-center text-sm text-muted-foreground">加载中…</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">加载中…</p>
           )}
           {!loading && list.length === 0 && (
-            <p className="px-2 py-6 text-center text-sm text-muted-foreground">还没有通知</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">还没有通知</p>
           )}
-          <ul className="space-y-1.5 pb-4">
+          <ul className="flex flex-col gap-1.5 pb-2">
             {list.map((n) => {
               const href = notifLink(n)
               const inner = (

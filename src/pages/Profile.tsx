@@ -314,6 +314,15 @@ export function Profile() {
                     <span className="text-muted-foreground">粉丝</span>
                   </Link>
                 </div>
+                <p
+                  className="mt-1.5 text-[11px] text-muted-foreground tabular-nums sm:text-xs"
+                  title="系统最近一次从各平台拉取提交与比赛记录的时间"
+                >
+                  上次同步：
+                  {profile.lastSyncAt
+                    ? formatTime(profile.lastSyncAt)
+                    : '尚未同步'}
+                </p>
                 {isSelf && (
                   <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
                     <Button type="button" size="sm" className="h-7 px-2 text-xs" asChild>
@@ -540,7 +549,7 @@ export function Profile() {
             <CardHeader className="flex flex-row items-center justify-between px-4 space-y-0">
               <CardTitle className="text-base">近期动态</CardTitle>
               <Button type="button" size="sm" variant="ghost" asChild>
-                <Link to={`/discover?tab=feed&id=${targetId}`}>查看所有动态</Link>
+                <Link to={`/all-activities?id=${targetId}`}>查看所有动态</Link>
               </Button>
             </CardHeader>
             <CardContent className="px-4 py-2">
@@ -676,7 +685,7 @@ export function Profile() {
                     {recentSolutions.map((s) => (
                       <li key={s.id} className="px-3 py-2 text-sm">
                         <Link
-                          to={`/question-bank/detail/${s.problemId}?tab=solutions&solutionId=${s.id}`}
+                          to={`/question-bank/detail/${s.problemId}/solution/${s.id}`}
                           className="font-medium text-sky-600 hover:underline dark:text-sky-400"
                         >
                           {s.title}

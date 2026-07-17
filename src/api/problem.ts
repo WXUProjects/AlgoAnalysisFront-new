@@ -1,6 +1,8 @@
 import {
   endpoints,
   type AdminUpdateProblemReq,
+  type HotProblemItem,
+  type HotProblemRes,
   type ProblemEditInfo,
   type ProblemInfo,
   type ProblemListRes,
@@ -103,6 +105,60 @@ export async function listProblems(params: {
       total: num(raw.total, list.length),
       page: num(raw.page, params.page ?? 1),
       pageSize: num(raw.pageSize, params.pageSize ?? 20),
+    },
+  }
+}
+
+function normalizeHotItem(raw: Record<string, unknown>): HotProblemItem {
+  const nested =
+    raw.problem && typeof raw.problem === 'object'
+      ? (raw.problem as Record<string, unknown>)
+      : raw
+  const problem = normalizeProblem(nested)
+  const last = num(raw.lastSubmittedAt, problem.lastSubmittedAt)
+  if (last && !problem.lastSubmittedAt) {
+    problem.lastSubmittedAt = last
+  }
+  return {
+    problem,
+    submitCount: num(raw.submitCount),
+    solverCount: num(raw.solverCount),
+    acCount: num(raw.acCount),
+    score: num(raw.score),
+    lastSubmittedAt: last,
+  }
+}
+
+/**
+ * 全站热题：近 days 天（默认 2）按提交次数/做题人数/AC 综合热度排序。
+ * 热度 = submit×1 + solver×3 + ac×2
+ */
+export async function listHotProblems(params?: {
+  page?: number
+  pageSize?: number
+  days?: number
+}): Promise<ApiResult<HotProblemRes>> {
+  const page = params?.page ?? 1
+  const pageSize = params?.pageSize ?? 20
+  const days = params?.days ?? 2
+  const res = await get<Record<string, unknown>[]>(endpoints.core.problem.hot, {
+    page,
+    pageSize,
+    days,
+  })
+  if (!res.success) return { ...res, data: null }
+  const list = Array.isArray(res.data)
+    ? res.data.map((r) => normalizeHotItem(r as Record<string, unknown>))
+    : []
+  const raw = (res.raw ?? {}) as Record<string, unknown>
+  return {
+    ...res,
+    data: {
+      data: list,
+      total: num(raw.total, list.length),
+      page: num(raw.page, page),
+      pageSize: num(raw.pageSize, pageSize),
+      days: num(raw.days, days),
     },
   }
 }

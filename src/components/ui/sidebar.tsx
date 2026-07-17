@@ -2,9 +2,12 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { PanelLeftIcon } from "lucide-react"
 import { Slot } from "radix-ui"
+import gsap from "gsap"
 
 import { useIsMobile } from "@/hooks/use-mobile"
+import { usePress } from "@/hooks/use-press"
 import { cn } from "@/lib/utils"
+import { MOTION, prefersReducedMotion } from "@/lib/motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -203,6 +206,54 @@ function Sidebar({
     )
   }
 
+  const gapRef = React.useRef<HTMLDivElement>(null)
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const firstSidebarAnim = React.useRef(true)
+
+  React.useLayoutEffect(() => {
+    const gap = gapRef.current
+    const container = containerRef.current
+    if (!gap || !container) return
+
+    const collapsed = state === "collapsed"
+    const isIcon = collapsed && collapsible === "icon"
+    const isOffcanvas = collapsed && collapsible === "offcanvas"
+    const expandedW = SIDEBAR_WIDTH
+    const iconW =
+      variant === "floating" || variant === "inset"
+        ? `calc(${SIDEBAR_WIDTH_ICON} + 1rem)`
+        : SIDEBAR_WIDTH_ICON
+    const gapTarget = isOffcanvas ? "0rem" : isIcon ? iconW : expandedW
+    const containerW = isIcon ? iconW : expandedW
+
+    const instant = prefersReducedMotion() || firstSidebarAnim.current
+    firstSidebarAnim.current = false
+    const dur = instant ? 0 : MOTION.duration.sidebar
+    const ease = MOTION.ease.sheet
+
+    gsap.killTweensOf([gap, container])
+    gsap.to(gap, { width: gapTarget, duration: dur, ease, overwrite: true })
+
+    const edge =
+      side === "left"
+        ? {
+            left: isOffcanvas ? `-${SIDEBAR_WIDTH}` : "0rem",
+            right: "auto",
+          }
+        : {
+            right: isOffcanvas ? `-${SIDEBAR_WIDTH}` : "0rem",
+            left: "auto",
+          }
+
+    gsap.to(container, {
+      width: containerW,
+      ...edge,
+      duration: dur,
+      ease,
+      overwrite: true,
+    })
+  }, [state, collapsible, variant, side])
+
   return (
     <div
       className="group peer hidden text-sidebar-foreground md:block"
@@ -214,27 +265,22 @@ function Sidebar({
     >
       {/* This is what handles the sidebar gap on desktop */}
       <div
+        ref={gapRef}
         data-slot="sidebar-gap"
         className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-          "group-data-[collapsible=offcanvas]:w-0",
+          "relative w-(--sidebar-width) bg-transparent",
           "group-data-[side=right]:rotate-180",
-          variant === "floating" || variant === "inset"
-            ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
         )}
       />
       <div
+        ref={containerRef}
         data-slot="sidebar-container"
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] md:flex",
-          side === "left"
-            ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
-            : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
-          // Adjust the padding for floating and inset variants.
+          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) md:flex",
+          side === "left" ? "left-0" : "right-0",
           variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            ? "p-2"
+            : "group-data-[side=left]:border-r group-data-[side=right]:border-l",
           className
         )}
         {...props}
@@ -242,7 +288,7 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm"
+          className="flex h-full w-full flex-col overflow-hidden bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm"
         >
           {children}
         </div>
@@ -424,7 +470,7 @@ function SidebarGroupAction({
       data-slot="sidebar-group-action"
       data-sidebar="group-action"
       className={cn(
-        "absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 md:after:hidden",
         "group-data-[collapsible=icon]:hidden",
@@ -472,7 +518,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding,background-color,color,box-shadow,transform] duration-200 ease-out group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:scale-[0.98] active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
+  "peer/menu-button flex w-full origin-center touch-manipulation items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding,background-color,color,box-shadow] duration-200 ease-out group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -500,6 +546,10 @@ function SidebarMenuButton({
   size = "default",
   tooltip,
   className,
+  onPointerDown,
+  onPointerUp,
+  onPointerLeave,
+  onPointerCancel,
   ...props
 }: React.ComponentProps<"button"> & {
   asChild?: boolean
@@ -508,14 +558,36 @@ function SidebarMenuButton({
 } & VariantProps<typeof sidebarMenuButtonVariants>) {
   const Comp = asChild ? Slot.Root : "button"
   const { isMobile, state } = useSidebar()
+  // asChild（NavLink 等）也要触感反馈：Slot 会把 ref / pointer 事件合并到真实 DOM
+  const { ref: pressRef, pressHandlers } = usePress<HTMLElement>({
+    scale: MOTION.press.scaleSidebar,
+    dim: true,
+  })
 
   const button = (
     <Comp
+      ref={pressRef as React.Ref<HTMLButtonElement>}
       data-slot="sidebar-menu-button"
       data-sidebar="menu-button"
       data-size={size}
       data-active={isActive}
       className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
+      onPointerDown={(e) => {
+        pressHandlers.onPointerDown(e as React.PointerEvent<HTMLElement>)
+        onPointerDown?.(e)
+      }}
+      onPointerUp={(e) => {
+        pressHandlers.onPointerUp()
+        onPointerUp?.(e)
+      }}
+      onPointerLeave={(e) => {
+        pressHandlers.onPointerLeave()
+        onPointerLeave?.(e)
+      }}
+      onPointerCancel={(e) => {
+        pressHandlers.onPointerCancel()
+        onPointerCancel?.(e)
+      }}
       {...props}
     />
   )
@@ -559,7 +631,7 @@ function SidebarMenuAction({
       data-slot="sidebar-menu-action"
       data-sidebar="menu-action"
       className={cn(
-        "absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform peer-hover/menu-button:text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden peer-hover/menu-button:text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 md:after:hidden",
         "peer-data-[size=sm]/menu-button:top-1",

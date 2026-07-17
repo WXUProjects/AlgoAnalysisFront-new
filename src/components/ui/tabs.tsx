@@ -6,7 +6,12 @@ import { Tabs as TabsPrimitive } from "radix-ui"
 import gsap from "gsap"
 
 import { cn } from "@/lib/utils"
-import { prefersReducedMotion } from "@/lib/motion"
+import {
+  animateTabContent,
+  animateTabPill,
+  MOTION,
+  prefersReducedMotion,
+} from "@/lib/motion"
 import { usePress } from "@/hooks/use-press"
 
 function Tabs({
@@ -21,7 +26,7 @@ function Tabs({
       orientation={orientation}
       className={cn(
         "group/tabs flex gap-2 data-[orientation=horizontal]:flex-col",
-        className
+        className,
       )}
       {...props}
     />
@@ -40,7 +45,7 @@ const tabsListVariants = cva(
     defaultVariants: {
       variant: "default",
     },
-  }
+  },
 )
 
 function TabsList({
@@ -69,27 +74,17 @@ function TabsList({
 
     const listRect = list.getBoundingClientRect()
     const activeRect = active.getBoundingClientRect()
-    const x = activeRect.left - listRect.left
-    const y = activeRect.top - listRect.top
-    const w = activeRect.width
-    const h = activeRect.height
-
-    if (prefersReducedMotion() || first.current) {
-      gsap.set(pill, { x, y, width: w, height: h, opacity: 1 })
-      first.current = false
-      return
+    const rect = {
+      x: activeRect.left - listRect.left,
+      y: activeRect.top - listRect.top,
+      width: activeRect.width,
+      height: activeRect.height,
     }
 
-    gsap.to(pill, {
-      x,
-      y,
-      width: w,
-      height: h,
-      opacity: 1,
-      duration: 0.34,
-      ease: "power3.out",
-      overwrite: true,
+    animateTabPill(pill, rect, {
+      instant: prefersReducedMotion() || first.current,
     })
+    first.current = false
   }, [variant])
 
   React.useLayoutEffect(() => {
@@ -144,7 +139,9 @@ function TabsTrigger({
   onPointerCancel,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
-  const { ref, pressHandlers } = usePress<HTMLButtonElement>({ scale: 0.92 })
+  const { ref, pressHandlers } = usePress<HTMLButtonElement>({
+    scale: MOTION.press.scaleTab,
+  })
 
   return (
     <TabsPrimitive.Trigger
@@ -155,7 +152,7 @@ function TabsTrigger({
         "data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-foreground",
         "group-data-[variant=line]/tabs-list:bg-transparent",
         "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity after:duration-200 group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:bottom-[-5px] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-right-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-[state=active]:after:opacity-100",
-        className
+        className,
       )}
       onPointerDown={(e) => {
         pressHandlers.onPointerDown(e)
@@ -191,19 +188,8 @@ function TabsContent({
 
     const play = () => {
       const active = el.getAttribute("data-state") === "active"
-      if (active && !wasActive.current && !prefersReducedMotion()) {
-        gsap.fromTo(
-          el,
-          { opacity: 0, y: 8 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.28,
-            ease: "power2.out",
-            overwrite: true,
-            clearProps: "transform",
-          },
-        )
+      if (active && !wasActive.current) {
+        animateTabContent(el)
       }
       wasActive.current = active
     }

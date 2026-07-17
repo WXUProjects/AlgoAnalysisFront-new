@@ -9,6 +9,11 @@ function normalizeProfile(raw: Record<string, unknown>): UserProfile {
         username: str(s.username),
       }))
     : []
+  const lastSyncRaw = raw.lastSyncAt
+  const lastSyncAt =
+    lastSyncRaw === undefined || lastSyncRaw === null
+      ? undefined
+      : num(lastSyncRaw) || undefined
   return {
     userId: num(raw.userId),
     username: str(raw.username),
@@ -22,6 +27,7 @@ function normalizeProfile(raw: Record<string, unknown>): UserProfile {
     emailWeeklyAllowedByOrg: bool(raw.emailWeeklyAllowedByOrg),
     roleId: num(raw.roleId),
     spiders,
+    lastSyncAt,
   }
 }
 
@@ -154,6 +160,32 @@ export async function setSyncExempt(
   exempt: boolean,
 ): Promise<ApiResult<unknown>> {
   return post(endpoints.user.profile.setSyncExempt, { userId, exempt })
+}
+
+/** 站点管理员：批量解除不活跃（刷新最近活跃为当前时间；超时后仍会再休眠） */
+export async function clearDormant(
+  userIds: number[],
+): Promise<ApiResult<{ updated: number; message?: string }>> {
+  const ids = Array.from(
+    new Set(userIds.filter((id) => Number.isFinite(id) && id > 0)),
+  )
+  if (!ids.length) {
+    return { success: false, message: '请先选择用户', data: null }
+  }
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.profile.clearDormant,
+    { userIds: ids },
+  )
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
+  const updated = num(raw.updated)
+  return {
+    ...res,
+    data: {
+      updated,
+      message: str(raw.message) || res.message || undefined,
+    },
+  }
 }
 
 export async function moveGroup(body: {

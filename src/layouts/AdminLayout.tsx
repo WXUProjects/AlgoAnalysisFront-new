@@ -52,7 +52,8 @@ const titles: Record<string, string> = {
   '/admin/statistics': '组织数据统计',
   '/admin/site-statistics': '站点数据统计',
   '/admin/access': '访问统计',
-  '/admin/bulletin': '公告管理',
+  '/admin/bulletin': '组织公告',
+  '/admin/site-bulletin': '站点公告',
   '/admin/emergency': '紧急通知',
   '/admin/problem-progress': '题库识别',
   '/admin/problem-edits': '题库修改审核',
@@ -164,12 +165,15 @@ export function AdminLayout() {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        isActive={pathname.startsWith('/admin/bulletin')}
-                        tooltip="公告管理"
+                        isActive={
+                          pathname === '/admin/bulletin' ||
+                          pathname.startsWith('/admin/bulletin/')
+                        }
+                        tooltip="组织公告"
                       >
                         <NavLink to="/admin/bulletin">
                           <MegaphoneIcon />
-                          <span>公告管理</span>
+                          <span>组织公告</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -301,6 +305,21 @@ export function AdminLayout() {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
+                        isActive={
+                          pathname === '/admin/site-bulletin' ||
+                          pathname.startsWith('/admin/site-bulletin/')
+                        }
+                        tooltip="站点公告"
+                      >
+                        <NavLink to="/admin/site-bulletin">
+                          <MegaphoneIcon />
+                          <span>站点公告</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
                         isActive={pathname.startsWith('/admin/emergency')}
                         tooltip="紧急通知"
                       >
@@ -376,8 +395,8 @@ export function AdminLayout() {
 
           <SidebarFooter>
             {orgs.length > 0 && (
-              <div className="px-2 pb-2">
-                <label className="mb-1 block text-xs text-muted-foreground">
+              <div className="group-data-[collapsible=icon]:hidden">
+                <label className="mb-1 block px-0.5 text-xs text-muted-foreground">
                   当前组织
                 </label>
                 <Select
@@ -423,10 +442,11 @@ export function AdminLayout() {
               </SidebarMenuItem>
             </SidebarMenu>
             <SidebarSeparator />
-            <div className="flex items-center justify-between px-2 py-1">
-              <span className="text-xs text-muted-foreground">主题</span>
-              <ThemeToggle />
-            </div>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <ThemeToggle />
+              </SidebarMenuItem>
+            </SidebarMenu>
           </SidebarFooter>
           <SidebarRail />
         </Sidebar>

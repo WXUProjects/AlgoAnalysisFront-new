@@ -133,153 +133,51 @@
   }
 }
 
-/* 列表 / 可点行 / 卡片轻抬 */
+/* 列表 / 可点行（颜色 chrome only；抬升由 GSAP useHoverLift 负责） */
 @layer utilities {
   .motion-row {
     @apply transition-colors duration-150 ease-out hover:bg-muted/50;
   }
 
   .motion-lift {
-    @apply transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md;
+    @apply transition-[box-shadow,border-color] duration-200 ease-out hover:shadow-md;
   }
 }
 
-/* 移动端侧栏 / Sheet：非线性进出（iOS 风格 cubic-bezier） */
-@keyframes sheet-overlay-in {
+/*
+ * Radix Presence unmount timer only.
+ * Does NOT drive visual opacity/transform — GSAP sets those via inline styles.
+ * Uses outline-offset so it never fights GSAP transform/opacity.
+ */
+@keyframes gsap-presence-in {
   from {
-    opacity: 0;
+    outline-offset: 0px;
   }
   to {
-    opacity: 1;
+    outline-offset: 0.01px;
   }
 }
 
-@keyframes sheet-overlay-out {
+@keyframes gsap-presence-out {
   from {
-    opacity: 1;
+    outline-offset: 0.01px;
   }
   to {
-    opacity: 0;
+    outline-offset: 0px;
   }
 }
 
-@keyframes sheet-in-left {
-  from {
-    transform: translate3d(-100%, 0, 0);
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
+.gsap-presence[data-state='open'] {
+  animation: gsap-presence-in var(--gsap-presence-in-ms, 380ms) linear both;
 }
 
-@keyframes sheet-out-left {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(-100%, 0, 0);
-  }
-}
-
-@keyframes sheet-in-right {
-  from {
-    transform: translate3d(100%, 0, 0);
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes sheet-out-right {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(100%, 0, 0);
-  }
-}
-
-@keyframes sheet-in-top {
-  from {
-    transform: translate3d(0, -100%, 0);
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes sheet-out-top {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(0, -100%, 0);
-  }
-}
-
-@keyframes sheet-in-bottom {
-  from {
-    transform: translate3d(0, 100%, 0);
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes sheet-out-bottom {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(0, 100%, 0);
-  }
-}
-
-.sheet-overlay[data-state='open'] {
-  animation: sheet-overlay-in 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
-}
-
-.sheet-overlay[data-state='closed'] {
-  animation: sheet-overlay-out 260ms cubic-bezier(0.4, 0, 1, 1) both;
-}
-
-.sheet-content[data-state='open'][data-side='left'] {
-  animation: sheet-in-left 420ms cubic-bezier(0.32, 0.72, 0, 1) both;
-}
-
-.sheet-content[data-state='closed'][data-side='left'] {
-  animation: sheet-out-left 280ms cubic-bezier(0.4, 0, 0.68, 0.28) both;
-}
-
-.sheet-content[data-state='open'][data-side='right'] {
-  animation: sheet-in-right 420ms cubic-bezier(0.32, 0.72, 0, 1) both;
-}
-
-.sheet-content[data-state='closed'][data-side='right'] {
-  animation: sheet-out-right 280ms cubic-bezier(0.4, 0, 0.68, 0.28) both;
-}
-
-.sheet-content[data-state='open'][data-side='top'] {
-  animation: sheet-in-top 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
-}
-
-.sheet-content[data-state='closed'][data-side='top'] {
-  animation: sheet-out-top 260ms cubic-bezier(0.4, 0, 0.68, 0.28) both;
-}
-
-.sheet-content[data-state='open'][data-side='bottom'] {
-  animation: sheet-in-bottom 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
-}
-
-.sheet-content[data-state='closed'][data-side='bottom'] {
-  animation: sheet-out-bottom 260ms cubic-bezier(0.4, 0, 0.68, 0.28) both;
+.gsap-presence[data-state='closed'] {
+  animation: gsap-presence-out var(--gsap-presence-out-ms, 280ms) linear both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sheet-overlay[data-state='open'],
-  .sheet-overlay[data-state='closed'],
-  .sheet-content[data-state='open'],
-  .sheet-content[data-state='closed'] {
+  .gsap-presence[data-state='open'],
+  .gsap-presence[data-state='closed'] {
     animation-duration: 1ms !important;
   }
 }

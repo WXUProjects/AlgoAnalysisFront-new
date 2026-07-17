@@ -64,8 +64,9 @@
 | 主信号 | `users.last_login_at`（登录写；VisitPing 登录用户 1h 节流写） |
 | 豁免 | 站管 / `sync_exempt`（站管开始终同步）/ 组织 staff / 组织 `force_sync`（永不冻结）/ plan∈{team,pro}；**任一豁免则不受休眠与不活跃筛选约束** |
 | 休眠效果 | 定时爬虫、AI 总结、邮件、画像预热跳过；登录唤醒全量爬 |
+| 手动解除（一次） | 站管 `POST /user/profile/clear-dormant` 批量刷新 `last_login_at`；超时后仍会再休眠（≠ 永久豁免） |
 
-相关 API：`POST /user/site/config`（`inactiveDays`+`setInactiveDays`）、`POST /user/org/update`（`forceSync` 仅站管）、`POST /user/profile/set-sync-exempt`
+相关 API：`POST /user/site/config`（`inactiveDays`+`setInactiveDays`）、`POST /user/org/update`（`forceSync` 仅站管）、`POST /user/profile/set-sync-exempt`、`POST /user/profile/clear-dormant`
 **RegisterReq**
 
 ```json
@@ -125,6 +126,7 @@
 | POST | `/user/profile/set-problem-pipeline` | 是(站点管理员) | body: `{ userId, enabled, kind: fetch\|ai }`；个人覆盖：近窗提交是否触发题面爬取 / 题面 AI（默认按是否非公共域组织） |
 | POST | `/user/profile/set-sync-intervals` | 是(站点管理员) | body: `{ userId, setSpider?, spiderIntervalMin?, setAi?, aiSummaryIntervalMin? }`；个人覆盖爬取/AI 总结间隔（分钟，**优先级最高**）；间隔 `0` 表示清除覆盖回落组织 MIN；范围 5–10080 |
 | POST | `/user/profile/set-sync-exempt` | 是(站点管理员) | body: `{ userId, exempt }`；永不休眠（跳过不活跃判定） |
+| POST | `/user/profile/clear-dormant` | 是(站点管理员) | body: `{ userIds: number[] }`（单次最多 200）；**一次性**解除不活跃：将 `last_login_at` 刷新为当前时间；超时后仍会再休眠（≠ `sync_exempt`）；返回 `{ code, message, updated }` |
 | GET | `/user/profile/ids-by-group` | 否 | query: `groupId` |
 | POST | `/user/profile/get-by-ids` | 否 | body: `{ userIds, orgId? }`；`name`=该组织 `org_display_name`（空则 username）；`orgId` 缺省用 JWT 当前组织，再回落公共域 |
 | GET | `/user/profile/non-public-org-user-ids` | 否（内部） | 题面流水线资格：`userIds`/`fetchUserIds`=爬取资格，`aiUserIds`=AI 资格（默认非公共域组织 + 个人覆盖） |
@@ -384,9 +386,11 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
   "avatar": "string",
   "emailEnabled": true,
   "roleId": 1,
-  "spiders": [{ "platform": "NowCoder", "username": "xxx" }]
+  "spiders": [{ "platform": "NowCoder", "username": "xxx" }],
+  "lastSyncAt": 0
 }
 ```
+- `lastSyncAt`：最近一次 OJ 数据同步成功时间（unix 秒；`0` 表示尚无成功同步记录，部署本字段前的历史用户会在下次定时/手动同步后出现）
 
 **UpdateReq**
 ```json
@@ -550,18 +554,30 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 ### Bulletin
 
+双层公告：`scope=site` 站点公告（仅站点管理员发布，全员可见，列表置顶展示）；`scope=org` 组织公告（组织教练/队长/组织管理员，仅本组织可见）。
+
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| POST | `/core/bulletin/create` | 是(教练/管理员) | 创建公告 |
-| POST | `/core/bulletin/update` | 是(教练/管理员) | 更新公告 |
-| DELETE | `/core/bulletin/delete` | 是(教练/管理员) | query: `id` |
+| POST | `/core/bulletin/create` | 是 | 创建；`scope=site` 仅站管；`scope=org` 组织教练及以上 |
+| POST | `/core/bulletin/update` | 是 | 更新（仅可管范围内） |
+| DELETE | `/core/bulletin/delete` | 是 | query: `id`（仅可管范围内） |
 | GET | `/core/bulletin/get` | 否 | query: `id` |
-| GET | `/core/bulletin/list` | 否 | query: `page`, `pageSize` |
+| GET | `/core/bulletin/list` | 否 | query: `page`, `pageSize`, `scope?` |
+
+**List 过滤**
+
+| `scope` | 结果 |
+|---------|------|
+| 空 | 全站 ∪ 当前组织；**站点公告优先**，再置顶，再时间倒序 |
+| `site` | 仅站点公告 |
+| `org` | 仅当前 JWT 组织公告（无组织上下文则空） |
 
 **CreateReq**
 ```json
-{ "title": "string", "content": "string", "isPinned": false }
+{ "title": "string", "content": "string", "isPinned": false, "scope": "site|org" }
 ```
+- `scope` 可选。省略时：站管默认 `site`，其余默认 `org`
+- 组织公告写入当前 JWT `orgId`
 
 **BulletinInfo**
 ```json
@@ -573,7 +589,9 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
   "authorName": "string",
   "isPinned": false,
   "createdAt": 1710000000,
-  "updatedAt": 1710000000
+  "updatedAt": 1710000000,
+  "scope": "site",
+  "orgId": 0
 }
 ```
 
@@ -588,6 +606,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | DELETE | `/core/emergency/delete` | 是(站点管理员) | query: `id` |
 | GET | `/core/emergency/list` | 是(站点管理员) | query: `page`, `pageSize` |
 | GET | `/core/emergency/active` | 否 | 当前生效列表（`enabled=true`，按 sortOrder） |
+| POST | `/core/emergency/reorder` | 是(站点管理员) | 拖拽排序 body `{ "ids": [3,1,2] }` 按序重写 sortOrder |
 
 **CreateReq / UpdateReq**
 ```json
@@ -616,11 +635,12 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 |--------|------|------|------|
 | GET | `/core/problem/list` | 否 | 题库列表 |
 | GET | `/core/problem/tags` | 否 | 标签聚合 `?limit=`，返回 `{ tag, count }[]` |
+| GET | `/core/problem/hot` | 否 | 全站热题：近 `days` 天（默认 2，1–7）按提交次数/做题人数/AC 综合热度排序；`page`/`pageSize`；项含 `problem` + `submitCount`/`solverCount`/`acCount`/`score`/`lastSubmittedAt`；热度 = submit×1 + solver×3 + ac×2 |
 | GET | `/core/problem/get` | 否 | query: `id` |
 | GET | `/core/problem/following-status` | 是 | query: `problemId` → 关注用户对本题 `AC|TRIED|NONE` |
 | GET | `/core/problem/submissions` | 否 | query: `problemId`, `page`, `pageSize`, `userId?`, `followingOnly?`（不受域限制）, `status?`=`AC`；返回 `data` + **`total`**（服务端分页） |
 | GET | `/core/problem/comment/list` | 否 | query: `problemId`, `page`, `pageSize` → 题目评论（**全站可见，不做组织隔离**） |
-| POST | `/core/problem/comment/create` | 是 | body: `{ problemId, content }`；支持 `@username`；同步发现流（当前组织） |
+| POST | `/core/problem/comment/create` | 是 | body: `{ problemId, content, syncToPublic? }`；支持 `@username`；同步发现流（当前组织）；`syncToPublic=true` 且非公共域时**额外**写入公共域发现流 |
 | POST | `/core/problem/comment/delete` | 是 | body: `{ id }` 本人或站管 |
 | GET | `/core/problem/solution/list` | 否 | query: `problemId`, `page`, `pageSize` → **用户题解**列表（全站；非 AI `solutions`） |
 | GET | `/core/problem/solution/get` | 否 | query: `id` → 题解全文 `contentMd` |
@@ -664,6 +684,39 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 **ListTags** `GET /core/problem/tags?limit=100`
 ```json
 { "code": "0", "message": "success", "data": [{ "tag": "前缀和", "count": "28" }] }
+```
+
+**Hot** `GET /core/problem/hot?page=1&pageSize=20&days=2`
+
+近窗全站热题（默认 2 天，允许 1–7）。从 `submit_logs` 聚合：
+
+| 指标 | 说明 |
+|------|------|
+| `submitCount` | 提交次数（排除力扣合成/不计入提交行） |
+| `solverCount` | 做题人数（`user_id` 去重） |
+| `acCount` | AC 次数（`is_ac`） |
+| `score` | `submit×1 + solver×3 + ac×2`（做题人数权重最高） |
+| `lastSubmittedAt` | 窗口内最近一次提交 |
+
+排序：`score DESC, lastSubmittedAt DESC`。短缓存约 90s。
+
+```json
+{
+  "code": "0",
+  "message": "success",
+  "data": [{
+    "problem": { "id": 1, "title": "…", "platform": "LuoGu", "difficulty": "中等" },
+    "submitCount": 12,
+    "solverCount": 5,
+    "acCount": 4,
+    "score": 35,
+    "lastSubmittedAt": 1784273532
+  }],
+  "total": 40,
+  "page": 1,
+  "pageSize": 20,
+  "days": 2
+}
 ```
 
 **ProblemInfo**
@@ -767,8 +820,14 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 - **评论、题解挂在题目上，全站可见**（list 不按 org 过滤）。
 - **发现流 `activity/feed` 按组织隔离**：创建时写入作者 JWT `orgId`；列表只返回当前组织条目。
+- **评论可选同步公共域**：`POST comment/create` 传 `syncToPublic: true` 时，若当前组织不是公共域，会再写一条公共域 `activity_feeds`（同一评论 `refId`）；删除评论时两条 feed 一并清除。
 - 题解 `contentMd` 按题面规格渲染（GFM + 公式）；与 AI `ProblemInfo.solutions` 无关。
 - `@username` 在创建时解析并写站内通知。
+
+**Comment create** `POST /core/problem/comment/create`
+```json
+{ "problemId": 1, "content": "不错 @bob", "syncToPublic": true }
+```
 
 **Comment list** `GET /core/problem/comment/list?problemId=1&page=1&pageSize=20`
 ```json
@@ -886,6 +945,7 @@ DELETE /api/core/bulletin/delete
 GET    /api/core/bulletin/get
 GET    /api/core/bulletin/list
 GET    /api/core/problem/list
+GET    /api/core/problem/hot
 GET    /api/core/problem/get
 GET    /api/core/problem/submissions
 GET    /api/core/problem/user-profile

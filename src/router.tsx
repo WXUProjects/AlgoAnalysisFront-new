@@ -3,7 +3,6 @@ import {
   createBrowserRouter,
   Navigate,
   Outlet,
-  useLocation,
 } from 'react-router-dom'
 import { AppLayout } from '@/layouts/AppLayout'
 import { AdminLayout } from '@/layouts/AdminLayout'
@@ -51,6 +50,9 @@ const Bulletin = lazy(() =>
 const Discover = lazy(() =>
   import('@/pages/Discover').then((m) => ({ default: m.Discover })),
 )
+const AllActivities = lazy(() =>
+  import('@/pages/AllActivities').then((m) => ({ default: m.AllActivities })),
+)
 const Contest = lazy(() =>
   import('@/pages/Contest').then((m) => ({ default: m.Contest })),
 )
@@ -64,6 +66,21 @@ const QuestionBank = lazy(() =>
 const QuestionBankDetail = lazy(() =>
   import('@/pages/QuestionBankDetail').then((m) => ({
     default: m.QuestionBankDetail,
+  })),
+)
+const ProblemContentEdit = lazy(() =>
+  import('@/pages/ProblemContentEdit').then((m) => ({
+    default: m.ProblemContentEdit,
+  })),
+)
+const ProblemSolutionEdit = lazy(() =>
+  import('@/pages/ProblemSolutionEdit').then((m) => ({
+    default: m.ProblemSolutionEdit,
+  })),
+)
+const ProblemSolutionView = lazy(() =>
+  import('@/pages/ProblemSolutionView').then((m) => ({
+    default: m.ProblemSolutionView,
   })),
 )
 const DashboardOrgStatistics = lazy(() =>
@@ -96,9 +113,14 @@ const DashboardSiteUser = lazy(() =>
     default: m.DashboardSiteUser,
   })),
 )
-const DashboardBulletinManage = lazy(() =>
+const DashboardOrgBulletinManage = lazy(() =>
   import('@/pages/dashboard/BulletinManage').then((m) => ({
-    default: m.DashboardBulletinManage,
+    default: m.DashboardOrgBulletinManage,
+  })),
+)
+const DashboardSiteBulletinManage = lazy(() =>
+  import('@/pages/dashboard/BulletinManage').then((m) => ({
+    default: m.DashboardSiteBulletinManage,
   })),
 )
 const DashboardEmergencyManage = lazy(() =>
@@ -173,13 +195,6 @@ function CoachOutlet() {
       <Outlet />
     </RequireCoach>
   )
-}
-
-/** 旧「动态」路径 → 发现页，保留 query */
-function RedirectAllActivities() {
-  const { search } = useLocation()
-  const next = search ? `/discover${search}` : '/discover'
-  return <Navigate to={next} replace />
 }
 
 export const router = createBrowserRouter([
@@ -294,7 +309,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'all-activities',
-        element: <RedirectAllActivities />,
+        element: (
+          <Lazy>
+            <AllActivities />
+          </Lazy>
+        ),
       },
       {
         path: 'bulletin',
@@ -337,6 +356,44 @@ export const router = createBrowserRouter([
         element: (
           <Lazy>
             <QuestionBankDetail />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'question-bank/detail/:id/edit-content',
+        element: (
+          <RequireLogin>
+            <Lazy>
+              <ProblemContentEdit />
+            </Lazy>
+          </RequireLogin>
+        ),
+      },
+      {
+        path: 'question-bank/detail/:id/solution/new',
+        element: (
+          <RequireLogin>
+            <Lazy>
+              <ProblemSolutionEdit />
+            </Lazy>
+          </RequireLogin>
+        ),
+      },
+      {
+        path: 'question-bank/detail/:id/solution/:solutionId/edit',
+        element: (
+          <RequireLogin>
+            <Lazy>
+              <ProblemSolutionEdit />
+            </Lazy>
+          </RequireLogin>
+        ),
+      },
+      {
+        path: 'question-bank/detail/:id/solution/:solutionId',
+        element: (
+          <Lazy>
+            <ProblemSolutionView />
           </Lazy>
         ),
       },
@@ -465,7 +522,15 @@ export const router = createBrowserRouter([
             path: 'bulletin',
             element: (
               <Lazy>
-                <DashboardBulletinManage />
+                <DashboardOrgBulletinManage />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'site-bulletin',
+            element: (
+              <Lazy>
+                <DashboardSiteBulletinManage />
               </Lazy>
             ),
           },

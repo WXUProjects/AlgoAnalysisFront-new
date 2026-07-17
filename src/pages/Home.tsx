@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useHoverLift } from '@/hooks/use-hover-motion'
 import { Link } from 'react-router-dom'
 import {
   BookOpenIcon,
@@ -91,6 +92,44 @@ function trendOf(curr: number, prev: number) {
   }
 }
 
+function OjLink({
+  href,
+  label,
+  desc,
+  icon,
+}: {
+  href: string
+  label: string
+  desc: string
+  icon: string
+}) {
+  const { ref, hoverHandlers } = useHoverLift<HTMLAnchorElement>()
+  return (
+    <a
+      ref={ref}
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="group flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-[border-color,background-color,box-shadow] duration-200 ease-out hover:border-primary/40 hover:bg-muted/40 hover:shadow-sm"
+      {...hoverHandlers}
+    >
+      <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background p-1">
+        <img
+          src={icon}
+          alt=""
+          className="max-h-full max-w-full object-contain"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-medium leading-tight">{label}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{desc}</p>
+      </div>
+    </a>
+  )
+}
+
 function StatCard({
   label,
   sub,
@@ -106,8 +145,13 @@ function StatCard({
   trend?: { icon: string; text: string; up: boolean | null }
   loading?: boolean
 }) {
+  const { ref, hoverHandlers } = useHoverLift<HTMLDivElement>()
   return (
-    <div className="relative overflow-hidden rounded-xl border bg-card p-4 shadow-sm motion-lift hover:bg-muted/30">
+    <div
+      ref={ref}
+      className="relative overflow-hidden rounded-xl border bg-card p-4 shadow-sm motion-lift hover:bg-muted/30"
+      {...hoverHandlers}
+    >
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-[11px] font-semibold tracking-wide text-muted-foreground">
@@ -279,29 +323,7 @@ export function Home() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 px-4 sm:grid-cols-2">
           {OJ_LINKS.map((o) => (
-            <a
-              key={o.href}
-              href={o.href}
-              target="_blank"
-              rel="noreferrer"
-              className="group flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/40 hover:shadow-sm"
-            >
-              <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background p-1">
-                <img
-                  src={o.icon}
-                  alt=""
-                  className="max-h-full max-w-full object-contain"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium leading-tight">{o.label}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
-                  {o.desc}
-                </p>
-              </div>
-            </a>
+            <OjLink key={o.href} href={o.href} label={o.label} desc={o.desc} icon={o.icon} />
           ))}
           {isLogin && isMemberLike && (
             <Link
@@ -476,15 +498,24 @@ export function Home() {
                 ? Array.from({ length: 4 }).map((_, i) => (
                     <Skeleton key={i} className="h-10 w-full" />
                   ))
-                : bulletins.map((b) => (
+                : bulletins.map((b) => {
+                    const isSite = !b.scope || b.scope === 'site'
+                    return (
                     <Link
                       key={b.id}
                       to={`/bulletin?expand=${b.id}`}
                       className="flex items-start justify-between gap-2 rounded-md border px-3 py-2 text-sm transition-all duration-200 ease-out hover:bg-muted/40 hover:shadow-sm"
                     >
                       <span className="flex min-w-0 items-start gap-2">
-                        {b.isPinned && (
+                        {isSite ? (
+                          <Badge className="shrink-0">站点</Badge>
+                        ) : (
                           <Badge className="shrink-0" variant="secondary">
+                            组织
+                          </Badge>
+                        )}
+                        {b.isPinned && (
+                          <Badge className="shrink-0" variant="outline">
                             置顶
                           </Badge>
                         )}
@@ -494,7 +525,8 @@ export function Home() {
                         {formatTime(b.createdAt)}
                       </span>
                     </Link>
-                  ))}
+                    )
+                  })}
               {!loading && !bulletins.length && (
                 <p className="py-4 text-center text-sm text-muted-foreground">
                   暂时还没有公告

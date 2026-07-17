@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { listGroups } from '@/api/group'
 import {
+  clearDormant,
   deleteUser,
   listProfiles,
   moveGroup,
@@ -32,6 +33,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Card,
   CardContent,
@@ -122,6 +124,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [spiderIntervalDraft, setSpiderIntervalDraft] = useState('')
   const [aiIntervalDraft, setAiIntervalDraft] = useState('')
   const [savingIntervals, setSavingIntervals] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
+  const [clearingDormant, setClearingDormant] = useState(false)
 
   const groupName = useCallback(
     (u: UserListItem) => {
@@ -150,6 +154,11 @@ function UserListPage({ scope }: { scope: UserScope }) {
   useEffect(() => {
     void load()
   }, [load])
+
+  // 筛选/范围变化时清空勾选，避免误操作跨筛选用户
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [scope, keyword, dormantOnly])
 
   useEffect(() => {
     if (isSite) return
@@ -226,6 +235,69 @@ function UserListPage({ scope }: { scope: UserScope }) {
       )
     } else toast.error(res.message || '操作未完成，请稍后重试')
   }
+
+  function toggleSelected(userId: number, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (checked) next.add(userId)
+      else next.delete(userId)
+      return next
+    })
+  }
+
+  function toggleSelectAllOnPage(checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      for (const u of list) {
+        if (checked) next.add(u.userId)
+        else next.delete(u.userId)
+      }
+      return next
+    })
+  }
+
+  async function handleClearDormant(userIds: number[]) {
+    if (!isAdmin) return
+    const ids = Array.from(new Set(userIds.filter((id) => id > 0)))
+    if (!ids.length) {
+      toast.error('请先勾选要解除的用户')
+      return
+    }
+    setClearingDormant(true)
+    const res = await clearDormant(ids)
+    setClearingDormant(false)
+    if (!res.success) {
+      toast.error(res.message || '解除失败，请稍后重试')
+      return
+    }
+    const n = res.data?.updated ?? ids.length
+    toast.success(res.data?.message || res.message || `已解除 ${n} 人的不活跃状态`)
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      for (const id of ids) next.delete(id)
+      return next
+    })
+    const nowSec = Math.floor(Date.now() / 1000)
+    setList((prev) =>
+      prev.map((row) =>
+        ids.includes(row.userId)
+          ? { ...row, dormant: false, lastLoginAt: nowSec }
+          : row,
+      ),
+    )
+    setDetailUser((cur) =>
+      cur && ids.includes(cur.userId)
+        ? { ...cur, dormant: false, lastLoginAt: nowSec }
+        : cur,
+    )
+    // 在「仅不活跃」筛选下刷新，让已解除的人从列表消失
+    if (dormantOnly) void load()
+  }
+
+  const pageAllSelected =
+    list.length > 0 && list.every((u) => selectedIds.has(u.userId))
+  const pageSomeSelected =
+    list.some((u) => selectedIds.has(u.userId)) && !pageAllSelected
 
   async function handleDelete(userId: number) {
     if (userId === 2) {
@@ -478,7 +550,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 <SelectItem value="dormant">不活跃（已暂停同步）</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant="secondary"
                 size="sm"
@@ -497,6 +569,42 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 >
                   清空
                 </Button>
+              )}
+              {isAdmin && selectedIds.size > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="default"
+                      disabled={clearingDormant}
+                    >
+                      {clearingDormant
+                        ? '处理中…'
+                        : `解除不活跃（${selectedIds.size}）`}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        解除 {selectedIds.size} 人的不活跃状态？
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        会把这些人的「最近活跃」更新为现在，后台同步会恢复。这只是一次性操作：之后如果长时间不再登录，仍会再次被标记为不活跃。不会设为「始终同步」。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>取消</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() =>
+                          void handleClearDormant(Array.from(selectedIds))
+                        }
+                      >
+                        确认解除
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           </div>
@@ -522,6 +630,23 @@ function UserListPage({ scope }: { scope: UserScope }) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {isAdmin && (
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={
+                          pageAllSelected
+                            ? true
+                            : pageSomeSelected
+                              ? 'indeterminate'
+                              : false
+                        }
+                        onCheckedChange={(v) =>
+                          toggleSelectAllOnPage(v === true)
+                        }
+                        aria-label="全选本页"
+                      />
+                    </TableHead>
+                  )}
                   <TableHead className="w-12" />
                   <TableHead>{isSite ? '昵称' : '组织内名称'}</TableHead>
                   <TableHead>用户名</TableHead>
@@ -539,8 +664,20 @@ function UserListPage({ scope }: { scope: UserScope }) {
                   const weeklyCanOpen = u.emailWeeklyAllowedByOrg !== false
                   const dailyBusy = togglingKey === `${u.userId}:daily`
                   const weeklyBusy = togglingKey === `${u.userId}:weekly`
+                  const selected = selectedIds.has(u.userId)
                   return (
-                    <TableRow key={u.userId}>
+                    <TableRow key={u.userId} data-state={selected ? 'selected' : undefined}>
+                      {isAdmin && (
+                        <TableCell>
+                          <Checkbox
+                            checked={selected}
+                            onCheckedChange={(v) =>
+                              toggleSelected(u.userId, v === true)
+                            }
+                            aria-label={`选择 ${u.name || u.username}`}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Avatar className="size-8">
                           <AvatarImage src={u.avatar || undefined} />
@@ -922,6 +1059,29 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       }
                     />
                   </Field>
+                )}
+                {isAdmin && (detailUser.dormant || !detailUser.lastLoginAt) && (
+                  <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-sm font-medium">解除不活跃</p>
+                      <p className="text-xs text-muted-foreground">
+                        把最近活跃刷新为现在，同步会恢复。只解除这一次，之后长时间未登录仍会再次暂停。
+                      </p>
+                    </div>
+                    <div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={clearingDormant}
+                        onClick={() =>
+                          void handleClearDormant([detailUser.userId])
+                        }
+                      >
+                        {clearingDormant ? '处理中…' : '立即解除'}
+                      </Button>
+                    </div>
+                  </div>
                 )}
                 <Field orientation="horizontal">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">

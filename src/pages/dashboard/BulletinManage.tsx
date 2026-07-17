@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   createBulletin,
@@ -7,6 +8,7 @@ import {
   updateBulletin,
 } from '@/api/bulletin'
 import type { BulletinInfo } from '@shared/api'
+import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { useListQueryState } from '@/hooks/use-list-query-state'
@@ -54,7 +56,20 @@ import { formatTime } from '@/lib/format'
 
 const DEFAULT_PAGE_SIZE = 10
 
-export function DashboardBulletinManage() {
+type ManageScope = 'org' | 'site'
+
+/**
+ * 公告管理
+ * - scope=org：组织后台，仅本组织公告（组织管理员/教练）
+ * - scope=site：站点后台，仅站点公告（站点管理员）
+ */
+export function DashboardBulletinManage({
+  scope = 'org',
+}: {
+  scope?: ManageScope
+}) {
+  const { isAdmin } = useAuth()
+  const isSite = scope === 'site'
   const { page, pageSize, setPage, setPageSize } = useListQueryState({
     defaultPageSize: DEFAULT_PAGE_SIZE,
   })
@@ -70,8 +85,13 @@ export function DashboardBulletinManage() {
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
+    // 站点公告管理仅站管；组织管理员不应请求/看到
+    if (isSite && !isAdmin) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
-    const res = await listBulletins(page, pageSize)
+    const res = await listBulletins(page, pageSize, scope)
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '公告加载失败，请稍后重试')
@@ -79,7 +99,7 @@ export function DashboardBulletinManage() {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page, pageSize])
+  }, [page, pageSize, scope, isSite, isAdmin])
 
   useEffect(() => {
     void load()
@@ -103,7 +123,7 @@ export function DashboardBulletinManage() {
 
   async function handleSave() {
     if (!title.trim()) {
-      toast.error('标题不能为空')
+      toast.error('请填写标题')
       return
     }
     setSaving(true)
@@ -118,6 +138,7 @@ export function DashboardBulletinManage() {
           title: title.trim(),
           content,
           isPinned: pinned,
+          scope,
         })
     setSaving(false)
     if (res.success) {
@@ -135,22 +156,32 @@ export function DashboardBulletinManage() {
     } else toast.error(res.message || '删除失败，请稍后重试')
   }
 
+  // 站点公告仅站点管理员可进管理页（组织管理员不可见）
+  if (isSite && !isAdmin) {
+    return <Navigate to="/admin/bulletin" replace />
+  }
+
+  const pageTitle = isSite ? '站点公告' : '组织公告'
+  const pageDesc = isSite
+    ? '发给全站所有人；会在公告列表最上方显示，并标注「站点公告」'
+    : '仅当前组织成员可见；与站点公告分开管理'
+  const emptyText = isSite ? '还没有站点公告' : '还没有组织公告'
+  const createLabel = isSite ? '新建站点公告' : '新建组织公告'
+
   return (
     <PageShell className="gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-semibold">公告管理</h3>
-          <p className="text-sm text-muted-foreground">
-            发布、编辑与置顶公告
-          </p>
+          <h3 className="font-semibold">{pageTitle}</h3>
+          <p className="text-sm text-muted-foreground">{pageDesc}</p>
         </div>
         <Button type="button" size="sm" onClick={openCreate}>
-          新建公告
+          {createLabel}
         </Button>
       </div>
 
-      <Card className="gap-0 py-0 overflow-hidden">
-        <CardHeader className="px-4 py-3 border-b">
+      <Card className="gap-0 overflow-hidden py-0">
+        <CardHeader className="border-b px-4 py-3">
           <CardTitle className="text-base">公告列表</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -220,7 +251,7 @@ export function DashboardBulletinManage() {
                 {!list.length && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      暂无公告
+                      {emptyText}
                     </TableCell>
                   </TableRow>
                 )}
@@ -242,7 +273,15 @@ export function DashboardBulletinManage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex! max-h-[92vh] w-full max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
           <DialogHeader className="shrink-0 border-b px-5 py-4">
-            <DialogTitle>{editing ? '编辑公告' : '新建公告'}</DialogTitle>
+            <DialogTitle>
+              {editing
+                ? isSite
+                  ? '编辑站点公告'
+                  : '编辑组织公告'
+                : isSite
+                  ? '新建站点公告'
+                  : '新建组织公告'}
+            </DialogTitle>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             <FieldGroup className="gap-3">
@@ -280,4 +319,14 @@ export function DashboardBulletinManage() {
       </Dialog>
     </PageShell>
   )
+}
+
+/** 组织后台：仅本组织公告 */
+export function DashboardOrgBulletinManage() {
+  return <DashboardBulletinManage scope="org" />
+}
+
+/** 站点后台：仅站点公告（仅站管） */
+export function DashboardSiteBulletinManage() {
+  return <DashboardBulletinManage scope="site" />
 }

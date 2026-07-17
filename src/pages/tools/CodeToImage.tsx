@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { useHoverTransform } from '@/hooks/use-hover-motion'
+import { MOTION } from '@/lib/motion'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
@@ -55,6 +57,32 @@ int main() {
   return 0;
 }
 `
+
+function BgSwatch({
+  bg,
+  active,
+  onClick,
+}: {
+  bg: string
+  active: boolean
+  onClick: () => void
+}) {
+  const { ref, hoverHandlers } = useHoverTransform<HTMLButtonElement>({
+    scale: MOTION.hover.scale,
+  })
+  return (
+    <button
+      ref={ref}
+      type="button"
+      title={bg}
+      className="size-7 rounded-md border border-border shadow-xs ring-offset-background will-change-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[active=true]:ring-2 data-[active=true]:ring-primary"
+      style={{ background: bg }}
+      data-active={active}
+      onClick={onClick}
+      {...hoverHandlers}
+    />
+  )
+}
 
 export function CodeToImage() {
   const [code, setCode] = useState(SAMPLE)
@@ -442,13 +470,10 @@ export function CodeToImage() {
                 <FieldLabel>背景色</FieldLabel>
                 <div className="flex flex-wrap gap-2">
                   {BG_PRESETS.map((bg) => (
-                    <button
+                    <BgSwatch
                       key={bg}
-                      type="button"
-                      title={bg}
-                      className="size-7 rounded-md border border-border shadow-xs ring-offset-background transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[active=true]:ring-2 data-[active=true]:ring-primary"
-                      style={{ background: bg }}
-                      data-active={settings.backgroundColor === bg}
+                      bg={bg}
+                      active={settings.backgroundColor === bg}
                       onClick={() => patch({ backgroundColor: bg })}
                     />
                   ))}

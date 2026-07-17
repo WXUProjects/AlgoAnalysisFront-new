@@ -3,6 +3,15 @@ import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import {
+  animateDialogIn,
+  animateDialogOut,
+  animateOverlayIn,
+  animateOverlayOut,
+  GSAP_PRESENCE_CLASS,
+  presenceStyleVars,
+} from "@/lib/motion"
+import { composeRefs, useGsapPresence } from "@/hooks/use-gsap-presence"
 
 function AlertDialog({
   ...props
@@ -28,15 +37,25 @@ function AlertDialogPortal({
 
 function AlertDialogOverlay({
   className,
+  ref: refProp,
+  style,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Overlay>) {
+  const { ref: motionRef } = useGsapPresence({
+    onOpen: animateOverlayIn,
+    onClose: animateOverlayOut,
+  })
+
   return (
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
+      ref={composeRefs(motionRef, refProp)}
       className={cn(
-        "fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
-        className
+        GSAP_PRESENCE_CLASS,
+        "fixed inset-0 z-50 bg-black/50",
+        className,
       )}
+      style={{ ...presenceStyleVars("overlay"), ...style }}
       {...props}
     />
   )
@@ -45,20 +64,30 @@ function AlertDialogOverlay({
 function AlertDialogContent({
   className,
   size = "default",
+  ref: refProp,
+  style,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
   size?: "default" | "sm"
 }) {
+  const { ref: motionRef } = useGsapPresence({
+    onOpen: animateDialogIn,
+    onClose: animateDialogOut,
+  })
+
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
         data-slot="alert-dialog-content"
         data-size={size}
+        ref={composeRefs(motionRef, refProp)}
         className={cn(
-          "group/alert-dialog-content fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 data-[size=sm]:max-w-xs data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[size=default]:sm:max-w-lg",
-          className
+          GSAP_PRESENCE_CLASS,
+          "group/alert-dialog-content fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-lg border bg-background p-6 shadow-lg will-change-transform data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-lg",
+          className,
         )}
+        style={{ ...presenceStyleVars("dialog"), ...style }}
         {...props}
       />
     </AlertDialogPortal>
@@ -74,7 +103,7 @@ function AlertDialogHeader({
       data-slot="alert-dialog-header"
       className={cn(
         "grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-6 sm:group-data-[size=default]/alert-dialog-content:place-items-start sm:group-data-[size=default]/alert-dialog-content:text-left sm:group-data-[size=default]/alert-dialog-content:has-data-[slot=alert-dialog-media]:grid-rows-[auto_1fr]",
-        className
+        className,
       )}
       {...props}
     />
@@ -90,7 +119,7 @@ function AlertDialogFooter({
       data-slot="alert-dialog-footer"
       className={cn(
         "flex flex-col-reverse gap-2 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
-        className
+        className,
       )}
       {...props}
     />
@@ -106,7 +135,7 @@ function AlertDialogTitle({
       data-slot="alert-dialog-title"
       className={cn(
         "text-lg font-semibold sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2",
-        className
+        className,
       )}
       {...props}
     />
@@ -135,7 +164,7 @@ function AlertDialogMedia({
       data-slot="alert-dialog-media"
       className={cn(
         "mb-2 inline-flex size-16 items-center justify-center rounded-md bg-muted sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*='size-'])]:size-8",
-        className
+        className,
       )}
       {...props}
     />

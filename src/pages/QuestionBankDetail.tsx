@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ExternalLinkIcon, PencilIcon, TagsIcon } from 'lucide-react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import {
+  BookOpenIcon,
+  ExternalLinkIcon,
+  FileTextIcon,
+  PencilIcon,
+  TagsIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import {
   adminUpdateProblem,
@@ -17,9 +23,11 @@ import { useAuth } from '@/auth/AuthContext'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
-import { MarkdownEditor } from '@/components/markdown-editor'
 import { Pagination } from '@/components/pagination'
-import { ProblemCommunity } from '@/components/problem-community'
+import {
+  ProblemComments,
+  ProblemSolutionsPanel,
+} from '@/components/problem-community'
 import { TagInput } from '@/components/tag-input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -40,7 +48,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Table,
@@ -54,18 +61,21 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime } from '@/lib/format'
 import { getSubmitLink } from '@/lib/link'
 import { num, str } from '@/lib/http'
-import { toMarkdownSource } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 
 export function QuestionBankDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { isLogin, isSiteAdmin } = useAuth()
   const [problem, setProblem] = useState<ProblemInfo | null>(null)
+  /** 移动端：题面 / 题解切换；深链 tab=solutions 时默认题解 */
+  const mobilePane =
+    searchParams.get('tab') === 'solutions' ? 'solutions' : 'problem'
   const [subs, setSubs] = useState<Record<string, unknown>[]>([])
   const [subsTotal, setSubsTotal] = useState(0)
   const [subsPage, setSubsPage] = useState(1)
-  const [subsPageSize, setSubsPageSize] = useState(20)
+  const [subsPageSize, setSubsPageSize] = useState(10)
   const [loading, setLoading] = useState(true)
   const [hasPending, setHasPending] = useState(false)
   const [followingOnly, setFollowingOnly] = useState(false)
@@ -77,11 +87,8 @@ export function QuestionBankDetail() {
   const [subTab, setSubTab] = useState<'history' | 'following'>('history')
 
   const [tagsOpen, setTagsOpen] = useState(false)
-  const [editingContent, setEditingContent] = useState(false)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [allTags, setAllTags] = useState<TagCountItem[]>([])
-  const [contentInput, setContentInput] = useState('')
-  const [titleInput, setTitleInput] = useState('')
   const [noteInput, setNoteInput] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -139,21 +146,6 @@ export function QuestionBankDetail() {
     }
   }, [id, isLogin, subTab])
 
-  // 全屏编辑时锁住底层滚动，避免控制栏与正文错位
-  useEffect(() => {
-    if (!editingContent) return
-    const html = document.documentElement
-    const body = document.body
-    const prevHtml = html.style.overflow
-    const prevBody = body.style.overflow
-    html.style.overflow = 'hidden'
-    body.style.overflow = 'hidden'
-    return () => {
-      html.style.overflow = prevHtml
-      body.style.overflow = prevBody
-    }
-  }, [editingContent])
-
   function openTagsEdit() {
     if (!problem) return
     if (!isLogin) {
@@ -176,16 +168,7 @@ export function QuestionBankDetail() {
       toast.error('请先登录后再修改')
       return
     }
-    setContentInput(toMarkdownSource(problem.contentMd || ''))
-    setTitleInput(problem.title || '')
-    setNoteInput('')
-    setEditingContent(true)
-  }
-
-  function closeContentEdit() {
-    setEditingContent(false)
-    setContentInput('')
-    setNoteInput('')
+    navigate(`/question-bank/detail/${problem.id}/edit-content`)
   }
 
   async function submitTags() {
@@ -225,49 +208,6 @@ export function QuestionBankDetail() {
     setHasPending(true)
   }
 
-  async function submitContent() {
-    if (!problem) return
-    const content = contentInput.trim()
-    if (!content) {
-      toast.error('题面内容不能为空')
-      return
-    }
-    setSaving(true)
-    if (isSiteAdmin) {
-      const res = await adminUpdateProblem({
-        id: problem.id,
-        updateContent: true,
-        contentMd: content,
-        title: titleInput.trim() || undefined,
-      })
-      setSaving(false)
-      if (!res.success) {
-        toast.error(res.message || '保存失败，请稍后重试')
-        return
-      }
-      toast.success(res.message || '题面已更新')
-      setEditingContent(false)
-      if (res.data) setProblem(res.data)
-      else void load()
-      return
-    }
-    const res = await proposeProblemEdit({
-      problemId: problem.id,
-      updateContent: true,
-      contentMd: content,
-      title: titleInput.trim() || undefined,
-      note: noteInput.trim() || undefined,
-    })
-    setSaving(false)
-    if (!res.success) {
-      toast.error(res.message || '提交失败，请稍后重试')
-      return
-    }
-    toast.success(res.message || '已提交审核')
-    setEditingContent(false)
-    setHasPending(true)
-  }
-
   if (loading) {
     return (
       <PageShell>
@@ -291,79 +231,6 @@ export function QuestionBankDetail() {
 
   const contentEmpty = !problem.contentMd?.trim()
   const tagsEmpty = !problem.tags.length
-
-  // ── 全屏题面编辑：fixed 盖住布局，控制栏不 sticky，仅正文区滚动 ──
-  // 避免 sticky 工具栏叠在正文上，也避开 AppLayout 高度链 / 页脚干扰
-  if (editingContent) {
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-background">
-        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={closeContentEdit}
-            disabled={saving}
-          >
-            取消
-          </Button>
-          <div className="min-w-0 flex-1">
-            <Input
-              value={titleInput}
-              onChange={(e) => setTitleInput(e.target.value)}
-              placeholder="题目标题（可选，不填则不改）"
-              className="max-w-xl"
-              disabled={saving}
-            />
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => void submitContent()}
-            disabled={saving}
-          >
-            {saving ? '提交中…' : isSiteAdmin ? '保存' : '提交审核'}
-          </Button>
-        </div>
-
-        <div className="shrink-0 border-b px-4 py-2">
-          <p className="text-sm text-muted-foreground">
-            {isSiteAdmin
-              ? '编辑题面，保存后立即生效。若题目还没有标签，系统会继续尝试自动分析。'
-              : '编辑题面。提交后由站点管理员审核通过才会展示。'}
-          </p>
-        </div>
-
-        {!isSiteAdmin && (
-          <div className="shrink-0 border-b px-4 py-2">
-            <Field>
-              <FieldLabel htmlFor="edit-content-note">说明（可选）</FieldLabel>
-              <Textarea
-                id="edit-content-note"
-                value={noteInput}
-                onChange={(e) => setNoteInput(e.target.value)}
-                placeholder="简要说明修改原因，便于审核"
-                rows={2}
-                disabled={saving}
-              />
-            </Field>
-          </div>
-        )}
-
-        <MarkdownEditor
-          fullPage
-          value={contentInput}
-          onChange={setContentInput}
-          disabled={saving}
-          previewMode="markdown"
-          placeholder={
-            '用 Markdown 编写题面…\n\n## 题目描述\n\n支持代码块、表格与 $LaTeX$ 公式'
-          }
-          className="min-h-0 flex-1"
-        />
-      </div>
-    )
-  }
 
   return (
     <PageShell>
@@ -445,44 +312,86 @@ export function QuestionBankDetail() {
         </div>
       </div>
 
-      <Card className="gap-3 py-4">
-        <CardHeader className="flex flex-row items-start justify-between gap-2 px-4">
-          <div className="flex flex-col gap-1">
-            <CardTitle className="text-base">题面</CardTitle>
-            {contentEmpty && (
-              <CardDescription>
-                题面尚未就绪，登录后可补充内容并提交审核
-              </CardDescription>
-            )}
-          </div>
-          {isLogin && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={openContentEdit}
-            >
-              <PencilIcon data-icon="inline-start" />
-              {isSiteAdmin
-                ? contentEmpty
-                  ? '填写题面'
-                  : '编辑题面'
-                : contentEmpty
-                  ? '补充题面'
-                  : '建议修改'}
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent className="px-4">
-          <MarkdownBody
-            content={problem.contentMd || ''}
-            mode="auto"
-            emptyText="题面准备中，请稍后刷新；登录后也可自行补充题面"
-          />
-        </CardContent>
-      </Card>
+      {/* 移动端：题面 / 题解切换；桌面：7:3 并排 */}
+      <div className="flex flex-col gap-3">
+        <div className="md:hidden">
+          <Tabs
+            value={mobilePane}
+            onValueChange={(v) => {
+              const next = new URLSearchParams(searchParams)
+              if (v === 'solutions') next.set('tab', 'solutions')
+              else {
+                next.delete('tab')
+                next.delete('solutionId')
+              }
+              setSearchParams(next, { replace: true })
+            }}
+          >
+            <TabsList className="w-full">
+              <TabsTrigger value="problem" className="flex-1">
+                <FileTextIcon />
+                题面
+              </TabsTrigger>
+              <TabsTrigger value="solutions" className="flex-1">
+                <BookOpenIcon />
+                题解
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
-      <ProblemCommunity problemId={problem.id} />
+        <div className="grid gap-4 md:grid-cols-[7fr_3fr] md:items-start">
+          <Card
+            className={cn(
+              'gap-3 py-4',
+              mobilePane !== 'problem' && 'hidden md:flex',
+            )}
+          >
+            <CardHeader className="flex flex-row items-start justify-between gap-2 px-4">
+              <div className="flex flex-col gap-1">
+                <CardTitle className="text-base">题面</CardTitle>
+                {contentEmpty && (
+                  <CardDescription>
+                    题面尚未就绪，登录后可补充内容并提交审核
+                  </CardDescription>
+                )}
+              </div>
+              {isLogin && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={openContentEdit}
+                >
+                  <PencilIcon data-icon="inline-start" />
+                  {isSiteAdmin
+                    ? contentEmpty
+                      ? '填写题面'
+                      : '编辑题面'
+                    : contentEmpty
+                      ? '补充题面'
+                      : '建议修改'}
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent className="px-4">
+              <MarkdownBody
+                content={problem.contentMd || ''}
+                mode="auto"
+                emptyText="题面准备中，请稍后刷新；登录后也可自行补充题面"
+              />
+            </CardContent>
+          </Card>
+
+          <ProblemSolutionsPanel
+            problemId={problem.id}
+            className={cn(
+              'md:sticky md:top-4 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto',
+              mobilePane !== 'solutions' && 'hidden md:flex',
+            )}
+          />
+        </div>
+      </div>
 
       {problem.solutions.length > 0 && (
         <Card className="gap-3 py-4">
@@ -503,6 +412,8 @@ export function QuestionBankDetail() {
           </CardContent>
         </Card>
       )}
+
+      <ProblemComments problemId={problem.id} />
 
       <Card className="gap-0 overflow-hidden py-0">
         <CardHeader className="flex flex-col gap-2 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">

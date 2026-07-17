@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ClipboardPasteIcon,
@@ -19,6 +20,11 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import {
+  animateHoverTransformIn,
+  animateHoverTransformOut,
+  MOTION,
+} from '@/lib/motion'
 
 type LinkItem = {
   title: string
@@ -79,6 +85,17 @@ function LinkCard({
   item: LinkItem
   isLogin: boolean
 }) {
+  const chevronRef = useRef<SVGSVGElement>(null)
+
+  const onEnter = () => {
+    const el = chevronRef.current
+    if (el) animateHoverTransformIn(el, { x: MOTION.hover.chevronX })
+  }
+  const onLeave = () => {
+    const el = chevronRef.current
+    if (el) animateHoverTransformOut(el)
+  }
+
   const body = (
     <Card
       className={cn(
@@ -103,9 +120,15 @@ function LinkCard({
           <CardDescription className="mt-0.5">{item.desc}</CardDescription>
         </div>
         {item.kind === 'external' ? (
-          <ExternalLinkIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          <ExternalLinkIcon
+            ref={chevronRef}
+            className="size-4 shrink-0 text-muted-foreground will-change-transform"
+          />
         ) : (
-          <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          <ChevronRightIcon
+            ref={chevronRef}
+            className="size-4 shrink-0 text-muted-foreground will-change-transform"
+          />
         )}
       </CardHeader>
       <CardContent className="pt-0" />
@@ -119,6 +142,8 @@ function LinkCard({
         target="_blank"
         rel="noopener noreferrer"
         className="group block"
+        onPointerEnter={onEnter}
+        onPointerLeave={onLeave}
       >
         {body}
       </a>
@@ -131,7 +156,12 @@ function LinkCard({
     : `/login?redirect=${encodeURIComponent(item.to)}`
 
   return (
-    <Link to={to} className="group block">
+    <Link
+      to={to}
+      className="group block"
+      onPointerEnter={onEnter}
+      onPointerLeave={onLeave}
+    >
       {body}
     </Link>
   )

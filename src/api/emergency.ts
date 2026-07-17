@@ -77,3 +77,10 @@ export async function updateEmergency(body: {
 export async function deleteEmergency(id: number): Promise<ApiResult<unknown>> {
   return del(endpoints.core.emergency.delete, { id })
 }
+
+/** 按 ids 顺序重写展示顺序（拖拽排序） */
+export async function reorderEmergencies(
+  ids: number[],
+): Promise<ApiResult<unknown>> {
+  return post(endpoints.core.emergency.reorder, { ids })
+}

@@ -3,6 +3,16 @@ import { XIcon } from "lucide-react"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import {
+  animateOverlayIn,
+  animateOverlayOut,
+  animatePanelIn,
+  animatePanelOut,
+  GSAP_PRESENCE_CLASS,
+  presenceStyleVars,
+  type SheetSide,
+} from "@/lib/motion"
+import { composeRefs, useGsapPresence } from "@/hooks/use-gsap-presence"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -28,12 +38,25 @@ function SheetPortal({
 
 function SheetOverlay({
   className,
+  ref: refProp,
+  style,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Overlay>) {
+  const { ref: motionRef } = useGsapPresence({
+    onOpen: animateOverlayIn,
+    onClose: animateOverlayOut,
+  })
+
   return (
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
-      className={cn("sheet-overlay fixed inset-0 z-50 bg-black/50", className)}
+      ref={composeRefs(motionRef, refProp)}
+      className={cn(
+        GSAP_PRESENCE_CLASS,
+        "fixed inset-0 z-50 bg-black/50",
+        className,
+      )}
+      style={{ ...presenceStyleVars("overlay"), ...style }}
       {...props}
     />
   )
@@ -44,25 +67,38 @@ function SheetContent({
   children,
   side = "right",
   showCloseButton = true,
+  ref: refProp,
+  style,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
-  side?: "top" | "right" | "bottom" | "left"
+  side?: SheetSide
   showCloseButton?: boolean
 }) {
+  const sideRef = React.useRef(side)
+  sideRef.current = side
+
+  const { ref: motionRef } = useGsapPresence({
+    onOpen: (el) => animatePanelIn(el, sideRef.current),
+    onClose: (el) => animatePanelOut(el, sideRef.current),
+  })
+
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
         data-side={side}
+        ref={composeRefs(motionRef, refProp)}
         className={cn(
-          "sheet-content fixed z-50 flex flex-col gap-4 bg-background shadow-lg will-change-transform",
+          GSAP_PRESENCE_CLASS,
+          "fixed z-50 flex flex-col gap-4 bg-background shadow-lg will-change-transform",
           side === "right" && "inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm",
           side === "left" && "inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm",
           side === "top" && "inset-x-0 top-0 h-auto border-b",
           side === "bottom" && "inset-x-0 bottom-0 h-auto border-t",
-          className
+          className,
         )}
+        style={{ ...presenceStyleVars("panel"), ...style }}
         {...props}
       >
         {children}

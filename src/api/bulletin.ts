@@ -1,4 +1,4 @@
-import { endpoints, type BulletinInfo } from '@shared/api'
+import { endpoints, type BulletinInfo, type BulletinScope } from '@shared/api'
 import { get, post, del, num, str, bool, type ApiResult } from '@/lib/http'
 
 export interface BulletinListData {
@@ -9,6 +9,8 @@ export interface BulletinListData {
 }
 
 function normalizeItem(raw: Record<string, unknown>): BulletinInfo {
+  const scopeRaw = str(raw.scope)
+  const scope: BulletinScope = scopeRaw === 'org' ? 'org' : scopeRaw === 'site' ? 'site' : scopeRaw || 'site'
   return {
     id: num(raw.id),
     title: str(raw.title),
@@ -18,17 +20,19 @@ function normalizeItem(raw: Record<string, unknown>): BulletinInfo {
     isPinned: bool(raw.isPinned),
     createdAt: num(raw.createdAt),
     updatedAt: num(raw.updatedAt),
+    scope,
+    orgId: num(raw.orgId),
   }
 }
 
 export async function listBulletins(
   page = 1,
   pageSize = 10,
+  scope?: 'site' | 'org' | '',
 ): Promise<ApiResult<BulletinListData>> {
-  const res = await get<Record<string, unknown>[]>(endpoints.core.bulletin.list, {
-    page,
-    pageSize,
-  })
+  const params: Record<string, string | number> = { page, pageSize }
+  if (scope) params.scope = scope
+  const res = await get<Record<string, unknown>[]>(endpoints.core.bulletin.list, params)
   if (!res.success) return { ...res, data: null }
   const list = Array.isArray(res.data) ? res.data.map(normalizeItem) : []
   const raw = (res.raw ?? {}) as Record<string, unknown>
@@ -47,6 +51,7 @@ export async function createBulletin(body: {
   title: string
   content: string
   isPinned: boolean
+  scope: 'site' | 'org'
 }): Promise<ApiResult<unknown>> {
   return post(endpoints.core.bulletin.create, body)
 }

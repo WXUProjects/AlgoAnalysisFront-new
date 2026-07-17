@@ -1,7 +1,15 @@
 import { useId, useRef } from 'react'
+import gsap from 'gsap'
 import { ImageIcon, Loader2 } from 'lucide-react'
 import { FieldLabel } from '@/components/ui/field'
 import { cn } from '@/lib/utils'
+import {
+  animateHoverTransformIn,
+  animateHoverTransformOut,
+  killTweens,
+  MOTION,
+  prefersReducedMotion,
+} from '@/lib/motion'
 
 export function ImageUploadTile({
   label,
@@ -20,6 +28,23 @@ export function ImageUploadTile({
 }) {
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
+
+  const setOverlay = (show: boolean) => {
+    const el = overlayRef.current
+    if (!el || uploading) return
+    killTweens(el)
+    if (prefersReducedMotion()) {
+      gsap.set(el, { opacity: show ? 1 : 0 })
+      return
+    }
+    gsap.to(el, {
+      opacity: show ? 1 : 0,
+      duration: MOTION.duration.hover,
+      overwrite: true,
+    })
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -33,27 +58,40 @@ export function ImageUploadTile({
           sizeClass,
           uploading && 'pointer-events-none',
         )}
+        onPointerEnter={() => {
+          if (imgRef.current) {
+            animateHoverTransformIn(imgRef.current, {
+              scale: MOTION.hover.imageScale,
+            })
+          }
+          setOverlay(true)
+        }}
+        onPointerLeave={() => {
+          if (imgRef.current) animateHoverTransformOut(imgRef.current)
+          setOverlay(false)
+        }}
       >
         {value ? (
           <img
+            ref={imgRef}
             src={value}
             alt=""
-            className="max-h-full max-w-full object-contain p-2 transition-transform duration-200 group-hover:scale-[0.98]"
+            className="max-h-full max-w-full object-contain p-2 will-change-transform"
           />
         ) : (
-          <div className="flex flex-col items-center gap-1.5 text-muted-foreground transition-opacity group-hover:text-foreground">
+          <div className="flex flex-col items-center gap-1.5 text-muted-foreground group-hover:text-foreground">
             <ImageIcon className="size-6 opacity-70" />
             <span className="text-xs">点击上传</span>
           </div>
         )}
 
         <div
+          ref={overlayRef}
           className={cn(
             'absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-[1px]',
-            'opacity-0 transition-opacity duration-200',
-            'group-hover:opacity-100 group-focus-within:opacity-100',
             uploading && 'opacity-100',
           )}
+          style={uploading ? undefined : { opacity: 0 }}
         >
           {uploading ? (
             <Loader2 className="size-5 animate-spin text-foreground" />

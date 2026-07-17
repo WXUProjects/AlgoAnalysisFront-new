@@ -70,6 +70,8 @@ export async function listProblemComments(params: {
 export async function createProblemComment(body: {
   problemId: number
   content: string
+  /** 非公共域时可选：额外写入公共域发现流 */
+  syncToPublic?: boolean
 }): Promise<ApiResult<ProblemCommentItem | null>> {
   const res = await post<Record<string, unknown>>(endpoints.core.problem.commentCreate, body)
   if (!res.success) return { ...res, data: null }
