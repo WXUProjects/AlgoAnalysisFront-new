@@ -172,6 +172,7 @@ export async function listProfiles(
   pageSize = 10,
   scope?: 'org' | 'site',
   keyword?: string,
+  opts?: { dormantOnly?: boolean },
 ): Promise<ApiResult<UserListRes>> {
   const kw = keyword?.trim()
   const res = await get<Record<string, unknown>>(endpoints.user.profile.list, {
@@ -179,6 +180,7 @@ export async function listProfiles(
     pageSize,
     ...(scope ? { scope } : {}),
     ...(kw ? { keyword: kw } : {}),
+    ...(opts?.dormantOnly ? { dormantOnly: true } : {}),
   })
   // list 可能无 success 字段，裸 { list, total }
   const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>

@@ -100,6 +100,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
       defaultPageSize: DEFAULT_PAGE_SIZE,
     })
   const keyword = (searchParams.get('keyword') || '').trim()
+  const dormantOnly =
+    searchParams.get('dormant') === '1' ||
+    searchParams.get('dormant') === 'true'
   const [keywordDraft, setKeywordDraft] = useState(keyword)
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<UserListItem[]>([])
@@ -132,7 +135,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await listProfiles(page, pageSize, scope, keyword || undefined)
+    const res = await listProfiles(page, pageSize, scope, keyword || undefined, {
+      dormantOnly,
+    })
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '用户列表加载失败，请稍后重试')
@@ -140,7 +145,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page, pageSize, scope, keyword])
+  }, [page, pageSize, scope, keyword, dormantOnly])
 
   useEffect(() => {
     void load()
@@ -206,7 +211,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     const res = await setSyncExempt(u.userId, next)
     setTogglingKey(null)
     if (res.success) {
-      toast.success(next ? '已标记永不休眠（始终参与同步）' : '已取消永不休眠（始终参与同步）')
+      toast.success(next ? '已设为始终同步' : '已取消始终同步')
       setList((prev) =>
         prev.map((row) =>
           row.userId === u.userId
@@ -300,7 +305,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
     }
     toast.success(res.message || '已更新同步间隔')
     // 刷新列表以拿有效间隔
-    const listRes = await listProfiles(page, pageSize, scope, keyword || undefined)
+    const listRes = await listProfiles(page, pageSize, scope, keyword || undefined, {
+      dormantOnly,
+    })
     if (listRes.success && listRes.data) {
       setList(listRes.data.list)
       setTotal(listRes.data.total)
@@ -428,8 +435,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
       ? `${currentOrg.name} · 成员`
       : '组织成员'
   const desc = isSite
-    ? '管理全站用户与所属组织。可直接开关日报/周报；题面抓取与分析见用户详情。'
-    : '当前组织成员。可查看名单，并在权限允许时开关日报/周报。'
+    ? '管理全站用户与所属组织。不活跃用户会暂停自动同步，可在列表中筛选查看。'
+    : '当前组织成员。不活跃成员会暂停自动同步，可在列表中筛选查看。'
 
   return (
     <PageShell className="gap-3">
@@ -441,7 +448,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
       <Card className="gap-0 py-0 overflow-hidden">
         <CardHeader className="px-4 py-3 border-b space-y-3">
           <CardTitle className="text-base">{isSite ? '用户列表' : '成员列表'}</CardTitle>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
             <Input
               className="sm:max-w-xs"
               placeholder={
@@ -456,6 +463,21 @@ function UserListPage({ scope }: { scope: UserScope }) {
               }}
               aria-label="搜索用户"
             />
+            <Select
+              value={dormantOnly ? 'dormant' : 'all'}
+              onValueChange={(v) => {
+                const next = String(v ?? 'all')
+                patch({ dormant: next === 'dormant' ? '1' : null })
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[11.5rem]" size="sm" aria-label="活跃状态筛选">
+                <SelectValue placeholder="全部用户" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部用户</SelectItem>
+                <SelectItem value="dormant">不活跃（已暂停同步）</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="flex gap-2">
               <Button
                 variant="secondary"
@@ -464,13 +486,13 @@ function UserListPage({ scope }: { scope: UserScope }) {
               >
                 搜索
               </Button>
-              {(keyword || keywordDraft) && (
+              {(keyword || keywordDraft || dormantOnly) && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
                     setKeywordDraft('')
-                    patch({ keyword: null })
+                    patch({ keyword: null, dormant: null })
                   }}
                 >
                   清空
@@ -486,11 +508,15 @@ function UserListPage({ scope }: { scope: UserScope }) {
             </div>
           ) : list.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              {keyword
-                ? `没有找到与「${keyword}」相关的用户`
-                : isSite
-                  ? '暂无用户'
-                  : '暂无成员'}
+              {dormantOnly && keyword
+                ? `没有找到与「${keyword}」相关的不活跃用户`
+                : dormantOnly
+                  ? '当前没有不活跃（已暂停同步）的用户'
+                  : keyword
+                    ? `没有找到与「${keyword}」相关的用户`
+                    : isSite
+                      ? '暂无用户'
+                      : '暂无成员'}
             </div>
           ) : (
             <Table>
@@ -532,13 +558,17 @@ function UserListPage({ scope }: { scope: UserScope }) {
                             </Badge>
                           )}
                           {u.dormant && (
-                            <Badge variant="outline" className="text-[10px]">
-                              休眠
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] border-destructive/40 text-destructive"
+                              title="长时间未登录，后台已暂停自动同步"
+                            >
+                              已暂停同步
                             </Badge>
                           )}
                           {u.syncExempt && (
                             <Badge variant="secondary" className="text-[10px]">
-                              永不休眠（始终参与同步）
+                              始终同步
                             </Badge>
                           )}
                         </div>
@@ -782,13 +812,17 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       </Badge>
                     )}
                     {detailUser.dormant && (
-                      <Badge variant="outline" className="text-[10px]">
-                        休眠
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] border-destructive/40 text-destructive"
+                        title="长时间未登录，后台已暂停自动同步"
+                      >
+                        已暂停同步
                       </Badge>
                     )}
                     {detailUser.syncExempt && (
                       <Badge variant="secondary" className="text-[10px]">
-                        永不休眠（始终参与同步）
+                        始终同步
                       </Badge>
                     )}
                   </div>
@@ -856,9 +890,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 {isAdmin && (
                   <Field orientation="horizontal">
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
-                      <FieldLabel htmlFor="sync-exempt">永不休眠（始终参与同步）</FieldLabel>
+                      <FieldLabel htmlFor="sync-exempt">始终同步</FieldLabel>
                       <FieldDescription>
-                        跳过不活跃判定，后台定时任务始终对该用户生效
+                        即使长时间未登录，也继续自动同步与后台任务
                       </FieldDescription>
                     </div>
                     <Switch

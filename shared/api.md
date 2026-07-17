@@ -115,7 +115,7 @@
 | GET | `/user/profile/get-by-id` | 否 | query: `userId`；公共域受隐私约束，私人域组织内隐私配置失效 |
 | GET | `/user/profile/get-by-username` | 否 | query: `username` 精确匹配；返回同 get-by-id |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` 模糊（用户名/昵称） |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开）、`problemFetchEnabled`/`problemAiEnabled`（题面爬取/AI 有效状态）、`createdAt`（注册时间 unix 秒）、`spiderIntervalMin`/`aiSummaryIntervalMin`（有效定时间隔）、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`（是否站管个人覆盖）、`syncExempt`/`lastLoginAt`/`dormant`（休眠相关） |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称），**`dormantOnly=true` 仅不活跃（已暂停同步）用户**（与 `dormant` 判定一致）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开）、`problemFetchEnabled`/`problemAiEnabled`（题面爬取/AI 有效状态）、`createdAt`（注册时间 unix 秒）、`spiderIntervalMin`/`aiSummaryIntervalMin`（有效定时间隔）、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`（是否站管个人覆盖）、`syncExempt`/`lastLoginAt`/`dormant`（休眠相关） |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新头像/邮箱；`name` 已忽略（昵称改「我的组织」）；邮箱变更须 `emailCode`（`purpose=change_email`） |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
