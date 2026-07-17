@@ -656,7 +656,8 @@ export function DashboardSiteSettings() {
           <CardHeader className="px-4 pb-0">
             <CardTitle>数据备份与恢复</CardTitle>
             <CardDescription>
-              导出站点数据（用户、组织、题库、提交与上传文件等），后台完成后可下载。导入将
+              导出站点数据（用户、组织、题库、提交与上传文件等），后台完成后可下载；
+              完成后请在 10 分钟内下载，超时将自动删除。导入将
               <span className="font-medium text-destructive">覆盖现有数据</span>
               ，恢复为备份时的状态。
             </CardDescription>

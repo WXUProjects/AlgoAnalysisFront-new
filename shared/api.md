@@ -168,6 +168,8 @@
 | GET | `/user/site/backup/jobs/{id}/download` | 是(站点管理员) | 下载导出完成的 zip（`goalgo-backup-v1`） |
 | DELETE | `/user/site/backup/jobs/{id}` | 是(站点管理员) | 删除已结束任务及磁盘文件 |
 
+任务 `done`/`failed` 后保留 **10 分钟**（zip + 任务记录），超时自动清理；请在窗口内下载。
+
 **备份 scope（预留细粒度）**：`all` \| `site` \| `users` \| `orgs` \| `pastes` \| `visits` \| `platforms` \| `submits` \| `contests` \| `problems` \| `bulletins` \| `emergency` \| `daily_stats` \| `files`。  
 需 user 服务能连 `algo_core_data`（默认由 `dbname=algo_user` 推导，或 `CWXU_CORE_DATABASE_SOURCE`）。导入时 `config_encryption_key` 指纹须与导出时一致。
 
