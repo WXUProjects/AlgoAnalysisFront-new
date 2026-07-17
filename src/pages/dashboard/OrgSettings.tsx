@@ -30,11 +30,12 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { orgRoleName } from '@/lib/roles'
+import { OrgTrainingReportCard } from '@/pages/dashboard/OrgTrainingReportCard'
 
 const DEFAULT_MEMBER_PAGE_SIZE = 10
 
 export function DashboardOrgSettings() {
-  const { isAdmin, isOrgAdmin, currentOrg, user, refreshOrgs } = useAuth()
+  const { isAdmin, isOrgAdmin, isStaff, currentOrg, user, refreshOrgs } = useAuth()
   const orgId = currentOrg?.id || user?.orgId || 0
 
   const {
@@ -155,14 +156,23 @@ export function DashboardOrgSettings() {
     } else toast.error(res.message || '保存失败，请稍后重试')
   }
 
-  if (!isAdmin && !isOrgAdmin) {
+  // 组织设置页：团队管理员可改设置；教练/队长等 staff 也可进入导出训练报告
+  if (!isAdmin && !isOrgAdmin && !isStaff) {
     return (
-      <div className="p-6 text-sm text-muted-foreground">需要团队管理员或站点管理员才能访问。</div>
+      <div className="p-6 text-sm text-muted-foreground">
+        需要教练、队长、团队管理员或站点管理员才能访问。
+      </div>
     )
   }
 
+  const canEditOrg = isAdmin || isOrgAdmin
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
+      {(isStaff || isAdmin) && orgId > 0 ? <OrgTrainingReportCard orgId={orgId} /> : null}
+
+      {canEditOrg ? (
+      <>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">组织品牌与加入方式</CardTitle>
@@ -451,6 +461,8 @@ export function DashboardOrgSettings() {
           />
         </CardContent>
       </Card>
+      </>
+      ) : null}
     </div>
   )
 }

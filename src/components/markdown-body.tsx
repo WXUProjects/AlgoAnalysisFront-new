@@ -67,7 +67,10 @@ export function MarkdownBody({
 
   return (
     <div
-      className={cn('markdown-body content-md', className)}
+      className={cn(
+        'markdown-body content-md min-w-0 max-w-full',
+        className,
+      )}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )

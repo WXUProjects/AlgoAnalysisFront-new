@@ -17,6 +17,8 @@ export type DiscoverStreamItem = {
   submit?: SubmitLogItem
   /** Community activity extras */
   activity?: ActivityFeedItem
+  /** Direct navigation (e.g. blog article) when no problem detail */
+  href?: string
 }
 
 export type FeedScope = 'org' | 'following' | 'mine'

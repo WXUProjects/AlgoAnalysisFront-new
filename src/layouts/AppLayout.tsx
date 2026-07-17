@@ -7,10 +7,12 @@ import {
   HomeIcon,
   InfoIcon,
   LayoutDashboardIcon,
+  ListTodoIcon,
   LogInIcon,
   LogOutIcon,
   MegaphoneIcon,
   ActivityIcon,
+  NewspaperIcon,
   UserIcon,
   UserPlusIcon,
   WrenchIcon,
@@ -59,15 +61,18 @@ const titles: Record<string, string> = {
   '/privacy': '隐私设置',
   '/social': '关注与粉丝',
   '/discover': '发现',
+  '/blog-plaza': '博客广场',
   '/all-activities': '提交动态',
   '/bulletin': '公告',
   '/contest': '比赛',
   '/question-bank': '题库',
+  '/problemset': '题单',
   '/about': '关于我们',
   '/org': '我的组织',
   '/tools': '工具',
   '/tools/paste': '粘贴板',
   '/tools/code-image': '代码转图片',
+  // blog uses independent BlogLayout — not listed here
 }
 
 function resolveTitle(pathname: string, brand: string): string {
@@ -81,6 +86,7 @@ function resolveTitle(pathname: string, brand: string): string {
     return '编辑题解'
   if (pathname.includes('/solution/')) return '题解'
   if (pathname.startsWith('/question-bank/detail/')) return '题目详情'
+  if (pathname.startsWith('/problemset/')) return '题单详情'
   if (pathname.startsWith('/p/')) return '粘贴板'
   if (pathname.startsWith('/tools')) return '工具'
   return brand
@@ -220,6 +226,18 @@ export function AppLayout() {
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
+                      isActive={pathname.startsWith('/blog-plaza')}
+                      tooltip="博客"
+                    >
+                      <NavLink to="/blog-plaza">
+                        <NewspaperIcon />
+                        <span>博客</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
                       isActive={
                         pathname === '/contest' ||
                         pathname.startsWith('/contest/')
@@ -253,6 +271,18 @@ export function AppLayout() {
                       <NavLink to="/question-bank">
                         <BookOpenIcon />
                         <span>题库</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname.startsWith('/problemset')}
+                      tooltip="题单"
+                    >
+                      <NavLink to="/problemset">
+                        <ListTodoIcon />
+                        <span>题单</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

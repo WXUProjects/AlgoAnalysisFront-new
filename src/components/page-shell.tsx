@@ -39,7 +39,10 @@ export function PageShell({
   return (
     <div
       ref={ref}
-      className={cn('flex flex-1 flex-col gap-4 p-4', className)}
+      className={cn(
+        'flex min-w-0 flex-1 flex-col gap-4 p-4 sm:p-6',
+        className,
+      )}
       data-page-shell=""
       style={reduced ? undefined : { opacity: 0 }}
     >

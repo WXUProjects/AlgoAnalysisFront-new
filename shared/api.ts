@@ -110,6 +110,30 @@ export const endpoints = {
       mine: `${API_PREFIX}/user/paste/mine`,
       delete: `${API_PREFIX}/user/paste/delete`,
     },
+    blog: {
+      byUsername: `${API_PREFIX}/user/blog/by-username`,
+      articleGet: `${API_PREFIX}/user/blog/article/get`,
+      articleUnlock: `${API_PREFIX}/user/blog/article/unlock`,
+      articleCreate: `${API_PREFIX}/user/blog/article/create`,
+      articleUpdate: `${API_PREFIX}/user/blog/article/update`,
+      articleDelete: `${API_PREFIX}/user/blog/article/delete`,
+      articleMine: `${API_PREFIX}/user/blog/article/mine`,
+      recommend: `${API_PREFIX}/user/blog/recommend`,
+      plaza: `${API_PREFIX}/user/blog/plaza`,
+      authors: `${API_PREFIX}/user/blog/authors`,
+      analytics: `${API_PREFIX}/user/blog/analytics`,
+      categories: `${API_PREFIX}/user/blog/categories`,
+      categoryMine: `${API_PREFIX}/user/blog/category/mine`,
+      categoryCreate: `${API_PREFIX}/user/blog/category/create`,
+      categoryUpdate: `${API_PREFIX}/user/blog/category/update`,
+      categoryDelete: `${API_PREFIX}/user/blog/category/delete`,
+      commentList: `${API_PREFIX}/user/blog/comment/list`,
+      commentCreate: `${API_PREFIX}/user/blog/comment/create`,
+      commentDelete: `${API_PREFIX}/user/blog/comment/delete`,
+      like: `${API_PREFIX}/user/blog/like`,
+      themeStatus: `${API_PREFIX}/user/blog/theme/status`,
+      themeEnable: `${API_PREFIX}/user/blog/theme/enable`,
+    },
     notification: {
       list: `${API_PREFIX}/user/notification/list`,
       unreadCount: `${API_PREFIX}/user/notification/unread-count`,
@@ -210,13 +234,77 @@ export const endpoints = {
       recentComments: `${API_PREFIX}/core/user/recent-comments`,
       recentSolutions: `${API_PREFIX}/core/user/recent-solutions`,
     },
+    problemset: {
+      /** 我的题单（自动确保收藏/待做） */
+      mine: `${API_PREFIX}/core/problemset/mine`,
+      /** 题单广场（公有自定义） */
+      square: `${API_PREFIX}/core/problemset/square`,
+      /** 题单详情 query: id, unlockToken? */
+      get: `${API_PREFIX}/core/problemset/get`,
+      /** 题目关联的公有题单 query: problemId */
+      byProblem: `${API_PREFIX}/core/problemset/by-problem`,
+      create: `${API_PREFIX}/core/problemset/create`,
+      update: `${API_PREFIX}/core/problemset/update`,
+      delete: `${API_PREFIX}/core/problemset/delete`,
+      unlock: `${API_PREFIX}/core/problemset/unlock`,
+      /** 加题：problemId 或 url */
+      add: `${API_PREFIX}/core/problemset/add`,
+      remove: `${API_PREFIX}/core/problemset/remove`,
+      like: `${API_PREFIX}/core/problemset/like`,
+    },
   },
   agent: {
     summary: {
       recent: `${API_PREFIX}/agent/summary/recent`,
     },
+    trainingReport: {
+      /** 发起组织训练报告（异步） */
+      start: `${API_PREFIX}/agent/training-report/start`,
+      /** 查询任务状态 query: jobId */
+      job: `${API_PREFIX}/agent/training-report/job`,
+      /** 当前组织最近任务 query: orgId?, limit? */
+      jobs: `${API_PREFIX}/agent/training-report/jobs`,
+      /** 下载报告 query: jobId, format?=pdf|html */
+      download: `${API_PREFIX}/agent/training-report/download`,
+    },
   },
 } as const
+
+/** 训练报告任务状态 */
+export type TrainingReportJobStatus =
+  | 'pending'
+  | 'running'
+  | 'done'
+  | 'failed'
+  | 'expired'
+  | string
+
+export interface TrainingReportJob {
+  jobId: string
+  status: TrainingReportJobStatus
+  progress: number
+  message?: string
+  startDate: string
+  endDate: string
+  groupId?: number
+  useAi?: boolean
+  orgId?: number
+  createdBy?: number
+  createdAt?: number
+  finishedAt?: number
+  expiresAt?: number
+  downloadable?: boolean
+  errorDetail?: string
+  fileName?: string
+}
+
+export interface StartTrainingReportReq {
+  startDate: string
+  endDate: string
+  groupId?: number
+  useAi?: boolean
+  orgId?: number
+}
 
 export type Platform =
   | 'NowCoder'
@@ -225,6 +313,67 @@ export type Platform =
   | 'LuoGu'
   | 'LeetCode'
   | 'QOJ'
+
+/** 题单系统类型 */
+export type ProblemsetKind = 'favorites' | 'todo' | 'custom' | string
+
+/** 题单可见性 */
+export type ProblemsetVisibility = 'private' | 'password' | 'public' | string
+
+export interface ProblemsetInfo {
+  id: number
+  ownerId: number
+  ownerName?: string
+  title: string
+  description?: string
+  kind: ProblemsetKind
+  visibility: ProblemsetVisibility
+  likeCount: number
+  itemCount: number
+  liked?: boolean
+  isOwner?: boolean
+  isSystem?: boolean
+  createdAt?: number
+  updatedAt?: number
+  locked?: boolean
+  items?: ProblemsetItemInfo[]
+}
+
+export interface ProblemsetItemInfo {
+  id: number
+  problemId: number
+  sortOrder?: number
+  createdAt?: number
+  title?: string
+  platform?: string
+  externalId?: string
+  url?: string
+  difficulty?: string
+  status?: string
+  userStatus?: string
+}
+
+export interface CreateProblemsetReq {
+  title: string
+  description?: string
+  visibility?: ProblemsetVisibility
+  password?: string
+}
+
+export interface UpdateProblemsetReq {
+  id: number
+  title?: string
+  description?: string
+  visibility?: ProblemsetVisibility
+  password?: string
+  clearPassword?: boolean
+}
+
+export interface AddProblemsetItemReq {
+  problemsetId: number
+  problemId?: number
+  url?: string
+}
 
 export interface StdResponse<T = unknown> {
   message: string
@@ -304,6 +453,10 @@ export interface ChangePasswordRes {
 export interface SpiderBinding {
   platform: string
   username: string
+  /** 平台当前 Rating（整数）；hasRating=false 时忽略 */
+  rating?: number
+  /** 是否已抓到有效 Rating */
+  hasRating?: boolean
 }
 
 export interface UserProfile {
@@ -871,6 +1024,12 @@ export interface ProblemUserSolutionItem {
   liked?: boolean
   createdAt: number
   updatedAt?: number
+  /** 同步到个人博客后的文章 id */
+  blogArticleId?: number
+  /** 博客文章 slug（如 solution-12），配合 blogUsername 跳转 */
+  blogSlug?: string
+  /** 作者用户名（博客路径用） */
+  blogUsername?: string
 }
 
 /** 点赞 toggle 结果 */
@@ -914,6 +1073,112 @@ export interface UserRecentCommentItem {
   platform?: string
   content: string
   createdAt: number
+}
+
+/** 博客文章可见性 */
+export type BlogVisibility = 'public' | 'private' | 'password'
+
+/** 博客作者摘要 */
+export interface BlogAuthor {
+  id: number
+  username: string
+  name: string
+  avatar?: string
+}
+
+/** 博客文章（列表可不含 content） */
+export interface BlogArticle {
+  id: number
+  slug: string
+  title: string
+  summary?: string
+  content?: string
+  coverUrl?: string
+  visibility: BlogVisibility | string
+  recommend?: boolean
+  syncToMainProfile?: boolean
+  categoryId?: number | null
+  /** 由主站题解同步时的题解 id */
+  sourceSolutionId?: number
+  viewCount?: number
+  likeCount?: number
+  commentCount?: number
+  liked?: boolean
+  requiresPassword?: boolean
+  canSeeBody?: boolean
+  unlockToken?: string
+  orgIds?: number[]
+  userId?: number
+  username?: string
+  author?: BlogAuthor
+  createdAt: number
+  updatedAt?: number
+  publishedAt?: number
+}
+
+export interface BlogCategory {
+  id: number
+  name: string
+  sortOrder?: number
+  articleCount?: number
+  /** 默认分类：主站题解同步到此；不可删除 */
+  isDefault?: boolean
+}
+
+export interface BlogComment {
+  id: number
+  articleId: number
+  parentId?: number
+  content: string
+  userId: number
+  author?: BlogAuthor
+  createdAt: number
+}
+
+export interface BlogAnalytics {
+  totalArticles: number
+  totalViews: number
+  totalLikes: number
+  totalComments: number
+  topArticles: Array<{
+    id: number
+    slug: string
+    title: string
+    viewCount: number
+    likeCount: number
+    commentCount: number
+    visibility: string
+  }>
+}
+
+/** 博客广场排序 */
+export type BlogPlazaSort = 'latest' | 'hot' | 'recommend'
+
+/** 博客广场 · 最近有公开文的作者 */
+export interface BlogPlazaAuthor {
+  id: number
+  username: string
+  name: string
+  avatar?: string
+  articleCount: number
+  lastPublishedAt?: number
+  latestTitle?: string
+}
+
+export interface BlogArticleWriteReq {
+  id?: number
+  title: string
+  slug?: string
+  summary?: string
+  content: string
+  coverUrl?: string
+  visibility?: BlogVisibility | string
+  password?: string
+  clearPassword?: boolean
+  recommend?: boolean
+  syncToMainProfile?: boolean
+  categoryId?: number | null
+  orgIds?: number[]
 }
 
 export interface UserRecentSolutionItem {

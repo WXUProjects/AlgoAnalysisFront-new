@@ -4,6 +4,8 @@ import {
   BookOpenIcon,
   ExternalLinkIcon,
   FileTextIcon,
+  HeartIcon,
+  ListTodoIcon,
   PencilIcon,
   TagsIcon,
 } from 'lucide-react'
@@ -18,7 +20,12 @@ import {
   proposeProblemEdit,
   type TagCountItem,
 } from '@/api/problem'
-import type { ProblemFollowingStatusItem, ProblemInfo } from '@shared/api'
+import { listProblemsetsByProblem } from '@/api/problemset'
+import type {
+  ProblemFollowingStatusItem,
+  ProblemInfo,
+  ProblemsetInfo,
+} from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MarkdownBody } from '@/components/markdown-body'
@@ -91,11 +98,12 @@ export function QuestionBankDetail() {
   const [allTags, setAllTags] = useState<TagCountItem[]>([])
   const [noteInput, setNoteInput] = useState('')
   const [saving, setSaving] = useState(false)
+  const [relatedSets, setRelatedSets] = useState<ProblemsetInfo[]>([])
 
   const load = useCallback(async () => {
     if (!id) return
     setLoading(true)
-    const [pRes, sRes] = await Promise.all([
+    const [pRes, sRes, setRes] = await Promise.all([
       getProblem(id),
       getProblemSubmissions({
         problemId: id,
@@ -104,6 +112,7 @@ export function QuestionBankDetail() {
         followingOnly: followingOnly || undefined,
         status: acOnly ? 'AC' : undefined,
       }),
+      listProblemsetsByProblem(id),
     ])
     setLoading(false)
     if (!pRes.success || !pRes.data) {
@@ -115,6 +124,8 @@ export function QuestionBankDetail() {
       setSubs(sRes.data.list || [])
       setSubsTotal(sRes.data.total || 0)
     }
+    if (setRes.success && setRes.data) setRelatedSets(setRes.data)
+    else setRelatedSets([])
 
     if (isLogin && !isSiteAdmin) {
       const pend = await getMyPendingProblemEdit(id)
@@ -340,15 +351,15 @@ export function QuestionBankDetail() {
           </Tabs>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-[7fr_3fr] md:items-start">
+        <div className="grid min-w-0 gap-4 md:grid-cols-[7fr_3fr] md:items-start">
           <Card
             className={cn(
-              'gap-3 py-4',
+              'min-w-0 gap-3 py-5 sm:py-6',
               mobilePane !== 'problem' && 'hidden md:flex',
             )}
           >
-            <CardHeader className="flex flex-row items-start justify-between gap-2 px-4">
-              <div className="flex flex-col gap-1">
+            <CardHeader className="flex flex-row items-start justify-between gap-2 px-5 sm:px-6">
+              <div className="flex min-w-0 flex-col gap-1">
                 <CardTitle className="text-base">题面</CardTitle>
                 {contentEmpty && (
                   <CardDescription>
@@ -374,7 +385,7 @@ export function QuestionBankDetail() {
                 </Button>
               )}
             </CardHeader>
-            <CardContent className="px-4">
+            <CardContent className="min-w-0 px-5 sm:px-6">
               <MarkdownBody
                 content={problem.contentMd || ''}
                 mode="auto"
@@ -408,6 +419,38 @@ export function QuestionBankDetail() {
                 </p>
                 <p className="mt-2 text-muted-foreground">{s.briefExplanation}</p>
               </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {relatedSets.length > 0 && (
+        <Card className="gap-3 py-4">
+          <CardHeader className="px-4">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ListTodoIcon className="size-4" />
+              收录本题的公开题单
+            </CardTitle>
+            <CardDescription>
+              以下题单已开放到广场，可点进去继续刷题
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2 px-4">
+            {relatedSets.map((ps) => (
+              <Link
+                key={ps.id}
+                to={`/problemset/${ps.id}`}
+                className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors hover:border-primary/40 hover:bg-muted/50"
+              >
+                <span className="font-medium">{ps.title}</span>
+                <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+                  <HeartIcon className="size-3.5" />
+                  {ps.likeCount}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {ps.itemCount} 题
+                </span>
+              </Link>
             ))}
           </CardContent>
         </Card>

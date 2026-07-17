@@ -50,6 +50,9 @@ const Bulletin = lazy(() =>
 const Discover = lazy(() =>
   import('@/pages/Discover').then((m) => ({ default: m.Discover })),
 )
+const BlogPlaza = lazy(() =>
+  import('@/pages/BlogPlaza').then((m) => ({ default: m.BlogPlaza })),
+)
 const AllActivities = lazy(() =>
   import('@/pages/AllActivities').then((m) => ({ default: m.AllActivities })),
 )
@@ -66,6 +69,16 @@ const QuestionBank = lazy(() =>
 const QuestionBankDetail = lazy(() =>
   import('@/pages/QuestionBankDetail').then((m) => ({
     default: m.QuestionBankDetail,
+  })),
+)
+const ProblemsetHome = lazy(() =>
+  import('@/pages/problemset/ProblemsetHome').then((m) => ({
+    default: m.ProblemsetHome,
+  })),
+)
+const ProblemsetDetail = lazy(() =>
+  import('@/pages/problemset/ProblemsetDetail').then((m) => ({
+    default: m.ProblemsetDetail,
   })),
 )
 const ProblemContentEdit = lazy(() =>
@@ -176,6 +189,33 @@ const PasteView = lazy(() =>
 const CodeToImage = lazy(() =>
   import('@/pages/tools/CodeToImage').then((m) => ({ default: m.CodeToImage })),
 )
+const BlogLayout = lazy(() =>
+  import('@/layouts/BlogLayout').then((m) => ({ default: m.BlogLayout })),
+)
+const BlogHome = lazy(() =>
+  import('@/pages/blog/BlogHome').then((m) => ({ default: m.BlogHome })),
+)
+const BlogArticlePage = lazy(() =>
+  import('@/pages/blog/BlogArticle').then((m) => ({
+    default: m.BlogArticlePage,
+  })),
+)
+const BlogManage = lazy(() =>
+  import('@/pages/blog/BlogManage').then((m) => ({ default: m.BlogManage })),
+)
+const BlogEditor = lazy(() =>
+  import('@/pages/blog/BlogEditor').then((m) => ({ default: m.BlogEditor })),
+)
+const BlogAnalyticsPage = lazy(() =>
+  import('@/pages/blog/BlogAnalytics').then((m) => ({
+    default: m.BlogAnalyticsPage,
+  })),
+)
+const BlogCategoriesPage = lazy(() =>
+  import('@/pages/blog/BlogCategories').then((m) => ({
+    default: m.BlogCategoriesPage,
+  })),
+)
 
 function PageFallback() {
   return (
@@ -198,6 +238,73 @@ function CoachOutlet() {
 }
 
 export const router = createBrowserRouter([
+  {
+    path: '/blog/:username',
+    element: (
+      <Lazy>
+        <BlogLayout />
+      </Lazy>
+    ),
+    errorElement: <RouteErrorFallback />,
+    children: [
+      {
+        index: true,
+        element: (
+          <Lazy>
+            <BlogHome />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'manage',
+        element: (
+          <Lazy>
+            <BlogManage />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'manage/new',
+        element: (
+          <Lazy>
+            <BlogEditor />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'manage/edit/:id',
+        element: (
+          <Lazy>
+            <BlogEditor />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'manage/analytics',
+        element: (
+          <Lazy>
+            <BlogAnalyticsPage />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'manage/categories',
+        element: (
+          <Lazy>
+            <BlogCategoriesPage />
+          </Lazy>
+        ),
+      },
+      {
+        path: ':slug',
+        element: (
+          <Lazy>
+            <BlogArticlePage />
+          </Lazy>
+        ),
+      },
+    ],
+  },
   {
     path: '/',
     element: <AppLayout />,
@@ -308,6 +415,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'blog-plaza',
+        element: (
+          <Lazy>
+            <BlogPlaza />
+          </Lazy>
+        ),
+      },
+      {
         path: 'all-activities',
         element: (
           <Lazy>
@@ -348,6 +463,22 @@ export const router = createBrowserRouter([
         element: (
           <Lazy>
             <QuestionBank />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'problemset',
+        element: (
+          <Lazy>
+            <ProblemsetHome />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'problemset/:id',
+        element: (
+          <Lazy>
+            <ProblemsetDetail />
           </Lazy>
         ),
       },

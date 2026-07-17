@@ -186,7 +186,10 @@
 .markdown-body {
   line-height: 1.7;
   font-size: 0.95rem;
+  max-width: 100%;
+  min-width: 0;
   overflow-wrap: anywhere;
+  word-break: break-word;
   color: var(--foreground);
 }
 
@@ -251,7 +254,9 @@
   padding: 12px 14px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  overflow: auto;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   background: color-mix(in srgb, var(--border) 25%, transparent);
 }
 
@@ -262,12 +267,127 @@
   border-radius: 0;
 }
 
+/* Carbon 风格围栏代码块：边框 + 行号 + 顶栏 */
+.markdown-body .md-code-block {
+  margin: 1em 0;
+  max-width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--foreground) 6%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--border) 40%, transparent);
+}
+
+.markdown-body .md-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+}
+
+.markdown-body .md-code-dots {
+  display: inline-flex;
+  gap: 6px;
+  width: 52px;
+  height: 10px;
+  background:
+    radial-gradient(circle closest-side, #ff5f56 90%, transparent) 0 50% / 10px 10px no-repeat,
+    radial-gradient(circle closest-side, #ffbd2e 90%, transparent) 18px 50% / 10px 10px no-repeat,
+    radial-gradient(circle closest-side, #27c93f 90%, transparent) 36px 50% / 10px 10px no-repeat;
+  opacity: 0.9;
+}
+
+.markdown-body .md-code-lang {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  opacity: 0.9;
+}
+
+.markdown-body .md-code-block pre.code-hl {
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.markdown-body .md-code-block pre.code-hl code.hljs {
+  display: block;
+  padding: 0.65rem 0 0.85rem;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  background: transparent !important;
+}
+
+.markdown-body .md-code-row {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  width: 100%;
+}
+
+.markdown-body .md-code-ln {
+  flex: 0 0 auto;
+  min-width: 2.4em;
+  padding: 0 0.75rem 0 0.9rem;
+  margin-right: 0.75rem;
+  border-right: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  text-align: right;
+  user-select: none;
+  opacity: 0.42;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.55;
+}
+
+.markdown-body .md-code-src {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: 1rem;
+  white-space: pre;
+  line-height: 1.55;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* 移动端：长行自动折行，避免被主布局 overflow-x-clip 裁切 */
+@media (max-width: 767px) {
+  .markdown-body .md-code-src {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .markdown-body pre:not(.code-hl) {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .markdown-body pre:not(.code-hl) code {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
 .markdown-body table {
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
   margin: 0.8em 0;
   display: block;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .markdown-body th,
@@ -309,8 +429,10 @@
 
 .markdown-body .katex-display {
   margin: 0.8em 0;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .markdown-body .math-fallback {
@@ -335,17 +457,22 @@
   margin-left: -1.2em;
 }
 
-.markdown-body pre.code-hl {
+/* 非 md-code-block 包裹的遗留 pre.code-hl（兼容） */
+.markdown-body > pre.code-hl,
+.markdown-body p > pre.code-hl {
   padding: 0;
   background: transparent;
-  border: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-.markdown-body pre.code-hl code.hljs {
+.markdown-body > pre.code-hl code.hljs,
+.markdown-body p > pre.code-hl code.hljs {
   display: block;
   padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
+  border: none;
+  border-radius: 0;
   overflow-x: auto;
   font-size: 0.86rem;
   line-height: 1.55;
@@ -357,4 +484,17 @@
 
 .markdown-body em {
   font-style: italic;
+}
+
+/* 行内/块级内容在窄屏下不撑破容器 */
+.markdown-body p,
+.markdown-body li,
+.markdown-body blockquote,
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }

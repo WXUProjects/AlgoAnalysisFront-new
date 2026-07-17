@@ -21,6 +21,7 @@ type FeedCardProps = {
 
 /** 题解/讨论/提交 → 详情页路径；无关联题目时返回 null */
 function getDetailHref(item: DiscoverStreamItem): string | null {
+  if (item.href) return item.href
   const submit = item.submit
   const activity = item.activity
   if (submit?.problemId) return `/question-bank/detail/${submit.problemId}`

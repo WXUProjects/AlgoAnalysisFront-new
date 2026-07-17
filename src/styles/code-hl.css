@@ -1,15 +1,33 @@
-/* 粘贴板代码高亮：随站点亮/暗色切换（不依赖 highlight.js 全局主题 CSS） */
+/* 粘贴板 / Markdown 代码高亮：随站点亮/暗色切换（不依赖 highlight.js 全局主题 CSS） */
 
-.code-hl {
+.code-hl,
+.markdown-body .md-code-block {
   --code-caret: #24292f;
   color: #24292f;
   background: #f6f8fa;
 }
 
-.dark .code-hl {
+.dark .code-hl,
+.dark .markdown-body .md-code-block {
   --code-caret: #e6edf3;
   color: #c9d1d9;
   background: #0d1117;
+}
+
+.markdown-body .md-code-block .md-code-header {
+  background: color-mix(in srgb, #f6f8fa 70%, #d0d7de);
+}
+
+.dark .markdown-body .md-code-block .md-code-header {
+  background: color-mix(in srgb, #0d1117 70%, #21262d);
+}
+
+.markdown-body .md-code-block .md-code-ln {
+  border-right-color: color-mix(in srgb, #d0d7de 80%, transparent);
+}
+
+.dark .markdown-body .md-code-block .md-code-ln {
+  border-right-color: color-mix(in srgb, #30363d 90%, transparent);
 }
 
 /* 编辑器输入层：透明文字、选区可见 */

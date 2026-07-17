@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { FlagIcon, HeartIcon, PencilIcon, Trash2Icon } from 'lucide-react'
+import {
+  ExternalLinkIcon,
+  FlagIcon,
+  HeartIcon,
+  PencilIcon,
+  Trash2Icon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import {
   deleteProblemSolution,
@@ -160,6 +166,21 @@ export function ProblemSolutionView() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {solution.blogSlug &&
+            (solution.blogUsername || solution.username) && (
+              <Button type="button" size="sm" variant="outline" asChild>
+                <Link
+                  to={`/blog/${solution.blogUsername || solution.username}/${solution.blogSlug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <ExternalLinkIcon data-icon="inline-start" />
+                  {myId > 0 && myId === solution.userId
+                    ? '去我的博客看'
+                    : '去他博客看'}
+                </Link>
+              </Button>
+            )}
           <Button
             type="button"
             size="sm"
@@ -226,8 +247,8 @@ export function ProblemSolutionView() {
         </div>
       </div>
 
-      <Card className="gap-3 py-4">
-        <CardContent className="px-4">
+      <Card className="min-w-0 gap-3 py-5 sm:py-6">
+        <CardContent className="min-w-0 px-5 sm:px-6">
           <MarkdownBody
             content={solution.contentMd || ''}
             mode="markdown"

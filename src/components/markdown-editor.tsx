@@ -25,7 +25,10 @@ import {
   SquareCodeIcon,
   SigmaIcon,
   StrikethroughIcon,
+  TableIcon,
+  MinusIcon,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { MarkdownBody } from '@/components/markdown-body'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -35,6 +38,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { blogImageToolbarAction } from '@/lib/blog-image'
 import { cn } from '@/lib/utils'
 
 type PaneMode = 'split' | 'edit' | 'preview'
@@ -51,6 +55,11 @@ export type MarkdownEditorProps = {
   previewMode?: 'markdown' | 'auto'
   /** 非全页时的固定高度（内容在编辑器内滚动，不撑开父容器） */
   minHeight?: number
+  /**
+   * 博客等场景：禁止图片上传，工具栏图片仅插入链接并提示用户。
+   * 默认 false（主站题解等仍可插入 markdown 图片语法，同样无上传）。
+   */
+  linkOnlyImages?: boolean
 }
 
 /**
@@ -88,6 +97,7 @@ export function MarkdownEditor({
   placeholder = '在此编写 Markdown…\n\n支持标题、列表、代码块、表格与 $公式$',
   previewMode = 'markdown',
   minHeight = 320,
+  linkOnlyImages = false,
 }: MarkdownEditorProps) {
   const taRef = useRef<HTMLTextAreaElement>(null)
   const previewScrollRef = useRef<HTMLDivElement>(null)
@@ -325,9 +335,21 @@ export function MarkdownEditor({
             <LinkIcon />
           </ToolBtn>
           <ToolBtn
-            title="图片"
+            title={linkOnlyImages ? '插入图片链接（不支持上传）' : '图片'}
             disabled={disabled}
-            onClick={() => wrapSelection('![', '](https://)')}
+            onClick={() => {
+              if (linkOnlyImages) {
+                const action = blogImageToolbarAction()
+                wrapSelection(
+                  action.markdownSnippet.before,
+                  action.markdownSnippet.after,
+                  action.markdownSnippet.placeholder,
+                )
+                toast.message(action.toastMessage)
+                return
+              }
+              wrapSelection('![', '](https://)')
+            }}
           >
             <ImageIcon />
           </ToolBtn>
@@ -337,6 +359,25 @@ export function MarkdownEditor({
             onClick={() => wrapSelection('$', '$', 'x^2')}
           >
             <SigmaIcon />
+          </ToolBtn>
+          <ToolBtn
+            title="表格"
+            disabled={disabled}
+            onClick={() =>
+              insertBlock(
+                '| 列1 | 列2 |\n| --- | --- |\n|  |  |',
+                2,
+              )
+            }
+          >
+            <TableIcon />
+          </ToolBtn>
+          <ToolBtn
+            title="分隔线"
+            disabled={disabled}
+            onClick={() => insertBlock('---')}
+          >
+            <MinusIcon />
           </ToolBtn>
           <ToolSep />
           <div className="ml-auto flex items-center gap-0.5">

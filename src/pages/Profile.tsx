@@ -65,6 +65,15 @@ import { formatTime, todayYmd } from '@/lib/format'
 import { getPlatformHomeLink, getSubmitLink, OJ_PLATFORMS } from '@/lib/link'
 import { cn } from '@/lib/utils'
 
+/** 后端已实现 Rating 抓取的平台（QOJ 等暂不支持） */
+const RATING_PLATFORMS = new Set([
+  'AtCoder',
+  'NowCoder',
+  'CodeForces',
+  'LuoGu',
+  'LeetCode',
+])
+
 export function Profile() {
   const { user, isLogin, logout } = useAuth()
   const { username: routeUsername } = useParams<{ username?: string }>()
@@ -109,8 +118,17 @@ export function Profile() {
   )
 
   const spiderMap = useMemo(() => {
-    const m = new Map<string, string>()
-    profile?.spiders.forEach((s) => m.set(s.platform, s.username))
+    const m = new Map<
+      string,
+      { username: string; rating?: number; hasRating?: boolean }
+    >()
+    profile?.spiders.forEach((s) =>
+      m.set(s.platform, {
+        username: s.username,
+        rating: s.rating,
+        hasRating: s.hasRating,
+      }),
+    )
     return m
   }, [profile])
 
@@ -401,15 +419,18 @@ export function Profile() {
             </CardContent>
           </Card>
 
-          {/* 移动端：OJ 芯片；桌面：列表 */}
+          {/* 移动端：OJ 芯片；桌面：列表（含 Rating） */}
           <Card className="gap-0 overflow-hidden py-0">
             <div className="border-b px-3 py-2 lg:px-4 lg:py-2.5">
               <p className="text-sm font-medium">OJ 绑定</p>
+              <p className="text-xs text-muted-foreground">
+                同步时会尽量带上各平台 Rating
+              </p>
             </div>
             <CardContent className="flex flex-wrap gap-1.5 px-3 py-2.5 lg:hidden">
               {OJ_PLATFORMS.map((p) => {
-                const uname = spiderMap.get(p.value)
-                if (!uname) {
+                const bind = spiderMap.get(p.value)
+                if (!bind) {
                   return isSelf ? (
                     <Button
                       key={p.value}
@@ -437,11 +458,16 @@ export function Profile() {
                     asChild
                   >
                     <a
-                      href={getPlatformHomeLink(p.value, uname)}
+                      href={getPlatformHomeLink(p.value, bind.username)}
                       target="_blank"
                       rel="noreferrer"
                     >
                       {p.label}
+                      {bind.hasRating ? (
+                        <span className="font-mono tabular-nums opacity-90">
+                          {bind.rating}
+                        </span>
+                      ) : null}
                       <ExternalLinkIcon className="size-3 opacity-70" />
                     </a>
                   </Button>
@@ -450,14 +476,14 @@ export function Profile() {
             </CardContent>
             <CardContent className="hidden flex-col divide-y px-0 py-0 lg:flex">
               {OJ_PLATFORMS.map((p) => {
-                const uname = spiderMap.get(p.value)
+                const bind = spiderMap.get(p.value)
                 return (
                   <div
                     key={p.value}
                     className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm"
                   >
                     <span className="text-muted-foreground">{p.label}</span>
-                    {!uname ? (
+                    {!bind ? (
                       isSelf ? (
                         <Button size="sm" variant="outline" asChild>
                           <Link to={`/change-profile?oj=${p.value}`}>
@@ -470,27 +496,48 @@ export function Profile() {
                         </span>
                       )
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-7 gap-1"
-                        asChild
-                      >
-                        <a
-                          href={getPlatformHomeLink(p.value, uname)}
-                          target="_blank"
-                          rel="noreferrer"
+                      <div className="flex items-center gap-2">
+                        {bind.hasRating ? (
+                          <Badge
+                            variant="secondary"
+                            className="font-mono tabular-nums"
+                            title={`${p.label} Rating`}
+                          >
+                            Rating {bind.rating}
+                          </Badge>
+                        ) : RATING_PLATFORMS.has(p.value) ? (
+                          <span className="text-xs text-muted-foreground">
+                            暂无 Rating
+                          </span>
+                        ) : null}
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-7 gap-1"
+                          asChild
                         >
-                          主页
-                          <ExternalLinkIcon className="size-3 opacity-70" />
-                        </a>
-                      </Button>
+                          <a
+                            href={getPlatformHomeLink(p.value, bind.username)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            主页
+                            <ExternalLinkIcon className="size-3 opacity-70" />
+                          </a>
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )
               })}
             </CardContent>
           </Card>
+
+          <div className="flex flex-col gap-2">
+            <Button type="button" variant="outline" asChild>
+              <Link to={`/blog/${profile.username}`}>访问博客</Link>
+            </Button>
+          </div>
 
           {isSelf ? (
             <div className="hidden flex-col gap-2 lg:flex">

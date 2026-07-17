@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { listBlogRecommend } from '@/api/blog'
 import { listActivityFeed } from '@/api/community'
 import { getRank } from '@/api/statistic'
 import { useAuth } from '@/auth/AuthContext'
@@ -11,9 +13,13 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { CompassIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { CompassIcon, NewspaperIcon } from 'lucide-react'
 import { FeedPreviewSheet } from './FeedPreviewSheet'
-import { mapActivityToStreamItem } from './map-items'
+import {
+  mapActivityToStreamItem,
+  mapBlogArticleToStreamItem,
+} from './map-items'
 import { VirtualFeedList } from './VirtualFeedList'
 import type { DiscoverStreamItem, PreviewTarget } from './types'
 
@@ -79,6 +85,15 @@ export function RecommendStream() {
         )
       }
 
+      // First page: merge public blog articles flagged for main-site recommend
+      if (reset) {
+        const blogRes = await listBlogRecommend({ page: 1, pageSize: 10 })
+        if (blogRes.success && blogRes.data?.list?.length) {
+          const blogItems = blogRes.data.list.map(mapBlogArticleToStreamItem)
+          batch = mergeCursorPage(blogItems, batch, (x) => x.uid)
+        }
+      }
+
       setItems((prev) =>
         mergeCursorPage(reset ? [] : prev, batch, (x) => x.uid),
       )
@@ -112,6 +127,15 @@ export function RecommendStream() {
 
   return (
     <div data-discover-recommend-stream="" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card/60 px-3 py-2 text-sm">
+        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+          <NewspaperIcon className="size-3.5 shrink-0" />
+          想专门逛文章？
+        </span>
+        <Button variant="ghost" size="sm" className="h-7 gap-1 px-2" asChild>
+          <Link to="/blog-plaza">去博客广场</Link>
+        </Button>
+      </div>
       <VirtualFeedList
         items={items}
         hasMore={hasMore}
@@ -132,6 +156,9 @@ export function RecommendStream() {
                   : '本组织有新的题解或讨论后，会出现在这里。也可切换到「动态」看提交时间线。'}
               </EmptyDescription>
             </EmptyHeader>
+            <Button variant="outline" size="sm" className="mt-2" asChild>
+              <Link to="/blog-plaza">逛博客广场</Link>
+            </Button>
           </Empty>
         }
       />

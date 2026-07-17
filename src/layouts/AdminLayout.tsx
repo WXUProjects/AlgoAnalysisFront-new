@@ -91,7 +91,8 @@ export function AdminLayout() {
       ? `${currentOrg.name} · 组织后台`
       : '组织后台'
   const title = titles[pathname] || staffLabel
-  const canOrgSettings = isAdmin || isOrgAdmin
+  // 组织设置：管理员改配置；教练/队长等 staff 可导出训练报告
+  const canOrgSettings = isAdmin || isOrgAdmin || isStaff
   const showTeamNav = isStaff
   function handleLogout() {
     logout()

@@ -1,4 +1,4 @@
-import type { ActivityFeedItem, SubmitLogItem } from '@shared/api'
+import type { ActivityFeedItem, BlogArticle, SubmitLogItem } from '@shared/api'
 import {
   activityActionLabel,
   submitActionLabel,
@@ -6,6 +6,26 @@ import {
 } from '@/lib/discover-feed'
 import { formatActivityProblemTitle } from '@/lib/activity-title'
 import type { DiscoverStreamItem } from './types'
+
+/** Map recommended blog article into discover stream (share chip). */
+export function mapBlogArticleToStreamItem(a: BlogArticle): DiscoverStreamItem {
+  const username = a.username || a.author?.username || ''
+  const href =
+    username && a.slug ? `/blog/${username}/${a.slug}` : `/blog/${username || ''}`
+  return {
+    uid: `blog-${a.id}`,
+    kind: 'share',
+    timeSec: toTimeSec(a.publishedAt || a.createdAt),
+    authorId: a.userId || a.author?.id || 0,
+    authorName: a.author?.name || a.author?.username || username || '作者',
+    authorUsername: username || undefined,
+    authorAvatar: a.author?.avatar || undefined,
+    actionLabel: '发布了博客',
+    title: a.title,
+    body: a.summary || '',
+    href,
+  }
+}
 
 export function mapSubmitToStreamItem(item: SubmitLogItem): DiscoverStreamItem {
   const title = formatActivityProblemTitle(

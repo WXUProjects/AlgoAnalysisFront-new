@@ -52,6 +52,9 @@ function normSolution(raw: Record<string, unknown>): ProblemUserSolutionItem {
     liked: Boolean(raw.liked),
     createdAt: num(raw.createdAt),
     updatedAt: num(raw.updatedAt),
+    blogArticleId: num(raw.blogArticleId) || undefined,
+    blogSlug: str(raw.blogSlug) || undefined,
+    blogUsername: str(raw.blogUsername) || undefined,
   }
 }
 

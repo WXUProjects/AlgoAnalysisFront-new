@@ -118,7 +118,7 @@
 | GET | `/user/profile/get-by-id` | 否 | query: `userId`；公共域受隐私约束，私人域组织内隐私配置失效 |
 | GET | `/user/profile/get-by-username` | 否 | query: `username` 精确匹配；返回同 get-by-id |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` 模糊（用户名/昵称） |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称），**`dormantOnly=true`（或 `dormant=true`）仅「已暂停同步」用户**：`last_login` 空/超时 **且** 无豁免（站管、`sync_exempt` 始终同步、组织 staff、组织 `force_sync` 永不冻结、plan∈team|pro）；**org 视图 `name`=组织内名称**；site 为全局昵称；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开）、`problemFetchEnabled`/`problemAiEnabled`（题面爬取/AI 有效状态）、`createdAt`（注册时间 unix 秒）、`spiderIntervalMin`/`aiSummaryIntervalMin`（有效定时间隔）、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`（是否站管个人覆盖）、`syncExempt`/`lastLoginAt`/`dormant`（休眠相关，与筛选同规则） |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称），**`dormantOnly=true`（或 `dormant=true`）仅「已暂停同步」用户**：`last_login` 空/超时 **且** 无豁免（站管、`sync_exempt` 始终同步、组织 staff、组织 `force_sync` 永不冻结、plan∈team|pro）；**org 视图 `name`=组织内名称**；**site 视图 `name`=公共域外显名称**（≡站内昵称）；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`（日报周报接收状态与是否可开）、`problemFetchEnabled`/`problemAiEnabled`（题面爬取/AI 有效状态）、`createdAt`（注册时间 unix 秒）、`spiderIntervalMin`/`aiSummaryIntervalMin`（有效定时间隔）、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`（是否站管个人覆盖）、`syncExempt`/`lastLoginAt`/`dormant`（休眠相关，与筛选同规则） |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新头像/邮箱；`name` 已忽略（昵称改「我的组织」）；邮箱变更须 `emailCode`（`purpose=change_email`） |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
@@ -329,6 +329,90 @@ HTTP 手写路由。创建需登录；公开查看不需登录。
 
 前端路由：`/tools` 工具入口；`/tools/paste` 创建；`/p/:slug` 公开查看。
 
+### Blog（个人博客）
+
+HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共用同一条记录）。路径前缀 `/user/blog/*`。
+
+**可见性**
+
+| 值 | 说明 |
+|----|------|
+| `public` | 公开，所有人可读正文 |
+| `private` | 仅作者可见（非作者 404） |
+| `password` | 可看标题/头图；正文需密码或 `unlockToken` |
+
+**组织同步规则**：勾选任一**私有域**组织时，服务端自动同时同步到**公共域**（与主站既有规则一致）。
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| GET | `/user/blog/by-username` | 否* | query: `username`；可选 `page`/`pageSize`/`categoryId`/`keyword`；返回作者信息 + 文章列表 |
+| GET | `/user/blog/article/get` | 否* | query: `id` 或 `username`+`slug`；可选 `password`/`unlockToken` |
+| POST | `/user/blog/article/unlock` | 否 | body: `{ id, password }`；成功返回正文 + `unlockToken` |
+| POST | `/user/blog/article/create` | 是 | body: `BlogArticleWriteReq` |
+| POST | `/user/blog/article/update` | 是 | body: 含 `id` 的 `BlogArticleWriteReq` |
+| POST | `/user/blog/article/delete` | 是 | body: `{ id }` |
+| GET | `/user/blog/article/mine` | 是 | 作者全部文章（含 private） |
+| GET | `/user/blog/recommend` | 否 | 主站推荐：`visibility=public` 且 `recommend=true`（发现流仍用） |
+| GET | `/user/blog/plaza` | 否 | **博客广场**公开文流；query: `page`/`pageSize`/`keyword`/`sort=latest\|hot\|recommend`；仅 `visibility=public`；列表**不含 content** |
+| GET | `/user/blog/authors` | 否 | 广场侧栏：最近有公开文的作者；query: `page`/`pageSize`/`keyword`；按最近发布时间排序 |
+| GET | `/user/blog/analytics` | 是 | 作者统计：阅读/点赞/评论汇总 + top 文章 |
+| GET | `/user/blog/categories` | 否 | query: `username`；公开分类列表（项含 `isDefault`） |
+| GET | `/user/blog/category/mine` | 是 | 我的分类；**自动确保默认分类「默认」存在**；项含 `isDefault` |
+| POST | `/user/blog/category/create` | 是 | body: `{ name, sortOrder? }` |
+| POST | `/user/blog/category/update` | 是 | body: `{ id, name?, sortOrder? }`（默认可改名，仍 `isDefault`） |
+| POST | `/user/blog/category/delete` | 是 | body: `{ id }`；**默认分类不可删**；其它分类删除后文章改挂默认分类 |
+
+**默认分类与题解同步**
+
+- 每用户至多一个 `isDefault=true` 的分类，名称初始为「默认」，可改名不可删除。
+- 主站发布/更新题解时，core 经 user 库写入 `blog_articles`：分类=默认、`visibility=public`、`sourceSolutionId=题解id`、`slug=solution-{题解id}`。
+- 题解详情 get 会对未同步的旧题解做懒同步。
+- 前端题解阅读页用 `blogUsername` + `blogSlug` 跳转 `/blog/:username/:slug`。
+| GET | `/user/blog/comment/list` | 否* | query: `articleId` |
+| POST | `/user/blog/comment/create` | 是 | body: `{ articleId, content, parentId? }` |
+| POST | `/user/blog/comment/delete` | 是 | body: `{ id }`；评论作者 / 文章作者 / 站管 |
+| POST | `/user/blog/like` | 是 | body: `{ articleId }`；toggle；返回 `{ liked, likeCount }` |
+| GET | `/user/blog/theme/status` | 否 | query: `username?`；`enabled` 默认 false；`customTheme` 预留 |
+| POST | `/user/blog/theme/enable` | 站管 | body: `{ mode: user\|batch\|all, userId?, userIds?, enabled }` |
+
+\* 可选 JWT：有 token 时识别作者以显示 private / 管理态。
+
+**BlogArticleWriteReq**
+
+```json
+{
+  "id": 0,
+  "title": "string",
+  "slug": "optional-slug",
+  "summary": "string",
+  "content": "markdown",
+  "coverUrl": "https://…",
+  "visibility": "public|private|password",
+  "password": "仅 password 可见性",
+  "clearPassword": false,
+  "recommend": false,
+  "syncToMainProfile": false,
+  "categoryId": null,
+  "orgIds": [1, 2]
+}
+```
+
+- 头图仅支持 **http(s) 外链**，不提供上传。
+- `recommend=true` 仅在 `public` 时生效。
+
+前端路由：
+- 主站博客广场：`/blog-plaza`（AppLayout，聚合公开文 + 活跃作者）
+- 个人博客壳：`/blog/:username`；`/blog/:username/manage` 仅作者
+- 登录走主站 `/login?redirect=…`
+
+**广场 sort**
+
+| 值 | 说明 |
+|----|------|
+| `latest` | 默认；按发布时间倒序，全部公开文 |
+| `hot` | 阅读 → 点赞 → 时间 |
+| `recommend` | 仅 `recommend=true` 的公开文（与「开放到主站推荐」一致） |
+
 ### Org（GoAlgo 多租户）
 
 HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`（`member|coach|captain|org_admin`）。
@@ -396,11 +480,12 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
   "avatar": "string",
   "emailEnabled": true,
   "roleId": 1,
-  "spiders": [{ "platform": "NowCoder", "username": "xxx" }],
+  "spiders": [{ "platform": "NowCoder", "username": "xxx", "rating": 1500, "hasRating": true }],
   "lastSyncAt": 0
 }
 ```
 - `lastSyncAt`：最近一次 OJ 数据同步成功时间（unix 秒；`0` 表示尚无成功同步记录，部署本字段前的历史用户会在下次定时/手动同步后出现）
+- `spiders[].rating` / `hasRating`：各平台当前 Rating；绑定后爬虫会一并抓取。`hasRating=false` 表示未参赛/平台无 Rating/尚未同步。支持：AtCoder、牛客、Codeforces、洛谷、力扣；QOJ 暂无
 
 **UpdateReq**
 ```json
@@ -506,9 +591,20 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 ```json
 { "platform": "NowCoder|AtCoder|CodeForces|LuoGu|LeetCode|QOJ", "userId": 1, "username": "string" }
 ```
-绑定成功后后台只抓取该 `platform` 的全量提交/比赛，不会重扫用户其它已绑定 OJ。
+绑定成功后后台只抓取该 `platform` 的全量提交/比赛，并尽量同步该平台 **Rating**，不会重扫用户其它已绑定 OJ。
 
 重绑同一平台时会先删除该平台已有提交/比赛明细，并按剩余明细**重建**日汇总与 AC 去重预聚合，再全量拉取，避免题量/提交量叠加（连点绑定不会再把 3000 叠成 6000）。
+
+**Rating 抓取**（与提交爬虫同任务；失败不阻断提交同步）
+
+| 平台 | 来源 | 备注 |
+|------|------|------|
+| Codeforces | `api/user.info` | 未参赛无 rating 字段 |
+| AtCoder | `/users/{handle}/history/json` | 取最近 rated 的 NewRating |
+| 牛客 | 竞赛主页 HTML | 显示「暂无」则 hasRating=false |
+| 洛谷 | 用户页 `_feInjection` | 依赖现有登录会话 |
+| 力扣 | `graphql/noj-go` contest ranking | 浮点四舍五入为整数 |
+| QOJ | — | Cloudflare 暂不支持 |
 
 **UpdateReq**
 ```json
@@ -652,14 +748,62 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/core/problem/comment/list` | 否（登录可带 liked） | query: `problemId` **或** `solutionId`（可同传）、`page`/`pageSize` → **顶层评论分页** + 嵌套 `replies`；`solutionId` 拉题解评论，仅 `problemId` 拉题目讨论（`solutionId=0`）；项含 `solutionId`/`likeCount`/`liked`/`parentId`/`rootId`/`depth` |
 | POST | `/core/problem/comment/create` | 是 | body: `{ problemId?, solutionId?, content, parentId?, syncToPublic? }`；传 `solutionId` 为题解评论（可省略 problemId，服务端按题解补全）；`parentId` 回复；最大深度 3；**仅题目顶层**写发现流；题解顶层通知题解作者；回复通知父作者；`@username` |
 | POST | `/core/problem/comment/delete` | 是 | body: `{ id }` 本人或站管；**级联删除子树** + 点赞/举报/发现流 |
-| GET | `/core/problem/solution/list` | 否（登录可带 liked） | query: `problemId`, `page`, `pageSize` → **用户题解**列表（含 `likeCount`/`liked`） |
-| GET | `/core/problem/solution/get` | 否（登录可带 liked） | query: `id` → 题解全文 `contentMd` + `likeCount`/`liked` |
-| POST | `/core/problem/solution/create` | 是 | body: `{ problemId, title, contentMd }`；Markdown；`@username`；同步发现流 |
-| POST | `/core/problem/solution/update` | 是 | body: `{ id, title, contentMd }` 本人或站管 |
-| POST | `/core/problem/solution/delete` | 是 | body: `{ id }` 本人或站管；清理点赞/举报/发现流，**并级联删除该题解下评论** |
+| GET | `/core/problem/solution/list` | 否（登录可带 liked） | query: `problemId`, `page`, `pageSize` → **用户题解**列表（含 `likeCount`/`liked`）；已同步博客时含 `blogArticleId`/`blogSlug`/`blogUsername` |
+| GET | `/core/problem/solution/get` | 否（登录可带 liked） | query: `id` → 题解全文 `contentMd` + `likeCount`/`liked`；**懒同步**到作者博客默认分类；返回 `blogArticleId`/`blogSlug`/`blogUsername` 供「去他博客看」 |
+| POST | `/core/problem/solution/create` | 是 | body: `{ problemId, title, contentMd }`；Markdown；`@username`；同步发现流；**同步写入作者博客默认分类**（`visibility=public`，slug=`solution-{id}`） |
+| POST | `/core/problem/solution/update` | 是 | body: `{ id, title, contentMd }` 本人或站管；同步更新博客镜像 |
+| POST | `/core/problem/solution/delete` | 是 | body: `{ id }` 本人或站管；清理点赞/举报/发现流，**并级联删除该题解下评论**与**对应博客文章** |
 | POST | `/core/problem/like` | 是 | body: `{ targetType: "comment"\|"solution", targetId }` **toggle** 点赞 → `{ liked, likeCount }` |
 | POST | `/core/problem/report` | 是 | body: `{ targetType: "comment"\|"solution", targetId, reason }`；同用户同目标去重 |
 | GET | `/core/activity/feed` | 否（建议登录） | query: `page`, `pageSize`, `type?`=`comment\|solution` → 发现动态：**公共域/未登录=全站聚合**（评论+题解，按 type+refId 去重，不区分发布组织）；**私有域=仅本组织** |
+
+### 题单（Problemset）
+
+每个登录用户自动具备系统题单：**我的收藏**（`kind=favorites`）、**待做题单**（`kind=todo`，AC 后自动剔除，也可手动剔除）。  
+用户可创建自定义题单：`visibility` = `private` | `password` | `public`（公有进入广场，且可在题目页展示）。
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| GET | `/core/problemset/mine` | 是 | 我的题单列表（幂等创建系统题单） |
+| GET | `/core/problemset/square` | 否 | 题单广场；query: `page`, `pageSize`, `keyword?`（模糊） |
+| GET | `/core/problemset/get` | 否* | query: `id`, `unlockToken?`；私有仅 owner；密码无 token 返回 `PASSWORD_REQUIRED` |
+| GET | `/core/problemset/by-problem` | 否 | query: `problemId` → 关联的**公有**自定义题单摘要（含点赞数） |
+| POST | `/core/problemset/create` | 是 | body: `{ title, description?, visibility?, password? }` |
+| POST | `/core/problemset/update` | 是 | body: `{ id, title?, description?, visibility?, password?, clearPassword? }`；系统题单仅可改描述 |
+| POST | `/core/problemset/delete` | 是 | body: `{ id }`；系统题单不可删 |
+| POST | `/core/problemset/unlock` | 否 | body: `{ id, password }` → `{ unlockToken, expiresIn }` |
+| POST | `/core/problemset/add` | 是 | body: `{ problemsetId, problemId? }` 或 `{ problemsetId, url? }`；缺题面强制仅爬取、不 AI 分析 |
+| POST | `/core/problemset/remove` | 是 | body: `{ problemsetId, problemId }` 手动剔除 |
+| POST | `/core/problemset/like` | 是 | body: `{ id }` toggle 点赞 → `{ liked, likeCount }` |
+
+**ProblemsetInfo**
+```json
+{
+  "id": 1,
+  "ownerId": 2,
+  "ownerName": "张三",
+  "title": "我的收藏",
+  "description": "…",
+  "kind": "favorites|todo|custom",
+  "visibility": "private|password|public",
+  "likeCount": 0,
+  "itemCount": 3,
+  "liked": false,
+  "isOwner": true,
+  "isSystem": true,
+  "items": [
+    {
+      "id": 10,
+      "problemId": 100,
+      "title": "A+B",
+      "platform": "LuoGu",
+      "externalId": "P1001",
+      "userStatus": "AC|TRIED|",
+      "sortOrder": 1
+    }
+  ]
+}
+```
 | GET | `/core/user/recent-comments` | 否 | query: `userId`, `limit?` → 用户近期评论（资料页） |
 | GET | `/core/user/recent-solutions` | 否 | query: `userId`, `limit?` → 用户近期题解（资料页） |
 | GET | `/core/problem/user-profile` | 否 | query: `userId` 做题画像 |
@@ -923,9 +1067,57 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 ```
 `resp` 为 JSON 字符串，需前端再 `JSON.parse`。
 
+### Training Report（组织训练报告）
+
+教练 / 队长 / 组织管理员可导出指定日期区间（可选组）的组织训练报告；支持规则模板或 AI 分析。生成在后台异步进行，完成后邮件通知发起人（可附 PDF），下载有效期 **24 小时**。周报即「上周」训练报告，共用此管道。
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| POST | `/agent/training-report/start` | staff | body: `startDate`, `endDate`, `groupId?`, `useAi?`, `orgId?` → `jobId` |
+| GET | `/agent/training-report/job` | staff | query: `jobId` |
+| GET | `/agent/training-report/jobs` | staff | query: `orgId?`, `limit?` 最近任务列表 |
+| GET | `/agent/training-report/download` | staff | query: `jobId`, `format?=pdf\|html` 下载产物 |
+
+**Start body**
+```json
+{
+  "startDate": "2026-07-06",
+  "endDate": "2026-07-12",
+  "groupId": 0,
+  "useAi": false,
+  "orgId": 3
+}
+```
+
+**Start response**
+```json
+{ "code": 0, "msg": "任务已创建，后台生成中", "jobId": "uuid" }
+```
+
+**Job**
+```json
+{
+  "jobId": "uuid",
+  "status": "pending|running|done|failed|expired",
+  "progress": 100,
+  "message": "已完成",
+  "startDate": "2026-07-06",
+  "endDate": "2026-07-12",
+  "groupId": 0,
+  "useAi": false,
+  "orgId": 3,
+  "createdBy": 1,
+  "createdAt": 1710000000,
+  "finishedAt": 1710001000,
+  "expiresAt": 1710087400,
+  "downloadable": true,
+  "fileName": "training-report-2026-07-06-2026-07-12.pdf"
+}
+```
+
 ---
 
-## 完整路径清单（共 45）
+## 完整路径清单
 
 ```
 POST   /api/user/auth/login
@@ -1006,7 +1198,22 @@ POST   /api/core/problem/resume
 POST   /api/core/problem/retry-failed
 POST   /api/core/problem/toggle-analyze
 POST   /api/core/problem/toggle-fetch
+GET    /api/core/problemset/mine
+GET    /api/core/problemset/square
+GET    /api/core/problemset/get
+GET    /api/core/problemset/by-problem
+POST   /api/core/problemset/create
+POST   /api/core/problemset/update
+POST   /api/core/problemset/delete
+POST   /api/core/problemset/unlock
+POST   /api/core/problemset/add
+POST   /api/core/problemset/remove
+POST   /api/core/problemset/like
 GET    /api/agent/summary/recent
+POST   /api/agent/training-report/start
+GET    /api/agent/training-report/job
+GET    /api/agent/training-report/jobs
+GET    /api/agent/training-report/download
 ```
 
 ## 来源

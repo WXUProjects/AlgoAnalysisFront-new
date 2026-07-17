@@ -177,6 +177,63 @@ export function sanitizeHtml(html: string): string {
 let rendererReady = false
 let hljsReady: Awaited<ReturnType<typeof loadHljs>> | null = null
 
+/**
+ * 将高亮 HTML 按行拆开，并为跨行 span 补齐开闭标签，
+ * 使每行可独立包进带行号的结构。
+ */
+function linesWithBalancedSpans(highlighted: string): string[] {
+  const rawLines = highlighted.split('\n')
+  const openTags: string[] = []
+  const out: string[] = []
+
+  for (const rawLine of rawLines) {
+    const prefix = openTags.join('')
+    const stack = openTags.slice()
+    const re = /<\/?span\b[^>]*>/gi
+    let m: RegExpExecArray | null
+    while ((m = re.exec(rawLine)) !== null) {
+      const tag = m[0]
+      if (/^<\//.test(tag)) stack.pop()
+      else stack.push(tag)
+    }
+    const suffix = '</span>'.repeat(stack.length)
+    out.push(prefix + rawLine + suffix)
+    openTags.length = 0
+    openTags.push(...stack)
+  }
+  return out
+}
+
+/** Carbon 风格代码块：边框 + 行号 + 可选语言标签 */
+function formatFencedCodeBlock(
+  highlighted: string,
+  langClass: string,
+  language: string,
+): string {
+  const lines = linesWithBalancedSpans(highlighted)
+  const rows = lines
+    .map((line, i) => {
+      const src = line.length ? line : ' '
+      return (
+        `<span class="md-code-row">` +
+        `<span class="md-code-ln" aria-hidden="true">${i + 1}</span>` +
+        `<span class="md-code-src">${src}</span>` +
+        `</span>`
+      )
+    })
+    .join('')
+  const label =
+    language && language.toLowerCase() !== 'text' && language.toLowerCase() !== 'plaintext'
+      ? `<div class="md-code-header"><span class="md-code-dots" aria-hidden="true"></span><span class="md-code-lang">${escapeHtml(language)}</span></div>`
+      : `<div class="md-code-header"><span class="md-code-dots" aria-hidden="true"></span></div>`
+  return (
+    `<div class="md-code-block">` +
+    label +
+    `<pre class="code-hl"><code class="hljs${langClass}">${rows}</code></pre>` +
+    `</div>\n`
+  )
+}
+
 function ensureRenderer() {
   if (rendererReady) return
   rendererReady = true
@@ -195,7 +252,7 @@ function ensureRenderer() {
       }
     }
     const langClass = mapped && mapped !== 'plaintext' ? ` language-${mapped}` : ''
-    return `<pre class="code-hl"><code class="hljs${langClass}">${body}</code></pre>\n`
+    return formatFencedCodeBlock(body, langClass, language || mapped || '')
   }
 
   renderer.link = function ({ href, title, text }: Tokens.Link): string {
