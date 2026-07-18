@@ -838,7 +838,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problemset/update` | 是 | body: `{ id, title?, description?, visibility?, password?, clearPassword? }`；系统题单仅可改描述 |
 | POST | `/core/problemset/delete` | 是 | body: `{ id }`；系统题单不可删 |
 | POST | `/core/problemset/unlock` | 否 | body: `{ id, password }` → `{ unlockToken, expiresIn }` |
-| POST | `/core/problemset/add` | 是 | body: `{ problemsetId, problemId? }` 或 `{ problemsetId, url? }`；缺题面**强制爬取**（不受爬取资格限制）；AI 分析按**操作者**题面 AI 资格；无法识别链接 → `success=false, code=URL_PARSE_FAILED`（HTTP 200） |
+| POST | `/core/problemset/add` | 是 | body: `{ problemsetId, problemId? }` 或 `{ problemsetId, url? }`；缺题面**强制爬取**（不受爬取资格限制）；AI 分析按**操作者**题面 AI 资格；无法识别链接 → `success=false, code=URL_PARSE_FAILED`（HTTP 200）。**加题链接识别 + 题面爬取**均支持：`CodeForces`（含 gym/group）、`AtCoder`、`LuoGu`（P/B/CF/AT_/SP/UVA 等）、`NowCoder`（AC 站+主站 practice）、`QOJ`、`LeetCode`（cn/com） |
 | POST | `/core/problemset/add-manual` | 是 | 链接无法识别时手动建题并入题单（**无需审核**）；body: `{ problemsetId, title, contentMd?, tags?, sourceUrl? }` → `{ problemId }`；`platform=Manual` |
 | POST | `/core/problemset/remove` | 是 | body: `{ problemsetId, problemId }` 手动剔除 |
 | POST | `/core/problemset/like` | 是 | body: `{ id }` toggle 点赞 → `{ liked, likeCount }` |
