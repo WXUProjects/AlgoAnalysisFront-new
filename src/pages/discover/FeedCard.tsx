@@ -1,15 +1,11 @@
-import { useState, type KeyboardEvent, type MouseEvent } from 'react'
+import type { KeyboardEvent, MouseEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge, formatSubmitStatus } from '@/components/status-badge'
-import { MarkdownBody } from '@/components/markdown-body'
+import { MarkdownSummary } from '@/components/markdown-summary'
 import { difficultyBadgeClass } from '@/lib/difficulty'
-import {
-  excerptContent,
-  formatRelativeTime,
-  shouldCollapseContent,
-} from '@/lib/discover-feed'
+import { formatRelativeTime } from '@/lib/discover-feed'
 import { isBlogPath, openBlogInNewTab } from '@/lib/blog-nav'
 import { getSubmitLink } from '@/lib/link'
 import { cn } from '@/lib/utils'
@@ -41,13 +37,13 @@ function previewTargetFor(item: DiscoverStreamItem): PreviewTarget {
   return { type: 'activity', item }
 }
 
-/** 提交/题解预览卡：信息行 + 标题 + 摘要；整卡可点进详情 */
+/**
+ * 流卡片：信息行 + 标题 + 概述。
+ * 概述渲染与博客广场一致（MarkdownSummary + line-clamp-2），紧贴标题。
+ */
 export function FeedCard({ item, onPreview }: FeedCardProps) {
   const navigate = useNavigate()
-  const [expanded, setExpanded] = useState(false)
-  const collapse = shouldCollapseContent(item.body, 4)
-  const { preview } = excerptContent(item.body, 4)
-  const bodyShown = expanded || !collapse ? item.body : preview
+  const summary = item.body?.trim() || ''
 
   const profileTo = item.authorUsername
     ? `/profile/${item.authorUsername}`
@@ -96,7 +92,7 @@ export function FeedCard({ item, onPreview }: FeedCardProps) {
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
       className={cn(
-        'flex cursor-pointer flex-col gap-1 rounded-md border-b px-1 py-2.5 last:border-b-0 sm:px-1.5',
+        'flex cursor-pointer flex-col gap-0.5 rounded-md border-b px-1 py-2 last:border-b-0 sm:px-1.5',
         'transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
       )}
     >
@@ -126,82 +122,64 @@ export function FeedCard({ item, onPreview }: FeedCardProps) {
         </time>
       </div>
 
-      <h3 className="text-sm font-semibold leading-snug tracking-tight">
-        {detailHref ? (
-          <Link to={detailHref} className="hover:underline">
-            {item.title}
-          </Link>
-        ) : (
-          item.title
-        )}
-      </h3>
-
-      {submit ? (
-        <div className="flex flex-wrap items-center gap-1">
-          {submit.problemDifficulty ? (
-            <Badge
-              variant="outline"
-              className={cn(
-                'h-4 px-1 text-[10px] font-normal',
-                difficultyBadgeClass(submit.problemDifficulty),
-              )}
-            >
-              {submit.problemDifficulty}
-            </Badge>
-          ) : null}
-          {submitUrl ? (
-            <StatusBadge status={submit.status} asChild>
-              <a
-                href={submitUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="hover:underline"
-              >
-                {formatSubmitStatus(submit.status)}
-              </a>
-            </StatusBadge>
+      {/* 标题 + 概述紧贴（对齐博客广场卡片） */}
+      <div className="min-w-0 space-y-0.5">
+        <h3 className="text-sm font-semibold leading-snug tracking-tight">
+          {detailHref ? (
+            <Link to={detailHref} className="hover:underline">
+              {item.title}
+            </Link>
           ) : (
-            <StatusBadge status={submit.status} />
+            item.title
           )}
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center gap-1">
-          <Badge variant="secondary" className="h-4 text-[10px] font-normal">
-            {item.kind === 'solution' || item.kind === 'share' ? '题解' : '讨论'}
-          </Badge>
-        </div>
-      )}
+        </h3>
 
-      {bodyShown ? (
-        <div
-          className={cn(
-            'text-xs leading-relaxed text-muted-foreground sm:text-[13px]',
-            !expanded && collapse && 'max-h-[4.5rem] overflow-hidden',
-          )}
-        >
-          <MarkdownBody
-            content={bodyShown}
-            mode="markdown"
-            className="text-xs leading-relaxed sm:text-[13px] [&_p]:my-1 [&_pre]:my-1.5 [&_pre]:max-h-16 [&_pre]:overflow-hidden"
-            emptyText=""
-          />
-        </div>
-      ) : null}
+        {submit ? (
+          <div className="flex flex-wrap items-center gap-1">
+            {submit.problemDifficulty ? (
+              <Badge
+                variant="outline"
+                className={cn(
+                  'h-4 px-1 text-[10px] font-normal',
+                  difficultyBadgeClass(submit.problemDifficulty),
+                )}
+              >
+                {submit.problemDifficulty}
+              </Badge>
+            ) : null}
+            {submitUrl ? (
+              <StatusBadge status={submit.status} asChild>
+                <a
+                  href={submitUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:underline"
+                >
+                  {formatSubmitStatus(submit.status)}
+                </a>
+              </StatusBadge>
+            ) : (
+              <StatusBadge status={submit.status} />
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-1">
+            <Badge variant="secondary" className="h-4 text-[10px] font-normal">
+              {item.href && isBlogPath(item.href)
+                ? '博客'
+                : item.kind === 'solution' || item.kind === 'share'
+                  ? '题解'
+                  : '讨论'}
+            </Badge>
+          </div>
+        )}
 
-      {collapse ? (
-        <button
-          type="button"
-          className="self-start text-xs font-medium text-sky-600 hover:underline dark:text-sky-400"
-          onClick={() => {
-            if (!expanded) {
-              onPreview(previewTargetFor(item))
-            }
-            setExpanded((v) => !v)
-          }}
-        >
-          {expanded ? '收起' : '展开阅读全文'}
-        </button>
-      ) : null}
+        {summary ? (
+          <div className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+            <MarkdownSummary content={summary} />
+          </div>
+        ) : null}
+      </div>
     </article>
   )
 }
@@ -210,7 +188,7 @@ export function FeedCardSkeleton() {
   return (
     <div
       data-discover-card-skeleton=""
-      className="flex flex-col gap-1.5 border-b px-1 py-2.5 sm:px-1.5"
+      className="flex flex-col gap-1 border-b px-1 py-2 sm:px-1.5"
     >
       <div className="flex items-center gap-2">
         <div className="size-6 animate-pulse rounded-full bg-muted" />
@@ -218,8 +196,8 @@ export function FeedCardSkeleton() {
         <div className="ml-auto h-2.5 w-12 animate-pulse rounded bg-muted" />
       </div>
       <div className="h-3.5 w-3/4 max-w-md animate-pulse rounded bg-muted" />
-      <div className="h-2.5 w-full animate-pulse rounded bg-muted" />
-      <div className="h-2.5 w-5/6 animate-pulse rounded bg-muted" />
+      <div className="h-3 w-full animate-pulse rounded bg-muted" />
+      <div className="h-3 w-5/6 animate-pulse rounded bg-muted" />
     </div>
   )
 }

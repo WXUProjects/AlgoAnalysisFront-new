@@ -10,6 +10,7 @@ import {
 } from '@/api/group'
 import { getProfileByName, moveGroup } from '@/api/profile'
 import type { GroupInfo, UserListItem, UserProfile } from '@shared/api'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import {
@@ -358,14 +359,21 @@ export function DashboardGroup() {
                             </Link>
                           </Button>
                           {selectedId !== 0 && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => void handleRemove(m.userId)}
+                            <ConfirmDialog
+                              title="移出该成员？"
+                              description={`确定将「${m.name || m.username || m.userId}」移出当前分组？对方会回到默认分组。`}
+                              confirmLabel="移出"
+                              destructive
+                              onConfirm={() => void handleRemove(m.userId)}
                             >
-                              移出
-                            </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                              >
+                                移出
+                              </Button>
+                            </ConfirmDialog>
                           )}
                         </div>
                       </TableCell>

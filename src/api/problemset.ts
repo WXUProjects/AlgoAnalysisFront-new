@@ -1,5 +1,6 @@
 import {
   endpoints,
+  type AddManualProblemsetItemReq,
   type AddProblemsetItemReq,
   type CreateProblemsetReq,
   type ProblemsetInfo,
@@ -40,6 +41,7 @@ function normalizeSet(raw: Record<string, unknown>): ProblemsetInfo {
     likeCount: num(raw.likeCount),
     itemCount: num(raw.itemCount),
     liked: bool(raw.liked),
+    favorited: bool(raw.favorited),
     isOwner: bool(raw.isOwner),
     isSystem: bool(raw.isSystem),
     containsProblem: hasContains ? bool(raw.containsProblem) : undefined,
@@ -208,12 +210,21 @@ export async function unlockProblemset(
 
 export async function addProblemToSet(
   body: AddProblemsetItemReq,
-): Promise<ApiResult<{ problemId: number; fetchTriggered: boolean }>> {
+): Promise<
+  ApiResult<{ problemId: number; fetchTriggered: boolean }> & { code?: string }
+> {
   const res = await post<Record<string, unknown>>(endpoints.core.problemset.add, body)
   const raw = (res.raw ?? {}) as Record<string, unknown>
   const data = (res.data ?? raw.data ?? {}) as Record<string, unknown>
+  const code = str(raw.code) || undefined
   if (!res.success) {
-    return { success: false, message: res.message || '加入失败', data: null }
+    return {
+      success: false,
+      message: res.message || '加入失败',
+      data: null,
+      code,
+      raw: res.raw,
+    }
   }
   return {
     success: true,
@@ -222,6 +233,80 @@ export async function addProblemToSet(
       problemId: num(data.problemId),
       fetchTriggered: bool(data.fetchTriggered),
     },
+    raw: res.raw,
+  }
+}
+
+export async function addManualProblemToSet(
+  body: AddManualProblemsetItemReq,
+): Promise<ApiResult<{ problemId: number; fetchTriggered: boolean }>> {
+  const res = await post<Record<string, unknown>>(
+    endpoints.core.problemset.addManual,
+    body,
+  )
+  const raw = (res.raw ?? {}) as Record<string, unknown>
+  const data = (res.data ?? raw.data ?? {}) as Record<string, unknown>
+  if (!res.success) {
+    return { success: false, message: res.message || '发布失败', data: null }
+  }
+  return {
+    success: true,
+    message: 'ok',
+    data: {
+      problemId: num(data.problemId),
+      fetchTriggered: bool(data.fetchTriggered),
+    },
+    raw: res.raw,
+  }
+}
+
+export async function listFavoriteProblemsets(params?: {
+  page?: number
+  pageSize?: number
+}): Promise<
+  ApiResult<{ list: ProblemsetInfo[]; total: number; page: number; pageSize: number }>
+> {
+  const res = await get<unknown>(endpoints.core.problemset.favorites, {
+    page: params?.page ?? 1,
+    pageSize: params?.pageSize ?? 20,
+  })
+  const raw = (res.raw ?? {}) as Record<string, unknown>
+  if (!res.success) {
+    return { success: false, message: res.message, data: null, status: res.status }
+  }
+  const list = Array.isArray(res.data)
+    ? (res.data as Record<string, unknown>[])
+    : Array.isArray(raw.data)
+      ? (raw.data as Record<string, unknown>[])
+      : []
+  return {
+    success: true,
+    message: 'ok',
+    data: {
+      list: list.map(normalizeSet),
+      total: num(raw.total),
+      page: num(raw.page, 1),
+      pageSize: num(raw.pageSize, 20),
+    },
+    raw: res.raw,
+  }
+}
+
+export async function toggleProblemsetFavorite(
+  id: number,
+): Promise<ApiResult<{ favorited: boolean }>> {
+  const res = await post<Record<string, unknown>>(endpoints.core.problemset.favorite, {
+    id,
+  })
+  const raw = (res.raw ?? {}) as Record<string, unknown>
+  const data = (res.data ?? raw.data ?? {}) as Record<string, unknown>
+  if (!res.success) {
+    return { success: false, message: res.message || '操作失败', data: null }
+  }
+  return {
+    success: true,
+    message: 'ok',
+    data: { favorited: bool(data.favorited) },
     raw: res.raw,
   }
 }
@@ -255,3 +340,4 @@ export async function toggleProblemsetLike(
     raw: res.raw,
   }
 }
+

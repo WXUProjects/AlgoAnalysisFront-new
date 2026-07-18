@@ -16,6 +16,7 @@ import {
 import { updateSpider } from '@/api/spider'
 import type { GroupInfo, UserListItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { useListQueryState } from '@/hooks/use-list-query-state'
@@ -125,6 +126,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [savingIntervals, setSavingIntervals] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
   const [clearingDormant, setClearingDormant] = useState(false)
+  /** 「始终同步」开关二次确认目标 */
+  const [syncExemptConfirmUser, setSyncExemptConfirmUser] =
+    useState<UserListItem | null>(null)
 
   const groupName = useCallback(
     (u: UserListItem) => {
@@ -1028,7 +1032,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                         togglingKey === `${detailUser.userId}:sync-exempt`
                       }
                       onCheckedChange={() =>
-                        void handleToggleSyncExempt(detailUser)
+                        setSyncExemptConfirmUser(detailUser)
                       }
                     />
                   </Field>
@@ -1042,17 +1046,24 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       </p>
                     </div>
                     <div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        disabled={clearingDormant}
-                        onClick={() =>
+                      <ConfirmDialog
+                        title="解除不活跃状态？"
+                        description={`确定解除「${detailUser.name || detailUser.username}」的不活跃状态？同步会恢复；之后若长时间未登录仍可能再次暂停。`}
+                        confirmLabel="立即解除"
+                        loading={clearingDormant}
+                        onConfirm={() =>
                           void handleClearDormant([detailUser.userId])
                         }
                       >
-                        {clearingDormant ? '处理中…' : '立即解除'}
-                      </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={clearingDormant}
+                        >
+                          {clearingDormant ? '处理中…' : '立即解除'}
+                        </Button>
+                      </ConfirmDialog>
                     </div>
                   </div>
                 )}
@@ -1150,14 +1161,29 @@ function UserListPage({ scope }: { scope: UserScope }) {
               <Separator />
 
               <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void handleToggleSiteAdmin(detailUser)}
+                <ConfirmDialog
+                  title={
+                    detailUser.isSiteAdmin
+                      ? '取消站点管理员？'
+                      : '设为站点管理员？'
+                  }
+                  description={
+                    detailUser.isSiteAdmin
+                      ? `确定取消「${detailUser.name || detailUser.username}」的站点管理员权限？对方将无法再使用站点级管理功能。`
+                      : `确定将「${detailUser.name || detailUser.username}」设为站点管理员？对方将获得全站管理权限。`
+                  }
+                  confirmLabel={
+                    detailUser.isSiteAdmin ? '取消权限' : '确认任命'
+                  }
+                  destructive={detailUser.isSiteAdmin}
+                  onConfirm={() => void handleToggleSiteAdmin(detailUser)}
                 >
-                  {detailUser.isSiteAdmin ? '取消站点管理员' : '设为站点管理员'}
-                </Button>
+                  <Button type="button" size="sm" variant="outline">
+                    {detailUser.isSiteAdmin
+                      ? '取消站点管理员'
+                      : '设为站点管理员'}
+                  </Button>
+                </ConfirmDialog>
                 <Button type="button" size="sm" variant="ghost" asChild>
                   <Link
                     to={
@@ -1236,6 +1262,37 @@ function UserListPage({ scope }: { scope: UserScope }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={syncExemptConfirmUser != null}
+        onOpenChange={(o) => {
+          if (!o) setSyncExemptConfirmUser(null)
+        }}
+        title={
+          syncExemptConfirmUser?.syncExempt
+            ? '关闭始终同步？'
+            : '开启始终同步？'
+        }
+        description={
+          syncExemptConfirmUser
+            ? syncExemptConfirmUser.syncExempt
+              ? `关闭后，「${syncExemptConfirmUser.name || syncExemptConfirmUser.username}」若长时间未登录，后台可能暂停自动同步。`
+              : `开启后，「${syncExemptConfirmUser.name || syncExemptConfirmUser.username}」即使长时间未登录也会继续自动同步。`
+            : ''
+        }
+        confirmLabel={syncExemptConfirmUser?.syncExempt ? '关闭' : '开启'}
+        loading={
+          syncExemptConfirmUser
+            ? togglingKey === `${syncExemptConfirmUser.userId}:sync-exempt`
+            : false
+        }
+        onConfirm={() => {
+          if (!syncExemptConfirmUser) return
+          const target = syncExemptConfirmUser
+          setSyncExemptConfirmUser(null)
+          void handleToggleSyncExempt(target)
+        }}
+      />
     </PageShell>
   )
 }

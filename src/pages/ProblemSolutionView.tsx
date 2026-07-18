@@ -17,6 +17,7 @@ import { getProblem } from '@/api/problem'
 import type { ProblemUserSolutionItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { CommunityReportDialog } from '@/components/community-report-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
 import { ProblemComments } from '@/components/problem-community'
@@ -28,6 +29,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useDocumentMeta } from '@/hooks/use-document-meta'
+import { clipMetaText } from '@/lib/document-meta'
 import { extractMarkdownOutline } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 import { formatTime } from '@/lib/format'
@@ -50,6 +53,27 @@ export function ProblemSolutionView() {
 
   const problemId = Number(id || 0)
   const sid = Number(solutionId || 0)
+
+  const authorName = solution?.name || solution?.username || ''
+  const solTitle = solution?.title || '题解'
+  useDocumentMeta(
+    solution
+      ? {
+          title: `${solTitle}${authorName ? ` · ${authorName}` : ''} - GoAlgo`,
+          description: clipMetaText(
+            solution.contentMd ||
+              solution.excerpt ||
+              (problemTitle
+                ? `${authorName || '选手'} 分享的「${problemTitle}」题解`
+                : '题解分享'),
+          ),
+          image: solution.avatar || undefined,
+          url: `/question-bank/detail/${problemId || solution.problemId}/solution/${sid}`,
+          type: 'article',
+          siteName: 'GoAlgo',
+        }
+      : null,
+  )
   const backTo =
     problemId > 0
       ? `/question-bank/detail/${problemId}?tab=solutions`
@@ -245,16 +269,24 @@ export function ProblemSolutionView() {
                 <PencilIcon data-icon="inline-start" />
                 编辑
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={removing}
-                onClick={() => void removeSolution()}
+              <ConfirmDialog
+                title="删除这篇题解？"
+                description="删除后无法恢复，相关点赞与评论也会一并消失。"
+                confirmLabel="删除"
+                destructive
+                loading={removing}
+                onConfirm={() => void removeSolution()}
               >
-                <Trash2Icon data-icon="inline-start" />
-                {removing ? '删除中…' : '删除'}
-              </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={removing}
+                >
+                  <Trash2Icon data-icon="inline-start" />
+                  {removing ? '删除中…' : '删除'}
+                </Button>
+              </ConfirmDialog>
             </>
           )}
           <Button

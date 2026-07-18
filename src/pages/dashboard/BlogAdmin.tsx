@@ -17,6 +17,7 @@ import {
   moderateBlogArticle,
 } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -420,15 +421,23 @@ export function DashboardBlogAdmin() {
                               <CheckIcon className="size-3.5" />
                               通过
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={busyId === a.id}
-                              onClick={() => void moderate(a.id, 'reject')}
+                            <ConfirmDialog
+                              title="驳回这篇文章？"
+                              description={`确定驳回「${a.title || '未命名'}」？作者将看到未通过的结果。`}
+                              confirmLabel="驳回"
+                              destructive
+                              loading={busyId === a.id}
+                              onConfirm={() => void moderate(a.id, 'reject')}
                             >
-                              <XIcon className="size-3.5" />
-                              驳回
-                            </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={busyId === a.id}
+                              >
+                                <XIcon className="size-3.5" />
+                                驳回
+                              </Button>
+                            </ConfirmDialog>
                           </div>
                         </TableCell>
                       </TableRow>

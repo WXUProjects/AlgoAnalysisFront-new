@@ -133,13 +133,13 @@ export function RecommendStream() {
   }, [])
 
   return (
-    <div data-discover-recommend-stream="" className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-1.5 rounded-md border bg-card/60 px-2.5 py-1.5 text-xs sm:text-sm">
-        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-          <NewspaperIcon className="size-3.5 shrink-0" />
+    <div data-discover-recommend-stream="" className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-1 rounded-md border bg-card/60 px-2 py-1 text-xs">
+        <span className="inline-flex items-center gap-1 text-muted-foreground">
+          <NewspaperIcon className="size-3 shrink-0" />
           想专门逛文章？
         </span>
-        <Button variant="ghost" size="sm" className="h-6 gap-1 px-2 text-xs" asChild>
+        <Button variant="ghost" size="sm" className="h-5 gap-1 px-1.5 text-xs" asChild>
           <Link to="/blog-plaza">去博客广场</Link>
         </Button>
       </div>

@@ -28,6 +28,7 @@ import { staffNavLabel } from '@/lib/roles'
 import { trackPageVisit } from '@/lib/visit-tracker'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { EmergencyDialogHost } from '@/components/emergency-dialog'
 import { NotificationInbox } from '@/components/notification-inbox'
 import { PrivacySetupDialog } from '@/components/privacy-setup-dialog'
@@ -85,7 +86,8 @@ export function AppLayout() {
   const isDetailOwned =
     pathname.startsWith('/question-bank/detail/') ||
     pathname.startsWith('/profile') ||
-    pathname.startsWith('/p/')
+    pathname.startsWith('/p/') ||
+    pathname.startsWith('/problemset/')
   useDocumentMeta(
     isDetailOwned
       ? null
@@ -411,14 +413,20 @@ export function AppLayout() {
                 </>
               ) : (
                 <SidebarMenuItem>
-                  <SidebarMenuButton
-                    type="button"
-                    tooltip={user?.name || '退出'}
-                    onClick={handleLogout}
+                  <ConfirmDialog
+                    title="确认退出？"
+                    description="退出后需要重新登录才能访问个人相关功能。"
+                    confirmLabel="退出"
+                    onConfirm={handleLogout}
                   >
-                    <LogOutIcon />
-                    <span>退出登录</span>
-                  </SidebarMenuButton>
+                    <SidebarMenuButton
+                      type="button"
+                      tooltip={user?.name || '退出'}
+                    >
+                      <LogOutIcon />
+                      <span>退出登录</span>
+                    </SidebarMenuButton>
+                  </ConfirmDialog>
                 </SidebarMenuItem>
               )}
             </SidebarMenu>

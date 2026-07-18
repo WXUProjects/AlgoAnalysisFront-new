@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
+  BookmarkIcon,
   HeartIcon,
   ListIcon,
   LockIcon,
@@ -11,8 +12,10 @@ import {
 import { toast } from 'sonner'
 import {
   createProblemset,
+  listFavoriteProblemsets,
   listMyProblemsets,
   listSquareProblemsets,
+  toggleProblemsetFavorite,
   toggleProblemsetLike,
 } from '@/api/problemset'
 import { useAuth } from '@/auth/AuthContext'
@@ -65,10 +68,21 @@ const kindLabel: Record<string, string> = {
 function SetCard({
   item,
   onLike,
+  onFavorite,
+  showFavorite,
 }: {
   item: ProblemsetInfo
   onLike?: (id: number) => void
+  onFavorite?: (id: number) => void
+  /** 广场等展示收藏按钮（公开自定义） */
+  showFavorite?: boolean
 }) {
+  const canFavorite =
+    showFavorite &&
+    !item.isSystem &&
+    item.visibility === 'public' &&
+    !!onFavorite
+
   return (
     <Card className="transition-colors hover:border-primary/40">
       <CardHeader className="gap-2 pb-2">
@@ -100,25 +114,47 @@ function SetCard({
       </CardHeader>
       <CardContent className="flex items-center justify-between gap-2 pt-0 text-sm text-muted-foreground">
         <span>{item.itemCount} 题</span>
-        <button
-          type="button"
-          className={cn(
-            'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs transition-colors',
-            item.liked
-              ? 'text-rose-600 dark:text-rose-400'
-              : 'hover:bg-muted hover:text-foreground',
+        <div className="flex items-center gap-1">
+          {canFavorite && (
+            <button
+              type="button"
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs transition-colors',
+                item.favorited
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'hover:bg-muted hover:text-foreground',
+              )}
+              onClick={(e) => {
+                e.preventDefault()
+                onFavorite?.(item.id)
+              }}
+              title={item.favorited ? '取消收藏' : '收藏题单'}
+            >
+              <BookmarkIcon
+                className={cn('size-3.5', item.favorited && 'fill-current')}
+              />
+            </button>
           )}
-          onClick={(e) => {
-            e.preventDefault()
-            onLike?.(item.id)
-          }}
-          disabled={!onLike}
-        >
-          <HeartIcon
-            className={cn('size-3.5', item.liked && 'fill-current')}
-          />
-          {item.likeCount}
-        </button>
+          <button
+            type="button"
+            className={cn(
+              'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs transition-colors',
+              item.liked
+                ? 'text-rose-600 dark:text-rose-400'
+                : 'hover:bg-muted hover:text-foreground',
+            )}
+            onClick={(e) => {
+              e.preventDefault()
+              onLike?.(item.id)
+            }}
+            disabled={!onLike}
+          >
+            <HeartIcon
+              className={cn('size-3.5', item.liked && 'fill-current')}
+            />
+            {item.likeCount}
+          </button>
+        </div>
       </CardContent>
     </Card>
   )
@@ -128,9 +164,18 @@ export function ProblemsetHome() {
   const { isLogin, ready } = useAuth()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') === 'square' ? 'square' : 'mine'
+  const tabParam = params.get('tab')
+  const tab =
+    tabParam === 'square'
+      ? 'square'
+      : tabParam === 'favorites'
+        ? 'favorites'
+        : 'mine'
 
   const [mine, setMine] = useState<ProblemsetInfo[]>([])
+  const [favorites, setFavorites] = useState<ProblemsetInfo[]>([])
+  const [favTotal, setFavTotal] = useState(0)
+  const [favPage, setFavPage] = useState(1)
   const [square, setSquare] = useState<ProblemsetInfo[]>([])
   const [squareTotal, setSquareTotal] = useState(0)
   const [squarePage, setSquarePage] = useState(1)
@@ -177,11 +222,32 @@ export function ProblemsetHome() {
     [squarePage, keyword],
   )
 
+  const loadFavorites = useCallback(
+    async (page = favPage) => {
+      if (!isLogin) {
+        setFavorites([])
+        setFavTotal(0)
+        return
+      }
+      const res = await listFavoriteProblemsets({ page, pageSize: 12 })
+      if (res.success && res.data) {
+        setFavorites(res.data.list)
+        setFavTotal(res.data.total)
+        setFavPage(res.data.page)
+      } else {
+        setFavorites([])
+        if (res.message) toast.error(res.message)
+      }
+    },
+    [isLogin, favPage],
+  )
+
   useEffect(() => {
     if (!ready) return
     setLoading(true)
     void (async () => {
       if (tab === 'mine') await loadMine()
+      else if (tab === 'favorites') await loadFavorites(1)
       else await loadSquare(1, keyword)
       setLoading(false)
     })()
@@ -207,6 +273,33 @@ export function ProblemsetHome() {
       )
     setMine(patch)
     setSquare(patch)
+    setFavorites(patch)
+  }
+
+  async function handleFavorite(id: number) {
+    if (!isLogin) {
+      toast.message('登录后即可收藏题单')
+      navigate('/login')
+      return
+    }
+    const res = await toggleProblemsetFavorite(id)
+    if (!res.success || !res.data) {
+      toast.error(res.message || '操作失败')
+      return
+    }
+    const favorited = res.data.favorited
+    const patch = (list: ProblemsetInfo[]) =>
+      list.map((x) => (x.id === id ? { ...x, favorited } : x))
+    setMine(patch)
+    setSquare(patch)
+    if (!favorited) {
+      // 取消收藏：从「我的收藏」列表移除
+      setFavorites((list) => list.filter((x) => x.id !== id))
+      setFavTotal((n) => Math.max(0, n - 1))
+    } else {
+      setFavorites(patch)
+    }
+    toast.success(favorited ? '已收藏' : '已取消收藏')
   }
 
   async function handleCreate() {
@@ -246,7 +339,7 @@ export function ProblemsetHome() {
         <div>
           <h2 className="text-lg font-semibold">题单</h2>
           <p className="text-sm text-muted-foreground">
-            收藏、待做与自建题单；公开题单会出现在广场。
+            待做与自建题单；可收藏他人公开题单；公开题单会出现在广场。
           </p>
         </div>
         {isLogin && (
@@ -261,6 +354,7 @@ export function ProblemsetHome() {
         onValueChange={(v) => {
           const next = new URLSearchParams(params)
           if (v === 'square') next.set('tab', 'square')
+          else if (v === 'favorites') next.set('tab', 'favorites')
           else next.delete('tab')
           setParams(next, { replace: true })
         }}
@@ -269,6 +363,10 @@ export function ProblemsetHome() {
           <TabsTrigger value="mine">
             <StarIcon />
             我的
+          </TabsTrigger>
+          <TabsTrigger value="favorites">
+            <BookmarkIcon />
+            我的收藏
           </TabsTrigger>
           <TabsTrigger value="square">
             <ListIcon />
@@ -280,7 +378,7 @@ export function ProblemsetHome() {
           {!isLogin ? (
             <Card>
               <CardContent className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
-                <p>登录后可查看收藏、待做和自建题单</p>
+                <p>登录后可查看收藏题目、待做和自建题单</p>
                 <Button asChild>
                   <Link to="/login">去登录</Link>
                 </Button>
@@ -304,6 +402,66 @@ export function ProblemsetHome() {
                 <SetCard key={item.id} item={item} onLike={handleLike} />
               ))}
             </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="favorites" className="mt-4 space-y-4">
+          {!isLogin ? (
+            <Card>
+              <CardContent className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
+                <p>登录后可收藏他人公开题单</p>
+                <Button asChild>
+                  <Link to="/login">去登录</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : loading ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-28 rounded-xl" />
+              ))}
+            </div>
+          ) : favorites.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
+                <p>还没有收藏别人的题单，去广场看看</p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    const next = new URLSearchParams(params)
+                    next.set('tab', 'square')
+                    setParams(next, { replace: true })
+                  }}
+                >
+                  去广场
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {favorites.map((item) => (
+                  <SetCard
+                    key={item.id}
+                    item={item}
+                    onLike={handleLike}
+                    onFavorite={handleFavorite}
+                    showFavorite
+                  />
+                ))}
+              </div>
+              {favTotal > 12 && (
+                <Pagination
+                  page={favPage}
+                  pageSize={12}
+                  total={favTotal}
+                  onChange={(p) => {
+                    void loadFavorites(p)
+                  }}
+                />
+              )}
+            </>
           )}
         </TabsContent>
 
@@ -345,7 +503,13 @@ export function ProblemsetHome() {
             <>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {square.map((item) => (
-                  <SetCard key={item.id} item={item} onLike={handleLike} />
+                  <SetCard
+                    key={item.id}
+                    item={item}
+                    onLike={handleLike}
+                    onFavorite={handleFavorite}
+                    showFavorite
+                  />
                 ))}
               </div>
               <Pagination

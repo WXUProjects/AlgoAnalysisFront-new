@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
+  BookmarkIcon,
   HeartIcon,
   LinkIcon,
   LockIcon,
@@ -13,6 +14,7 @@ import {
   deleteProblemset,
   getProblemset,
   removeProblemFromSet,
+  toggleProblemsetFavorite,
   toggleProblemsetLike,
   unlockProblemset,
   updateProblemset,
@@ -68,6 +70,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { ProblemInfo, ProblemsetInfo, ProblemsetVisibility } from '@shared/api'
+import { useDocumentMeta } from '@/hooks/use-document-meta'
+import { clipMetaText } from '@/lib/document-meta'
 import { cn } from '@/lib/utils'
 
 const unlockKey = (id: string | number) => `ps_unlock_${id}`
@@ -88,6 +92,23 @@ export function ProblemsetDetail() {
   const [password, setPassword] = useState('')
   const [unlocking, setUnlocking] = useState(false)
 
+  useDocumentMeta(
+    set
+      ? {
+          title: `${set.title || '题单'} - GoAlgo`,
+          description: clipMetaText(
+            set.description ||
+              `${set.ownerName || '选手'} 的题单${
+                set.itemCount ? ` · ${set.itemCount} 道题` : ''
+              }`,
+          ),
+          url: `/problemset/${set.id}`,
+          type: 'website',
+          siteName: 'GoAlgo',
+        }
+      : null,
+  )
+
   const [addOpen, setAddOpen] = useState(false)
   const [addMode, setAddMode] = useState<'bank' | 'url'>('bank')
   const [url, setUrl] = useState('')
@@ -107,6 +128,8 @@ export function ProblemsetDetail() {
   } | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [busyConfirm, setBusyConfirm] = useState(false)
+  const [manualPromptOpen, setManualPromptOpen] = useState(false)
+  const [pendingManualUrl, setPendingManualUrl] = useState('')
 
   const load = useCallback(async () => {
     if (!id) return
@@ -164,6 +187,26 @@ export function ProblemsetDetail() {
       return
     }
     setSet({ ...set, liked: res.data.liked, likeCount: res.data.likeCount })
+  }
+
+  async function handleFavorite() {
+    if (!set) return
+    if (!isLogin) {
+      toast.message('登录后即可收藏题单')
+      navigate('/login')
+      return
+    }
+    if (set.isSystem || set.visibility !== 'public') {
+      toast.error('仅公开题单可收藏')
+      return
+    }
+    const res = await toggleProblemsetFavorite(set.id)
+    if (!res.success || !res.data) {
+      toast.error(res.message || '操作失败')
+      return
+    }
+    setSet({ ...set, favorited: res.data.favorited })
+    toast.success(res.data.favorited ? '已收藏' : '已取消收藏')
   }
 
   function requestRemove(problemId: number, title: string) {
@@ -242,6 +285,12 @@ export function ProblemsetDetail() {
     })
     setAdding(false)
     if (!res.success) {
+      if (res.code === 'URL_PARSE_FAILED') {
+        setPendingManualUrl(url.trim())
+        setManualPromptOpen(true)
+        setAddOpen(false)
+        return
+      }
       toast.error(res.message || '无法识别该链接')
       return
     }
@@ -253,6 +302,15 @@ export function ProblemsetDetail() {
     setUrl('')
     setAddOpen(false)
     void load()
+  }
+
+  function goManualAdd() {
+    if (!set) return
+    const q = pendingManualUrl
+      ? `?url=${encodeURIComponent(pendingManualUrl)}`
+      : ''
+    setManualPromptOpen(false)
+    navigate(`/problemset/${set.id}/add-problem${q}`)
   }
 
   function openEdit() {
@@ -388,6 +446,21 @@ export function ProblemsetDetail() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {!set.isSystem && set.visibility === 'public' && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className={cn(set.favorited && 'text-amber-600')}
+              onClick={() => void handleFavorite()}
+            >
+              <BookmarkIcon
+                data-icon="inline-start"
+                className={cn(set.favorited && 'fill-current')}
+              />
+              {set.favorited ? '已收藏' : '收藏'}
+            </Button>
+          )}
           <Button
             type="button"
             size="sm"
@@ -514,7 +587,8 @@ export function ProblemsetDetail() {
           <DialogHeader>
             <DialogTitle>向题单加题</DialogTitle>
             <DialogDescription>
-              可从题库搜索添加，或粘贴 OJ 题目链接。未入库题面会自动获取，不进行标签分析。
+              可从题库搜索，或粘贴常见 OJ 题目链接。未入库题面会自动拉取；是否做标签分析取决于你的 AI
+              权限。链接无法识别时可手动加入题库。
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2">
@@ -737,6 +811,36 @@ export function ProblemsetDetail() {
               }}
             >
               {busyConfirm ? '删除中…' : '确认删除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={manualPromptOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setManualPromptOpen(false)
+            setPendingManualUrl('')
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>无法识别该链接</AlertDialogTitle>
+            <AlertDialogDescription>
+              系统无法从该链接识别题目。是否向题库手动加题？填写标题后发布，会加入当前题单。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                goManualAdd()
+              }}
+            >
+              向题库加题
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -81,6 +81,11 @@ const ProblemsetDetail = lazy(() =>
     default: m.ProblemsetDetail,
   })),
 )
+const ProblemsetAddManual = lazy(() =>
+  import('@/pages/problemset/ProblemsetAddManual').then((m) => ({
+    default: m.ProblemsetAddManual,
+  })),
+)
 const ProblemContentEdit = lazy(() =>
   import('@/pages/ProblemContentEdit').then((m) => ({
     default: m.ProblemContentEdit,
@@ -553,6 +558,16 @@ export const router = createBrowserRouter([
           <Lazy>
             <ProblemsetDetail />
           </Lazy>
+        ),
+      },
+      {
+        path: 'problemset/:id/add-problem',
+        element: (
+          <RequireLogin>
+            <Lazy>
+              <ProblemsetAddManual />
+            </Lazy>
+          </RequireLogin>
         ),
       },
       {

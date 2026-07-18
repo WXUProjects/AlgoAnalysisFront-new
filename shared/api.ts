@@ -262,10 +262,16 @@ export const endpoints = {
       update: `${API_PREFIX}/core/problemset/update`,
       delete: `${API_PREFIX}/core/problemset/delete`,
       unlock: `${API_PREFIX}/core/problemset/unlock`,
-      /** 加题：problemId 或 url */
+      /** 加题：problemId 或 url；缺题面强制爬取，AI 按操作者权限 */
       add: `${API_PREFIX}/core/problemset/add`,
+      /** 链接无法识别时手动建题并入题单（无需审核） */
+      addManual: `${API_PREFIX}/core/problemset/add-manual`,
       remove: `${API_PREFIX}/core/problemset/remove`,
       like: `${API_PREFIX}/core/problemset/like`,
+      /** 收藏题单 toggle */
+      favorite: `${API_PREFIX}/core/problemset/favorite`,
+      /** 我收藏的题单（排除自己的） */
+      favorites: `${API_PREFIX}/core/problemset/favorites`,
     },
   },
   agent: {
@@ -346,6 +352,8 @@ export interface ProblemsetInfo {
   likeCount: number
   itemCount: number
   liked?: boolean
+  /** 当前用户是否已收藏该题单（与点赞分离） */
+  favorited?: boolean
   isOwner?: boolean
   isSystem?: boolean
   /** 仅 mine?problemId= 时返回：本题是否已在该题单 */
@@ -390,6 +398,15 @@ export interface AddProblemsetItemReq {
   problemsetId: number
   problemId?: number
   url?: string
+}
+
+/** 手动向题库加题并加入题单（无需审核） */
+export interface AddManualProblemsetItemReq {
+  problemsetId: number
+  title: string
+  contentMd?: string
+  tags?: string[]
+  sourceUrl?: string
 }
 
 export interface StdResponse<T = unknown> {

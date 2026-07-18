@@ -31,6 +31,7 @@ import {
   toggleCommunityLike,
 } from '@/api/community'
 import { useAuth } from '@/auth/AuthContext'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { MarkdownBody } from '@/components/markdown-body'
 import { MarkdownSummary } from '@/components/markdown-summary'
 import { Button } from '@/components/ui/button'
@@ -207,20 +208,23 @@ export function BlogArticlePage() {
           `${authorName} 的文章`,
       )
     : undefined
+  // 博文分享图：优先博主头像；siteName 固定 GoAlgo 品牌
   const articleMetaImage =
-    article?.coverUrl ||
     article?.author?.avatar ||
     author?.avatar ||
+    article?.coverUrl ||
     undefined
   useDocumentMeta(
     article
       ? {
-          title: articleMetaTitle,
+          title: articleMetaTitle
+            ? `${articleMetaTitle} - GoAlgo`
+            : 'GoAlgo',
           description: articleMetaDesc,
           image: articleMetaImage,
           url: `/blog/${username}/${slug}`,
           type: 'article',
-          siteName: authorName || 'GoAlgo',
+          siteName: 'GoAlgo',
         }
       : null,
   )
@@ -698,15 +702,22 @@ export function BlogArticlePage() {
                 <p className="mt-1 whitespace-pre-wrap text-sm">{c.content}</p>
               </div>
               {(user?.userId === c.userId || isOwner) && (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="shrink-0 text-muted-foreground"
-                  onClick={() => void handleDeleteComment(c.id)}
-                  aria-label="删除评论"
+                <ConfirmDialog
+                  title="删除这条评论？"
+                  description="删除后无法恢复。"
+                  confirmLabel="删除"
+                  destructive
+                  onConfirm={() => void handleDeleteComment(c.id)}
                 >
-                  <Trash2Icon className="size-3.5" />
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="shrink-0 text-muted-foreground"
+                    aria-label="删除评论"
+                  >
+                    <Trash2Icon className="size-3.5" />
+                  </Button>
+                </ConfirmDialog>
               )}
             </li>
           ))

@@ -25,6 +25,7 @@ import { resolvePageTitle } from '@/lib/page-title'
 import { staffNavLabel } from '@/lib/roles'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { EmergencyDialogHost } from '@/components/emergency-dialog'
 import { SiteFooter } from '@/components/site-footer'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -452,10 +453,17 @@ export function AdminLayout() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton tooltip="退出" onClick={handleLogout}>
-                  <LogOutIcon />
-                  <span>退出登录</span>
-                </SidebarMenuButton>
+                <ConfirmDialog
+                  title="确认退出？"
+                  description="退出后需要重新登录才能访问个人相关功能。"
+                  confirmLabel="退出"
+                  onConfirm={handleLogout}
+                >
+                  <SidebarMenuButton tooltip="退出">
+                    <LogOutIcon />
+                    <span>退出登录</span>
+                  </SidebarMenuButton>
+                </ConfirmDialog>
               </SidebarMenuItem>
             </SidebarMenu>
             <SidebarSeparator />

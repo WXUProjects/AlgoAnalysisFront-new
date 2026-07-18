@@ -21,6 +21,7 @@ import {
   upsertContestCalendarSub,
 } from '@/api/contest-calendar'
 import { useAuth } from '@/auth/AuthContext'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Pagination } from '@/components/pagination'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -100,6 +101,10 @@ export function ContestCalendar() {
 
   const [platDialogOpen, setPlatDialogOpen] = useState(false)
   const [platBusy, setPlatBusy] = useState<string | null>(null)
+  /** 关闭平台订阅前二次确认 */
+  const [platOffTarget, setPlatOffTarget] = useState<ContestCalendarPlatform | null>(
+    null,
+  )
 
   const loadList = useCallback(async () => {
     const id = ++requestId.current
@@ -446,14 +451,17 @@ export function ContestCalendar() {
                         </Button>
                       ) : null}
                       {subbed ? (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => void removeContestSub(item)}
+                        <ConfirmDialog
+                          title="取消本场提醒？"
+                          description={`确定取消「${item.name}」的邮件提醒？`}
+                          confirmLabel="取消订阅"
+                          onConfirm={() => void removeContestSub(item)}
                         >
-                          <BellOffIcon data-icon="inline-start" />
-                          取消订阅
-                        </Button>
+                          <Button variant="secondary" size="sm">
+                            <BellOffIcon data-icon="inline-start" />
+                            取消订阅
+                          </Button>
+                        </ConfirmDialog>
                       ) : (
                         <Button size="sm" onClick={() => openContestSub(item)}>
                           <BellIcon data-icon="inline-start" />
@@ -544,9 +552,13 @@ export function ContestCalendar() {
                         <Switch
                           checked={enabled}
                           disabled={platBusy === p.platform}
-                          onCheckedChange={(v) =>
-                            void togglePlatformSub(p, v, adv)
-                          }
+                          onCheckedChange={(v) => {
+                            if (!v) {
+                              setPlatOffTarget(p)
+                              return
+                            }
+                            void togglePlatformSub(p, true, adv)
+                          }}
                         />
                       </div>
                       {enabled ? (
@@ -576,6 +588,29 @@ export function ContestCalendar() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={platOffTarget != null}
+        onOpenChange={(o) => {
+          if (!o) setPlatOffTarget(null)
+        }}
+        title="取消平台订阅？"
+        description={
+          platOffTarget
+            ? `确定取消「${platOffTarget.platformName}」的全部比赛提醒？之后该平台新比赛将不再自动提醒。`
+            : ''
+        }
+        confirmLabel="取消订阅"
+        onConfirm={() => {
+          if (!platOffTarget) return
+          const target = platOffTarget
+          const adv =
+            platformSubMap.get(target.platform)?.advanceMinutes ||
+            CONTEST_CALENDAR_DEFAULT_ADVANCE
+          setPlatOffTarget(null)
+          void togglePlatformSub(target, false, adv)
+        }}
+      />
     </>
   )
 }

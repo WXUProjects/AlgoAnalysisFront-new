@@ -446,7 +446,7 @@ function DiscoverFeedLayout({
             </TabsList>
           )}
 
-          <TabsContent value="recommend" className="mt-0 flex flex-col gap-2.5">
+          <TabsContent value="recommend" className="mt-0 flex flex-col gap-1.5">
             <RecommendStream />
           </TabsContent>
 

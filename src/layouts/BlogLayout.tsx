@@ -177,6 +177,7 @@ export function BlogLayout() {
       location.pathname.replace(/\/+$/, ''),
     )
   // 文章页由 BlogArticle 写真实标题；壳层只处理博客首页/分类等
+  // 个人博客分享图：博客身份图（作者头像）；siteName 保留 GoAlgo
   useDocumentMeta(
     isArticleRoute
       ? null
@@ -184,11 +185,11 @@ export function BlogLayout() {
           title: formatDocumentTitle(pageTitle, displayName || '博客'),
           description:
             subtitle?.trim() ||
-            `${displayName || username} 的算法博客`,
+            `${displayName || username} 的算法博客，分享题解与训练笔记`,
           image: author?.avatar || undefined,
           url: location.pathname,
           type: 'profile',
-          siteName: displayName || 'GoAlgo',
+          siteName: 'GoAlgo',
         },
   )
 

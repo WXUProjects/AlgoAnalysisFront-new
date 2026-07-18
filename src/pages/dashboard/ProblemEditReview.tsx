@@ -7,6 +7,7 @@ import {
 } from '@/api/problem'
 import type { ProblemEditInfo } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
@@ -369,21 +370,29 @@ export function DashboardProblemEditReview() {
                 </Button>
                 {detail.status === 'pending' ? (
                   <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={acting}
-                      onClick={() => void handleReview(false)}
+                    <ConfirmDialog
+                      title="驳回这次修改？"
+                      description="驳回后不会改动题面，提交者会看到未通过的结果。"
+                      confirmLabel="驳回"
+                      destructive
+                      loading={acting}
+                      onConfirm={() => void handleReview(false)}
                     >
-                      驳回
-                    </Button>
-                    <Button
-                      type="button"
-                      disabled={acting}
-                      onClick={() => void handleReview(true)}
+                      <Button type="button" variant="outline" disabled={acting}>
+                        驳回
+                      </Button>
+                    </ConfirmDialog>
+                    <ConfirmDialog
+                      title="通过并应用修改？"
+                      description="通过后会用本次内容覆盖题目信息，请确认已仔细核对。"
+                      confirmLabel="通过并应用"
+                      loading={acting}
+                      onConfirm={() => void handleReview(true)}
                     >
-                      通过并应用
-                    </Button>
+                      <Button type="button" disabled={acting}>
+                        通过并应用
+                      </Button>
+                    </ConfirmDialog>
                   </>
                 ) : (
                   <Button type="button" variant="outline" onClick={() => setDetail(null)}>

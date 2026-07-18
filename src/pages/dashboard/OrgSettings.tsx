@@ -14,6 +14,7 @@ import {
 import { getProfileByName } from '@/api/profile'
 import { uploadImage } from '@/api/upload'
 import type { OrgMemberInfo, UserProfile } from '@shared/api'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ImageUploadTile } from '@/components/image-upload-tile'
 import { Pagination } from '@/components/pagination'
 import { useListQueryState } from '@/hooks/use-list-query-state'
@@ -70,6 +71,13 @@ export function DashboardOrgSettings() {
   const [addSearch, setAddSearch] = useState('')
   const [addCandidates, setAddCandidates] = useState<UserProfile[]>([])
   const [addSearching, setAddSearching] = useState(false)
+  /** 修改成员角色前二次确认 */
+  const [roleConfirm, setRoleConfirm] = useState<{
+    userId: number
+    name: string
+    from: string
+    to: string
+  } | null>(null)
 
   const loadMembers = useCallback(async () => {
     if (!orgId) return
@@ -258,9 +266,11 @@ export function DashboardOrgSettings() {
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
           <code className="rounded bg-muted px-3 py-2 text-sm">{inviteCode || '—'}</code>
-          <Button
-            variant="secondary"
-            onClick={() =>
+          <ConfirmDialog
+            title="更换团队识别码？"
+            description="更换后旧识别码立即失效，已发出去的邀请将无法再使用。确定继续？"
+            confirmLabel="更换"
+            onConfirm={() =>
               void rotateInvite(orgId).then((r) => {
                 if (r.success) {
                   setInviteCode(r.inviteCode || '')
@@ -269,8 +279,8 @@ export function DashboardOrgSettings() {
               })
             }
           >
-            更换识别码
-          </Button>
+            <Button variant="secondary">更换识别码</Button>
+          </ConfirmDialog>
         </CardContent>
       </Card>
 
@@ -426,14 +436,15 @@ export function DashboardOrgSettings() {
                 </div>
                 <Select
                   value={m.role || 'member'}
-                  onValueChange={(role) =>
-                    void setOrgMemberRole(orgId, m.userId, role).then(async (r) => {
-                      if (r.success) {
-                        toast.success('已更新角色')
-                        await loadMembers()
-                      } else toast.error(r.message)
+                  onValueChange={(role) => {
+                    if (role === (m.role || 'member')) return
+                    setRoleConfirm({
+                      userId: m.userId,
+                      name: m.name || m.orgDisplayName || m.username || String(m.userId),
+                      from: m.role || 'member',
+                      to: role,
                     })
-                  }
+                  }}
                 >
                   <SelectTrigger className="w-36 shrink-0">
                     <SelectValue />
@@ -463,6 +474,33 @@ export function DashboardOrgSettings() {
       </Card>
       </>
       ) : null}
+
+      <ConfirmDialog
+        open={roleConfirm != null}
+        onOpenChange={(o) => {
+          if (!o) setRoleConfirm(null)
+        }}
+        title="修改成员角色？"
+        description={
+          roleConfirm
+            ? `确定将「${roleConfirm.name}」从「${orgRoleName(roleConfirm.from)}」改为「${orgRoleName(roleConfirm.to)}」？对方的后台权限会立即变化。`
+            : ''
+        }
+        confirmLabel="确认修改"
+        onConfirm={() => {
+          if (!roleConfirm || !orgId) return
+          const target = roleConfirm
+          setRoleConfirm(null)
+          void setOrgMemberRole(orgId, target.userId, target.to).then(
+            async (r) => {
+              if (r.success) {
+                toast.success('已更新角色')
+                await loadMembers()
+              } else toast.error(r.message)
+            },
+          )
+        }}
+      />
     </div>
   )
 }

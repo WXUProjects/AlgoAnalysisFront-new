@@ -5,6 +5,7 @@ import { createPaste, listMyPastes, deletePaste } from '@/api/paste'
 import type { PasteInfo } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { CodeEditor } from '@/components/code-editor'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageShell } from '@/components/page-shell'
 import { Button } from '@/components/ui/button'
 import {
@@ -274,14 +275,17 @@ export function PasteCreate() {
                         {p.createdAt ? ` · ${formatTime(String(p.createdAt))}` : ''}
                       </p>
                     </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => void handleDelete(p.slug)}
+                    <ConfirmDialog
+                      title="删除这条粘贴？"
+                      description={`「${p.title || p.slug}」删除后，分享链接将失效且无法恢复。`}
+                      confirmLabel="删除"
+                      destructive
+                      onConfirm={() => void handleDelete(p.slug)}
                     >
-                      删除
-                    </Button>
+                      <Button type="button" size="sm" variant="outline">
+                        删除
+                      </Button>
+                    </ConfirmDialog>
                   </div>
                 ))}
               </>

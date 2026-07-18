@@ -34,6 +34,7 @@ import type {
   ProblemsetInfo,
 } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MarkdownBody } from '@/components/markdown-body'
 import { PageShell } from '@/components/page-shell'
@@ -136,6 +137,9 @@ export function QuestionBankDetail() {
   const [mySets, setMySets] = useState<ProblemsetInfo[]>([])
   const [mySetsLoading, setMySetsLoading] = useState(false)
   const [togglingSetId, setTogglingSetId] = useState<number | null>(null)
+  /** 从题单移除前二次确认 */
+  const [removeFromSetTarget, setRemoveFromSetTarget] =
+    useState<ProblemsetInfo | null>(null)
 
   useDocumentMeta(
     problem
@@ -519,6 +523,10 @@ export function QuestionBankDetail() {
                                 disabled={busy || togglingSetId != null}
                                 onSelect={(e) => e.preventDefault()}
                                 onCheckedChange={(v) => {
+                                  if (!v && checked) {
+                                    setRemoveFromSetTarget(ps)
+                                    return
+                                  }
                                   void toggleInSet(ps, Boolean(v))
                                 }}
                               >
@@ -884,6 +892,27 @@ export function QuestionBankDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={removeFromSetTarget != null}
+        onOpenChange={(o) => {
+          if (!o) setRemoveFromSetTarget(null)
+        }}
+        title="从题单移除？"
+        description={
+          removeFromSetTarget
+            ? `确定从「${removeFromSetTarget.title}」移除此题？`
+            : ''
+        }
+        confirmLabel="移除"
+        destructive
+        onConfirm={() => {
+          if (!removeFromSetTarget) return
+          const target = removeFromSetTarget
+          setRemoveFromSetTarget(null)
+          void toggleInSet(target, false)
+        }}
+      />
     </PageShell>
   )
 }

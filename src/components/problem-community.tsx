@@ -19,6 +19,7 @@ import {
 import type { ProblemCommentItem, ProblemUserSolutionItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { CommunityReportDialog } from '@/components/community-report-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { MentionTextarea } from '@/components/mention-textarea'
 import { Pagination } from '@/components/pagination'
 import { Button } from '@/components/ui/button'
@@ -214,15 +215,22 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
                     >
                       编辑
                     </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="size-7"
-                      onClick={() => void removeSolution(s.id)}
+                    <ConfirmDialog
+                      title="删除这篇题解？"
+                      description="删除后无法恢复，相关点赞与评论也会一并消失。"
+                      confirmLabel="删除"
+                      destructive
+                      onConfirm={() => void removeSolution(s.id)}
                     >
-                      <Trash2Icon />
-                    </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-7"
+                      >
+                        <Trash2Icon />
+                      </Button>
+                    </ConfirmDialog>
                   </>
                 )}
               </div>
@@ -607,15 +615,22 @@ function CommentNode({
             </span>
           </div>
           {(myId === c.userId || isSiteAdmin) && (
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="size-7 shrink-0"
-              onClick={() => void onDelete(c.id)}
+            <ConfirmDialog
+              title="删除这条评论？"
+              description="删除后无法恢复。"
+              confirmLabel="删除"
+              destructive
+              onConfirm={() => void onDelete(c.id)}
             >
-              <Trash2Icon />
-            </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-7 shrink-0"
+              >
+                <Trash2Icon />
+              </Button>
+            </ConfirmDialog>
           )}
         </div>
         <p className="mt-1 whitespace-pre-wrap break-words text-muted-foreground">
