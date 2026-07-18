@@ -26,7 +26,7 @@ import type { DiscoverStreamItem, PreviewTarget } from './types'
 /**
  * Recommend / Discover surface — high-signal activity (题解/讨论) + rank-backed signal.
  * Decoupled from chronological Feed; no inject into Feed array.
- * 公共域：后端全站聚合；私有域：仅本组织。
+ * 公共域：后端全站聚合；私有域：仅本组织成员内容（题解/博客跨作者所属各域可见）。
  */
 export function RecommendStream() {
   const { currentOrg } = useAuth()
