@@ -155,7 +155,7 @@ export function BlogSettingsPage() {
                 <p className="mt-1 text-xs text-muted-foreground">
                   {meta.description}
                 </p>
-                {id === 'chirpy' && (
+                {id === 'mizuki' && (
                   <span className="mt-2 inline-block text-[11px] text-primary">
                     默认
                   </span>

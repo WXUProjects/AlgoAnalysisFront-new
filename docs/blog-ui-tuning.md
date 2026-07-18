@@ -1,6 +1,6 @@
 # 博客 UI 调优文档（留存）
 
-> 状态：**三主题已上线**。默认 **Chirpy**（1:1 复刻 [lumenvestige.github.io](https://lumenvestige.github.io/) / jekyll-theme-chirpy）；备选 **简约**、**Mizuki**（适配 [LyraVoid/Mizuki](https://github.com/LyraVoid/Mizuki)，非默认，动画轻度–中度）。  
+> 状态：**三主题已上线**。默认 **Mizuki**（适配 [LyraVoid/Mizuki](https://github.com/LyraVoid/Mizuki)，动画轻度–中度）；备选 **Chirpy**（1:1 复刻 [lumenvestige.github.io](https://lumenvestige.github.io/) / jekyll-theme-chirpy）、**简约**。  
 > 作者可在「外观设置」切换主题，并自定义 Chirpy/Mizuki 外链图标。  
 > 页脚**备案信息始终使用主站** `footerIcp`（`SiteConfig`）。
 
@@ -12,8 +12,8 @@
 |----|------|
 | 路径 | 单域名 `/blog/:username`，无独立子域；主站广场 `/blog-plaza` |
 | 壳 | 个人博客 **独立于主站 AppLayout**；广场走主站侧栏 |
-| 默认主题 | `chirpy`（Chirpy） |
-| 备选主题 | `simple`（简约）· `mizuki`（Mizuki，[GitHub](https://github.com/LyraVoid/Mizuki)） |
+| 默认主题 | `mizuki`（Mizuki） |
+| 备选主题 | `chirpy`（Chirpy）· `simple`（简约） |
 | 外链 | Chirpy 侧栏 / Mizuki 资料卡 图标可配置（github / x / email / rss / …） |
 | 备案 | 页脚 ICP 读主站站点配置，不按博客作者自定义 |
 | 数据 | 文章与主站推荐/资料共用同一 `blog_articles` 记录 |
@@ -28,7 +28,7 @@
 
 | 位置 | 职责 |
 |------|------|
-| `src/lib/blog-theme.ts` | `themeId` / `socialLinks` 解析；默认 `chirpy` |
+| `src/lib/blog-theme.ts` | `themeId` / `socialLinks` 解析；默认 `mizuki` |
 | `src/styles/blog-chirpy.css` | Chirpy 色板与布局（侧栏 260/300px、卡片、归档时间线…） |
 | `src/styles/blog-mizuki.css` | Mizuki 色板与布局（hue 系 oklch、毛玻璃顶栏、圆角卡片） |
 | `src/components/blog/chirpy-shell.tsx` | Chirpy 壳：侧栏 / 顶栏 / 右栏 / 页脚 |
@@ -88,7 +88,7 @@ SimpleShell
 └── Outlet + 页脚（含主站备案）
 ```
 
-### Mizuki（可选，非默认）
+### Mizuki（默认）
 
 ```
 MizukiShell  ← 适配 https://github.com/LyraVoid/Mizuki
@@ -124,3 +124,4 @@ MizukiShell  ← 适配 https://github.com/LyraVoid/Mizuki
 | 2026-07-17 | 初版：独立壳、共享文章、主题钩子与文档落盘 |
 | 2026-07-17 | Chirpy 默认主题 1:1 复原；简约=原壳；社交链接可配；备案走主站 |
 | 2026-07-17 | 新增可选主题 Mizuki（适配 LyraVoid/Mizuki，轻度动画，非默认） |
+| 2026-07-18 | 默认主题改为 Mizuki；Chirpy / 简约仍为可选 |

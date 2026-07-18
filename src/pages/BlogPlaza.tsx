@@ -9,7 +9,11 @@ import {
   SearchIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { listBlogAuthors, listBlogPlaza } from '@/api/blog'
+import {
+  getBlogActivationStatus,
+  listBlogAuthors,
+  listBlogPlaza,
+} from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
 import { BlogActivateDialog } from '@/components/blog/blog-activate-dialog'
 import { BlogLink } from '@/components/blog/blog-link'
@@ -65,6 +69,8 @@ export function BlogPlaza() {
   const [authors, setAuthors] = useState<BlogPlazaAuthor[]>([])
   const [authorsLoading, setAuthorsLoading] = useState(true)
   const [activateOpen, setActivateOpen] = useState(false)
+  /** null=检测中；登录后才有意义 */
+  const [blogActivated, setBlogActivated] = useState<boolean | null>(null)
 
   const myUsername = user?.username
   const myBlogHref = myUsername ? `/blog/${myUsername}` : undefined
@@ -74,6 +80,23 @@ export function BlogPlaza() {
   useEffect(() => {
     setQInput(keyword)
   }, [keyword])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!isLogin) {
+      setBlogActivated(null)
+      return
+    }
+    setBlogActivated(null)
+    ;(async () => {
+      const res = await getBlogActivationStatus()
+      if (cancelled) return
+      setBlogActivated(Boolean(res.success && res.data?.activated))
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isLogin, user?.userId])
 
   useEffect(() => {
     let cancelled = false
@@ -144,27 +167,37 @@ export function BlogPlaza() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {isLogin && myBlogHref ? (
-            <>
-              <Button variant="outline" size="sm" asChild>
-                <BlogLink to={myBlogHref}>我的博客</BlogLink>
+          {isLogin && myUsername ? (
+            blogActivated === null ? (
+              <Button size="sm" disabled>
+                加载中…
               </Button>
-              {writeHref ? (
-                <Button size="sm" className="gap-1.5" asChild>
-                  <BlogLink to={writeHref}>
-                    <PenLineIcon className="size-3.5" />
-                    写文章
-                  </BlogLink>
-                </Button>
-              ) : null}
+            ) : blogActivated ? (
+              <>
+                {myBlogHref ? (
+                  <Button variant="outline" size="sm" asChild>
+                    <BlogLink to={myBlogHref}>我的博客</BlogLink>
+                  </Button>
+                ) : null}
+                {writeHref ? (
+                  <Button size="sm" className="gap-1.5" asChild>
+                    <BlogLink to={writeHref}>
+                      <PenLineIcon className="size-3.5" />
+                      写文章
+                    </BlogLink>
+                  </Button>
+                ) : null}
+              </>
+            ) : (
               <Button
-                variant="secondary"
                 size="sm"
+                className="gap-1.5"
                 onClick={() => setActivateOpen(true)}
               >
-                开通 / 协议
+                <PenLineIcon className="size-3.5" />
+                开通博客
               </Button>
-            </>
+            )
           ) : (
             <Button size="sm" asChild>
               <Link to={loginRedirect}>登录后写博客</Link>
@@ -177,6 +210,7 @@ export function BlogPlaza() {
         open={activateOpen}
         onOpenChange={setActivateOpen}
         onActivated={() => {
+          setBlogActivated(true)
           if (writeHref) window.location.assign(writeHref)
         }}
       />
@@ -240,14 +274,20 @@ export function BlogPlaza() {
                 <EmptyDescription>
                   {keyword
                     ? '换个关键词试试，或清空搜索看全部'
-                    : isLogin && writeHref
+                    : isLogin && blogActivated
                       ? '写一篇公开文章，就会出现在这里'
-                      : '有人发布公开文章后，会出现在这里'}
+                      : isLogin
+                        ? '开通个人博客后，公开文章会出现在这里'
+                        : '有人发布公开文章后，会出现在这里'}
                 </EmptyDescription>
               </EmptyHeader>
-              {isLogin && writeHref ? (
+              {isLogin && blogActivated && writeHref ? (
                 <Button className="mt-2" asChild>
                   <BlogLink to={writeHref}>去写文章</BlogLink>
+                </Button>
+              ) : isLogin && blogActivated === false ? (
+                <Button className="mt-2" onClick={() => setActivateOpen(true)}>
+                  开通博客
                 </Button>
               ) : null}
             </Empty>

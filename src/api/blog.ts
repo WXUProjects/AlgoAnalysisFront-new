@@ -124,6 +124,8 @@ export async function listBlogByUsername(params: {
     subtitle: string
     socialLinks: BlogSocialLink[]
     isOwner: boolean
+    /** 是否已签署协议开通个人博客 */
+    activated: boolean
   }>
 > {
   const res = await get<Record<string, unknown>>(endpoints.user.blog.byUsername, {
@@ -151,6 +153,11 @@ export async function listBlogByUsername(params: {
       subtitle: str(data.subtitle),
       socialLinks: normalizeSocialLinks(data.socialLinks),
       isOwner: Boolean(data.isOwner),
+      // 兼容旧接口：字段未下发时视为已开通，避免前后端滚动发布时误伤
+      activated:
+        data.activated === undefined || data.activated === null
+          ? true
+          : Boolean(data.activated),
     }
   })
 }

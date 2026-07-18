@@ -9,20 +9,22 @@ import {
 } from './blog-theme.ts'
 
 describe('blog theme', () => {
-  it('defaults to chirpy', () => {
-    assert.equal(DEFAULT_BLOG_THEME_ID, 'chirpy')
-    assert.equal(normalizeBlogThemeId(undefined), 'chirpy')
-    assert.equal(normalizeBlogThemeId(''), 'chirpy')
+  it('defaults to mizuki', () => {
+    assert.equal(DEFAULT_BLOG_THEME_ID, 'mizuki')
+    assert.equal(normalizeBlogThemeId(undefined), 'mizuki')
+    assert.equal(normalizeBlogThemeId(''), 'mizuki')
     assert.equal(normalizeBlogThemeId('SIMPLE'), 'simple')
+    assert.equal(normalizeBlogThemeId('chirpy'), 'chirpy')
+    assert.equal(normalizeBlogThemeId('CHIRPY'), 'chirpy')
     assert.equal(normalizeBlogThemeId('mizuki'), 'mizuki')
     assert.equal(normalizeBlogThemeId('MIZUKI'), 'mizuki')
   })
 
-  it('resolves chirpy with social links by default', () => {
+  it('resolves mizuki with social links by default', () => {
     const t = resolveBlogTheme({
       socialLinks: [{ type: 'github', url: 'https://github.com/x' }],
     })
-    assert.equal(t.themeId, 'chirpy')
+    assert.equal(t.themeId, 'mizuki')
     assert.equal(t.useMainSiteTokens, false)
     assert.equal(t.socialLinks.length, 1)
     assert.equal(t.socialLinks[0].type, 'github')
@@ -34,11 +36,11 @@ describe('blog theme', () => {
     assert.equal(t.useMainSiteTokens, true)
   })
 
-  it('mizuki is optional and not default', () => {
-    const t = resolveBlogTheme({ themeId: 'mizuki' })
-    assert.equal(t.themeId, 'mizuki')
+  it('chirpy remains available as optional theme', () => {
+    const t = resolveBlogTheme({ themeId: 'chirpy' })
+    assert.equal(t.themeId, 'chirpy')
     assert.equal(t.useMainSiteTokens, false)
-    assert.notEqual(DEFAULT_BLOG_THEME_ID, 'mizuki')
+    assert.equal(DEFAULT_BLOG_THEME_ID, 'mizuki')
   })
 
   it('exposes css vars only when custom payload present', () => {

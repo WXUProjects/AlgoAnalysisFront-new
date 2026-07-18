@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ExternalLinkIcon, UserPlusIcon, UserMinusIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import { listBlogByUsername } from '@/api/blog'
 import { getProfileById, getProfileByUsername } from '@/api/profile'
 import {
   followUser,
@@ -100,6 +101,8 @@ export function Profile() {
   const [isFollowing, setIsFollowing] = useState(false)
   const [followBusy, setFollowBusy] = useState(false)
   const [denied, setDenied] = useState(false)
+  /** 对方是否已开通个人博客（用于是否展示「访问博客」） */
+  const [blogActivated, setBlogActivated] = useState(false)
 
   const isSelf = Boolean(
     isLogin &&
@@ -149,6 +152,7 @@ export function Profile() {
     setLoading(true)
     setDenied(false)
     setIdentity(null)
+    setBlogActivated(false)
     setAcHeat([])
     setAcHeatLoaded(false)
     setHeatTab('submit')
@@ -201,6 +205,7 @@ export function Profile() {
       rcRes,
       rsRes,
       idRes,
+      blogRes,
     ] = await Promise.all([
       getHeatmap({
         startDate: heatmapStartYmd(end),
@@ -216,6 +221,9 @@ export function Profile() {
       listUserRecentComments({ userId: uid, limit: 8 }),
       listUserRecentSolutions({ userId: uid, limit: 8 }),
       getSocialIdentity(uid),
+      pf.username
+        ? listBlogByUsername({ username: pf.username, page: 1, pageSize: 1 })
+        : Promise.resolve(null),
     ])
     if (signal?.cancelled) return
     setLoading(false)
@@ -242,6 +250,7 @@ export function Profile() {
           : prev,
       )
     }
+    setBlogActivated(Boolean(blogRes?.success && blogRes.data?.activated))
   }, [routeUsername, queryId, user?.userId, isLogin, navigate])
 
   useEffect(() => {
@@ -515,15 +524,17 @@ export function Profile() {
           </Card>
 
           <div className="flex flex-col gap-2">
-            <Button type="button" variant="outline" asChild>
-              <Link
-                to={`/blog/${profile.username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                访问博客
-              </Link>
-            </Button>
+            {blogActivated && profile.username ? (
+              <Button type="button" variant="outline" asChild>
+                <Link
+                  to={`/blog/${profile.username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  访问博客
+                </Link>
+              </Button>
+            ) : null}
             {isSelf ? (
               <div className="hidden flex-col gap-2 lg:flex">
                 <Button type="button" asChild>

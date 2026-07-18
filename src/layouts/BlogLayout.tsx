@@ -13,6 +13,7 @@ import {
 } from 'react-router-dom'
 import { listBlogByUsername, listBlogCategories } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
+import { BlogActivateDialog } from '@/components/blog/blog-activate-dialog'
 import { ChirpyShell } from '@/components/blog/chirpy-shell'
 import { MizukiShell } from '@/components/blog/mizuki-shell'
 import { SimpleShell } from '@/components/blog/simple-shell'
@@ -52,7 +53,7 @@ export type BlogOutletContext = {
 
 /**
  * Independent blog shell — not AppLayout.
- * Default theme: Chirpy；可选简约 / Mizuki。
+ * Default theme: Mizuki；可选 Chirpy / 简约。
  */
 export function BlogLayout() {
   const { username = '' } = useParams<{ username: string }>()
@@ -62,8 +63,9 @@ export function BlogLayout() {
 
   const [author, setAuthor] = useState<BlogAuthor | null>(null)
   const [isOwner, setIsOwner] = useState(false)
+  const [activated, setActivated] = useState(false)
   const [themeEnabled, setThemeEnabled] = useState(false)
-  const [themeId, setThemeId] = useState<string>('chirpy')
+  const [themeId, setThemeId] = useState<string>('mizuki')
   const [subtitle, setSubtitle] = useState('')
   const [socialLinks, setSocialLinks] = useState<
     BlogThemeContext['socialLinks']
@@ -72,6 +74,7 @@ export function BlogLayout() {
   const [recentPosts, setRecentPosts] = useState<BlogArticle[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [activateOpen, setActivateOpen] = useState(false)
   const [breadcrumb, setBreadcrumb] = useState<
     { label: string; to?: string }[]
   >([{ label: '首页' }])
@@ -80,25 +83,32 @@ export function BlogLayout() {
 
   const refreshMeta = useCallback(async () => {
     if (!username) return
-    const [res, cats] = await Promise.all([
-      listBlogByUsername({ username, page: 1, pageSize: 8 }),
-      listBlogCategories(username),
-    ])
+    const res = await listBlogByUsername({ username, page: 1, pageSize: 8 })
     if (!res.success || !res.data) {
       setError(res.message || '找不到这个博客')
       setAuthor(null)
       setIsOwner(false)
+      setActivated(false)
+      setCategories([])
+      setRecentPosts([])
       return
     }
     setError('')
     setAuthor(res.data.author)
     setIsOwner(res.data.isOwner)
+    setActivated(res.data.activated)
     setThemeEnabled(res.data.themeEnabled)
-    setThemeId(res.data.themeId || 'chirpy')
+    setThemeId(res.data.themeId || 'mizuki')
     setSubtitle(res.data.subtitle || '')
     setSocialLinks(res.data.socialLinks || [])
     setRecentPosts(res.data.list || [])
-    setCategories(cats.data || [])
+    // 未开通不拉分类，避免空壳噪声
+    if (res.data.activated) {
+      const cats = await listBlogCategories(username)
+      setCategories(cats.data || [])
+    } else {
+      setCategories([])
+    }
   }, [username])
 
   useEffect(() => {
@@ -206,20 +216,69 @@ export function BlogLayout() {
     setPanelExtra,
   }
 
-  const body = loading ? (
-    <div className="flex justify-center py-20">
-      <Spinner className="size-6" />
-    </div>
-  ) : error ? (
-    <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
-      <p className="mb-4">{error}</p>
-      <Button variant="outline" onClick={() => navigate('/')}>
-        回主站首页
-      </Button>
-    </div>
-  ) : (
-    <Outlet context={outletCtx} />
-  )
+  // 加载中 / 错误 / 未开通：不进完整主题壳
+  if (loading || error || !activated) {
+    return (
+      <MotionProvider>
+        <TooltipProvider delayDuration={300}>
+          <div
+            className="flex min-h-svh flex-col bg-background text-foreground"
+            data-blog-shell="1"
+            data-blog-theme="simple"
+          >
+            <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-4 py-16">
+              {loading ? (
+                <div className="flex justify-center py-10">
+                  <Spinner className="size-6" />
+                </div>
+              ) : error ? (
+                <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
+                  <p className="mb-4">{error}</p>
+                  <Button variant="outline" onClick={() => navigate('/')}>
+                    回主站首页
+                  </Button>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed p-10 text-center">
+                  <p className="mb-2 text-base font-medium text-foreground">
+                    此用户未开通博客
+                  </p>
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    {isOwner
+                      ? '开通后即可发布文章、自定义外观，并在个人资料展示博客入口。'
+                      : '对方还没有开通个人博客，暂时没有内容可看。'}
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {isOwner ? (
+                      <Button onClick={() => setActivateOpen(true)}>
+                        开通博客
+                      </Button>
+                    ) : null}
+                    <Button variant="outline" onClick={() => navigate('/')}>
+                      回主站首页
+                    </Button>
+                    <Button variant="ghost" onClick={() => navigate('/blog-plaza')}>
+                      去博客广场
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <BlogActivateDialog
+              open={activateOpen}
+              onOpenChange={setActivateOpen}
+              onActivated={() => {
+                void refreshMeta()
+              }}
+            />
+            <Toaster />
+          </div>
+        </TooltipProvider>
+      </MotionProvider>
+    )
+  }
+
+  const body = <Outlet context={outletCtx} />
 
   return (
     <MotionProvider>

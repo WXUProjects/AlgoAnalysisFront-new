@@ -1202,7 +1202,7 @@ export interface BlogAuthor {
   avatar?: string
 }
 
-/** 博客壳主题：chirpy 默认 | simple 简约 | mizuki（https://github.com/LyraVoid/Mizuki，用户可选） */
+/** 博客壳主题：mizuki 默认 | chirpy | simple 简约（https://github.com/LyraVoid/Mizuki） */
 export type BlogThemeId = 'chirpy' | 'simple' | 'mizuki'
 
 /** 侧栏社交链接（Chirpy 左下角） */

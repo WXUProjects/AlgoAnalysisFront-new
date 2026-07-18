@@ -1,9 +1,9 @@
 /**
  * Blog shell themes.
- * - chirpy: default, 1:1 Chirpy (jekyll-theme-chirpy) layout
+ * - mizuki: default, Material Design 3 inspired shell, adapted from
+ *   https://github.com/LyraVoid/Mizuki（动画轻度–中度）
+ * - chirpy: 1:1 Chirpy (jekyll-theme-chirpy) layout（可选）
  * - simple: original shadcn top-bar shell（简约）
- * - mizuki: Material Design 3 inspired shell, adapted from
- *   https://github.com/LyraVoid/Mizuki （用户可选，非默认；动画轻度–中度）
  */
 
 import type { BlogSocialLink, BlogThemeId } from '@shared/api'
@@ -43,7 +43,7 @@ export const BLOG_THEME_META: Record<
   },
 }
 
-export const DEFAULT_BLOG_THEME_ID: BlogThemeId = 'chirpy'
+export const DEFAULT_BLOG_THEME_ID: BlogThemeId = 'mizuki'
 
 export type BlogThemeTokens = {
   /** CSS variable overrides, e.g. { '--primary': '…' } */
@@ -72,8 +72,9 @@ export type BlogThemeContext = {
 export function normalizeBlogThemeId(raw?: string | null): BlogThemeId {
   const v = (raw || '').trim().toLowerCase()
   if (v === 'simple') return 'simple'
+  if (v === 'chirpy') return 'chirpy'
   if (v === 'mizuki') return 'mizuki'
-  return 'chirpy'
+  return DEFAULT_BLOG_THEME_ID
 }
 
 export function normalizeSocialLinks(
@@ -98,7 +99,7 @@ export function normalizeSocialLinks(
 
 /**
  * Resolve theme for rendering a blog surface.
- * Chirpy is the default for all blogs.
+ * Mizuki is the default for all blogs.
  */
 export function resolveBlogTheme(input: {
   themeId?: string | null
