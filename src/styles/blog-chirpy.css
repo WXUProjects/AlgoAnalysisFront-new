@@ -393,6 +393,7 @@
   flex-shrink: 0;
   height: 3rem;
   position: sticky;
+  /* 分站条在文档流上方约 2rem，顶栏 sticky 时仍贴视口顶 */
   top: 0;
   z-index: 30;
   background: var(--topbar-bg);

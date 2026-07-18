@@ -1,15 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
-import { ArrowLeftIcon, LogInIcon, SparklesIcon } from 'lucide-react'
+import { ArrowLeftIcon, LogInIcon } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { useSiteConfig } from '@/site/SiteConfigContext'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 type Variant = 'default' | 'chirpy' | 'mizuki'
 
 /**
- * 个人博客分站身份条：回主站 + 未登录去登录（SSO redirect 回当前页）
- * 三主题共用信息架构，视觉随 variant 微调。
+ * 轻量分站提示：不 sticky、不抢顶栏，仅文档流一行，避免遮挡原有控件。
  */
 export function BlogSubsiteBar({
   username,
@@ -20,7 +18,7 @@ export function BlogSubsiteBar({
   variant?: Variant
   className?: string
 }) {
-  const { isLogin, ready, user } = useAuth()
+  const { isLogin, ready } = useAuth()
   const { config } = useSiteConfig()
   const location = useLocation()
   const siteTitle = config.siteTitle || 'GoAlgo'
@@ -30,66 +28,51 @@ export function BlogSubsiteBar({
   return (
     <div
       className={cn(
-        'blog-subsite-bar flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2 text-xs sm:px-4 sm:text-sm',
+        'blog-subsite-bar flex h-8 shrink-0 items-center justify-between gap-2 border-b px-3 text-[11px] leading-none sm:px-4 sm:text-xs',
         variant === 'default' &&
-          'border-border bg-muted/50 text-muted-foreground',
+          'border-border bg-muted/40 text-muted-foreground',
         variant === 'chirpy' &&
           'border-[var(--main-border-color)] bg-[var(--sidebar-bg)] text-[var(--sidebar-muted-color)]',
         variant === 'mizuki' &&
-          'border-[var(--mz-border)] bg-[var(--mz-card)]/80 text-[var(--mz-text-50)] backdrop-blur-md',
+          'border-[var(--mz-border)] bg-[var(--mz-card)]/70 text-[var(--mz-text-50)]',
         className,
       )}
       role="region"
       aria-label="主站分站提示"
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2">
+      <p className="min-w-0 truncate">
         <span
           className={cn(
-            'inline-flex shrink-0 items-center gap-1 font-medium',
+            'font-medium',
             variant === 'default' && 'text-foreground',
             variant === 'chirpy' && 'text-[var(--heading-color)]',
             variant === 'mizuki' && 'text-[var(--mz-text)]',
           )}
         >
-          <SparklesIcon className="size-3.5 shrink-0 opacity-80" />
-          {siteTitle} · 个人博客分站
+          {siteTitle} 分站
         </span>
-        <span className="min-w-0 truncate opacity-90">
-          主站分站的个人空间，之后人人可一键开通自己的博客
+        <span className="mx-1.5 opacity-40" aria-hidden>
+          ·
         </span>
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5">
-        <Button
-          variant={variant === 'default' ? 'outline' : 'ghost'}
-          size="sm"
-          className={cn(
-            'h-8 gap-1',
-            variant !== 'default' && 'text-inherit hover:bg-black/5 dark:hover:bg-white/10',
-          )}
-          asChild
+        <span className="opacity-80">人人可一键开通博客</span>
+      </p>
+      <div className="flex shrink-0 items-center gap-2.5">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-0.5 font-medium underline-offset-2 hover:underline"
+          title={`返回 ${siteTitle}`}
         >
-          <Link to="/" title={`返回 ${siteTitle}`}>
-            <ArrowLeftIcon className="size-3.5" />
-            <span>返回主站</span>
-          </Link>
-        </Button>
+          <ArrowLeftIcon className="size-3 opacity-70" />
+          主站
+        </Link>
         {ready && !isLogin ? (
-          <Button size="sm" className="h-8 gap-1" asChild>
-            <Link to={loginHref}>
-              <LogInIcon className="size-3.5" />
-              去登录
-            </Link>
-          </Button>
-        ) : ready && isLogin ? (
-          <span
-            className={cn(
-              'hidden max-w-[8rem] truncate text-xs sm:inline',
-              variant === 'default' && 'text-muted-foreground',
-            )}
-            title={user?.username}
+          <Link
+            to={loginHref}
+            className="inline-flex items-center gap-0.5 font-medium underline-offset-2 hover:underline"
           >
-            {user?.username}
-          </span>
+            <LogInIcon className="size-3 opacity-70" />
+            登录
+          </Link>
         ) : null}
       </div>
     </div>

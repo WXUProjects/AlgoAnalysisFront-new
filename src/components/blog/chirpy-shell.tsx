@@ -78,6 +78,10 @@ export function ChirpyShell({
 
   useEffect(() => {
     setSidebarOpen(false)
+    setSearchMode(false)
+    setSearchOpen(false)
+    setSearchHits([])
+    setQ(new URLSearchParams(location.search).get('q') || '')
   }, [location.pathname, location.search])
 
   useEffect(() => {
@@ -153,11 +157,7 @@ export function ChirpyShell({
       data-sidebar-open={sidebarOpen ? '1' : '0'}
       data-search-mode={searchMode ? '1' : '0'}
     >
-      <BlogSubsiteBar
-        username={username}
-        variant="chirpy"
-        className="sticky top-0 z-50"
-      />
+      <BlogSubsiteBar username={username} variant="chirpy" />
       <button
         type="button"
         className="chirpy-mask"
@@ -167,7 +167,12 @@ export function ChirpyShell({
 
       <aside className="chirpy-sidebar" aria-label="侧栏">
         <header className="chirpy-profile">
-          <Link to={base} className="chirpy-avatar" id="avatar">
+          <Link
+            to={base}
+            className="chirpy-avatar"
+            id="avatar"
+            onClick={closeSearch}
+          >
             {author?.avatar ? (
               <img src={author.avatar} alt="" width={112} height={112} />
             ) : (
@@ -176,7 +181,7 @@ export function ChirpyShell({
               </span>
             )}
           </Link>
-          <Link to={base} className="chirpy-site-title">
+          <Link to={base} className="chirpy-site-title" onClick={closeSearch}>
             {displayName}
           </Link>
           {subtitle ? (
@@ -191,7 +196,10 @@ export function ChirpyShell({
                 key={item.to}
                 to={item.to}
                 end={item.end}
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => {
+                  setSidebarOpen(false)
+                  closeSearch()
+                }}
                 className={({ isActive }) =>
                   cn('chirpy-nav-item block', isActive && 'is-active')
                 }
@@ -207,7 +215,10 @@ export function ChirpyShell({
                 href={manageHref}
                 {...BLOG_NEW_TAB_PROPS}
                 className="chirpy-nav-item block"
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => {
+                  setSidebarOpen(false)
+                  closeSearch()
+                }}
               >
                 <span className="chirpy-nav-link">
                   <SettingsIcon />

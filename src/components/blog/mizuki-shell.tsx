@@ -148,11 +148,7 @@ export function MizukiShell({
 
   return (
     <div className={cn('mz-shell', isDark && 'dark')}>
-      <BlogSubsiteBar
-        username={username}
-        variant="mizuki"
-        className="sticky top-0 z-70"
-      />
+      <BlogSubsiteBar username={username} variant="mizuki" />
       <div className="mz-top-row">
         <header className="mz-navbar" aria-label="导航">
           <div className="mz-nav-inner">

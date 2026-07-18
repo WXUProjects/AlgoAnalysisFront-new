@@ -41,7 +41,7 @@ export function BlogSiteFooter({
             <span className="mx-1">·</span>
             <Link to="/">{siteTitle} 主站</Link>
             <span className="mx-1">·</span>
-            <span title="个人博客是主站的分站">主站分站</span>
+            <span>分站</span>
           </p>
         </div>
       </footer>
@@ -69,7 +69,7 @@ export function BlogSiteFooter({
           <span className="mx-1.5">·</span>
           <Link to="/blog-plaza">博客广场</Link>
           <span className="mx-1.5">·</span>
-          个人博客分站
+          分站
         </p>
       </footer>
     )
@@ -78,7 +78,7 @@ export function BlogSiteFooter({
   return (
     <footer className="border-t py-6 text-center text-xs text-muted-foreground">
       <span className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-        <span>个人博客分站</span>
+        <span>分站</span>
         <span aria-hidden>·</span>
         <Link to="/blog-plaza" className="hover:text-foreground">
           博客广场
