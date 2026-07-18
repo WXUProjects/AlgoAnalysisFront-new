@@ -126,18 +126,26 @@
   min-height: 100svh;
   background: var(--main-bg);
   color: var(--text-color);
+  /* 与 blog-subsite-bar h-8 对齐，避免 fixed 侧栏盖住顶部分站条 */
+  --chirpy-subsite-bar-h: 2rem;
+}
+
+/* 分站条在侧栏之上、全宽可读 */
+.chirpy-shell > .blog-subsite-bar {
+  position: relative;
+  z-index: 60;
 }
 
 .chirpy-sidebar {
   position: fixed;
-  top: 0;
+  top: var(--chirpy-subsite-bar-h);
   left: 0;
   z-index: 50;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   width: var(--chirpy-sidebar-width);
-  height: 100%;
+  height: calc(100svh - var(--chirpy-subsite-bar-h));
   overflow-y: auto;
   padding: 0;
   background: var(--sidebar-bg);
@@ -1097,11 +1105,14 @@
   border-bottom: 1px solid var(--link-hover);
 }
 
-/* mask */
+/* mask（侧栏打开时从分站条下缘起，不盖顶条） */
 .chirpy-mask {
   display: none;
   position: fixed;
-  inset: 0;
+  top: var(--chirpy-subsite-bar-h);
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 40;
   background: rgb(0 0 0 / 0.35);
 }
