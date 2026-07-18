@@ -1,11 +1,16 @@
 import {
   endpoints,
+  type BlogActivationStatus,
+  type BlogAdminArticle,
+  type BlogAdminAuthor,
+  type BlogAdminOverview,
   type BlogAnalytics,
   type BlogArticle,
   type BlogArticleWriteReq,
   type BlogAuthor,
   type BlogCategory,
   type BlogComment,
+  type BlogEmailNotifyStrategy,
   type BlogPlazaAuthor,
   type BlogPlazaSort,
   type BlogSocialLink,
@@ -49,6 +54,8 @@ function normalizeArticle(raw: Record<string, unknown>): BlogArticle {
     requiresPassword: Boolean(raw.requiresPassword),
     canSeeBody: raw.canSeeBody !== false,
     unlockToken: str(raw.unlockToken) || undefined,
+    moderationStatus: str(raw.moderationStatus) || undefined,
+    moderationNote: str(raw.moderationNote) || undefined,
     orgIds: Array.isArray(orgIdsRaw)
       ? (orgIdsRaw as unknown[]).map((x) => num(x as number)).filter(Boolean)
       : undefined,
@@ -549,5 +556,211 @@ export async function saveBlogThemeConfig(body: {
     themeId: normalizeBlogThemeId(str(data.themeId)),
     subtitle: str(data.subtitle),
     socialLinks: normalizeSocialLinks(data.socialLinks),
+  }))
+}
+
+function normalizeActivation(data: Record<string, unknown>): BlogActivationStatus {
+  return {
+    activated: Boolean(data.activated),
+    needAgreement: data.needAgreement !== false && !data.activated,
+    agreementVersion: str(data.agreementVersion),
+    signedAgreementVersion: str(data.signedAgreementVersion) || undefined,
+    agreementAcceptedAt: num(data.agreementAcceptedAt) || undefined,
+    activatedAt: num(data.activatedAt) || undefined,
+    emailNotifyEnabled: Boolean(data.emailNotifyEnabled),
+    emailNotifyStrategy: (str(data.emailNotifyStrategy, 'off') ||
+      'off') as BlogEmailNotifyStrategy,
+    themeId: str(data.themeId) || undefined,
+    subtitle: str(data.subtitle) || undefined,
+    username: str(data.username) || undefined,
+    title: str(data.title) || undefined,
+    content: str(data.content) || undefined,
+  }
+}
+
+/** 开通协议正文 + 当前用户状态 */
+export async function getBlogAgreement(): Promise<ApiResult<BlogActivationStatus>> {
+  const res = await get<Record<string, unknown>>(endpoints.user.blog.agreement)
+  return wrapData(res, (data) => normalizeActivation(data))
+}
+
+export async function getBlogActivationStatus(): Promise<
+  ApiResult<BlogActivationStatus>
+> {
+  const res = await get<Record<string, unknown>>(
+    endpoints.user.blog.activationStatus,
+  )
+  return wrapData(res, (data) => normalizeActivation(data))
+}
+
+export async function activateBlog(body: {
+  accept: boolean
+  agreementVersion?: string
+  emailNotifyEnabled?: boolean
+  emailNotifyStrategy?: BlogEmailNotifyStrategy | string
+}): Promise<ApiResult<BlogActivationStatus>> {
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.blog.activate,
+    body,
+  )
+  return wrapData(res, (data) => normalizeActivation(data))
+}
+
+export async function saveBlogNotifyPref(body: {
+  emailNotifyEnabled?: boolean
+  emailNotifyStrategy?: BlogEmailNotifyStrategy | string
+}): Promise<
+  ApiResult<{
+    emailNotifyEnabled: boolean
+    emailNotifyStrategy: string
+  }>
+> {
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.blog.notifyPref,
+    body,
+  )
+  return wrapData(res, (data) => ({
+    emailNotifyEnabled: Boolean(data.emailNotifyEnabled),
+    emailNotifyStrategy: str(data.emailNotifyStrategy, 'off'),
+  }))
+}
+
+export async function getBlogAdminOverview(): Promise<
+  ApiResult<BlogAdminOverview>
+> {
+  const res = await get<Record<string, unknown>>(
+    endpoints.user.blog.adminOverview,
+  )
+  return wrapData(res, (data) => ({
+    activatedUsers: num(data.activatedUsers),
+    totalArticles: num(data.totalArticles),
+    totalViews: num(data.totalViews),
+    totalLikes: num(data.totalLikes),
+    totalComments: num(data.totalComments),
+    pendingReview: num(data.pendingReview),
+    rejected: num(data.rejected),
+  }))
+}
+
+export async function listBlogAdminAuthors(params?: {
+  page?: number
+  pageSize?: number
+  keyword?: string
+}): Promise<
+  ApiResult<{
+    list: BlogAdminAuthor[]
+    total: number
+    page: number
+    pageSize: number
+  }>
+> {
+  const res = await get<Record<string, unknown>>(
+    endpoints.user.blog.adminAuthors,
+    {
+      page: params?.page,
+      pageSize: params?.pageSize,
+      keyword: params?.keyword,
+    },
+  )
+  return wrapData(res, (data) => {
+    const listRaw = (Array.isArray(data.list) ? data.list : []) as Record<
+      string,
+      unknown
+    >[]
+    return {
+      list: listRaw.map((r) => ({
+        userId: num(r.userId),
+        username: str(r.username),
+        name: str(r.name),
+        avatar: str(r.avatar) || undefined,
+        activated: Boolean(r.activated),
+        activatedAt: num(r.activatedAt) || undefined,
+        agreementAcceptedAt: num(r.agreementAcceptedAt) || undefined,
+        agreementVersion: str(r.agreementVersion) || undefined,
+        emailNotifyEnabled: Boolean(r.emailNotifyEnabled),
+        emailNotifyStrategy: str(r.emailNotifyStrategy) || undefined,
+        themeId: str(r.themeId) || undefined,
+        articleCount: num(r.articleCount),
+        viewCount: num(r.viewCount),
+        likeCount: num(r.likeCount),
+        commentCount: num(r.commentCount),
+      })),
+      total: num(data.total),
+      page: num(data.page, 1),
+      pageSize: num(data.pageSize, 20),
+    }
+  })
+}
+
+export async function listBlogAdminArticles(params?: {
+  page?: number
+  pageSize?: number
+  keyword?: string
+  status?: string
+  visibility?: string
+}): Promise<
+  ApiResult<{
+    list: BlogAdminArticle[]
+    total: number
+    page: number
+    pageSize: number
+  }>
+> {
+  const res = await get<Record<string, unknown>>(
+    endpoints.user.blog.adminArticles,
+    {
+      page: params?.page,
+      pageSize: params?.pageSize,
+      keyword: params?.keyword,
+      status: params?.status,
+      visibility: params?.visibility,
+    },
+  )
+  return wrapData(res, (data) => {
+    const listRaw = (Array.isArray(data.list) ? data.list : []) as Record<
+      string,
+      unknown
+    >[]
+    return {
+      list: listRaw.map((r) => ({
+        id: num(r.id),
+        slug: str(r.slug),
+        title: str(r.title),
+        summary: str(r.summary) || undefined,
+        visibility: str(r.visibility),
+        viewCount: num(r.viewCount),
+        likeCount: num(r.likeCount),
+        commentCount: num(r.commentCount),
+        moderationStatus: str(r.moderationStatus, 'approved'),
+        moderationNote: str(r.moderationNote) || undefined,
+        userId: num(r.userId),
+        username: str(r.username),
+        authorName: str(r.authorName) || undefined,
+        createdAt: num(r.createdAt),
+        publishedAt: num(r.publishedAt) || undefined,
+        moderatedAt: num(r.moderatedAt) || undefined,
+      })),
+      total: num(data.total),
+      page: num(data.page, 1),
+      pageSize: num(data.pageSize, 20),
+    }
+  })
+}
+
+export async function moderateBlogArticle(body: {
+  id: number
+  action: 'approve' | 'reject' | 'pending' | string
+  note?: string
+}): Promise<
+  ApiResult<{ id: number; moderationStatus: string; moderationNote?: string }>
+> {
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.blog.adminModerate,
+    body,
+  )
+  return wrapData(res, (data) => ({
+    id: num(data.id),
+    moderationStatus: str(data.moderationStatus),
+    moderationNote: str(data.moderationNote) || undefined,
   }))
 }

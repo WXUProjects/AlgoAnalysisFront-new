@@ -134,6 +134,14 @@ export const endpoints = {
       themeStatus: `${API_PREFIX}/user/blog/theme/status`,
       themeConfig: `${API_PREFIX}/user/blog/theme/config`,
       themeEnable: `${API_PREFIX}/user/blog/theme/enable`,
+      agreement: `${API_PREFIX}/user/blog/agreement`,
+      activationStatus: `${API_PREFIX}/user/blog/activation/status`,
+      activate: `${API_PREFIX}/user/blog/activate`,
+      notifyPref: `${API_PREFIX}/user/blog/notify-pref`,
+      adminOverview: `${API_PREFIX}/user/blog/admin/overview`,
+      adminAuthors: `${API_PREFIX}/user/blog/admin/authors`,
+      adminArticles: `${API_PREFIX}/user/blog/admin/articles`,
+      adminModerate: `${API_PREFIX}/user/blog/admin/moderate`,
     },
     seo: {
       html: `${API_PREFIX}/user/seo/html`,
@@ -962,6 +970,13 @@ export type NotificationType =
   | 'org_join_approved'
   | 'org_join_rejected'
   | 'mention'
+  | 'comment_reply'
+  | 'blog_article_like'
+  | 'blog_comment'
+  | 'blog_comment_reply'
+  | 'solution_like'
+  | 'comment_like'
+  | 'blog_moderation'
   | string
 
 export interface NotificationItem {
@@ -1086,6 +1101,81 @@ export interface UserRecentCommentItem {
 /** 博客文章可见性 */
 export type BlogVisibility = 'public' | 'private' | 'password'
 
+/** 博客文章审核状态 */
+export type BlogModerationStatus = 'approved' | 'pending' | 'rejected'
+
+/** 博客互动邮件策略（默认 off） */
+export type BlogEmailNotifyStrategy =
+  | 'off'
+  | 'immediate'
+  | 'digest_daily'
+  | 'random'
+
+/** 博客开通 / 协议状态 */
+export interface BlogActivationStatus {
+  activated: boolean
+  needAgreement: boolean
+  agreementVersion: string
+  signedAgreementVersion?: string
+  agreementAcceptedAt?: number
+  activatedAt?: number
+  emailNotifyEnabled: boolean
+  emailNotifyStrategy: BlogEmailNotifyStrategy | string
+  themeId?: string
+  subtitle?: string
+  username?: string
+  /** agreement 接口附带 */
+  title?: string
+  content?: string
+}
+
+export interface BlogAdminOverview {
+  activatedUsers: number
+  totalArticles: number
+  totalViews: number
+  totalLikes: number
+  totalComments: number
+  pendingReview: number
+  rejected: number
+}
+
+export interface BlogAdminAuthor {
+  userId: number
+  username: string
+  name: string
+  avatar?: string
+  activated: boolean
+  activatedAt?: number
+  agreementAcceptedAt?: number
+  agreementVersion?: string
+  emailNotifyEnabled?: boolean
+  emailNotifyStrategy?: string
+  themeId?: string
+  articleCount: number
+  viewCount: number
+  likeCount: number
+  commentCount: number
+}
+
+export interface BlogAdminArticle {
+  id: number
+  slug: string
+  title: string
+  summary?: string
+  visibility: string
+  viewCount: number
+  likeCount: number
+  commentCount: number
+  moderationStatus: BlogModerationStatus | string
+  moderationNote?: string
+  userId: number
+  username: string
+  authorName?: string
+  createdAt: number
+  publishedAt?: number
+  moderatedAt?: number
+}
+
 /** 博客作者摘要 */
 export interface BlogAuthor {
   id: number
@@ -1133,6 +1223,8 @@ export interface BlogArticle {
   requiresPassword?: boolean
   canSeeBody?: boolean
   unlockToken?: string
+  moderationStatus?: BlogModerationStatus | string
+  moderationNote?: string
   orgIds?: number[]
   userId?: number
   username?: string

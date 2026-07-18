@@ -23,6 +23,7 @@ import { useTheme } from 'next-themes'
 import { listBlogByUsername } from '@/api/blog'
 import { SocialIcon, socialAriaLabel } from '@/components/blog/blog-social-icons'
 import { BlogSiteFooter } from '@/components/blog/blog-site-footer'
+import { BlogSubsiteBar } from '@/components/blog/blog-subsite-bar'
 import { MarkdownSummary } from '@/components/markdown-summary'
 import { BLOG_NEW_TAB_PROPS } from '@/lib/blog-nav'
 import { cn } from '@/lib/utils'
@@ -147,6 +148,11 @@ export function MizukiShell({
 
   return (
     <div className={cn('mz-shell', isDark && 'dark')}>
+      <BlogSubsiteBar
+        username={username}
+        variant="mizuki"
+        className="sticky top-0 z-70"
+      />
       <div className="mz-top-row">
         <header className="mz-navbar" aria-label="导航">
           <div className="mz-nav-inner">

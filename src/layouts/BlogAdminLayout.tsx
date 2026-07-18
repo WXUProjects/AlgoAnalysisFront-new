@@ -15,8 +15,9 @@ import {
   PenLineIcon,
   SettingsIcon,
 } from 'lucide-react'
-import { listBlogByUsername } from '@/api/blog'
+import { getBlogActivationStatus, listBlogByUsername } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
+import { BlogActivateDialog } from '@/components/blog/blog-activate-dialog'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Toaster } from '@/components/ui/sonner'
@@ -50,6 +51,8 @@ export function BlogAdminLayout() {
   )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [needAgreement, setNeedAgreement] = useState(false)
+  const [activateOpen, setActivateOpen] = useState(false)
 
   const refreshMeta = useCallback(async () => {
     if (!username) return
@@ -71,7 +74,15 @@ export function BlogAdminLayout() {
         enabled: res.data.themeEnabled,
       }),
     )
-  }, [username])
+    if (res.data.isOwner && isLogin) {
+      const act = await getBlogActivationStatus()
+      const need = !(act.success && act.data?.activated)
+      setNeedAgreement(need)
+      if (need) setActivateOpen(true)
+    } else {
+      setNeedAgreement(false)
+    }
+  }, [username, isLogin])
 
   useEffect(() => {
     let cancelled = false
@@ -177,10 +188,26 @@ export function BlogAdminLayout() {
                   回主站首页
                 </Button>
               </div>
+            ) : needAgreement ? (
+              <div className="rounded-lg border border-dashed p-10 text-center">
+                <p className="mb-2 font-medium">开通个人博客前须签署协议</p>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  请阅读并同意开通协议后，才能管理文章与外观。不同意则无法开通。
+                </p>
+                <Button onClick={() => setActivateOpen(true)}>阅读并签署协议</Button>
+              </div>
             ) : (
               <Outlet context={outletCtx} />
             )}
           </main>
+          <BlogActivateDialog
+            open={activateOpen}
+            onOpenChange={setActivateOpen}
+            onActivated={() => {
+              setNeedAgreement(false)
+              void refreshMeta()
+            }}
+          />
           <Toaster />
         </div>
       </TooltipProvider>

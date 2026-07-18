@@ -171,6 +171,11 @@ const DashboardOrgsManage = lazy(() =>
     default: m.DashboardOrgsManage,
   })),
 )
+const DashboardBlogAdmin = lazy(() =>
+  import('@/pages/dashboard/BlogAdmin').then((m) => ({
+    default: m.DashboardBlogAdmin,
+  })),
+)
 const OrgHub = lazy(() =>
   import('@/pages/OrgHub').then((m) => ({ default: m.OrgHub })),
 )
@@ -786,6 +791,14 @@ export const router = createBrowserRouter([
             element: (
               <Lazy>
                 <DashboardOrgsManage />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'blog',
+            element: (
+              <Lazy>
+                <DashboardBlogAdmin />
               </Lazy>
             ),
           },

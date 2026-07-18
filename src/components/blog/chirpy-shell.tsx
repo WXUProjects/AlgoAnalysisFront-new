@@ -23,6 +23,7 @@ import { useTheme } from 'next-themes'
 import { listBlogByUsername } from '@/api/blog'
 import { SocialIcon, socialAriaLabel } from '@/components/blog/blog-social-icons'
 import { BlogSiteFooter } from '@/components/blog/blog-site-footer'
+import { BlogSubsiteBar } from '@/components/blog/blog-subsite-bar'
 import { MarkdownSummary } from '@/components/markdown-summary'
 import { BLOG_NEW_TAB_PROPS } from '@/lib/blog-nav'
 import { cn } from '@/lib/utils'
@@ -152,6 +153,11 @@ export function ChirpyShell({
       data-sidebar-open={sidebarOpen ? '1' : '0'}
       data-search-mode={searchMode ? '1' : '0'}
     >
+      <BlogSubsiteBar
+        username={username}
+        variant="chirpy"
+        className="sticky top-0 z-50"
+      />
       <button
         type="button"
         className="chirpy-mask"

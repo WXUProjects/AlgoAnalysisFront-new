@@ -4,6 +4,7 @@ import {
   ArrowLeftIcon,
   BookOpenIcon,
   BarChart3Icon,
+  NewspaperIcon,
   CalendarIcon,
   ClipboardCheckIcon,
   FileSpreadsheetIcon,
@@ -303,6 +304,18 @@ export function AdminLayout() {
                         <NavLink to="/admin/problem-edits">
                           <ClipboardCheckIcon />
                           <span>修改审核</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/admin/blog')}
+                        tooltip="博客管理"
+                      >
+                        <NavLink to="/admin/blog">
+                          <NewspaperIcon />
+                          <span>博客管理</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

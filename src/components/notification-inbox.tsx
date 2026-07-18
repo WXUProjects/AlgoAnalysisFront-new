@@ -22,7 +22,32 @@ import {
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
+function parsePayload(raw?: string): Record<string, unknown> {
+  if (!raw) return {}
+  try {
+    const v = JSON.parse(raw) as unknown
+    return v && typeof v === 'object' ? (v as Record<string, unknown>) : {}
+  } catch {
+    return {}
+  }
+}
+
 function notifLink(n: NotificationItem): string | null {
+  const p = parsePayload(n.payload)
+  const blogUser = String(p.blogUsername || '').trim()
+  const blogSlug = String(p.blogSlug || '').trim()
+  if (blogUser && blogSlug) {
+    return `/blog/${blogUser}/${blogSlug}`
+  }
+  if (
+    n.refType === 'blog_article' ||
+    n.type === 'blog_article_like' ||
+    n.type === 'blog_comment' ||
+    n.type === 'blog_comment_reply' ||
+    n.type === 'blog_moderation'
+  ) {
+    if (blogUser) return `/blog/${blogUser}`
+  }
   if (n.problemId > 0) {
     if (n.refType === 'solution' && n.refId > 0) {
       return `/question-bank/detail/${n.problemId}/solution/${n.refId}`
@@ -30,9 +55,13 @@ function notifLink(n: NotificationItem): string | null {
     if (
       n.refType === 'comment' ||
       n.type === 'mention' ||
-      n.type === 'comment_reply'
+      n.type === 'comment_reply' ||
+      n.type === 'comment_like'
     ) {
       return `/question-bank/detail/${n.problemId}?tab=comments`
+    }
+    if (n.type === 'solution_like' && n.refId > 0) {
+      return `/question-bank/detail/${n.problemId}/solution/${n.refId}`
     }
     return `/question-bank/detail/${n.problemId}`
   }
@@ -114,7 +143,9 @@ export function NotificationInbox({ enabled }: { enabled: boolean }) {
       <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
         <SheetHeader className="border-b px-4 py-3">
           <SheetTitle>站内通知</SheetTitle>
-          <SheetDescription>审核结果、@ 提醒等会显示在这里</SheetDescription>
+          <SheetDescription>
+            审核结果、@ 提醒、博客与题解互动等会显示在这里
+          </SheetDescription>
         </SheetHeader>
         <div className="flex items-center justify-between gap-2 border-b px-4 py-2">
           <span className="text-xs text-muted-foreground">

@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useOutletContext } from 'react-router-dom'
 import { PlusIcon, Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
-import { saveBlogThemeConfig } from '@/api/blog'
+import {
+  getBlogActivationStatus,
+  saveBlogNotifyPref,
+  saveBlogThemeConfig,
+} from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import {
   BLOG_THEME_META,
   SOCIAL_LINK_PRESETS,
@@ -21,6 +26,7 @@ import {
   type BlogThemeId,
 } from '@/lib/blog-theme'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
+import type { BlogEmailNotifyStrategy } from '@shared/api'
 
 /**
  * Owner-only: pick shell theme + customize Chirpy sidebar social links.
@@ -38,12 +44,28 @@ export function BlogSettingsPage() {
       : [],
   )
   const [saving, setSaving] = useState(false)
+  const [emailOn, setEmailOn] = useState(false)
+  const [emailStrategy, setEmailStrategy] =
+    useState<BlogEmailNotifyStrategy>('off')
+  const [savingNotify, setSavingNotify] = useState(false)
 
   useEffect(() => {
     setThemeId(theme.themeId)
     setSubtitle(theme.subtitle)
     setLinks(theme.socialLinks.map((l) => ({ ...l })))
   }, [theme.themeId, theme.subtitle, theme.socialLinks])
+
+  useEffect(() => {
+    if (!isLogin || !isOwner) return
+    void getBlogActivationStatus().then((res) => {
+      if (res.success && res.data) {
+        setEmailOn(Boolean(res.data.emailNotifyEnabled))
+        setEmailStrategy(
+          (res.data.emailNotifyStrategy as BlogEmailNotifyStrategy) || 'off',
+        )
+      }
+    })
+  }, [isLogin, isOwner])
 
   if (ready && !isLogin) {
     return (
@@ -234,9 +256,71 @@ export function BlogSettingsPage() {
         )}
       </div>
 
+      <div className="rounded-lg border p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <Label htmlFor="blog-email-on">互动邮件通知</Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              有人点赞或评论时发邮件提醒。默认关闭；可选手动开启并选择发送策略。
+            </p>
+          </div>
+          <Switch
+            id="blog-email-on"
+            checked={emailOn}
+            onCheckedChange={(v) => {
+              setEmailOn(v)
+              if (v && emailStrategy === 'off') setEmailStrategy('immediate')
+              if (!v) setEmailStrategy('off')
+            }}
+          />
+        </div>
+        {emailOn ? (
+          <div className="mt-3 max-w-xs space-y-2">
+            <Label>发送策略</Label>
+            <Select
+              value={emailStrategy === 'off' ? 'immediate' : emailStrategy}
+              onValueChange={(v) =>
+                setEmailStrategy((v || 'immediate') as BlogEmailNotifyStrategy)
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="策略" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="immediate">立即发送</SelectItem>
+                <SelectItem value="digest_daily">每日摘要</SelectItem>
+                <SelectItem value="random">随机时段发送</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="mt-3"
+          disabled={savingNotify}
+          onClick={async () => {
+            setSavingNotify(true)
+            const res = await saveBlogNotifyPref({
+              emailNotifyEnabled: emailOn,
+              emailNotifyStrategy: emailOn ? emailStrategy : 'off',
+            })
+            setSavingNotify(false)
+            if (!res.success) {
+              toast.error(res.message || '保存失败')
+              return
+            }
+            toast.success('通知偏好已保存')
+          }}
+        >
+          {savingNotify ? '保存中…' : '保存通知偏好'}
+        </Button>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2 pt-2">
         <Button type="submit" disabled={saving}>
-          {saving ? '保存中…' : '保存'}
+          {saving ? '保存中…' : '保存外观'}
         </Button>
         <Button type="button" variant="outline" asChild>
           <Link to={`/blog/${username}`}>打开博客</Link>

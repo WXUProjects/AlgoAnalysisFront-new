@@ -11,6 +11,7 @@ import {
 import { toast } from 'sonner'
 import { listBlogAuthors, listBlogPlaza } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
+import { BlogActivateDialog } from '@/components/blog/blog-activate-dialog'
 import { BlogLink } from '@/components/blog/blog-link'
 import { MarkdownSummary } from '@/components/markdown-summary'
 import { PageShell } from '@/components/page-shell'
@@ -63,6 +64,7 @@ export function BlogPlaza() {
   const [loading, setLoading] = useState(true)
   const [authors, setAuthors] = useState<BlogPlazaAuthor[]>([])
   const [authorsLoading, setAuthorsLoading] = useState(true)
+  const [activateOpen, setActivateOpen] = useState(false)
 
   const myUsername = user?.username
   const myBlogHref = myUsername ? `/blog/${myUsername}` : undefined
@@ -155,6 +157,13 @@ export function BlogPlaza() {
                   </BlogLink>
                 </Button>
               ) : null}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setActivateOpen(true)}
+              >
+                开通 / 协议
+              </Button>
             </>
           ) : (
             <Button size="sm" asChild>
@@ -163,6 +172,14 @@ export function BlogPlaza() {
           )}
         </div>
       </section>
+
+      <BlogActivateDialog
+        open={activateOpen}
+        onOpenChange={setActivateOpen}
+        onActivated={() => {
+          if (writeHref) window.location.assign(writeHref)
+        }}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="min-w-0 space-y-4" data-stagger-item>

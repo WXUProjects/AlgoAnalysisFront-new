@@ -1,19 +1,17 @@
 import type { ReactNode } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import {
-  ArrowLeftIcon,
   BookOpenIcon,
   ExternalLinkIcon,
-  LogInIcon,
   NewspaperIcon,
   SettingsIcon,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { BlogSiteFooter } from '@/components/blog/blog-site-footer'
+import { BlogSubsiteBar } from '@/components/blog/blog-subsite-bar'
 import { BLOG_NEW_TAB_PROPS } from '@/lib/blog-nav'
 import { cn } from '@/lib/utils'
-import { useAuth } from '@/auth/AuthContext'
 
 type Props = {
   username: string
@@ -29,13 +27,11 @@ export function SimpleShell({
   isOwner,
   children,
 }: Props) {
-  const { isLogin, user, ready } = useAuth()
-  const navigate = useNavigate()
-  const loginHref = `/login?redirect=${encodeURIComponent(`/blog/${username}`)}`
   const manageHref = `/blog/${username}/manage`
 
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
+      <BlogSubsiteBar username={username} variant="default" />
       <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
           <Link
@@ -57,28 +53,7 @@ export function SimpleShell({
                 <span className="hidden sm:inline">博客广场</span>
               </Link>
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-muted-foreground"
-              onClick={() => navigate('/')}
-            >
-              <ArrowLeftIcon className="size-3.5" />
-              <span className="hidden sm:inline">返回主站</span>
-            </Button>
             <ThemeToggle variant="button" />
-            {!ready ? null : isLogin ? (
-              <span className="hidden text-xs text-muted-foreground sm:inline">
-                {user?.username}
-              </span>
-            ) : (
-              <Button variant="outline" size="sm" asChild className="gap-1.5">
-                <Link to={loginHref}>
-                  <LogInIcon className="size-3.5" />
-                  登录
-                </Link>
-              </Button>
-            )}
           </div>
         </div>
         <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 pb-2">
