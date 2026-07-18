@@ -135,6 +135,11 @@ export const endpoints = {
       themeConfig: `${API_PREFIX}/user/blog/theme/config`,
       themeEnable: `${API_PREFIX}/user/blog/theme/enable`,
     },
+    seo: {
+      html: `${API_PREFIX}/user/seo/html`,
+      meta: `${API_PREFIX}/user/seo/meta`,
+      sitemap: `${API_PREFIX}/user/seo/sitemap.xml`,
+    },
     notification: {
       list: `${API_PREFIX}/user/notification/list`,
       unreadCount: `${API_PREFIX}/user/notification/unread-count`,

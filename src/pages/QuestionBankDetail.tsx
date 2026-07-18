@@ -83,6 +83,7 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
+import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { formatTime } from '@/lib/format'
 import { getSubmitLink } from '@/lib/link'
 import { num, str } from '@/lib/http'
@@ -135,6 +136,20 @@ export function QuestionBankDetail() {
   const [mySets, setMySets] = useState<ProblemsetInfo[]>([])
   const [mySetsLoading, setMySetsLoading] = useState(false)
   const [togglingSetId, setTogglingSetId] = useState<number | null>(null)
+
+  useDocumentMeta(
+    problem
+      ? {
+          title: `${problem.title || `题目 #${problem.id}`} - GoAlgo`,
+          description: [problem.platform, problem.difficulty]
+            .filter(Boolean)
+            .join(' · ') || '题库题目',
+          url: `/question-bank/detail/${problem.id}`,
+          type: 'article',
+          siteName: 'GoAlgo',
+        }
+      : null,
+  )
 
   const load = useCallback(async () => {
     if (!id) return

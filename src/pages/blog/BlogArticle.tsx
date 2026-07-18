@@ -38,6 +38,8 @@ import {
   ensureOutlineAnchors,
   estimateReadMinutes,
 } from '@/lib/blog-nav'
+import { useDocumentMeta } from '@/hooks/use-document-meta'
+import { clipMetaText } from '@/lib/document-meta'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogArticle as BlogArticleType, BlogComment } from '@shared/api'
 
@@ -48,6 +50,7 @@ export function BlogArticlePage() {
   const {
     isOwner,
     theme,
+    author,
     setBreadcrumb,
     setPanelExtra,
     setShowPanel,
@@ -152,6 +155,40 @@ export function BlogArticlePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username, slug])
+
+  const authorName =
+    article?.author?.name ||
+    article?.author?.username ||
+    author?.name ||
+    author?.username ||
+    username
+  const articleMetaTitle = article
+    ? `${article.title}${authorName ? ` - ${authorName}` : ''}`
+    : ''
+  const articleMetaDesc = article
+    ? clipMetaText(
+        article.summary ||
+          (article.canSeeBody ? article.content || '' : '') ||
+          `${authorName} 的文章`,
+      )
+    : undefined
+  const articleMetaImage =
+    article?.coverUrl ||
+    article?.author?.avatar ||
+    author?.avatar ||
+    undefined
+  useDocumentMeta(
+    article
+      ? {
+          title: articleMetaTitle,
+          description: articleMetaDesc,
+          image: articleMetaImage,
+          url: `/blog/${username}/${slug}`,
+          type: 'article',
+          siteName: authorName || 'GoAlgo',
+        }
+      : null,
+  )
 
   const toc = useMemo(
     () =>

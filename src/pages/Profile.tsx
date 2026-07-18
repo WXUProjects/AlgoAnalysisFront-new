@@ -59,6 +59,7 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { formatActivityProblemTitle } from '@/lib/activity-title'
 import { difficultyBadgeClass } from '@/lib/difficulty'
 import { formatTime, heatmapStartYmd, todayYmd } from '@/lib/format'
@@ -106,6 +107,27 @@ export function Profile() {
       ((targetId > 0 && targetId === user.userId) ||
         (routeUsername && routeUsername === user.username) ||
         (!routeUsername && !queryId)),
+  )
+
+  const profileDisplayName =
+    identity?.name ||
+    profile?.name ||
+    profile?.username ||
+    routeUsername ||
+    '个人资料'
+  useDocumentMeta(
+    profile
+      ? {
+          title: `${profileDisplayName} - GoAlgo`,
+          description: `${profileDisplayName} 的个人资料 · GoAlgo`,
+          image: profile.avatar || undefined,
+          url: profile.username
+            ? `/profile/${profile.username}`
+            : `/profile?id=${profile.userId}`,
+          type: 'profile',
+          siteName: 'GoAlgo',
+        }
+      : null,
   )
 
   const spiderMap = useMemo(() => {

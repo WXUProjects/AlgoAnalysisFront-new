@@ -19,8 +19,11 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
-import { useDocumentTitle } from '@/hooks/use-document-title'
-import { resolvePageTitle } from '@/lib/page-title'
+import { useDocumentMeta } from '@/hooks/use-document-meta'
+import {
+  DEFAULT_SITE_DESCRIPTION,
+  resolvePageTitle,
+} from '@/lib/page-title'
 import { staffNavLabel } from '@/lib/roles'
 import { trackPageVisit } from '@/lib/visit-tracker'
 import { useSiteConfig } from '@/site/SiteConfigContext'
@@ -73,8 +76,31 @@ export function AppLayout() {
     config.siteTitle ||
     'GoAlgo'
   const brandLogo = currentOrg?.brandLogo || config.siteLogo
-  const title = resolvePageTitle(pathname) || brand
-  useDocumentTitle(title, brand)
+  const pageName = resolvePageTitle(pathname)
+  const title = pageName
+    ? pageName === brand
+      ? brand
+      : `${pageName} - ${brand}`
+    : brand
+  const isDetailOwned =
+    pathname.startsWith('/question-bank/detail/') ||
+    pathname.startsWith('/profile')
+  useDocumentMeta(
+    isDetailOwned
+      ? null
+      : {
+          title,
+          description: DEFAULT_SITE_DESCRIPTION,
+          image: brandLogo || config.favicon || '/favicon.png',
+          url: pathname,
+          type: 'website',
+          siteName: brand,
+          noIndex:
+            pathname.startsWith('/admin') ||
+            pathname.startsWith('/login') ||
+            pathname.startsWith('/register'),
+        },
+  )
   const homeTo = isLogin ? '/' : '/about'
   const adminLabel = staffNavLabel(user)
   // 公共域（或未登录默认视图）展示「关于我们」

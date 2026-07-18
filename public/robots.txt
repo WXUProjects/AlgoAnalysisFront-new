@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# 管理与写操作路径不建议收录
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /login
+Disallow: /register
+Disallow: /blog/*/manage
+
+Sitemap: https://algo.zhiyuansofts.cn/api/user/seo/sitemap.xml

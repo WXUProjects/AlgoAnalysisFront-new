@@ -20,13 +20,13 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { useDocumentTitle } from '@/hooks/use-document-title'
+import { useDocumentMeta } from '@/hooks/use-document-meta'
 import {
   blogThemeStyle,
   resolveBlogTheme,
   type BlogThemeContext,
 } from '@/lib/blog-theme'
-import { resolvePageTitle } from '@/lib/page-title'
+import { formatDocumentTitle, resolvePageTitle } from '@/lib/page-title'
 import { MotionProvider } from '@/motion/MotionContext'
 import type {
   BlogArticle,
@@ -171,8 +171,26 @@ export function BlogLayout() {
   const themeStyle = blogThemeStyle(theme)
   const displayName = author?.name || author?.username || username
   const pageTitle = resolvePageTitle(location.pathname) || '博客'
-  // 博客用博主名作品牌后缀，更易辨认标签页
-  useDocumentTitle(pageTitle, displayName || '博客')
+  const isArticleRoute =
+    /^\/blog\/[^/]+\/[^/]+$/.test(location.pathname.replace(/\/+$/, '')) &&
+    !/\/(manage|categories|archives|about)$/.test(
+      location.pathname.replace(/\/+$/, ''),
+    )
+  // 文章页由 BlogArticle 写真实标题；壳层只处理博客首页/分类等
+  useDocumentMeta(
+    isArticleRoute
+      ? null
+      : {
+          title: formatDocumentTitle(pageTitle, displayName || '博客'),
+          description:
+            subtitle?.trim() ||
+            `${displayName || username} 的算法博客`,
+          image: author?.avatar || undefined,
+          url: location.pathname,
+          type: 'profile',
+          siteName: displayName || 'GoAlgo',
+        },
+  )
 
   const outletCtx: BlogOutletContext = {
     username,

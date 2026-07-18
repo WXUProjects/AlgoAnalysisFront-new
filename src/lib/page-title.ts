@@ -110,3 +110,7 @@ export function applyDocumentTitle(
 ): void {
   document.title = formatDocumentTitle(pageTitle, brand)
 }
+
+/** 默认站点描述（OG / meta description 回退） */
+export const DEFAULT_SITE_DESCRIPTION =
+  'GoAlgo 算法训练与竞赛社区：题库、博客、比赛与数据统计。'
