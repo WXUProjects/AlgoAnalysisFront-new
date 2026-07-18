@@ -51,12 +51,11 @@ export function BlogSubsiteBar({
         >
           {siteTitle} 分站
         </span>
-        <span className="mx-1.5 opacity-40" aria-hidden>
-          ·
-        </span>
-        <span className="opacity-80">人人可一键开通博客</span>
       </p>
-      <div className="flex shrink-0 items-center gap-2.5">
+      <div className="flex min-w-0 shrink-0 items-center gap-2.5">
+        <span className="hidden max-w-[12rem] truncate opacity-80 sm:inline sm:max-w-none">
+          人人可一键开通博客
+        </span>
         <Link
           to="/"
           className="inline-flex items-center gap-0.5 font-medium underline-offset-2 hover:underline"

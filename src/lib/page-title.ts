@@ -33,7 +33,7 @@ const ADMIN_TITLES: Record<string, string> = {
   '/admin/site-bulletin': '站点公告',
   '/admin/emergency': '紧急通知',
   '/admin/problem-progress': '题库识别',
-  '/admin/problem-edits': '题库修改审核',
+  '/admin/problem-edits': '题库审查',
   '/admin/group': '分组管理',
   '/admin/user': '组织成员',
   '/admin/site-users': '站点用户',

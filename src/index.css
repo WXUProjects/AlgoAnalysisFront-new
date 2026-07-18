@@ -368,28 +368,34 @@
   flex: 1 1 auto;
   min-width: 0;
   padding-right: 1rem;
+  /* 原代码格式：不软换行；长行横向滚动（PC + 移动端一致） */
   white-space: pre;
   line-height: 1.55;
   overflow-wrap: normal;
   word-break: normal;
 }
 
-/* 移动端：长行自动折行，避免被主布局 overflow-x-clip 裁切 */
+/* 移动端同样保持 pre + 横向滚动，不强制折行 */
 @media (max-width: 767px) {
+  .markdown-body .md-code-block pre.code-hl {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .markdown-body .md-code-src {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    white-space: pre;
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
   .markdown-body pre:not(.code-hl) {
-    white-space: pre-wrap;
-    word-break: break-word;
+    white-space: pre;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .markdown-body pre:not(.code-hl) code {
-    white-space: pre-wrap;
-    word-break: break-word;
+    white-space: pre;
   }
 }
 

@@ -85,11 +85,18 @@ export function RecommendStream() {
         )
       }
 
-      // First page: merge public blog articles flagged for main-site recommend
+      // First page: merge pure blog articles (exclude solution mirrors — 题解只走 activity)
       if (reset) {
-        const blogRes = await listBlogRecommend({ page: 1, pageSize: 10 })
+        const blogRes = await listBlogRecommend({
+          page: 1,
+          pageSize: 10,
+          excludeSolutions: true,
+          orgId: currentOrg?.id,
+        })
         if (blogRes.success && blogRes.data?.list?.length) {
-          const blogItems = blogRes.data.list.map(mapBlogArticleToStreamItem)
+          // client-side guard: never show solution-mirrored blogs in recommend
+          const pure = blogRes.data.list.filter((a) => !a.sourceSolutionId)
+          const blogItems = pure.map(mapBlogArticleToStreamItem)
           batch = mergeCursorPage(blogItems, batch, (x) => x.uid)
         }
       }
@@ -102,7 +109,7 @@ export function RecommendStream() {
       setLoading(false)
       setInitialLoading(false)
     }
-  }, [])
+  }, [currentOrg?.id])
 
   useEffect(() => {
     setItems([])

@@ -47,6 +47,10 @@ function normalizeArticle(raw: Record<string, unknown>): BlogArticle {
     categoryId:
       cat === null || cat === undefined || cat === '' ? null : num(cat as number),
     sourceSolutionId: num(raw.sourceSolutionId) || undefined,
+    sourceProblemId: num(raw.sourceProblemId) || undefined,
+    summaryIsDefault: raw.summaryIsDefault !== undefined
+      ? Boolean(raw.summaryIsDefault)
+      : undefined,
     viewCount: num(raw.viewCount),
     likeCount: num(raw.likeCount),
     commentCount: num(raw.commentCount),
@@ -244,12 +248,18 @@ export async function listMyBlogArticles(params?: {
 export async function listBlogRecommend(params?: {
   page?: number
   pageSize?: number
+  /** 排除题解镜像文（发现推荐去重） */
+  excludeSolutions?: boolean
+  /** 按组织过滤（私有域发现） */
+  orgId?: number
 }): Promise<
   ApiResult<{ list: BlogArticle[]; total: number; page: number; pageSize: number }>
 > {
   const res = await get<Record<string, unknown>>(endpoints.user.blog.recommend, {
     page: params?.page,
     pageSize: params?.pageSize,
+    excludeSolutions: params?.excludeSolutions ? 1 : undefined,
+    orgId: params?.orgId,
   })
   return wrapData(res, (data) => {
     const listRaw = (Array.isArray(data.list) ? data.list : []) as Record<
@@ -512,6 +522,18 @@ export async function toggleBlogLike(
   return wrapData(res, (data) => ({
     liked: Boolean(data.liked),
     likeCount: num(data.likeCount),
+  }))
+}
+
+/** 举报博客文章 → 站管站内信 + 邮件 */
+export async function reportBlogArticle(body: {
+  articleId: number
+  reason: string
+}): Promise<ApiResult<{ id: number; alreadyReported?: boolean }>> {
+  const res = await post<Record<string, unknown>>(endpoints.user.blog.report, body)
+  return wrapData(res, (data) => ({
+    id: num(data.id),
+    alreadyReported: Boolean(data.alreadyReported),
   }))
 }
 

@@ -142,6 +142,7 @@ export const endpoints = {
       adminAuthors: `${API_PREFIX}/user/blog/admin/authors`,
       adminArticles: `${API_PREFIX}/user/blog/admin/articles`,
       adminModerate: `${API_PREFIX}/user/blog/admin/moderate`,
+      report: `${API_PREFIX}/user/blog/report`,
     },
     seo: {
       html: `${API_PREFIX}/user/seo/html`,
@@ -1216,6 +1217,10 @@ export interface BlogArticle {
   categoryId?: number | null
   /** 由主站题解同步时的题解 id */
   sourceSolutionId?: number
+  /** 题解对应题目 id（共享评论/点赞用） */
+  sourceProblemId?: number
+  /** 当前摘要是否为系统默认（编辑时勿回填） */
+  summaryIsDefault?: boolean
   viewCount?: number
   likeCount?: number
   commentCount?: number
@@ -1293,9 +1298,12 @@ export interface BlogArticleWriteReq {
   visibility?: BlogVisibility | string
   password?: string
   clearPassword?: boolean
+  /** @deprecated 服务端自动：公开文 recommend=true */
   recommend?: boolean
+  /** @deprecated 服务端自动：公开文同步资料动态 */
   syncToMainProfile?: boolean
   categoryId?: number | null
+  /** @deprecated 服务端自动同步作者所属组织 */
   orgIds?: number[]
 }
 

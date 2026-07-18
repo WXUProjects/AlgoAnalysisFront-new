@@ -21,9 +21,15 @@ import {
   getBlogArticle,
   listBlogByUsername,
   listBlogComments,
+  reportBlogArticle,
   toggleBlogLike,
   unlockBlogArticle,
 } from '@/api/blog'
+import {
+  createProblemComment,
+  listProblemComments,
+  toggleCommunityLike,
+} from '@/api/community'
 import { useAuth } from '@/auth/AuthContext'
 import { MarkdownBody } from '@/components/markdown-body'
 import { MarkdownSummary } from '@/components/markdown-summary'
@@ -67,6 +73,7 @@ export function BlogArticlePage() {
   const [commentText, setCommentText] = useState('')
   const [posting, setPosting] = useState(false)
   const [related, setRelated] = useState<BlogArticleType[]>([])
+  const [reporting, setReporting] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
 
   const load = async (unlockToken?: string) => {
@@ -106,7 +113,7 @@ export function BlogArticlePage() {
           setArticle(again.data)
           setLoading(false)
           if (again.data.canSeeBody) {
-            void loadComments(again.data.id)
+            void loadComments(again.data)
             void loadRelated(again.data)
           }
           setBreadcrumb([
@@ -120,7 +127,7 @@ export function BlogArticlePage() {
     setArticle(res.data)
     setLoading(false)
     if (res.data.canSeeBody) {
-      void loadComments(res.data.id)
+      void loadComments(res.data)
       void loadRelated(res.data)
     }
     setBreadcrumb([
@@ -129,7 +136,35 @@ export function BlogArticlePage() {
     ])
   }
 
-  const loadComments = async (articleId: number) => {
+  const loadComments = async (a: BlogArticleType | number) => {
+    // 题解镜像文：评论与主站题解共享
+    if (typeof a === 'object' && a.sourceSolutionId) {
+      const res = await listProblemComments({
+        solutionId: a.sourceSolutionId,
+        problemId: a.sourceProblemId,
+        pageSize: 50,
+      })
+      if (res.success && res.data) {
+        setComments(
+          res.data.list.map((c) => ({
+            id: c.id,
+            articleId: typeof a === 'object' ? a.id : 0,
+            parentId: c.parentId,
+            content: c.content,
+            userId: c.userId,
+            author: {
+              id: c.userId,
+              username: c.username || '',
+              name: c.name || c.username || '',
+              avatar: c.avatar,
+            },
+            createdAt: c.createdAt,
+          })),
+        )
+      }
+      return
+    }
+    const articleId = typeof a === 'number' ? a : a.id
     const res = await listBlogComments({ articleId, pageSize: 50 })
     if (res.success && res.data) setComments(res.data.list)
   }
@@ -251,7 +286,7 @@ export function BlogArticlePage() {
     }
     setArticle(res.data)
     toast.success('已解锁')
-    void loadComments(res.data.id)
+    void loadComments(res.data)
     void loadRelated(res.data)
   }
 
@@ -261,6 +296,23 @@ export function BlogArticlePage() {
       navigate(
         `/login?redirect=${encodeURIComponent(`/blog/${username}/${slug}`)}`,
       )
+      return
+    }
+    // 题解镜像：点赞走主站题解，计数双向同步
+    if (article.sourceSolutionId) {
+      const res = await toggleCommunityLike({
+        targetType: 'solution',
+        targetId: article.sourceSolutionId,
+      })
+      if (!res.success || !res.data) {
+        toast.error(res.message || '操作失败')
+        return
+      }
+      setArticle({
+        ...article,
+        liked: res.data.liked,
+        likeCount: res.data.likeCount,
+      })
       return
     }
     const res = await toggleBlogLike(article.id)
@@ -289,6 +341,26 @@ export function BlogArticlePage() {
       return
     }
     setPosting(true)
+    if (article.sourceSolutionId) {
+      const res = await createProblemComment({
+        problemId: article.sourceProblemId || 0,
+        solutionId: article.sourceSolutionId,
+        content: commentText.trim(),
+      })
+      setPosting(false)
+      if (!res.success) {
+        toast.error(res.message || '发送失败')
+        return
+      }
+      setCommentText('')
+      toast.success('已发送')
+      setArticle({
+        ...article,
+        commentCount: (article.commentCount || 0) + 1,
+      })
+      void loadComments(article)
+      return
+    }
     const res = await createBlogComment({
       articleId: article.id,
       content: commentText.trim(),
@@ -304,10 +376,15 @@ export function BlogArticlePage() {
       ...article,
       commentCount: (article.commentCount || 0) + 1,
     })
-    void loadComments(article.id)
+    void loadComments(article)
   }
 
   async function handleDeleteComment(id: number) {
+    // 题解评论删除走社区 API（此处仅博客自有评论）
+    if (article?.sourceSolutionId) {
+      toast.message('请到主站题解页管理题解评论')
+      return
+    }
     const res = await deleteBlogComment(id)
     if (!res.success) {
       toast.error(res.message || '删除失败')
@@ -320,6 +397,33 @@ export function BlogArticlePage() {
         commentCount: Math.max(0, (article.commentCount || 1) - 1),
       })
     }
+  }
+
+  async function handleReport() {
+    if (!article) return
+    if (!isLogin) {
+      navigate(
+        `/login?redirect=${encodeURIComponent(`/blog/${username}/${slug}`)}`,
+      )
+      return
+    }
+    const reason = window.prompt('请简述举报原因（将通知站点管理员）')
+    if (reason == null) return
+    if (!reason.trim()) {
+      toast.error('请填写举报原因')
+      return
+    }
+    setReporting(true)
+    const res = await reportBlogArticle({
+      articleId: article.id,
+      reason: reason.trim(),
+    })
+    setReporting(false)
+    if (!res.success) {
+      toast.error(res.message || '提交失败')
+      return
+    }
+    toast.success(res.message || '已收到举报')
   }
 
   async function handleCopyLink() {
@@ -477,14 +581,26 @@ export function BlogArticlePage() {
       <div className="text-sm text-muted-foreground">
         {catName ? <span>分类：{catName}</span> : null}
       </div>
-      <button
-        type="button"
-        onClick={() => void handleCopyLink()}
-        className="inline-flex items-center gap-1.5 text-sm text-[var(--link-color,var(--primary))] hover:underline"
-      >
-        <LinkIcon className="size-3.5" />
-        复制链接
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void handleCopyLink()}
+          className="inline-flex items-center gap-1.5 text-sm text-[var(--link-color,var(--primary))] hover:underline"
+        >
+          <LinkIcon className="size-3.5" />
+          复制链接
+        </button>
+        {!isOwner ? (
+          <button
+            type="button"
+            disabled={reporting}
+            onClick={() => void handleReport()}
+            className="text-sm text-muted-foreground hover:text-destructive hover:underline"
+          >
+            {reporting ? '提交中…' : '举报'}
+          </button>
+        ) : null}
+      </div>
     </div>
   ) : null
 

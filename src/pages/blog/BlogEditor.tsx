@@ -16,7 +16,6 @@ import {
 import { useAuth } from '@/auth/AuthContext'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import {
@@ -32,6 +31,10 @@ import {
   BLOG_IMAGE_UPLOAD_HINT,
   isAllowedBlogImageUrl,
 } from '@/lib/blog-image'
+import {
+  isDefaultSummary,
+  resolveSummaryForSave,
+} from '@/lib/blog-summary'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogCategory, BlogVisibility } from '@shared/api'
 
@@ -40,7 +43,7 @@ export function BlogEditor() {
   const { id: idParam } = useParams()
   const editId = idParam ? Number(idParam) : 0
   const isNew = !editId
-  const { isLogin, ready, orgs } = useAuth()
+  const { isLogin, ready } = useAuth()
   const navigate = useNavigate()
 
   const [loading, setLoading] = useState(!isNew)
@@ -52,11 +55,7 @@ export function BlogEditor() {
   const [coverUrl, setCoverUrl] = useState('')
   const [visibility, setVisibility] = useState<BlogVisibility>('public')
   const [password, setPassword] = useState('')
-  const [recommend, setRecommend] = useState(false)
-  const [syncToMainProfile, setSyncToMainProfile] = useState(false)
   const [categoryId, setCategoryId] = useState<string>('')
-  const [orgIds, setOrgIds] = useState<number[]>([])
-  const [orgDefaulted, setOrgDefaulted] = useState(false)
   const [categories, setCategories] = useState<BlogCategory[]>([])
 
   useEffect(() => {
@@ -65,21 +64,13 @@ export function BlogEditor() {
     })
   }, [])
 
-  // 无分类时回落到「默认」分类（去掉「未分类」选项）
+  // 无分类时回落到「默认」分类
   useEffect(() => {
     if (categoryId || !categories.length) return
     if (!isNew && loading) return
     const def = categories.find((c) => c.isDefault) || categories[0]
     if (def) setCategoryId(String(def.id))
   }, [categories, categoryId, isNew, loading])
-
-  // 新建文章：默认勾选公共域（仅初始化一次，用户取消后不强制回勾）
-  useEffect(() => {
-    if (!isNew || orgDefaulted || !orgs.length) return
-    const pub = orgs.find((o) => o.isSystem || o.slug === 'public')
-    if (pub) setOrgIds([pub.id])
-    setOrgDefaulted(true)
-  }, [isNew, orgs, orgDefaulted])
 
   useEffect(() => {
     if (isNew || !isOwner) return
@@ -96,15 +87,14 @@ export function BlogEditor() {
       const a = res.data
       setTitle(a.title)
       setSlug(a.slug)
-      setSummary(a.summary || '')
-      setContent(a.content || '')
+      // 系统默认摘要不回填编辑框；保存时会按正文重新生成
+      const body = a.content || ''
+      const sum = a.summary || ''
+      setSummary(isDefaultSummary(sum, body) ? '' : sum)
+      setContent(body)
       setCoverUrl(a.coverUrl || '')
       setVisibility((a.visibility as BlogVisibility) || 'public')
-      setRecommend(Boolean(a.recommend))
-      setSyncToMainProfile(Boolean(a.syncToMainProfile))
       setCategoryId(a.categoryId ? String(a.categoryId) : '')
-      setOrgIds(a.orgIds || [])
-      setOrgDefaulted(true)
       setLoading(false)
     })()
     return () => {
@@ -129,12 +119,6 @@ export function BlogEditor() {
     return <Navigate to={`/blog/${username}`} replace />
   }
 
-  function toggleOrg(id: number) {
-    setOrgIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    )
-  }
-
   async function handleSave() {
     if (!title.trim()) {
       toast.error('请填写标题')
@@ -156,16 +140,14 @@ export function BlogEditor() {
     const body = {
       title: title.trim(),
       slug: slug.trim() || undefined,
-      summary: summary.trim(),
+      // 空摘要 → 后端 / resolve 生成默认简述
+      summary: resolveSummaryForSave(summary, content),
       content,
       coverUrl: coverUrl.trim(),
       visibility,
       password: password.trim() || undefined,
       clearPassword: visibility !== 'password',
-      recommend: visibility === 'public' ? recommend : false,
-      syncToMainProfile,
       categoryId: Number(categoryId) || null,
-      orgIds,
     }
     const res = isNew
       ? await createBlogArticle(body)
@@ -176,7 +158,6 @@ export function BlogEditor() {
       return
     }
     toast.success(isNew ? '已发布' : '已保存')
-    // 后台设置内打开博客正文：本页跳转
     navigate(`/blog/${username}/${res.data.slug}`)
   }
 
@@ -251,7 +232,7 @@ export function BlogEditor() {
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
             rows={2}
-            placeholder="列表卡片上的简介；不填则列表不展示摘要"
+            placeholder="不填则保存时按正文自动生成列表简介"
           />
         </Field>
         <Field className="sm:col-span-2">
@@ -280,6 +261,11 @@ export function BlogEditor() {
               <SelectItem value="password">密码访问</SelectItem>
             </SelectContent>
           </Select>
+          {visibility === 'public' && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              公开文章会自动出现在博客广场与你所在组织的发现推荐中
+            </p>
+          )}
         </Field>
         {visibility === 'password' && (
           <Field>
@@ -295,54 +281,6 @@ export function BlogEditor() {
           </Field>
         )}
       </FieldGroup>
-
-      <div className="flex flex-col gap-3 rounded-lg border p-4">
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={recommend && visibility === 'public'}
-            disabled={visibility !== 'public'}
-            onCheckedChange={(v) => setRecommend(Boolean(v))}
-          />
-          开放到主站推荐页
-          {visibility !== 'public' && (
-            <span className="text-xs text-muted-foreground">
-              （仅公开文章可推荐）
-            </span>
-          )}
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={syncToMainProfile}
-            onCheckedChange={(v) => setSyncToMainProfile(Boolean(v))}
-          />
-          同步到主站个人资料动态（作者开启后主站可展示）
-        </label>
-        {orgs.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">同步到组织发现</p>
-            <p className="text-xs text-muted-foreground">
-              勾选后会出现在对应组织的发现页。勾选校队时，会一并出现在公共域发现里。
-            </p>
-            <div className="flex flex-wrap gap-3">
-              {orgs.map((o) => (
-                <label
-                  key={o.id}
-                  className="flex items-center gap-2 text-sm"
-                >
-                  <Checkbox
-                    checked={orgIds.includes(o.id)}
-                    onCheckedChange={() => toggleOrg(o.id)}
-                  />
-                  {o.name}
-                  {o.isSystem || o.slug === 'public' ? (
-                    <span className="text-xs text-muted-foreground">公共域</span>
-                  ) : null}
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
 
       <div className="min-h-[480px]">
         <MarkdownEditor

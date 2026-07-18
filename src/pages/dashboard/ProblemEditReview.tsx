@@ -126,7 +126,7 @@ export function DashboardProblemEditReview() {
     <PageShell>
       <Card className="gap-3 py-4">
         <CardHeader className="px-4">
-          <CardTitle className="text-base">题库修改审核</CardTitle>
+          <CardTitle className="text-base">题库审查</CardTitle>
           <CardDescription>
             审核用户提交的标签与题面修改。通过后立即生效；已有标签的题目将不再自动分析。
           </CardDescription>

@@ -299,11 +299,11 @@ export function AdminLayout() {
                       <SidebarMenuButton
                         asChild
                         isActive={pathname.startsWith('/admin/problem-edits')}
-                        tooltip="题库修改审核"
+                        tooltip="题库审查"
                       >
                         <NavLink to="/admin/problem-edits">
                           <ClipboardCheckIcon />
-                          <span>修改审核</span>
+                          <span>审查</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

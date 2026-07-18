@@ -57,6 +57,12 @@ const statusLabel: Record<string, string> = {
   rejected: '已驳回',
 }
 
+const visibilityLabel: Record<string, string> = {
+  public: '公开',
+  private: '不公开',
+  password: '加密',
+}
+
 export function DashboardBlogAdmin() {
   const { isAdmin, ready } = useAuth()
   const [overview, setOverview] = useState<BlogAdminOverview | null>(null)
@@ -158,7 +164,7 @@ export function DashboardBlogAdmin() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">博客管理</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          查看个人博客开通情况、使用数据，并对文章进行审核。
+          查看博客开通情况与全部文章（含不公开 / 加密），便于审查。
         </p>
       </div>
 
@@ -193,7 +199,7 @@ export function DashboardBlogAdmin() {
       <Tabs defaultValue="authors">
         <TabsList>
           <TabsTrigger value="authors">开通作者</TabsTrigger>
-          <TabsTrigger value="articles">文章审核</TabsTrigger>
+          <TabsTrigger value="articles">文章审查</TabsTrigger>
         </TabsList>
 
         <TabsContent value="authors" className="flex flex-col gap-3">
@@ -363,7 +369,8 @@ export function DashboardBlogAdmin() {
                             {a.title}
                           </Link>
                           <div className="text-xs text-muted-foreground">
-                            {a.visibility}
+                            {visibilityLabel[a.visibility] || a.visibility}
+                            {a.visibility === 'password' ? ' · 密码' : ''}
                           </div>
                         </TableCell>
                         <TableCell className="text-sm">
