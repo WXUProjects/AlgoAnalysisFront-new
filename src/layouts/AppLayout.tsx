@@ -84,7 +84,8 @@ export function AppLayout() {
     : brand
   const isDetailOwned =
     pathname.startsWith('/question-bank/detail/') ||
-    pathname.startsWith('/profile')
+    pathname.startsWith('/profile') ||
+    pathname.startsWith('/p/')
   useDocumentMeta(
     isDetailOwned
       ? null

@@ -15,6 +15,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useDocumentMeta } from '@/hooks/use-document-meta'
+import { clipMetaText } from '@/lib/document-meta'
 import { languageLabel } from '@/lib/paste-languages'
 import { formatTime } from '@/lib/format'
 
@@ -24,6 +26,35 @@ export function PasteView() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+
+  const pasteTitle =
+    data?.title?.trim() ||
+    (data?.language && data.language !== 'text'
+      ? `${languageLabel(data.language)} 代码片段`
+      : '粘贴板分享')
+  useDocumentMeta(
+    data
+      ? {
+          title: `${pasteTitle} - GoAlgo`,
+          description: clipMetaText(
+            [data.language && data.language !== 'text' ? languageLabel(data.language) : '', data.content]
+              .filter(Boolean)
+              .join(' · ') || '粘贴板分享',
+          ),
+          url: `/p/${data.slug || slug}`,
+          type: 'article',
+          siteName: 'GoAlgo',
+        }
+      : error
+        ? {
+            title: '粘贴板 - GoAlgo',
+            description: error,
+            url: slug ? `/p/${slug}` : '/tools/paste',
+            type: 'website',
+            siteName: 'GoAlgo',
+          }
+        : null,
+  )
 
   useEffect(() => {
     if (!slug) {
