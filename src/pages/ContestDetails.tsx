@@ -133,12 +133,15 @@ export function ContestDetails() {
     void loadProblems()
   }, [loadProblems])
 
-  // ensure 进行中时短轮询目录
+  // ensure 进行中 / 首屏尚无目录时短轮询
   useEffect(() => {
-    if (ensureStatus !== 'running' && !(ensureStatus === '' && problems.length === 0 && !problemsLoading)) {
-      return
-    }
-    if (ensureStatus === 'done' || ensureStatus === 'failed') return
+    const shouldPoll =
+      ensureStatus === 'running' ||
+      (ensureStatus !== 'done' &&
+        ensureStatus !== 'failed' &&
+        problems.length === 0 &&
+        !problemsLoading)
+    if (!shouldPoll) return
     const t = window.setInterval(() => {
       void loadProblems()
     }, 2500)
