@@ -1,10 +1,12 @@
 import {
   endpoints,
   type ContestItem,
+  type ContestProblemItem,
+  type ContestProblemsData,
   type ContestRankingItem,
   type Platform,
 } from '@shared/api'
-import { get, num, str, type ApiResult } from '@/lib/http'
+import { get, num, str, bool, type ApiResult } from '@/lib/http'
 import { normalizeStaticUrl } from '@/lib/static-url'
 
 export interface ContestListData {
@@ -110,6 +112,46 @@ export async function getContestRanking(params: {
       contest: contestRaw ? normalizeContest(contestRaw) : null,
       list,
       total: num(raw.total, list.length),
+    },
+  }
+}
+
+function normalizeContestProblem(r: Record<string, unknown>): ContestProblemItem {
+  const tags = Array.isArray(r.tags) ? r.tags.map((t) => str(t)) : []
+  return {
+    label: str(r.label),
+    externalId: str(r.externalId),
+    title: str(r.title),
+    url: str(r.url),
+    problemId: num(r.problemId),
+    sortOrder: num(r.sortOrder),
+    status: str(r.status),
+    hasContent: bool(r.hasContent),
+    difficulty: str(r.difficulty),
+    tags,
+  }
+}
+
+/** 比赛题目目录；首次打开会触发 ensure（每场只跑一次） */
+export async function getContestProblems(
+  contestLogId: string | number,
+): Promise<ApiResult<ContestProblemsData>> {
+  const res = await get<Record<string, unknown>>(endpoints.core.contest.problems, {
+    id: contestLogId,
+    contestId: contestLogId,
+  })
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
+  const listRaw = Array.isArray(raw.list)
+    ? (raw.list as Record<string, unknown>[])
+    : []
+  const contestRaw = (raw.contest as Record<string, unknown>) || null
+  return {
+    ...res,
+    data: {
+      contest: contestRaw ? normalizeContest(contestRaw) : null,
+      ensureStatus: str(raw.ensureStatus),
+      list: listRaw.map(normalizeContestProblem),
     },
   }
 }

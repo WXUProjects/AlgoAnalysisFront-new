@@ -176,6 +176,8 @@ export const endpoints = {
       list: `${API_PREFIX}/core/contest/list`,
       history: `${API_PREFIX}/core/contest/history`,
       ranking: `${API_PREFIX}/core/contest/ranking`,
+      /** 比赛题目目录（A/B/C…）；每场 ensure 只跑一次 */
+      problems: `${API_PREFIX}/core/contest/problems`,
     },
     contestCalendar: {
       list: `${API_PREFIX}/core/contest-calendar/list`,
@@ -731,6 +733,26 @@ export interface ContestRankingItem {
   score: number
   acCount: number
   totalCount: number
+}
+
+/** 比赛内题目（Tab A/B/C…） */
+export interface ContestProblemItem {
+  label: string
+  externalId: string
+  title: string
+  url: string
+  problemId: number
+  sortOrder: number
+  status?: string
+  hasContent?: boolean
+  difficulty?: string
+  tags?: string[]
+}
+
+export interface ContestProblemsData {
+  contest: Partial<ContestItem> | null
+  ensureStatus: string
+  list: ContestProblemItem[]
 }
 
 /** 组织广场卡片（无识别码/成员明细） */
