@@ -4,6 +4,16 @@ import { useAuth } from '@/auth/AuthContext'
 import { joinOrg, leaveOrg, setOrgDisplayName } from '@/api/org'
 import type { OrgInfo } from '@shared/api'
 import { orgRoleName } from '@/lib/roles'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -18,7 +28,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export function OrgHub() {
-  const { orgs, currentOrg, switchOrg, refreshOrgs, user } = useAuth()
+  const { orgs, currentOrg, switchOrg, refreshOrgs, sync, user } = useAuth()
   const [code, setCode] = useState('')
   const [orgDisplayName, setOrgDisplayNameInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -26,6 +36,12 @@ export function OrgHub() {
   const [editOrg, setEditOrg] = useState<OrgInfo | null>(null)
   const [editName, setEditName] = useState('')
   const [savingName, setSavingName] = useState(false)
+  const [leaveTarget, setLeaveTarget] = useState<{
+    id: number
+    name: string
+    isSystem?: boolean
+  } | null>(null)
+  const [leaving, setLeaving] = useState(false)
 
   async function handleJoin() {
     if (!code.trim()) {
@@ -49,16 +65,24 @@ export function OrgHub() {
     }
   }
 
-  async function handleLeave(orgId: number, name: string, isSystem?: boolean) {
+  function requestLeave(orgId: number, name: string, isSystem?: boolean) {
     if (isSystem) {
       toast.error('公共域为默认组织，无法退出')
       return
     }
-    if (!confirm(`确定退出「${name}」？`)) return
-    const res = await leaveOrg(orgId)
+    setLeaveTarget({ id: orgId, name, isSystem })
+  }
+
+  async function confirmLeave() {
+    if (!leaveTarget) return
+    setLeaving(true)
+    const res = await leaveOrg(leaveTarget.id)
+    setLeaving(false)
     if (res.success) {
       toast.success('已退出组织')
-      await refreshOrgs()
+      setLeaveTarget(null)
+      // 退出当前组织时后端会签发新 JWT；必须 sync 刷新 orgId/orgRole
+      await sync()
     } else {
       toast.error(res.message || '退出失败，请稍后重试')
     }
@@ -163,7 +187,7 @@ export function OrgHub() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => void handleLeave(o.id, o.name, o.isSystem)}
+                    onClick={() => requestLeave(o.id, o.name, o.isSystem)}
                   >
                     退出
                   </Button>
@@ -209,6 +233,34 @@ export function OrgHub() {
           </Button>
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={!!leaveTarget}
+        onOpenChange={(open) => {
+          if (!open && !leaving) setLeaveTarget(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>退出组织？</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定退出「{leaveTarget?.name}」？退出后需重新用识别码加入。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={leaving}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={leaving}
+              onClick={(e) => {
+                e.preventDefault()
+                void confirmLeave()
+              }}
+            >
+              {leaving ? '退出中…' : '确认退出'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog
         open={!!editOrg}

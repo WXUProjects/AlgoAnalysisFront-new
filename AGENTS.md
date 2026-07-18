@@ -134,16 +134,18 @@ npm run build
 **旧前端 `../CWXU-Algo-Frontend` 已弃用：不要再访问、修改或照抄其 UI 文案。**  
 以下为已实现/历史清单，仅作范围参考；用户可见文案须面向 C 端，禁止把开发术语（CRUD、MQ、消费、流水线等）直接写进界面。
 
-### 角色
+### 角色（GoAlgo 多租户）
 
-| roleId | 角色 | 说明 |
-|--------|------|------|
-| 0 | 队员 | 交题、个人资料、绑 OJ |
-| 1 | 管理员 | 全部功能：后台、改角色、删用户、全局爬虫、题库运维、站点设置等 |
-| 2 | 教练 | 仅管理端（统计/公告/分组/队员）；**无个人资料流程**；登录直达 `/admin` |
-| 3 | 队长 | **教练管理权限 + 队员交题/资料**（`isStaff` + `isMemberLike`） |
+| 标志 / 字段 | 说明 |
+|-------------|------|
+| `isSiteAdmin` / `roleId===1` | 站点管理员：全站后台、用户、运维等 |
+| `orgRole=member` | 组织成员：交题、资料、绑 OJ |
+| `orgRole=coach` | 组织教练：组织管理端（统计/公告/分组/成员）+ 训练报告 |
+| `orgRole=captain` | 组织队长：同教练 |
+| `orgRole=org_admin` | 团队管理员：组织设置（品牌/识别码/任命）+ 教练能力 |
 
-Auth 标志：`isAdmin` / `isCoach`(纯教练) / `isCaptain` / `isStaff`(1\|2\|3) / `isMemberLike`(0\|1\|3)
+Auth 标志：`isAdmin`/`isSiteAdmin` · `isOrgAdmin` · `isCoach` · `isCaptain` · `isStaff`(站管或组织 staff) · `isMemberLike`(任意登录用户)  
+**权限只认 `isSiteAdmin` + `orgRole`，不要再依赖旧全局 roleId 2/3。**
 
 ### 路由一览
 
@@ -256,7 +258,7 @@ agent.summary:    recent
 
 ### 实现优先级
 
-1. **P0 壳**：shadcn init → AppLayout（Algo-CWUX 侧栏 + Header）→ 鉴权 → Toast  
+1. **P0 壳**：shadcn init → AppLayout（GoAlgo 侧栏 + Header）→ 鉴权 → Toast  
 2. **P0 业务**：Login/Register → Home → Profile/ChangeProfile → Contest → Bulletin → QuestionBank → AllActivities  
 3. **P0 后台**：Statistics / Group / User / BulletinManage / ProblemProgress  
 4. **P1**：热力图、算法画像、Markdown 题面、AI 总结  
@@ -264,9 +266,9 @@ agent.summary:    recent
 
 ### 侧栏导航（启用项）
 
-首页 · 比赛（记录/日历） · 公告 · 动态 · 题库 · 个人资料(队员/队长/管理员) · 后台(管理员/教练/队长) · 论坛(外链) · 主题 · 登录/注册(未登录)
+首页 · 发现 · 博客 · 比赛 · 公告 · 题库 · 题单 · 工具 · 个人资料 · 我的组织 · 后台(站管/组织 staff) · 关于 · 主题 · 登录/注册(未登录)
 
-品牌：**Algo-CWUX**（侧栏最上方）
+品牌默认：**GoAlgo**（可被站点/当前组织品牌覆盖）
 
 ### 参考路径
 

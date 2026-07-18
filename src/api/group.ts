@@ -57,6 +57,30 @@ export async function listGroups(
   }
 }
 
+/** 分页拉全部分组（筛选用，避免硬编码 pageSize 截断） */
+export async function listAllGroups(
+  pageSize = 100,
+): Promise<ApiResult<GroupListData>> {
+  const size = Math.min(Math.max(pageSize, 1), 200)
+  const first = await listGroups(1, size)
+  if (!first.success || !first.data) return first
+  const total = first.data.total
+  if (total <= first.data.list.length) return first
+  const pages = Math.ceil(total / size)
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, i) => listGroups(i + 2, size)),
+  )
+  const list = [...first.data.list]
+  for (const r of rest) {
+    if (r.success && r.data) list.push(...r.data.list)
+  }
+  return {
+    success: true,
+    message: 'ok',
+    data: { list, total },
+  }
+}
+
 export async function getGroup(id: number): Promise<ApiResult<GroupInfo>> {
   const res = await get<Record<string, unknown>>(endpoints.user.group.get, { id })
   if (!res.success && !res.data) return { ...res, data: null }

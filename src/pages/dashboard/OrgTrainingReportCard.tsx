@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { listGroups } from '@/api/group'
+import { listAllGroups } from '@/api/group'
 import {
   downloadTrainingReport,
   getTrainingReportJob,
@@ -69,7 +69,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
   }, [orgId])
 
   useEffect(() => {
-    void listGroups(1, 100).then((r) => {
+    void listAllGroups().then((r) => {
       if (r.success && r.data?.list) setGroups(r.data.list)
     })
   }, [])
@@ -152,8 +152,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
       <CardHeader>
         <CardTitle className="text-base">导出训练报告</CardTitle>
         <CardDescription>
-          按日期区间汇总组织训练数据，可限定某个分组。可选用 AI 写评语；完成后发邮件给你，并支持 24
-          小时内下载 PDF。
+          按日期区间汇总组织训练数据，可限定分组。可选生成 AI 评语；完成后发邮件，24 小时内可下载 PDF。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -200,7 +199,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
           <div className="space-y-0.5">
             <Label>启用 AI 分析</Label>
             <p className="text-xs text-muted-foreground">
-              关闭时用规则模板；开启后走与日报/周报相同的 AI，耗时更长。
+              关闭时用规则模板；开启后使用与日报/周报相同的分析模型，耗时更长。
             </p>
           </div>
           <Switch checked={useAi} onCheckedChange={setUseAi} />

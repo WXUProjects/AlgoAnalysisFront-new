@@ -156,7 +156,7 @@ export function DashboardOrgSettings() {
     } else toast.error(res.message || '保存失败，请稍后重试')
   }
 
-  // 组织设置页：团队管理员可改设置；教练/队长等 staff 也可进入导出训练报告
+  // 教练/队长：仅训练报告；团队管理员/站管：完整组织设置
   if (!isAdmin && !isOrgAdmin && !isStaff) {
     return (
       <div className="p-6 text-sm text-muted-foreground">

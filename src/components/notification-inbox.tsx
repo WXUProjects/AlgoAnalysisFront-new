@@ -136,7 +136,7 @@ export function NotificationInbox({ enabled }: { enabled: boolean }) {
             <p className="py-6 text-center text-sm text-muted-foreground">加载中…</p>
           )}
           {!loading && list.length === 0 && (
-            <p className="py-6 text-center text-sm text-muted-foreground">还没有通知</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">暂无通知</p>
           )}
           <ul className="flex flex-col gap-1.5 pb-2">
             {list.map((n) => {

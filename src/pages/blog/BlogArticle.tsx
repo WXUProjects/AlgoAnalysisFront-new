@@ -528,7 +528,7 @@ export function BlogArticlePage() {
       <ul className="divide-y">
         {comments.length === 0 ? (
           <li className="py-6 text-center text-sm text-muted-foreground">
-            还没有评论，来抢沙发吧
+            暂无评论
           </li>
         ) : (
           comments.map((c) => (

@@ -9,8 +9,27 @@ import {
   updateBlogCategory,
 } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogCategory } from '@shared/api'
@@ -22,6 +41,15 @@ export function BlogCategoriesPage() {
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
+  const [renameTarget, setRenameTarget] = useState<{ id: number; name: string } | null>(
+    null,
+  )
+  const [renameValue, setRenameValue] = useState('')
+  const [renaming, setRenaming] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(
+    null,
+  )
+  const [deleting, setDeleting] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -64,26 +92,41 @@ export function BlogCategoriesPage() {
     void load()
   }
 
-  async function handleRename(id: number, current: string) {
-    const next = prompt('新的分类名称', current)
-    if (next === null || !next.trim() || next.trim() === current) return
-    const res = await updateBlogCategory({ id, name: next.trim() })
+  function openRename(id: number, current: string) {
+    setRenameTarget({ id, name: current })
+    setRenameValue(current)
+  }
+
+  async function confirmRename() {
+    if (!renameTarget) return
+    const next = renameValue.trim()
+    if (!next || next === renameTarget.name) {
+      setRenameTarget(null)
+      return
+    }
+    setRenaming(true)
+    const res = await updateBlogCategory({ id: renameTarget.id, name: next })
+    setRenaming(false)
     if (!res.success) {
       toast.error(res.message || '保存失败')
       return
     }
     toast.success('已更新')
+    setRenameTarget(null)
     void load()
   }
 
-  async function handleDelete(id: number, n: string) {
-    if (!confirm(`删除分类「${n}」？该分类下的文章将不再归属此分类。`)) return
-    const res = await deleteBlogCategory(id)
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const res = await deleteBlogCategory(deleteTarget.id)
+    setDeleting(false)
     if (!res.success) {
       toast.error(res.message || '删除失败')
       return
     }
     toast.success('已删除')
+    setDeleteTarget(null)
     void load()
   }
 
@@ -142,7 +185,7 @@ export function BlogCategoriesPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => void handleRename(c.id, c.name)}
+                  onClick={() => openRename(c.id, c.name)}
                 >
                   <PencilIcon data-icon="inline-start" />
                   编辑
@@ -152,7 +195,7 @@ export function BlogCategoriesPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => void handleDelete(c.id, c.name)}
+                    onClick={() => setDeleteTarget({ id: c.id, name: c.name })}
                   >
                     <Trash2Icon data-icon="inline-start" />
                     删除
@@ -167,6 +210,71 @@ export function BlogCategoriesPage() {
       <Button variant="outline" asChild>
         <Link to={`/blog/${username}/manage`}>返回管理</Link>
       </Button>
+
+      <Dialog
+        open={!!renameTarget}
+        onOpenChange={(open) => {
+          if (!open && !renaming) setRenameTarget(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>修改分类名称</DialogTitle>
+            <DialogDescription>当前：{renameTarget?.name}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="rename-cat">新名称</Label>
+            <Input
+              id="rename-cat"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void confirmRename()
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={renaming}
+              onClick={() => setRenameTarget(null)}
+            >
+              取消
+            </Button>
+            <Button disabled={renaming} onClick={() => void confirmRename()}>
+              {renaming ? '保存中…' : '保存'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteTarget(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>删除分类？</AlertDialogTitle>
+            <AlertDialogDescription>
+              删除分类「{deleteTarget?.name}」？该分类下的文章将不再归属此分类。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(e) => {
+                e.preventDefault()
+                void confirmDelete()
+              }}
+            >
+              {deleting ? '删除中…' : '确认删除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

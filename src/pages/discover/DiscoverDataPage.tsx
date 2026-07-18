@@ -32,7 +32,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { todayYmd } from '@/lib/format'
+import { heatmapStartYmd, todayYmd } from '@/lib/format'
 
 type Props = {
   isLogin: boolean
@@ -130,10 +130,12 @@ export function DiscoverDataPage({ isLogin, userId }: Props) {
       setAcHeat([])
       setAcHeatLoaded(false)
       setHeatTab('submit')
-      const uid = isLogin && userId ? userId : -1
+      const periodUid = isLogin && userId ? userId : -2
+      const heatUid = isLogin && userId ? userId : -2
       const end = todayYmd()
+      const start = heatmapStartYmd(end)
       const tasks: Promise<unknown>[] = [
-        getPeriod(uid).then((res) => {
+        getPeriod(periodUid).then((res) => {
           if (cancelled) return
           if (res.success && res.data) setPeriod(res.data)
           else {
@@ -144,10 +146,10 @@ export function DiscoverDataPage({ isLogin, userId }: Props) {
           }
         }),
         getHeatmap({
-          startDate: '20230101',
+          startDate: start,
           endDate: end,
           isAc: false,
-          ...(uid > 0 ? { userId: uid } : {}),
+          userId: heatUid,
         }).then((res) => {
           if (!cancelled && res.success) setSubmitHeat(res.data || [])
         }),
@@ -189,12 +191,13 @@ export function DiscoverDataPage({ isLogin, userId }: Props) {
     async function loadAc() {
       setAcHeatLoading(true)
       try {
-        const uid = isLogin && userId ? userId : -1
+        const heatUid = isLogin && userId ? userId : -2
+        const end = todayYmd()
         const res = await getHeatmap({
-          startDate: '20230101',
-          endDate: todayYmd(),
+          startDate: heatmapStartYmd(end),
+          endDate: end,
           isAc: true,
-          ...(uid > 0 ? { userId: uid } : {}),
+          userId: heatUid,
         })
         if (cancelled) return
         if (res.success) setAcHeat(res.data || [])

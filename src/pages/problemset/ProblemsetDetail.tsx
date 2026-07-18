@@ -31,6 +31,16 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -91,6 +101,12 @@ export function ProblemsetDetail() {
   const [editVis, setEditVis] = useState<ProblemsetVisibility>('private')
   const [editPw, setEditPw] = useState('')
   const [saving, setSaving] = useState(false)
+  const [removeTarget, setRemoveTarget] = useState<{
+    problemId: number
+    title: string
+  } | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [busyConfirm, setBusyConfirm] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -150,27 +166,35 @@ export function ProblemsetDetail() {
     setSet({ ...set, liked: res.data.liked, likeCount: res.data.likeCount })
   }
 
-  async function handleRemove(problemId: number, title: string) {
-    if (!set) return
-    if (!confirm(`从题单中移除「${title || problemId}」？`)) return
-    const res = await removeProblemFromSet(set.id, problemId)
+  function requestRemove(problemId: number, title: string) {
+    setRemoveTarget({ problemId, title })
+  }
+
+  async function confirmRemove() {
+    if (!set || !removeTarget) return
+    setBusyConfirm(true)
+    const res = await removeProblemFromSet(set.id, removeTarget.problemId)
+    setBusyConfirm(false)
     if (!res.success) {
       toast.error(res.message || '移除失败')
       return
     }
     toast.success('已移除')
+    setRemoveTarget(null)
     void load()
   }
 
-  async function handleDelete() {
+  async function confirmDeleteSet() {
     if (!set || set.isSystem) return
-    if (!confirm(`确定删除题单「${set.title}」？删除后无法恢复。`)) return
+    setBusyConfirm(true)
     const res = await deleteProblemset(set.id)
+    setBusyConfirm(false)
     if (!res.success) {
       toast.error(res.message || '删除失败')
       return
     }
     toast.success('已删除')
+    setDeleteOpen(false)
     navigate('/problemset')
   }
 
@@ -398,7 +422,7 @@ export function ProblemsetDetail() {
                   type="button"
                   size="sm"
                   variant="destructive"
-                  onClick={() => void handleDelete()}
+                  onClick={() => setDeleteOpen(true)}
                 >
                   <Trash2Icon data-icon="inline-start" />
                   删除
@@ -466,7 +490,7 @@ export function ProblemsetDetail() {
                           variant="ghost"
                           className="text-destructive"
                           onClick={() =>
-                            void handleRemove(
+                            requestRemove(
                               it.problemId,
                               it.title || String(it.problemId),
                             )
@@ -490,7 +514,7 @@ export function ProblemsetDetail() {
           <DialogHeader>
             <DialogTitle>向题单加题</DialogTitle>
             <DialogDescription>
-              可从题库搜索添加，或直接粘贴 OJ 题目链接。若题面尚未入库，会在后台静默拉取（不跑 AI 分析）。
+              可从题库搜索添加，或粘贴 OJ 题目链接。未入库题面会自动获取，不进行标签分析。
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2">
@@ -661,6 +685,62 @@ export function ProblemsetDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={!!removeTarget}
+        onOpenChange={(open) => {
+          if (!open && !busyConfirm) setRemoveTarget(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>从题单移除？</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定从题单中移除「{removeTarget?.title || removeTarget?.problemId}」？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busyConfirm}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busyConfirm}
+              onClick={(e) => {
+                e.preventDefault()
+                void confirmRemove()
+              }}
+            >
+              {busyConfirm ? '处理中…' : '确认移除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          if (!open && !busyConfirm) setDeleteOpen(false)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>删除题单？</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定删除题单「{set.title}」？删除后无法恢复。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busyConfirm}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busyConfirm}
+              onClick={(e) => {
+                e.preventDefault()
+                void confirmDeleteSet()
+              }}
+            >
+              {busyConfirm ? '删除中…' : '确认删除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   )
 }

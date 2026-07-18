@@ -149,7 +149,7 @@ export function RecommendStream() {
               <EmptyMedia variant="icon">
                 <CompassIcon />
               </EmptyMedia>
-              <EmptyTitle>还没有可推荐的内容</EmptyTitle>
+              <EmptyTitle>暂无可推荐内容</EmptyTitle>
               <EmptyDescription>
                 {isPublicOrg
                   ? '全站有新的题解或讨论后，会出现在这里。也可切换到「动态」看提交时间线。'

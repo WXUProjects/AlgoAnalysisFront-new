@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { listGroups } from '@/api/group'
+import { listAllGroups } from '@/api/group'
 import {
   clearDormant,
   deleteUser,
@@ -161,7 +161,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
 
   useEffect(() => {
     if (isSite) return
-    void listGroups(1, 100).then((r) => {
+    void listAllGroups().then((r) => {
       if (r.success && r.data) setGroups(r.data.list)
     })
   }, [isSite, currentOrg?.id])
@@ -906,8 +906,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
               用户详情 · {detailUser?.name || detailUser?.username}
             </DialogTitle>
             <DialogDescription>
-              站点级操作与题面流水线开关。默认仅非公共域组织成员触发抓取题面与
-              AI；可对个人强制开/关。
+              站点级操作与题面自动识别开关。默认仅非公共域组织成员会同步题面与
+              AI 标签；可对个人强制开/关。
             </DialogDescription>
           </DialogHeader>
           {detailUser ? (

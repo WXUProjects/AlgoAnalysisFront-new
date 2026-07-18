@@ -295,7 +295,7 @@ export function ProblemsetHome() {
           ) : mine.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
-                还没有题单，点右上角新建一个吧
+                暂无题单，可点右上角新建
               </CardContent>
             </Card>
           ) : (
@@ -338,7 +338,7 @@ export function ProblemsetHome() {
           ) : square.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
-                广场里还没有公开题单
+                暂无公开题单
               </CardContent>
             </Card>
           ) : (
@@ -367,7 +367,7 @@ export function ProblemsetHome() {
           <DialogHeader>
             <DialogTitle>新建题单</DialogTitle>
             <DialogDescription>
-              可选私有、密码保护或公开到广场。收藏与待做会自动为你准备好。
+              可选私有、密码或公开。系统会创建收藏与待做题单。
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>

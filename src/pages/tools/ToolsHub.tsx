@@ -48,16 +48,16 @@ const tools: LinkItem[] = [
     kind: 'internal',
     to: '/tools/code-image',
     title: '代码转图片',
-    desc: '把代码导出成精美图片，可调主题、字体、行号，并自动识别语言。',
+    desc: '将代码导出为图片，可调主题、字体、行号，并识别语言。',
     icon: CameraIcon,
   },
   {
     kind: 'external',
     href: 'https://guadart.fun/',
     title: 'Guadart 生图站',
-    desc: '作者维护的 AI 绘图站，支持多种模型。欢迎体验，也是对 GoAlgo 的支持。',
+    desc: '作者维护的绘图站，支持多种模型。',
     icon: ImageIcon,
-    badge: '推荐',
+    badge: '外链',
   },
 ]
 
@@ -204,7 +204,7 @@ export function ToolsHub() {
     <PageShell className="mx-auto w-full max-w-2xl gap-8 p-6">
       <Section
         title="工具"
-        subtitle="常用小工具合集，之后还会继续增加。"
+        subtitle="常用小工具"
         items={tools}
         isLogin={isLogin}
       />

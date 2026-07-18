@@ -38,11 +38,11 @@ export function BlogAboutPage() {
             <Link to={`/blog/${username}`}>首页</Link>
             浏览全部文章，或前往
             <Link to="/blog-plaza">博客广场</Link>
-            发现更多作者。
+            浏览其他作者。
           </p>
           {theme.socialLinks.length > 0 ? (
             <p>
-              侧栏底部可以找到作者留下的外链。
+              侧栏底部可查看作者外链。
             </p>
           ) : null}
         </div>
@@ -81,10 +81,10 @@ export function BlogAboutPage() {
             <Link to={`/blog/${username}`}>首页</Link>
             浏览全部文章，或前往
             <Link to="/blog-plaza">博客广场</Link>
-            发现更多作者。
+            浏览其他作者。
           </p>
           {theme.socialLinks.length > 0 ? (
-            <p>右侧资料卡可以找到作者留下的外链。</p>
+            <p>右侧资料卡可查看作者外链。</p>
           ) : null}
         </div>
       </article>

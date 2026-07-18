@@ -144,7 +144,7 @@ export function ContestRecords() {
         {!loading && !list.length && (
           <Card className="py-4">
             <CardContent className="px-4 text-sm text-muted-foreground">
-              暂时还没有比赛记录
+              暂无比赛记录
             </CardContent>
           </Card>
         )}

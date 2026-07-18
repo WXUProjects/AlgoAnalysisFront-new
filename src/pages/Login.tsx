@@ -49,12 +49,12 @@ export function Login() {
         toast.message(msg, {
           description:
             days && days > 0
-              ? `你已经有 ${days} 天没登录了。正在后台同步做题数据，完成后请刷新页面查看。`
-              : '正在后台同步你的做题数据，可能需要几分钟；完成后请刷新页面查看。',
+              ? `距上次登录 ${days} 天。正在同步做题数据，完成后请刷新页面。`
+              : '正在同步做题数据，完成后请刷新页面。',
           duration: 8000,
         })
       } else if (days && days >= 3) {
-        toast.success(msg || `欢迎回来！你已经有 ${days} 天没登录了。`)
+        toast.success(`登录成功 · 距上次登录 ${days} 天`)
       } else {
         toast.success(msg)
       }
@@ -115,7 +115,7 @@ export function Login() {
             <p className="text-sm text-muted-foreground">
               没有账号？{' '}
               <Link to="/register" className="text-foreground underline-offset-4 hover:underline">
-                立即注册
+                注册
               </Link>
             </p>
           </CardFooter>

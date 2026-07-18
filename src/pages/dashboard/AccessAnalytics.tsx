@@ -285,9 +285,9 @@ export function DashboardAccessAnalytics() {
       hint: '当前进行中的请求',
     },
     {
-      label: '爬虫入队',
+      label: '同步任务次数',
       value: data?.spiderEnqueuedToday,
-      hint: '今日任务入队次数',
+      hint: '今日安排的数据同步次数',
     },
     {
       label: '爬虫成功 / 失败',

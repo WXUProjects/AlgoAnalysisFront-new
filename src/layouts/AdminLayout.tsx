@@ -6,6 +6,7 @@ import {
   BarChart3Icon,
   CalendarIcon,
   ClipboardCheckIcon,
+  FileSpreadsheetIcon,
   KeyRoundIcon,
   LayoutDashboardIcon,
   LogOutIcon,
@@ -75,8 +76,9 @@ export function AdminLayout() {
       : '组织后台'
   const title = resolvePageTitle(pathname) || staffLabel
   useDocumentTitle(title, brand)
-  // 组织设置：管理员改配置；教练/队长等 staff 可导出训练报告
-  const canOrgSettings = isAdmin || isOrgAdmin || isStaff
+  // 组织设置（品牌/识别码/任命）仅 org_admin / 站管；教练/队长单独「训练报告」
+  const canOrgSettings = isAdmin || isOrgAdmin
+  const canTrainingReport = isStaff
   const showTeamNav = isStaff
   function handleLogout() {
     logout()
@@ -189,6 +191,23 @@ export function AdminLayout() {
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                    {canTrainingReport && !canOrgSettings && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={
+                            pathname.startsWith('/admin/org') &&
+                            !pathname.startsWith('/admin/orgs')
+                          }
+                          tooltip="训练报告"
+                        >
+                          <NavLink to="/admin/org">
+                            <FileSpreadsheetIcon />
+                            <span>训练报告</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
                     {canOrgSettings && (
                       <SidebarMenuItem>
                         <SidebarMenuButton

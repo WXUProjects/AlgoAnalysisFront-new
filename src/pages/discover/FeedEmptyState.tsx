@@ -121,7 +121,7 @@ export function FeedEmptyState({
       return
     }
     setRelationMap((m) => ({ ...m, [userId]: true }))
-    toast.success('已关注，正在刷新动态…')
+    toast.success('已关注')
     onFollowed()
   }
 
@@ -132,19 +132,19 @@ export function FeedEmptyState({
           <EmptyMedia variant="icon">
             <UsersIcon />
           </EmptyMedia>
-          <EmptyTitle>你的动态空空如也</EmptyTitle>
+          <EmptyTitle>暂无动态</EmptyTitle>
           <EmptyDescription>
             {followingOnly
-              ? '关注优秀的算法同行，这里会按时间展示他们的最新提交与题解干货。'
-              : '组织里暂时还没有新动态。也可以关注活跃同学，动态会马上亮起来。'}
+              ? '关注他人后，这里会显示其提交与题解。'
+              : '暂无组织动态。可关注活跃用户以获取更新。'}
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
 
       <section className="rounded-xl border bg-card/50 px-4 py-4">
-        <h3 className="text-sm font-semibold">为你推荐的活跃创作者</h3>
+        <h3 className="text-sm font-semibold">推荐关注</h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          近 7 日 AC 表现突出的同学 · 一键关注后自动刷新动态
+          近 7 日 AC 较多 · 关注后刷新列表
         </p>
         <ul className="mt-3 flex flex-col divide-y">
           {loading &&
@@ -201,7 +201,7 @@ export function FeedEmptyState({
             })}
           {!loading && !creators.length && (
             <li className="py-4 text-center text-sm text-muted-foreground">
-              暂时没有可推荐的创作者
+              暂无可推荐用户
             </li>
           )}
         </ul>

@@ -564,7 +564,7 @@ export function QuestionBankDetail() {
       {problem.solutions.length > 0 && (
         <Card className="gap-3 py-4">
           <CardHeader className="px-4">
-            <CardTitle className="text-base">AI 推荐解法</CardTitle>
+            <CardTitle className="text-base">AI 参考解法</CardTitle>
             <CardDescription>由 AI 生成，仅供参考（与用户题解栏无关）</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 px-4 sm:grid-cols-2">

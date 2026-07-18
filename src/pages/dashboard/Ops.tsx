@@ -84,7 +84,7 @@ export function DashboardOps() {
     const d = res.data
     toast.success(
       res.message ||
-        `已清空：明细 ${d?.deletedSubmitLogs ?? 0} · 已入队 ${d?.enqueuedUsers ?? 0} 人`,
+        `已清空：明细 ${d?.deletedSubmitLogs ?? 0} · 已重新排队 ${d?.enqueuedUsers ?? 0} 人`,
     )
     setConfirm('')
     void load()

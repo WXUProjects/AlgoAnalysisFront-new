@@ -35,12 +35,12 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { formatTime, todayYmd } from '@/lib/format'
+import { formatTime, heatmapStartYmd, todayYmd } from '@/lib/format'
 
 const OJ_LINKS = [
   {
     label: '牛客竞赛',
-    desc: '专业的编程算法训练平台',
+    desc: 'OJ 平台',
     href: 'https://ac.nowcoder.com/',
     icon: '/images/ac.nowcoder.webp',
   },
@@ -210,21 +210,24 @@ export function Home() {
     let cancelled = false
     async function load() {
       setLoading(true)
-      const uid = isLogin && user ? user.userId : -1
+      // 登录：个人；未登录：全站公开聚合 userId=-2
+      const periodUid = isLogin && user ? user.userId : -2
+      const heatUid = isLogin && user ? user.userId : -2
       const end = todayYmd()
+      const start = heatmapStartYmd(end)
       setAcHeat([])
       setAcHeatLoaded(false)
       setHeatTab('submit')
       const tasks: Promise<unknown>[] = [
-        getPeriod(uid).then((res) => {
+        getPeriod(periodUid).then((res) => {
           if (!cancelled && res.success) setPeriod(res.data)
           else if (!res.success) toast.error(res.message || '统计加载失败，请稍后重试')
         }),
         getHeatmap({
-          startDate: '20230101',
+          startDate: start,
           endDate: end,
           isAc: false,
-          ...(uid > 0 ? { userId: uid } : {}),
+          userId: heatUid,
         }).then((res) => {
           if (!cancelled && res.success) setSubmitHeat(res.data || [])
         }),
@@ -257,12 +260,13 @@ export function Home() {
     async function loadAc() {
       setAcHeatLoading(true)
       try {
-        const uid = isLogin && user ? user.userId : -1
+        const heatUid = isLogin && user ? user.userId : -2
+        const end = todayYmd()
         const res = await getHeatmap({
-          startDate: '20230101',
-          endDate: todayYmd(),
+          startDate: heatmapStartYmd(end),
+          endDate: end,
           isAc: true,
-          ...(uid > 0 ? { userId: uid } : {}),
+          userId: heatUid,
         })
         if (cancelled) return
         if (res.success) setAcHeat(res.data || [])
@@ -334,7 +338,7 @@ export function Home() {
           <div className="flex items-center gap-2">
             <ChartLineIcon className="size-4 text-muted-foreground" />
             <h2 className="text-base font-semibold">
-              {isLogin ? '' : '全站'}数据统计
+              {isLogin ? '我的' : '全站'}数据统计
             </h2>
           </div>
           <Tabs value={mode} onValueChange={(v) => setMode(v as 'submit' | 'ac')}>
@@ -502,7 +506,7 @@ export function Home() {
                   })}
               {!loading && !bulletins.length && (
                 <p className="py-4 text-center text-sm text-muted-foreground">
-                  暂时还没有公告
+                  暂无公告
                 </p>
               )}
             </CardContent>

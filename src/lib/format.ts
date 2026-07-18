@@ -78,6 +78,23 @@ export function daysAgoYmd(offsetDays: number): string {
   return dateToYmd(d)
 }
 
+/** 与后端 heatmapMaxDays=400 对齐的默认热力区间起点 */
+export const HEATMAP_MAX_DAYS = 400
+
+export function heatmapStartYmd(endYmd?: string): string {
+  if (!endYmd) return daysAgoYmd(HEATMAP_MAX_DAYS)
+  const end = ymdToDate(endYmd)
+  if (!end) return daysAgoYmd(HEATMAP_MAX_DAYS)
+  end.setDate(end.getDate() - HEATMAP_MAX_DAYS)
+  return dateToYmd(end)
+}
+
+function ymdToDate(ymd: string): Date | null {
+  const key = ymdToDateKey(ymd)
+  const t = new Date(`${key}T00:00:00`)
+  return Number.isNaN(t.getTime()) ? null : t
+}
+
 function dateToYmd(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')

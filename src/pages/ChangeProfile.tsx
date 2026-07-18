@@ -109,6 +109,14 @@ export function ChangeProfile() {
     }
   }, [])
 
+  useEffect(() => {
+    if (window.location.hash !== '#privacy') return
+    const t = window.setTimeout(() => {
+      document.getElementById('privacy')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
+    return () => window.clearTimeout(t)
+  }, [privacyLoading])
+
   async function handleSendEmailCode() {
     if (!emailOk(email)) {
       toast.error('请输入有效邮箱')
@@ -169,13 +177,13 @@ export function ChangeProfile() {
     }
     if (kind === 'daily') {
       if (checked && profile && profile.emailAllowedByOrg === false) {
-        toast.error('当前没有组织为你开通日报邮件，无法开启')
+        toast.error('当前没有组织开通日报邮件，无法开启')
         return
       }
       setEmailOn(checked)
     } else {
       if (checked && profile && profile.emailWeeklyAllowedByOrg === false) {
-        toast.error('当前没有组织为你开通周报（需教练/队长或管理员权限）')
+        toast.error('当前没有组织开通周报（需教练/队长或管理员权限）')
         return
       }
       setWeeklyOn(checked)
@@ -368,7 +376,7 @@ export function ChangeProfile() {
                 </div>
                 {profile?.emailAllowedByOrg === false ? (
                   <p className="text-xs text-muted-foreground">
-                    当前没有组织为你开通日报邮件，无法开启；组织关闭权限后会自动关掉。
+                    当前没有组织开通日报邮件，无法开启；组织关闭权限后会自动关掉。
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
@@ -482,7 +490,7 @@ export function ChangeProfile() {
         </form>
       </Card>
 
-      <Card className="gap-4 py-4">
+      <Card id="privacy" className="scroll-mt-20 gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>隐私设置</CardTitle>
           <CardDescription>

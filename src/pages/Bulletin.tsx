@@ -85,7 +85,7 @@ export function Bulletin() {
         {!loading && !list.length && (
           <Card className="py-4">
             <CardHeader className="px-4">
-              <CardDescription>暂时还没有公告</CardDescription>
+              <CardDescription>暂无公告</CardDescription>
             </CardHeader>
           </Card>
         )}

@@ -199,12 +199,12 @@ export function AllActivities() {
                 <EmptyMedia variant="icon">
                   <ActivityIcon />
                 </EmptyMedia>
-                <EmptyTitle>暂时还没有动态</EmptyTitle>
+                <EmptyTitle>暂无动态</EmptyTitle>
                 <EmptyDescription>
                   {followingOnly
                     ? '关注队友后，这里会显示他们的提交动态'
                     : userMode
-                      ? '该用户还没有提交记录'
+                      ? '该用户暂无提交记录'
                       : '组织内有新的提交时会出现在这里'}
                 </EmptyDescription>
               </EmptyHeader>

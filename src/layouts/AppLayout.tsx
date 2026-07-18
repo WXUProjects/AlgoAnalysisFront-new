@@ -279,15 +279,15 @@ export function AppLayout() {
 
                   {isLogin && isStaff && (
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild tooltip={adminLabel}>
-                        <Link
-                          to="/admin"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/admin')}
+                        tooltip={adminLabel}
+                      >
+                        <NavLink to="/admin">
                           <LayoutDashboardIcon />
                           <span>{adminLabel}</span>
-                        </Link>
+                        </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}

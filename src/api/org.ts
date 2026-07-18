@@ -16,15 +16,21 @@ function asList<T>(raw: unknown): T[] {
   return []
 }
 
+/** 业务成功：code 缺省或 0（与 site/training-report 一致；2/3 为失败） */
+function bizOk(code: unknown): boolean {
+  return code === undefined || code === null || code === 0 || code === '0'
+}
+
 export async function listMyOrgs(opts?: { all?: boolean }) {
   const res = await get<{ code?: number; message?: string; list?: OrgInfo[] }>(
     endpoints.user.org.list,
     opts?.all ? { all: '1' } : undefined,
   )
+  const body = (res.data ?? res.raw ?? {}) as { code?: number; message?: string; list?: OrgInfo[] }
   return {
-    success: res.success && (res.data as { code?: number })?.code !== 1,
-    message: (res.data as { message?: string })?.message || res.message,
-    list: asList<OrgInfo>((res.data as { list?: OrgInfo[] }) ?? res.data),
+    success: res.success && bizOk(body?.code),
+    message: body?.message || res.message,
+    list: asList<OrgInfo>(body.list ?? res.data),
   }
 }
 
@@ -50,7 +56,7 @@ export async function discoverOrgs(params?: {
     isCurrent: o.isCurrent === undefined ? undefined : bool(o.isCurrent),
   }))
   return {
-    success: res.success && (raw.code === undefined || num(raw.code) === 0),
+    success: res.success && bizOk(raw.code),
     message: str(raw.message) || res.message,
     list,
     total: num(raw.total, list.length),
@@ -70,7 +76,7 @@ export async function addOrgMember(payload: {
   )
   const body = res.data as { code?: number; message?: string; userId?: number }
   return {
-    success: res.success && body?.code !== 1,
+    success: res.success && bizOk(body?.code),
     message: body?.message || res.message,
     userId: body?.userId,
   }
@@ -99,7 +105,7 @@ export async function switchOrg(orgId: number) {
     jwt.setNewToken(body.jwtToken)
   }
   return {
-    success: res.success && body?.code !== 1,
+    success: res.success && bizOk(body?.code),
     message: body?.message || res.message,
     jwtToken: body?.jwtToken,
   }
@@ -112,7 +118,7 @@ export async function joinOrg(inviteCode: string, orgDisplayName: string) {
   })
   const body = res.data as { code?: number; message?: string }
   return {
-    success: res.success && body?.code !== 1,
+    success: res.success && bizOk(body?.code),
     message: body?.message || res.message,
   }
 }
@@ -128,7 +134,7 @@ export async function setOrgDisplayName(payload: {
   )
   const body = res.data as { code?: number; message?: string }
   return {
-    success: res.success && body?.code !== 1,
+    success: res.success && bizOk(body?.code),
     message: body?.message || res.message,
   }
 }
@@ -143,8 +149,9 @@ export async function leaveOrg(orgId: number) {
     jwt.setNewToken(body.jwtToken)
   }
   return {
-    success: res.success && body?.code !== 1,
+    success: res.success && bizOk(body?.code),
     message: body?.message || res.message,
+    jwtToken: body?.jwtToken,
   }
 }
 
@@ -166,7 +173,7 @@ export async function createOrg(payload: {
       ? (res.data as OrgInfo)
       : undefined)
   return {
-    success: res.success && raw?.code !== 1,
+    success: res.success && bizOk(raw?.code),
     message: raw?.message || res.message,
     data,
   }
@@ -184,7 +191,7 @@ export async function updateOrg(payload: Record<string, unknown>) {
       ? (res.data as OrgInfo)
       : undefined)
   return {
-    success: res.success && raw?.code !== 1,
+    success: res.success && bizOk(raw?.code),
     message: raw?.message || res.message,
     data,
   }
@@ -197,7 +204,7 @@ export async function deleteOrg(id: number) {
   )
   const body = res.data as { code?: number; message?: string }
   return {
-    success: res.success && body?.code !== 1,
+    success: res.success && bizOk(body?.code),
     message: body?.message || res.message,
   }
 }
@@ -238,7 +245,7 @@ export async function setOrgMemberRole(orgId: number, userId: number, role: stri
   const res = await post(endpoints.user.org.setRole, { orgId, userId, role })
   const body = res.data as { code?: number; message?: string }
   return {
-    success: res.success && body?.code !== 1,
+    success: res.success && bizOk(body?.code),
     message: body?.message || res.message,
   }
 }
@@ -264,7 +271,7 @@ export async function rotateInvite(orgId: number) {
   )
   const body = res.data as { code?: number; inviteCode?: string; message?: string }
   return {
-    success: res.success && body?.code !== 1,
+    success: res.success && bizOk(body?.code),
     inviteCode: body?.inviteCode,
     message: body?.message || res.message,
   }
@@ -282,7 +289,7 @@ export async function reviewJoinRequest(id: number, approve: boolean) {
   const res = await post(endpoints.user.org.joinReview, { id, approve })
   const body = res.data as { code?: number; message?: string }
   return {
-    success: res.success && body?.code !== 1,
+    success: res.success && bizOk(body?.code),
     message: body?.message || res.message,
   }
 }

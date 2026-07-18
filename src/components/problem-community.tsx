@@ -230,7 +230,7 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
           ))}
           {!solutions.length && (
             <li className="px-3 py-8 text-center text-sm text-muted-foreground">
-              还没有用户题解
+              暂无题解
             </li>
           )}
         </ul>
@@ -518,7 +518,7 @@ export function ProblemComments({
           ))}
           {!comments.length && (
             <li className="px-3 py-8 text-center text-sm text-muted-foreground">
-              {onSolution ? '还没有评论，来聊一聊这篇题解吧' : '还没有评论，来抢沙发吧'}
+              暂无评论
             </li>
           )}
         </ul>

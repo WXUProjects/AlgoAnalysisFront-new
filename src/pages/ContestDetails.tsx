@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ExternalLinkIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { getContestRanking } from '@/api/contest'
-import { listGroups } from '@/api/group'
+import { listAllGroups } from '@/api/group'
 import type { ContestItem, ContestRankingItem, GroupInfo } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
@@ -57,7 +57,7 @@ export function ContestDetails() {
 
   useEffect(() => {
     if (!isLogin) return
-    void listGroups(1, 50).then((res) => {
+    void listAllGroups().then((res) => {
       if (res.success && res.data) setGroups(res.data.list)
     })
   }, [isLogin])

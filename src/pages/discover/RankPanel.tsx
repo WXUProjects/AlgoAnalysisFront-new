@@ -157,7 +157,7 @@ export function RankPanel() {
                         <EmptyMedia variant="icon">
                           <TrophyIcon />
                         </EmptyMedia>
-                        <EmptyTitle>暂时还没有排行</EmptyTitle>
+                        <EmptyTitle>暂无排行</EmptyTitle>
                         <EmptyDescription>
                           近 7 日有提交后会出现在这里
                         </EmptyDescription>

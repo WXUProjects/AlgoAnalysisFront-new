@@ -199,7 +199,7 @@ export function Register() {
             <p className="text-sm text-muted-foreground">
               已有账号？{' '}
               <Link to="/login" className="text-foreground underline-offset-4 hover:underline">
-                立即登录
+                登录
               </Link>
             </p>
           </CardFooter>

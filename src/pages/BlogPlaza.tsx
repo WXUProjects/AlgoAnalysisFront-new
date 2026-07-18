@@ -197,7 +197,7 @@ export function BlogPlaza() {
 
           {sort === 'recommend' ? (
             <p className="text-xs text-muted-foreground">
-              精选：作者勾选「开放到主站推荐」的公开文章
+              仅显示作者设为「推荐到主站」的公开文章
             </p>
           ) : null}
 
@@ -217,8 +217,8 @@ export function BlogPlaza() {
                   {keyword
                     ? '没有找到相关文章'
                     : sort === 'recommend'
-                      ? '还没有精选文章'
-                      : '还没有公开文章'}
+                      ? '暂无推荐文章'
+                      : '暂无公开文章'}
                 </EmptyTitle>
                 <EmptyDescription>
                   {keyword

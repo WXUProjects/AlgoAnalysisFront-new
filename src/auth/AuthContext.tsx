@@ -20,7 +20,6 @@ import { jwt, type JwtPayload } from '@/lib/jwt'
 import {
   isCaptainFromPayload,
   isCoachFromPayload,
-  isMemberLikeRole,
   isOrgAdminFromPayload,
   isSiteAdminFromPayload,
   isStaffFromPayload,
@@ -73,7 +72,8 @@ function deriveFlags(payload: JwtPayload | null) {
     isCoach: isCoachFromPayload(payload),
     isCaptain: isCaptainFromPayload(payload),
     isStaff: isStaffFromPayload(payload),
-    isMemberLike: isMemberLikeRole(payload?.roleId) || Boolean(payload),
+    // 任意登录用户均可走队员侧（资料/交题等）
+    isMemberLike: Boolean(payload),
   }
 }
 

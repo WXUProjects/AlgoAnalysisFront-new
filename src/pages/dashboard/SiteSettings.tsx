@@ -597,7 +597,7 @@ export function DashboardSiteSettings() {
 
         <Card className="gap-3 py-4">
           <CardHeader className="px-4 pb-0">
-            <CardTitle>题库智能分析</CardTitle>
+            <CardTitle>题库分析</CardTitle>
             <CardDescription>
               用于题面整理与标签分析的 AI 服务
             </CardDescription>

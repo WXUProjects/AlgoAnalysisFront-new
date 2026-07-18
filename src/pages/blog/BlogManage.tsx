@@ -10,6 +10,16 @@ import {
 import { toast } from 'sonner'
 import { deleteBlogArticle, listMyBlogArticles } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
@@ -30,6 +40,10 @@ export function BlogManage() {
   const [loading, setLoading] = useState(true)
   const [keyword, setKeyword] = useState('')
   const [q, setQ] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; title: string } | null>(
+    null,
+  )
+  const [deleting, setDeleting] = useState(false)
 
   const load = async (kw = keyword) => {
     setLoading(true)
@@ -71,14 +85,17 @@ export function BlogManage() {
     )
   }
 
-  async function handleDelete(id: number, title: string) {
-    if (!confirm(`确定删除「${title}」？删除后无法恢复。`)) return
-    const res = await deleteBlogArticle(id)
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const res = await deleteBlogArticle(deleteTarget.id)
+    setDeleting(false)
     if (!res.success) {
       toast.error(res.message || '删除失败')
       return
     }
     toast.success('已删除')
+    setDeleteTarget(null)
     void load()
   }
 
@@ -122,7 +139,7 @@ export function BlogManage() {
         </div>
       ) : list.length === 0 ? (
         <div className="rounded-lg border border-dashed py-16 text-center text-muted-foreground">
-          还没有文章，点击「写文章」开始
+          暂无文章，可点击「写文章」
         </div>
       ) : (
         <ul className="divide-y rounded-xl border bg-card">
@@ -166,7 +183,7 @@ export function BlogManage() {
                   variant="ghost"
                   size="icon-sm"
                   className="text-muted-foreground"
-                  onClick={() => void handleDelete(a.id, a.title)}
+                  onClick={() => setDeleteTarget({ id: a.id, title: a.title })}
                   aria-label="删除"
                 >
                   <Trash2Icon className="size-3.5" />
@@ -176,6 +193,34 @@ export function BlogManage() {
           ))}
         </ul>
       )}
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteTarget(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>删除文章？</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定删除「{deleteTarget?.title}」？删除后无法恢复。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(e) => {
+                e.preventDefault()
+                void confirmDelete()
+              }}
+            >
+              {deleting ? '删除中…' : '确认删除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

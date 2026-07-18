@@ -285,7 +285,7 @@ function ProfilePanels({
 
 export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) {
   if (!data) {
-    return <p className="text-sm text-muted-foreground">暂时还没有算法画像，多通过一些题目后再来看</p>
+    return <p className="text-sm text-muted-foreground">暂无数据，通过题目后生成</p>
   }
 
   const radarAll = data.radar

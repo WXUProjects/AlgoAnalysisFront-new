@@ -61,7 +61,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatActivityProblemTitle } from '@/lib/activity-title'
 import { difficultyBadgeClass } from '@/lib/difficulty'
-import { formatTime, todayYmd } from '@/lib/format'
+import { formatTime, heatmapStartYmd, todayYmd } from '@/lib/format'
 import { getPlatformHomeLink, getSubmitLink, OJ_PLATFORMS } from '@/lib/link'
 import { cn } from '@/lib/utils'
 
@@ -181,7 +181,7 @@ export function Profile() {
       idRes,
     ] = await Promise.all([
       getHeatmap({
-        startDate: '20230101',
+        startDate: heatmapStartYmd(end),
         endDate: end,
         isAc: false,
         userId: uid,
@@ -237,9 +237,10 @@ export function Profile() {
     async function loadAc() {
       setAcHeatLoading(true)
       try {
+        const end = todayYmd()
         const res = await getHeatmap({
-          startDate: '20230101',
-          endDate: todayYmd(),
+          startDate: heatmapStartYmd(end),
+          endDate: end,
           isAc: true,
           userId: targetId,
         })
@@ -675,7 +676,7 @@ export function Profile() {
                   })}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">暂时还没有动态</p>
+                <p className="text-sm text-muted-foreground">暂无动态</p>
               )}
             </CardContent>
           </Card>
@@ -806,7 +807,7 @@ export function Profile() {
                 </div>
               ))}
               {!contests.length && (
-                <p className="text-sm text-muted-foreground">暂时还没有比赛</p>
+                <p className="text-sm text-muted-foreground">暂无比赛</p>
               )}
             </CardContent>
           </Card>
