@@ -203,8 +203,9 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
       <CardHeader>
         <CardTitle className="text-base">导出训练报告</CardTitle>
         <CardDescription>
-          按日期区间汇总组织训练数据（提交、排行、标签、比赛、博客、动态等），可限定分组。可选 AI
-          多维度分析（最长约 8 个月）；完成后发邮件，24 小时内可下载报告（HTML）。
+          汇总全员活跃排行（剔除未提交）、题目标签、做题概览、提交动态、比赛、博客等。报告 HTML
+          自适应手机与电脑。可选 AI 多维分析（最长约 8 个月）；完成后邮件通知，24
+          小时内可下载。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -251,7 +252,8 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
           <div className="space-y-0.5">
             <Label>启用 AI 分析</Label>
             <p className="text-xs text-muted-foreground">
-              关闭时用精美规则模板回填数据；开启后多维 AI 分析，最长约 8 个月，耗时更长。
+              关闭：规则模板回填（全员活跃榜、标签、做题概览）。开启：AI 深度点评，最长约 8
+              个月，更慢。
             </p>
           </div>
           <Switch checked={useAi} onCheckedChange={setUseAi} />
