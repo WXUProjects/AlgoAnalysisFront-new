@@ -474,7 +474,9 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
         </div>
       ) : (
         <p className="px-2 text-sm text-muted-foreground">
-          还没有过题记录，绑定 OJ 并同步后会出现在这里
+          {data.totalAc > 0
+            ? '平台分布暂时算不出来，稍后再看看'
+            : '还没有过题记录，绑定 OJ 并同步后会出现在这里'}
         </p>
       ),
     },

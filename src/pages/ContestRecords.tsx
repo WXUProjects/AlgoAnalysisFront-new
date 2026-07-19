@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatTime } from '@/lib/format'
+import { formatContestTimeRange } from '@/lib/format'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -287,7 +287,9 @@ export function ContestRecords() {
             {userMode ? `${titleName || '用户'} 的比赛` : '全部比赛'}
           </h3>
           <p className="text-sm text-muted-foreground">
-            按平台、名称或时间查找参赛记录，可跳转原站或站内详情
+            {userMode
+              ? '按平台、名称或时间查找参赛记录，可打开站内榜或原站'
+              : '组织内成员的参赛记录汇总；每条会标明是谁参加的'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -436,7 +438,23 @@ export function ContestRecords() {
                   </CardTitle>
                 </div>
                 <CardDescription>
-                  {formatTime(item.time)}
+                  {!userMode && (item.userName || item.userId) ? (
+                    <>
+                      <Link
+                        to={`/profile?id=${item.userId}`}
+                        className="text-foreground/80 underline-offset-2 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {item.userName || '未知选手'}
+                      </Link>
+                      {' · '}
+                    </>
+                  ) : null}
+                  {formatContestTimeRange(
+                    item.startTime,
+                    item.endTime,
+                    item.time,
+                  )}
                   {item.rank > 0 ? ` · 排名 ${item.rank}` : ''}
                   {item.platform === 'LeetCode' && item.acCount > 0
                     ? ` · 得分 ${item.acCount}`

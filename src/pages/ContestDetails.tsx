@@ -44,7 +44,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useListQueryState } from '@/hooks/use-list-query-state'
-import { formatTime } from '@/lib/format'
+import { formatContestTimeRange } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 const DEFAULT_PAGE_SIZE = 20
@@ -84,6 +84,8 @@ export function ContestDetails() {
     [],
   )
   const [scoring, setScoring] = useState('icpc')
+  /** 有逐题明细才画格子；否则只显示 AC 题数 */
+  const [hasCellDetail, setHasCellDetail] = useState(false)
   const [contest, setContest] = useState<Partial<ContestItem> | null>(null)
   const [groups, setGroups] = useState<GroupInfo[]>([])
   const [groupId, setGroupId] = useState<number | undefined>(undefined)
@@ -93,6 +95,7 @@ export function ContestDetails() {
   const [problems, setProblems] = useState<ContestProblemItem[]>([])
   const [ensureStatus, setEnsureStatus] = useState('')
   const [problemsLoading, setProblemsLoading] = useState(true)
+  const problemsPollCount = useRef(0)
   const [activeLabel, setActiveLabel] = useState('')
   const [problemDetail, setProblemDetail] = useState<ProblemInfo | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -131,21 +134,27 @@ export function ContestDetails() {
     setBoardRows(res.data.rows)
     setBoardProblems(res.data.problems)
     setScoring(res.data.scoring || 'icpc')
+    const detail =
+      res.data.hasCellDetail ??
+      res.data.rows.some((r) =>
+        r.cells.some((c) => c.status === 'AC' || c.status === 'TRIED'),
+      )
+    setHasCellDetail(Boolean(detail))
     setTotal(res.data.total)
     if (res.data.contest) setContest(res.data.contest)
   }, [id, groupId, followingOnly])
 
-  const loadProblems = useCallback(async () => {
+  const loadProblems = useCallback(async (opts?: { quiet?: boolean }) => {
     if (!id) return
-    setProblemsLoading(true)
+    if (!opts?.quiet) setProblemsLoading(true)
     const res = await getContestProblems(id)
-    setProblemsLoading(false)
+    if (!opts?.quiet) setProblemsLoading(false)
     if (!res.success || !res.data) {
       // 题目失败不阻断榜单
       return
     }
     setProblems(res.data.list)
-    setEnsureStatus(res.data.ensureStatus)
+    setEnsureStatus(res.data.ensureStatus || '')
     if (res.data.contest) {
       setContest((prev) => prev ?? res.data!.contest)
     }
@@ -159,25 +168,30 @@ export function ContestDetails() {
     void loadBoard()
   }, [loadBoard])
 
-  // 明细异步补全：首屏无格子时短轮询 board
+  // 明细异步补全：首屏无格子时短轮询 board（最多约 30s）
   useEffect(() => {
-    const hasCells = boardRows.some((r) =>
-      r.cells.some((c) => c.status === 'AC' || c.status === 'TRIED'),
-    )
-    if (loading || hasCells || boardRows.length === 0) return
+    if (loading || hasCellDetail || boardRows.length === 0) return
+    let n = 0
     const t = window.setInterval(() => {
+      n += 1
+      if (n > 8) {
+        window.clearInterval(t)
+        return
+      }
       void loadBoard()
     }, 4000)
     return () => window.clearInterval(t)
-  }, [loading, boardRows, loadBoard])
+  }, [loading, hasCellDetail, boardRows.length, loadBoard])
 
   useEffect(() => {
+    problemsPollCount.current = 0
     void loadProblems()
   }, [loadProblems])
 
   const pageRows = boardRows.slice((page - 1) * pageSize, page * pageSize)
-  const colProblems =
-    boardProblems.length > 0
+  const colProblems = !hasCellDetail
+    ? []
+    : boardProblems.length > 0
       ? boardProblems
       : // 无目录时从格子推导列
         Array.from(
@@ -185,21 +199,31 @@ export function ContestDetails() {
             boardRows
               .flatMap((r) => r.cells)
               .filter((c) => c.label)
-              .map((c) => [c.label, { label: c.label, externalId: c.externalId || '', title: c.label }]),
+              .map((c) => [
+                c.label,
+                {
+                  label: c.label,
+                  externalId: c.externalId || '',
+                  title: c.label,
+                },
+              ]),
           ).values(),
         )
 
-  // ensure 进行中 / 首屏尚无目录时短轮询
+  // 仅 ensure 真正 running 且尚无目录时短轮询；failed/done/有题立刻停；最多 12 次
   useEffect(() => {
-    const shouldPoll =
-      ensureStatus === 'running' ||
-      (ensureStatus !== 'done' &&
-        ensureStatus !== 'failed' &&
-        problems.length === 0 &&
-        !problemsLoading)
-    if (!shouldPoll) return
+    if (problems.length > 0) return
+    if (ensureStatus === 'done' || ensureStatus === 'failed') return
+    if (ensureStatus !== 'running') return
+    if (problemsLoading) return
+    if (problemsPollCount.current >= 12) return
     const t = window.setInterval(() => {
-      void loadProblems()
+      if (problemsPollCount.current >= 12) {
+        window.clearInterval(t)
+        return
+      }
+      problemsPollCount.current += 1
+      void loadProblems({ quiet: true })
     }, 2500)
     return () => window.clearInterval(t)
   }, [ensureStatus, problems.length, problemsLoading, loadProblems])
@@ -246,9 +270,15 @@ export function ContestDetails() {
               {contest?.contestName || `比赛 #${id}`}
             </h2>
           </div>
-          {contest?.time && (
+          {(contest?.startTime ||
+            contest?.endTime ||
+            contest?.time) && (
             <p className="text-sm text-muted-foreground">
-              {formatTime(contest.time)}
+              {formatContestTimeRange(
+                contest.startTime,
+                contest.endTime,
+                contest.time,
+              )}
               {problems.length > 0 ? ` · ${problems.length} 题` : ''}
             </p>
           )}
@@ -329,9 +359,13 @@ export function ContestDetails() {
               <CardTitle className="text-base">站内榜</CardTitle>
               <CardDescription>
                 {scoring === 'leetcode'
-                  ? '力扣赛：排名与得分；格子为每题 AC 用时与失败次数'
-                  : '组织内 ICPC 风格榜：绿=AC 用时，红=尝试次数'}
-                {followingOnly ? ' · 仅关注' : ''}
+                  ? hasCellDetail
+                    ? '按得分排序；绿色为通过用时，红色为失败次数'
+                    : '本场暂无逐题明细，只显示得分'
+                  : hasCellDetail
+                    ? '绿色为通过用时，红色为尝试次数'
+                    : '本场暂无逐题明细，只显示通过题数'}
+                {followingOnly ? ' · 仅看关注' : ''}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -353,9 +387,9 @@ export function ContestDetails() {
                           选手
                         </TableHead>
                         <TableHead className="w-14 text-center">
-                          {scoring === 'leetcode' ? '得分' : '题数'}
+                          {scoring === 'leetcode' ? '得分' : 'AC'}
                         </TableHead>
-                        {scoring === 'icpc' && (
+                        {hasCellDetail && scoring === 'icpc' && (
                           <TableHead className="w-16 text-center">
                             罚时
                           </TableHead>
@@ -372,65 +406,88 @@ export function ContestDetails() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pageRows.map((row) => (
-                        <TableRow key={row.userId}>
-                          <TableCell className="sticky left-0 z-10 bg-background font-medium tabular-nums">
-                            {row.rankOfficial > 0
-                              ? row.rankOfficial
-                              : row.rankLocal}
-                          </TableCell>
-                          <TableCell className="sticky left-12 z-10 bg-background">
-                            <Link
-                              to={`/profile?id=${row.userId}`}
-                              className="inline-flex items-center gap-2 hover:underline"
-                            >
-                              <Avatar className="size-7">
-                                <AvatarImage src={row.avatar || undefined} />
-                                <AvatarFallback>
-                                  {(row.name || '?').slice(0, 1)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="max-w-[10rem] truncate">
-                                {row.name || `用户${row.userId}`}
-                              </span>
-                            </Link>
-                          </TableCell>
-                          <TableCell className="text-center font-medium tabular-nums">
-                            {scoring === 'leetcode'
-                              ? row.score || row.acCount
-                              : row.solved || row.acCount}
-                          </TableCell>
-                          {scoring === 'icpc' && (
-                            <TableCell className="text-center tabular-nums text-muted-foreground">
-                              {formatPenalty(row.penaltySec)}
+                      {pageRows.map((row) => {
+                        const rowDetail =
+                          row.hasDetail !== false &&
+                          row.cells.some(
+                            (c) => c.status === 'AC' || c.status === 'TRIED',
+                          )
+                        return (
+                          <TableRow key={row.userId}>
+                            <TableCell className="sticky left-0 z-10 bg-background font-medium tabular-nums">
+                              {row.rankOfficial > 0
+                                ? row.rankOfficial
+                                : row.rankLocal}
                             </TableCell>
-                          )}
-                          {colProblems.map((p) => {
-                            const cell =
-                              row.cells.find((c) => c.label === p.label) ||
-                              row.cells.find(
-                                (c) =>
-                                  p.externalId &&
-                                  c.externalId === p.externalId,
-                              )
-                            return (
-                              <TableCell
-                                key={p.label}
-                                className="p-1 text-center"
+                            <TableCell className="sticky left-12 z-10 bg-background">
+                              <Link
+                                to={`/profile?id=${row.userId}`}
+                                className="inline-flex items-center gap-2 hover:underline"
                               >
-                                <BoardCellView
-                                  cell={cell}
-                                  scoring={scoring}
-                                />
+                                <Avatar className="size-7">
+                                  <AvatarImage src={row.avatar || undefined} />
+                                  <AvatarFallback>
+                                    {(row.name || '?').slice(0, 1)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="max-w-[10rem] truncate">
+                                  {row.name?.trim() || '未知选手'}
+                                </span>
+                              </Link>
+                            </TableCell>
+                            <TableCell className="text-center font-medium tabular-nums">
+                              {scoring === 'leetcode'
+                                ? row.score || row.acCount
+                                : row.solved || row.acCount}
+                            </TableCell>
+                            {hasCellDetail && scoring === 'icpc' && (
+                              <TableCell className="text-center tabular-nums text-muted-foreground">
+                                {rowDetail
+                                  ? formatPenalty(row.penaltySec)
+                                  : '—'}
                               </TableCell>
-                            )
-                          })}
-                        </TableRow>
-                      ))}
+                            )}
+                            {colProblems.map((p) => {
+                              if (!rowDetail) {
+                                return (
+                                  <TableCell
+                                    key={p.label}
+                                    className="p-1 text-center text-muted-foreground/50"
+                                  >
+                                    —
+                                  </TableCell>
+                                )
+                              }
+                              const cell =
+                                row.cells.find((c) => c.label === p.label) ||
+                                row.cells.find(
+                                  (c) =>
+                                    p.externalId &&
+                                    c.externalId === p.externalId,
+                                )
+                              return (
+                                <TableCell
+                                  key={p.label}
+                                  className="p-1 text-center"
+                                >
+                                  <BoardCellView
+                                    cell={cell}
+                                    scoring={scoring}
+                                  />
+                                </TableCell>
+                              )
+                            })}
+                          </TableRow>
+                        )
+                      })}
                       {!pageRows.length && (
                         <TableRow>
                           <TableCell
-                            colSpan={4 + colProblems.length}
+                            colSpan={
+                              3 +
+                              (hasCellDetail && scoring === 'icpc' ? 1 : 0) +
+                              colProblems.length
+                            }
                             className="text-center text-muted-foreground"
                           >
                             暂无榜单

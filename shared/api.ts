@@ -723,13 +723,20 @@ export interface ContestItem {
   id: number
   platform: Platform
   userId: number
+  /** 参赛者展示名（全部比赛列表用） */
+  userName?: string
   contestId: string
   contestName: string
   contestUrl: string
   rank: number
   totalCount: number
   acCount: number
+  /** 兼容字段：优先为开赛时间 */
   time: string
+  /** 开赛 unix 秒（0/缺省=未知） */
+  startTime?: number
+  /** 结束 unix 秒（0/缺省=未知） */
+  endTime?: number
 }
 
 export interface ContestRankingItem {
@@ -771,6 +778,8 @@ export interface ContestBoardRow {
   penaltySec: number
   score: number
   acCount: number
+  /** 是否有逐题 AC/尝试明细 */
+  hasDetail?: boolean
   cells: ContestBoardCell[]
 }
 
@@ -778,6 +787,8 @@ export interface ContestBoardData {
   contest: Partial<ContestItem> | null
   /** icpc | leetcode */
   scoring: string
+  /** 本场是否有任意逐题明细；false 时只展示 AC 题数 */
+  hasCellDetail?: boolean
   problems: ContestBoardProblemCol[]
   rows: ContestBoardRow[]
   total: number
@@ -800,6 +811,7 @@ export interface ContestProblemItem {
 export interface ContestProblemsData {
   contest: Partial<ContestItem> | null
   ensureStatus: string
+  ensureError?: string
   list: ContestProblemItem[]
 }
 

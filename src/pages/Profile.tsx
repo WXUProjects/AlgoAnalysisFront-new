@@ -63,7 +63,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { formatActivityProblemTitle } from '@/lib/activity-title'
 import { difficultyBadgeClass } from '@/lib/difficulty'
-import { formatTime, heatmapStartYmd, todayYmd } from '@/lib/format'
+import {
+  formatContestTimeRange,
+  formatTime,
+  heatmapStartYmd,
+  todayYmd,
+} from '@/lib/format'
 import { getPlatformHomeLink, getSubmitLink, OJ_PLATFORMS } from '@/lib/link'
 import { cn } from '@/lib/utils'
 
@@ -817,7 +822,7 @@ export function Profile() {
                       </span>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {formatTime(c.time)}
+                      {formatContestTimeRange(c.startTime, c.endTime, c.time)}
                       {c.rank ? ` · 排名 ${c.rank}` : ''}
                       {c.platform === 'LeetCode' && c.acCount > 0
                         ? ` · 得分 ${c.acCount}`

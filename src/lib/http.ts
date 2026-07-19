@@ -53,11 +53,21 @@ export const http = axios.create({
   },
 })
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    /** 为 true 时 401 不触发全局登出（用于 /auth/refresh 自身） */
+    skipAuthExpired?: boolean
+  }
+  export interface InternalAxiosRequestConfig {
+    skipAuthExpired?: boolean
+  }
+}
+
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (jwt.isValid()) {
     config.headers.Authorization = `Bearer ${jwt.token}`
-  } else if (jwt.token) {
-    // token 存在但已过期：清会话
+  } else if (jwt.token && !config.skipAuthExpired) {
+    // token 存在但已过期：清会话（refresh 请求除外）
     fireAuthExpired()
   }
   return config
@@ -67,8 +77,10 @@ http.interceptors.response.use(
   (res) => res,
   (error: AxiosError) => {
     const status = error.response?.status
+    const cfg = error.config as InternalAxiosRequestConfig | undefined
     // 仅 401 视为会话失效；业务暂无权限执行此操作用 403 + body.message，不应清登录
-    if (status === 401 && jwt.token) {
+    // refresh 自身 401 不连环清会话（由 AuthContext 处理）
+    if (status === 401 && jwt.token && !cfg?.skipAuthExpired) {
       fireAuthExpired()
     }
     return Promise.reject(error)

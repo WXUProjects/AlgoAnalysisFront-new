@@ -25,10 +25,19 @@ export interface ContestRankingData {
 }
 
 function normalizeContest(raw: Record<string, unknown>): ContestItem {
+  const startTime =
+    raw.startTime !== undefined && raw.startTime !== null
+      ? num(raw.startTime)
+      : undefined
+  const endTime =
+    raw.endTime !== undefined && raw.endTime !== null
+      ? num(raw.endTime)
+      : undefined
   return {
     id: num(raw.id),
     platform: str(raw.platform) as Platform,
     userId: num(raw.userId),
+    userName: str(raw.userName) || undefined,
     contestId: str(raw.contestId),
     contestName: str(raw.contestName),
     contestUrl: str(raw.contestUrl),
@@ -36,6 +45,8 @@ function normalizeContest(raw: Record<string, unknown>): ContestItem {
     totalCount: num(raw.totalCount),
     acCount: num(raw.acCount),
     time: str(raw.time),
+    startTime: startTime || undefined,
+    endTime: endTime || undefined,
   }
 }
 
@@ -182,6 +193,7 @@ function normalizeBoardRow(r: Record<string, unknown>): ContestBoardRow {
     penaltySec: num(r.penaltySec),
     score: num(r.score),
     acCount: num(r.acCount),
+    hasDetail: r.hasDetail === undefined ? undefined : bool(r.hasDetail),
     cells: cellsRaw.map(normalizeBoardCell),
   }
 }
@@ -217,6 +229,8 @@ export async function getContestBoard(params: {
     data: {
       contest: contestRaw ? normalizeContest(contestRaw) : null,
       scoring: str(raw.scoring) || 'icpc',
+      hasCellDetail:
+        raw.hasCellDetail === undefined ? undefined : bool(raw.hasCellDetail),
       problems,
       rows: rowsRaw.map(normalizeBoardRow),
       total: num(raw.total, rowsRaw.length),
@@ -243,6 +257,7 @@ export async function getContestProblems(
     data: {
       contest: contestRaw ? normalizeContest(contestRaw) : null,
       ensureStatus: str(raw.ensureStatus),
+      ensureError: str(raw.ensureError),
       list: listRaw.map(normalizeContestProblem),
     },
   }

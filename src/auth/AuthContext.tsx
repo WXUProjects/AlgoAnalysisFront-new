@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -16,7 +17,7 @@ import {
 } from '@/api/auth'
 import { listMyOrgs, switchOrg as apiSwitchOrg } from '@/api/org'
 import { setAuthExpiredHandler } from '@/lib/http'
-import { jwt, type JwtPayload } from '@/lib/jwt'
+import { jwt, jwtPayloadEquals, type JwtPayload } from '@/lib/jwt'
 import {
   isCaptainFromPayload,
   isCoachFromPayload,
@@ -63,6 +64,11 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null)
 
+/** 剩余有效期低于此值才主动 refresh（秒）；7 天 TTL 下约剩 1 天时续期 */
+const RENEW_WHEN_REMAINING_SEC = 24 * 60 * 60
+/** 两次主动续期间隔下限，避免 visibility 连点 */
+const RENEW_MIN_INTERVAL_MS = 60 * 60 * 1000
+
 function deriveFlags(payload: JwtPayload | null) {
   return {
     isLogin: Boolean(payload),
@@ -78,18 +84,28 @@ function deriveFlags(payload: JwtPayload | null) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<JwtPayload | null>(null)
+  const [user, setUserState] = useState<JwtPayload | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [orgs, setOrgs] = useState<OrgInfo[]>([])
   const [ready, setReady] = useState(false)
+  const userRef = useRef<JwtPayload | null>(null)
+  const lastRenewAtRef = useRef(0)
+  const profileLoadedForRef = useRef<number | null>(null)
+
+  const setUser = useCallback((next: JwtPayload | null) => {
+    if (jwtPayloadEquals(userRef.current, next)) return
+    userRef.current = next
+    setUserState(next)
+  }, [])
 
   const logout = useCallback(() => {
     void apiLogout()
     jwt.clearToken()
+    profileLoadedForRef.current = null
     setUser(null)
     setProfile(null)
     setOrgs([])
-  }, [])
+  }, [setUser])
 
   const refreshOrgs = useCallback(async () => {
     if (!jwt.isValid()) {
@@ -100,47 +116,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (res.success) setOrgs(res.list)
   }, [])
 
-  const sync = useCallback(async () => {
-    // 启动时通过 HttpOnly Cookie 恢复内存中的短期访问令牌。
-    try {
-      await refreshToken()
-    } catch {
-      /* ignore */
-    }
+  /**
+   * 会话同步：
+   * - 内存 token 仍有效：不调 refresh，避免无意义重签 + 全站重渲染
+   * - 无内存 token：用 HttpOnly Cookie 调 refresh 一次恢复
+   * - profile/orgs 仅在 userId 变化或尚未加载时拉取
+   */
+  const sync = useCallback(
+    async (opts?: { forceRefresh?: boolean; forceProfile?: boolean }) => {
+      const forceRefresh = Boolean(opts?.forceRefresh)
+      const forceProfile = Boolean(opts?.forceProfile)
 
-    if (!jwt.isValid()) {
-      setUser(null)
-      setProfile(null)
-      setOrgs([])
-      return
-    }
+      if (forceRefresh || !jwt.isValid()) {
+        try {
+          await refreshToken()
+        } catch {
+          /* ignore */
+        }
+      }
 
-    const payload = jwt.getUserInfo()
-    if (!payload) {
-      jwt.clearToken()
-      setUser(null)
-      setProfile(null)
-      setOrgs([])
-      return
-    }
+      if (!jwt.isValid()) {
+        profileLoadedForRef.current = null
+        setUser(null)
+        setProfile(null)
+        setOrgs([])
+        return
+      }
 
-    setUser(payload)
+      const payload = jwt.getUserInfo()
+      if (!payload) {
+        jwt.clearToken()
+        profileLoadedForRef.current = null
+        setUser(null)
+        setProfile(null)
+        setOrgs([])
+        return
+      }
 
-    const res = await fetchProfileById(payload.userId)
-    if (res.success && res.data) {
-      setProfile(res.data)
-    }
-    await refreshOrgs()
-  }, [refreshOrgs])
+      setUser(payload)
+
+      const needProfile =
+        forceProfile || profileLoadedForRef.current !== payload.userId
+      if (needProfile) {
+        const res = await fetchProfileById(payload.userId)
+        if (res.success && res.data) {
+          setProfile(res.data)
+          profileLoadedForRef.current = payload.userId
+        }
+        await refreshOrgs()
+      }
+    },
+    [refreshOrgs, setUser],
+  )
 
   useEffect(() => {
     setAuthExpiredHandler(() => {
+      profileLoadedForRef.current = null
       setUser(null)
       setProfile(null)
       setOrgs([])
     })
     return () => setAuthExpiredHandler(null)
-  }, [])
+  }, [setUser])
 
   useEffect(() => {
     let cancelled = false
@@ -151,28 +188,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [sync])
+    // 仅冷启动一次；勿依赖 sync 引用以免重跑
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // 有效期内活跃则 refresh 滚动续期（后端默认 7 天）；过期则登出
+  // 接近过期时静默续期；成功后幂等 setUser，不重拉整站数据
   useEffect(() => {
-    let lastRenewAt = 0
-    // 与后端 7 天 TTL 匹配：活跃时最多每天续一次即可，避免过于频繁
-    const RENEW_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000
-
     const renewIfNeeded = async () => {
-      if (!user) return
+      if (!userRef.current) return
       if (!jwt.isValid()) {
+        // 内存过期：尝试 cookie 恢复一次，失败再登出
+        try {
+          const res = await refreshToken()
+          if (res.success && jwt.isValid()) {
+            const payload = jwt.getUserInfo()
+            if (payload) {
+              setUser(payload)
+              lastRenewAtRef.current = Date.now()
+              return
+            }
+          }
+        } catch {
+          /* fallthrough */
+        }
         logout()
         return
       }
+      const remaining = jwt.remainingSeconds()
+      if (remaining > RENEW_WHEN_REMAINING_SEC) return
       const now = Date.now()
-      if (now - lastRenewAt < RENEW_MIN_INTERVAL_MS) return
-      lastRenewAt = now
+      if (now - lastRenewAtRef.current < RENEW_MIN_INTERVAL_MS) return
+      lastRenewAtRef.current = now
       try {
-        await refreshToken()
+        const res = await refreshToken()
+        if (!res.success) {
+          if (!jwt.isValid()) logout()
+          return
+        }
         const payload = jwt.getUserInfo()
         if (payload) setUser(payload)
-        else logout()
+        else if (!jwt.isValid()) logout()
       } catch {
         if (!jwt.isValid()) logout()
       }
@@ -182,19 +237,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (document.visibilityState === 'visible') void renewIfNeeded()
     }
     document.addEventListener('visibilitychange', onVis)
-    // 长开标签页：每天尝试续期一次
-    const t = window.setInterval(() => void renewIfNeeded(), 24 * 60 * 60 * 1000)
+    // 长开标签：每小时检查是否需要续期（实际仅剩 <1 天才打 refresh）
+    const t = window.setInterval(() => void renewIfNeeded(), 60 * 60 * 1000)
     return () => {
       document.removeEventListener('visibilitychange', onVis)
       window.clearInterval(t)
     }
-  }, [user, logout])
+  }, [logout, setUser])
 
   const login = useCallback(
     async (username: string, password: string) => {
       const res = await apiLogin(username, password)
       if (res.success) {
-        await sync()
+        profileLoadedForRef.current = null
+        await sync({ forceRefresh: false, forceProfile: true })
       }
       return {
         success: res.success,
@@ -215,7 +271,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (orgId: number) => {
       const res = await apiSwitchOrg(orgId)
       if (res.success) {
-        await sync()
+        // 切组织会重签 JWT，需强制 refresh 语义：switchOrg API 已写新 token
+        profileLoadedForRef.current = null
+        await sync({ forceRefresh: false, forceProfile: true })
       }
       return { success: res.success, message: res.message }
     },

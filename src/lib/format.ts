@@ -33,6 +33,22 @@ export function formatTime(value: unknown): string {
   }
 }
 
+/** 比赛起止：有两端则「开始 ～ 结束」；只有一端则单点时间 */
+export function formatContestTimeRange(
+  startTime?: number | string | null,
+  endTime?: number | string | null,
+  fallbackTime?: number | string | null,
+): string {
+  const s = num(startTime, 0)
+  const e = num(endTime, 0)
+  if (s > 0 && e > 0 && e !== s) {
+    return `${formatTime(s)} ～ ${formatTime(e)}`
+  }
+  if (s > 0) return formatTime(s)
+  if (e > 0) return formatTime(e)
+  return formatTime(fallbackTime)
+}
+
 /** 题目标题：去掉 AtCoder 页头夹带的 Editorial / 换行空白 */
 export function cleanProblemTitle(title?: string | null, fallback = ''): string {
   const raw = (title || '').replace(/\r/g, '\n')

@@ -258,7 +258,12 @@ export async function fetchProfileById(
 /** 用当前登录态换新令牌（角色变更后刷新，权限才能同步到界面） */
 export async function refreshToken(): Promise<ApiResult<LoginRes>> {
   try {
-    const res = await http.post<LoginRes>(endpoints.user.auth.refresh, {})
+    // skipAuthExpired：refresh 401 不触发全局登出风暴，由 AuthContext 决定
+    const res = await http.post<LoginRes>(
+      endpoints.user.auth.refresh,
+      {},
+      { skipAuthExpired: true },
+    )
     const data = res.data
     if (data?.success && data.jwtToken) {
       jwt.setNewToken(data.jwtToken)
