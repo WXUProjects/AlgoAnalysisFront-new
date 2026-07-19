@@ -1064,7 +1064,7 @@ export interface HotProblemRes {
 
 export interface ProblemUserProfile {
   radar: { tag: string; score: number; acCount: number }[]
-  /** 平台过题；牛客拆为「牛客竞赛站」(AC 数字题号) 与「牛客Tracker」(主站 UUID) */
+  /** 平台过题；牛客统一为 NowCoder（不再拆竞赛站 / Tracker） */
   platforms: { name: string; count: number }[]
   difficulties: { name: string; count: number }[]
   totalAc: number

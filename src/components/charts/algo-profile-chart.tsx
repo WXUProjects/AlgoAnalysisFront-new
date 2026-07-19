@@ -59,12 +59,13 @@ const DIFF_ORDER: Record<string, number> = {
   Hard: 2,
 }
 
-/** 平台过题饼图展示名（后端已拆牛客；兼容旧缓存 NowCoder / 竞赛站） */
+/** 平台过题饼图展示名（牛客统一 NowCoder；兼容旧缓存拆分名） */
 const PLATFORM_PIE_LABEL: Record<string, string> = {
-  NowCoder: '牛客竞赛站',
-  竞赛站: '牛客竞赛站',
-  牛客竞赛站: '牛客竞赛站',
-  牛客Tracker: '牛客Tracker',
+  NowCoder: 'NowCoder',
+  竞赛站: 'NowCoder',
+  牛客竞赛站: 'NowCoder',
+  牛客Tracker: 'NowCoder',
+  牛客: 'NowCoder',
   CodeForces: 'Codeforces',
   LuoGu: '洛谷',
   LeetCode: '力扣',
@@ -75,6 +76,19 @@ const PLATFORM_PIE_LABEL: Record<string, string> = {
 function platformPieLabel(name: string): string {
   const t = name.trim()
   return PLATFORM_PIE_LABEL[t] || t
+}
+
+/** 合并同展示名扇区（旧缓存可能同时返回竞赛站+Tracker） */
+function mergePlatformPieSlices(
+  items: { name: string; value: number }[],
+): { name: string; value: number }[] {
+  const map = new Map<string, number>()
+  for (const it of items) {
+    const name = platformPieLabel(it.name)
+    if (!name || it.value <= 0) continue
+    map.set(name, (map.get(name) || 0) + it.value)
+  }
+  return Array.from(map, ([name, value]) => ({ name, value }))
 }
 
 function isJunkLabel(name?: string | null): boolean {
@@ -378,14 +392,12 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
 
   const maxAc = Math.max(...radarAll.map((r) => r.count), 1)
 
-  // 平台过题数（去重题量，非 AC 提交次数）；牛客拆「牛客竞赛站 / 牛客Tracker」
-  const platformPie = (data.platforms ?? [])
-    .filter((p) => p.name?.trim() && !isJunkLabel(p.name) && p.count > 0)
-    .map((p) => ({
-      name: platformPieLabel(p.name),
-      value: p.count,
-    }))
-    .sort((a, b) => b.value - a.value)
+  // 平台过题数（去重题量，非 AC 提交次数）；牛客统一 NowCoder
+  const platformPie = mergePlatformPieSlices(
+    (data.platforms ?? [])
+      .filter((p) => p.name?.trim() && !isJunkLabel(p.name) && p.count > 0)
+      .map((p) => ({ name: p.name, value: p.count })),
+  ).sort((a, b) => b.value - a.value)
   const platformTotal = platformPie.reduce((s, p) => s + p.value, 0)
 
   // 第一行：能力雷达 + 平台过题（大屏并排共用顶部位置；小屏各成滑动卡片）
