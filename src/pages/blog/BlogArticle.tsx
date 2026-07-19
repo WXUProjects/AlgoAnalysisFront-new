@@ -49,11 +49,6 @@ import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { clipMetaText } from '@/lib/document-meta'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogArticle as BlogArticleType, BlogComment } from '@shared/api'
-import { sharedElementStyle } from '@/lib/view-transition'
-
-function articleSharedKey(username: string, slug: string, id?: number) {
-  return slug ? `${username}--${slug}` : String(id || username)
-}
 
 const unlockKey = (id: number) => `blog-unlock-${id}`
 
@@ -732,16 +727,12 @@ export function BlogArticlePage() {
     </section>
   ) : null
 
-  const blogVtKey = articleSharedKey(username, slug, article.id)
-  const blogVtStyle = sharedElementStyle('blog', blogVtKey)
-
   if (isChirpy) {
     return (
       <article className="chirpy-article px-1 pt-4">
         {article.coverUrl ? (
           <div
-            className="mb-6 overflow-hidden rounded-[10px] vt-shared"
-            style={blogVtStyle}
+            className="mb-6 overflow-hidden rounded-[10px]"
           >
             <img
               src={article.coverUrl}
@@ -751,7 +742,7 @@ export function BlogArticlePage() {
           </div>
         ) : null}
         <header>
-          <h1 className="vt-shared" style={article.coverUrl ? undefined : blogVtStyle}>
+          <h1>
             {article.title}
           </h1>
           {/* 摘要字段保留，正文页不渲染；只在列表卡片展示 */}
@@ -811,8 +802,7 @@ export function BlogArticlePage() {
         <article className="mz-article">
           {article.coverUrl ? (
             <div
-              className="mb-6 overflow-hidden rounded-[var(--mz-radius-sm)] vt-shared"
-              style={blogVtStyle}
+              className="mb-6 overflow-hidden rounded-[var(--mz-radius-sm)]"
             >
               <img
                 src={article.coverUrl}
@@ -822,7 +812,7 @@ export function BlogArticlePage() {
             </div>
           ) : null}
           <header>
-            <h1 className="vt-shared" style={article.coverUrl ? undefined : blogVtStyle}>
+            <h1>
               {article.title}
             </h1>
             <div className="mz-article-meta">
@@ -880,8 +870,7 @@ export function BlogArticlePage() {
     <article className="mx-auto max-w-3xl space-y-6">
       {article.coverUrl ? (
         <div
-          className="overflow-hidden rounded-xl border vt-shared"
-          style={blogVtStyle}
+          className="overflow-hidden rounded-xl border"
         >
           <img
             src={article.coverUrl}
@@ -911,8 +900,7 @@ export function BlogArticlePage() {
           )}
         </div>
         <h1
-          className="text-3xl font-bold tracking-tight vt-shared"
-          style={article.coverUrl ? undefined : blogVtStyle}
+          className="text-3xl font-bold tracking-tight"
         >
           {article.title}
         </h1>

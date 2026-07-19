@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom'
 import {
   BookOpenIcon,
   ExternalLinkIcon,
@@ -58,9 +64,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useListQueryState } from '@/hooks/use-list-query-state'
 import { formatContestTimeRange, formatTime } from '@/lib/format'
+import {
+  mergeContestMeta,
+  readContestSeed,
+} from '@/lib/contest-nav'
 import { getSubmitLink } from '@/lib/link'
 import { cn } from '@/lib/utils'
-import { sharedElementStyle } from '@/lib/view-transition'
 
 const DEFAULT_PAGE_SIZE = 20
 
@@ -88,7 +97,9 @@ function formatPenalty(sec: number): string {
  */
 export function ContestDetails() {
   const { id } = useParams()
+  const location = useLocation()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { isLogin } = useAuth()
   const { page, pageSize, setPage, setPageSize } = useListQueryState({
     defaultPageSize: DEFAULT_PAGE_SIZE,
@@ -101,7 +112,10 @@ export function ContestDetails() {
   const [scoring, setScoring] = useState('icpc')
   /** 有逐题明细才画格子；否则只显示 AC 题数 */
   const [hasCellDetail, setHasCellDetail] = useState(false)
-  const [contest, setContest] = useState<Partial<ContestItem> | null>(null)
+  /** 列表/资料页带入的种子，避免标题先闪「比赛 #id」 */
+  const [contest, setContest] = useState<Partial<ContestItem> | null>(() =>
+    readContestSeed(id, location.state),
+  )
   const [groups, setGroups] = useState<GroupInfo[]>([])
   const [groupId, setGroupId] = useState<number | undefined>(undefined)
   const [followingOnly, setFollowingOnly] = useState(false)
@@ -111,13 +125,17 @@ export function ContestDetails() {
   const [ensureStatus, setEnsureStatus] = useState('')
   const [problemsLoading, setProblemsLoading] = useState(true)
   const problemsPollCount = useRef(0)
-  const [activeLabel, setActiveLabel] = useState('')
+  const [activeLabel, setActiveLabel] = useState(
+    () => searchParams.get('label')?.trim() || '',
+  )
   const [problemDetail, setProblemDetail] = useState<ProblemInfo | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   /** 移动端：题面 / 题解 */
   const [mobilePane, setMobilePane] = useState<'problem' | 'solutions'>('problem')
-  /** 顶层：站内榜 | 比赛题目 */
-  const [mainTab, setMainTab] = useState<'board' | 'problems'>('board')
+  /** 顶层：站内榜 | 比赛题目；题库深链 ?tab=problems&label=A */
+  const [mainTab, setMainTab] = useState<'board' | 'problems'>(() =>
+    searchParams.get('tab') === 'problems' ? 'problems' : 'board',
+  )
 
   /** 格子弹窗：某用户某题的赛时提交 */
   const [cellDialog, setCellDialog] = useState<{
@@ -139,7 +157,20 @@ export function ContestDetails() {
       navigate(-1)
       return
     }
-  }, [id, navigate])
+    // 路由 id 变化或从列表带入 state：立刻用上游数据填标题区
+    const seed = readContestSeed(id, location.state)
+    if (seed) {
+      setContest((prev) =>
+        prev && String(prev.id) === String(id)
+          ? mergeContestMeta(prev, seed)
+          : seed,
+      )
+    } else {
+      setContest((prev) =>
+        prev && String(prev.id) === String(id) ? prev : null,
+      )
+    }
+  }, [id, location.state, navigate])
 
   useEffect(() => {
     if (!cellDialog || !id) {
@@ -210,7 +241,9 @@ export function ContestDetails() {
       )
     setHasCellDetail(Boolean(detail))
     setTotal(res.data.total)
-    if (res.data.contest) setContest(res.data.contest)
+    if (res.data.contest) {
+      setContest((prev) => mergeContestMeta(prev, res.data!.contest))
+    }
   }, [id, groupId, followingOnly])
 
   const loadProblems = useCallback(async (opts?: { quiet?: boolean }) => {
@@ -225,13 +258,17 @@ export function ContestDetails() {
     setProblems(res.data.list)
     setEnsureStatus(res.data.ensureStatus || '')
     if (res.data.contest) {
-      setContest((prev) => prev ?? res.data!.contest)
+      setContest((prev) => mergeContestMeta(prev, res.data!.contest))
     }
     setActiveLabel((cur) => {
+      const fromQuery = searchParams.get('label')?.trim() || ''
+      if (fromQuery && res.data!.list.some((p) => p.label === fromQuery)) {
+        return fromQuery
+      }
       if (cur && res.data!.list.some((p) => p.label === cur)) return cur
       return res.data!.list[0]?.label || ''
     })
-  }, [id])
+  }, [id, searchParams])
 
   useEffect(() => {
     void loadBoard()
@@ -322,10 +359,7 @@ export function ContestDetails() {
             {contest?.platform && (
               <Badge variant="secondary">{contest.platform}</Badge>
             )}
-            <h2
-              className="text-lg font-semibold vt-shared"
-              style={id ? sharedElementStyle('contest', id) : undefined}
-            >
+            <h2 className="text-lg font-semibold">
               {contest?.contestName || `比赛 #${id}`}
             </h2>
           </div>
@@ -362,11 +396,11 @@ export function ContestDetails() {
         onValueChange={(v) => setMainTab(v as 'board' | 'problems')}
         className="flex flex-col gap-3"
       >
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="board" className="flex-1 sm:flex-none">
+        <TabsList>
+          <TabsTrigger value="board" className="flex-none">
             站内榜
           </TabsTrigger>
-          <TabsTrigger value="problems" className="flex-1 sm:flex-none">
+          <TabsTrigger value="problems" className="flex-none">
             比赛题目
             {problems.length > 0 ? (
               <span className="text-muted-foreground tabular-nums">

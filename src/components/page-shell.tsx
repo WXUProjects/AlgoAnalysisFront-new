@@ -1,7 +1,6 @@
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { useMotion } from '@/motion/MotionContext'
 import {
-  animateEnter,
   animateStagger,
   prefersReducedMotion,
 } from '@/lib/motion'
@@ -19,32 +18,21 @@ export function PageShell({
   stagger?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const { direction, pathname, useViewTransition } = useMotion()
+  const { direction, pathname } = useMotion()
   const reduced = prefersReducedMotion()
-  // VT owns full-page enter when supported — avoid stacking GSAP + VT on the same root
-  const skipGsapEnter = reduced || useViewTransition
 
+  // Full-page enter is owned by GsapPageTransition at layout level.
   useLayoutEffect(() => {
+    if (!stagger || reduced) return
     const el = ref.current
     if (!el) return
-
-    if (skipGsapEnter) {
-      // Ensure content is visible; View Transition CSS handles the morph
-      el.style.opacity = ''
-      return
-    }
-
-    // 短进入：仅轻微方向感 + opacity，不做重 stagger
-    animateEnter(el, direction)
-
-    if (!stagger) return
     const items = el.querySelectorAll<HTMLElement>(
       ':scope > [data-stagger-item], :scope > section, :scope > [data-slot="card"]',
     )
     if (items.length > 1) {
       animateStagger(items, direction, { delay: 0.03, stagger: 0.035 })
     }
-  }, [direction, pathname, stagger, skipGsapEnter])
+  }, [direction, pathname, stagger, reduced])
 
   return (
     <div
@@ -54,7 +42,6 @@ export function PageShell({
         className,
       )}
       data-page-shell=""
-      style={skipGsapEnter ? undefined : { opacity: 0 }}
     >
       {children}
     </div>

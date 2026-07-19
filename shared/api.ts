@@ -214,6 +214,8 @@ export const endpoints = {
       /** 全站热题：近 N 天提交/做题人数/AC 综合热度 */
       hot: `${API_PREFIX}/core/problem/hot`,
       get: `${API_PREFIX}/core/problem/get`,
+      /** 本题出现过的比赛（全平台） */
+      relatedContests: `${API_PREFIX}/core/problem/related-contests`,
       submissions: `${API_PREFIX}/core/problem/submissions`,
       followingStatus: `${API_PREFIX}/core/problem/following-status`,
       userProfile: `${API_PREFIX}/core/problem/user-profile`,
@@ -980,6 +982,18 @@ export interface ProblemInfo {
   errorMsg: string
   lastSubmittedAt: number
   userStatus: string
+}
+
+/** 题目关联的一场比赛（站内详情用 contestLogId → /contest/{id}） */
+export interface ProblemRelatedContest {
+  platform: string
+  contestId: string
+  label: string
+  contestName: string
+  contestLogId: number
+  contestTime: number
+  problemTitle: string
+  contestUrl: string
 }
 
 /** 题库标签/题面人工修改申请 */

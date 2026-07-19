@@ -493,33 +493,71 @@ export function DashboardProblemProgress() {
           <CardHeader className="px-4 py-3 border-b">
             <CardTitle className="text-base">永久失败</CardTitle>
             <CardDescription className="text-xs">
-              不会自动重试；清除历史只隐藏本页列表，状态仍为永久失败
+              硬错误（付费题等）不再自动重试；WAF/暂无权限/未找到题面会先退避，满 24
+              小时才进此列。可点「重试永久失败」再排队
             </CardDescription>
             {isAdmin && (
               <CardAction>
-                <ActionTip tip="仅从本页列表隐藏这些永久失败记录，不改变题目状态，也不会重新排队">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button type="button" size="sm" variant="outline" disabled={busy}>
-                        清除历史
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>清除永久失败历史？</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          列表将不再显示当前这些永久失败题目，但它们在系统中仍是永久失败，不会被重试。之后新出现的永久失败仍会显示。
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>取消</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleClearPermHistory}>
-                          确认清除
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </ActionTip>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ActionTip tip="把近 6 个月内可恢复的永久失败重新排队（DOM/WAF/暂无权限等）；付费题、QOJ 无权限等硬错误不会纳入">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={busy || !visibleFailedPerm.length}
+                        >
+                          重试永久失败
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>重试永久失败的题目？</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            将把近 6 个月内可恢复的永久失败重新排队获取题面。付费题、无稳定链接、QOJ
+                            无权限等硬错误不会纳入。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>取消</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() =>
+                              void run('重试永久失败', () =>
+                                retryFailedProblems(0, true),
+                              )
+                            }
+                          >
+                            确认
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </ActionTip>
+                  <ActionTip tip="仅从本页列表隐藏这些永久失败记录，不改变题目状态，也不会重新排队">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button type="button" size="sm" variant="outline" disabled={busy}>
+                          清除历史
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>清除永久失败历史？</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            列表将不再显示当前这些永久失败题目，但它们在系统中仍是永久失败，不会被重试。之后新出现的永久失败仍会显示。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>取消</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleClearPermHistory}>
+                            确认清除
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </ActionTip>
+                </div>
               </CardAction>
             )}
           </CardHeader>

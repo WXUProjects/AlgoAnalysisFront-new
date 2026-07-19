@@ -44,9 +44,10 @@ export const MOTION = {
     sheetOut: 'power2.out',
   },
   y: {
+    /** Page enter always rises from below (向上推); direction no longer randomizes axis */
     forward: 8,
-    back: -6,
-    lateral: 6,
+    back: 8,
+    lateral: 8,
   },
   press: {
     scale: 0.97,
@@ -86,7 +87,7 @@ export function canHover(): boolean {
   return window.matchMedia('(hover: hover) and (pointer: fine)').matches
 }
 
-/** 路由信息层级：列表浅、详情深，用于进出方向 / View Transition */
+/** 路由信息层级：列表浅、详情深，用于 GSAP 进出方向 */
 export function routeDepth(pathname: string): number {
   if (pathname === '/') return 0
   // 详情 / 深层
@@ -134,16 +135,19 @@ export function resolveDirection(
   return 'lateral'
 }
 
-export function enterOffset(direction: MotionDirection): { y: number; x: number } {
-  switch (direction) {
-    case 'forward':
-      return { y: MOTION.y.forward, x: 0 }
-    case 'back':
-      return { y: MOTION.y.back, x: 0 }
-    default:
-      return { y: MOTION.y.lateral, x: 0 }
-  }
+/**
+ * Enter offset for page shells. Always the same upward-push feel
+ * (content rises from below) — left-tab / forward / back no longer pick different axes.
+ */
+export function enterOffset(_direction: MotionDirection = 'lateral'): {
+  y: number
+  x: number
+} {
+  return { y: MOTION.y.lateral, x: 0 }
 }
+
+/** Prefer GPU compositor for route enters (smooth ~60fps under load). */
+const GPU_ENTER = { force3D: true as const }
 
 export function killTweens(target: gsap.TweenTarget) {
   gsap.killTweensOf(target)
@@ -182,9 +186,10 @@ export function animateEnter(
   }
   const { y, x } = enterOffset(direction)
   killTweens(el)
+  // Transform-only enter (GPU); no opacity dual-fade so it stays sharp at 60fps
   gsap.fromTo(
     el,
-    { opacity: 0, y, x },
+    { opacity: 1, y, x, ...GPU_ENTER },
     {
       opacity: 1,
       y: 0,
@@ -193,6 +198,7 @@ export function animateEnter(
       delay: options?.delay ?? 0,
       ease: MOTION.ease.soft,
       overwrite: true,
+      force3D: true,
       clearProps: 'transform',
     },
   )
@@ -213,7 +219,11 @@ export function animateStagger(
   killTweens(list)
   gsap.fromTo(
     list,
-    { opacity: 0, y: Math.min(Math.abs(y) + 4, 12) * Math.sign(y || 1) },
+    {
+      opacity: 0,
+      y: Math.min(Math.abs(y) + 4, 12) * Math.sign(y || 1),
+      force3D: true,
+    },
     {
       opacity: 1,
       y: 0,
@@ -222,6 +232,7 @@ export function animateStagger(
       stagger: options?.stagger ?? 0.04,
       ease: MOTION.ease.soft,
       overwrite: true,
+      force3D: true,
       clearProps: 'transform',
     },
   )

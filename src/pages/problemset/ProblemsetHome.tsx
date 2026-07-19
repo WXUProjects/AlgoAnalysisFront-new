@@ -19,10 +19,6 @@ import {
   toggleProblemsetLike,
 } from '@/api/problemset'
 import { useAuth } from '@/auth/AuthContext'
-import {
-  prepareSharedElement,
-  sharedElementStyle,
-} from '@/lib/view-transition'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { Badge } from '@/components/ui/badge'
@@ -91,14 +87,10 @@ function SetCard({
     <Card className="transition-colors hover:border-primary/40">
       <CardHeader className="gap-2 pb-2">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle
-            className="text-base leading-snug vt-shared"
-            style={sharedElementStyle('problemset', item.id)}
-          >
+          <CardTitle className="text-base leading-snug">
             <Link
               to={`/problemset/${item.id}`}
               className="hover:text-primary hover:underline"
-              onClick={() => prepareSharedElement('problemset', item.id)}
             >
               {item.title}
             </Link>

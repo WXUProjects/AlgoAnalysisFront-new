@@ -104,16 +104,22 @@ describe('routeDepth / resolveDirection / enterOffset', () => {
       motion.resolveDirection('/question-bank', '/question-bank/detail/1'),
       'forward',
     )
-    assert.equal(motion.enterOffset('forward').y, motion.MOTION.y.forward)
   })
 
   it('resolves back when depth decreases', () => {
     assert.equal(motion.resolveDirection('/contest/abc', '/contest'), 'back')
-    assert.equal(motion.enterOffset('back').y, motion.MOTION.y.back)
   })
 
   it('resolves lateral for same depth', () => {
     assert.equal(motion.resolveDirection('/bulletin', '/discover'), 'lateral')
+  })
+
+  it('enterOffset is always upward-push (same y) for every direction', () => {
+    const y = motion.MOTION.y.lateral
+    assert.equal(motion.enterOffset('forward').y, y)
+    assert.equal(motion.enterOffset('back').y, y)
+    assert.equal(motion.enterOffset('lateral').y, y)
+    assert.equal(motion.enterOffset('forward').x, 0)
   })
 })
 

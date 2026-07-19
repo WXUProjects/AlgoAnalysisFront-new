@@ -10,6 +10,7 @@ import {
   ListTodoIcon,
   PencilIcon,
   TagsIcon,
+  TrophyIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -18,6 +19,7 @@ import {
   getProblem,
   getProblemFollowingStatus,
   getProblemSubmissions,
+  listProblemRelatedContests,
   listProblemTags,
   proposeProblemEdit,
   type TagCountItem,
@@ -31,6 +33,7 @@ import {
 import type {
   ProblemFollowingStatusItem,
   ProblemInfo,
+  ProblemRelatedContest,
   ProblemsetInfo,
 } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
@@ -63,6 +66,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -89,7 +99,6 @@ import { formatTime } from '@/lib/format'
 import { getSubmitLink } from '@/lib/link'
 import { num, str } from '@/lib/http'
 import { cn } from '@/lib/utils'
-import { sharedElementStyle } from '@/lib/view-transition'
 
 /** 题目页「关联题单」只展示公有自定义题单，不含收藏/待做 */
 function isPublicCustomSet(ps: ProblemsetInfo): boolean {
@@ -102,6 +111,21 @@ const kindHint: Record<string, string> = {
   favorites: '收藏',
   todo: '待做',
   custom: '自建',
+}
+
+function contestDisplayName(c: ProblemRelatedContest): string {
+  const name = c.contestName?.trim()
+  if (name) return name
+  if (c.contestId) return `${c.platform} · ${c.contestId}`
+  return c.platform || '比赛'
+}
+
+function contestDetailPath(c: ProblemRelatedContest): string | null {
+  if (!c.contestLogId) return null
+  const q = new URLSearchParams()
+  q.set('tab', 'problems')
+  if (c.label) q.set('label', c.label)
+  return `/contest/${c.contestLogId}?${q.toString()}`
 }
 
 export function QuestionBankDetail() {
@@ -138,6 +162,10 @@ export function QuestionBankDetail() {
   const [noteInput, setNoteInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [relatedSets, setRelatedSets] = useState<ProblemsetInfo[]>([])
+  const [relatedContests, setRelatedContests] = useState<
+    ProblemRelatedContest[]
+  >([])
+  const [contestsSheetOpen, setContestsSheetOpen] = useState(false)
 
   const [addSetOpen, setAddSetOpen] = useState(false)
   const [mySets, setMySets] = useState<ProblemsetInfo[]>([])
@@ -166,9 +194,10 @@ export function QuestionBankDetail() {
     if (!id) return
     const isNewProblem = loadedProblemIdRef.current !== String(id)
     if (isNewProblem) setLoading(true)
-    const [pRes, setRes] = await Promise.all([
+    const [pRes, setRes, cRes] = await Promise.all([
       getProblem(id),
       listProblemsetsByProblem(id),
+      listProblemRelatedContests(id),
     ])
     if (!pRes.success || !pRes.data) {
       if (isNewProblem) {
@@ -186,6 +215,11 @@ export function QuestionBankDetail() {
       setRelatedSets(setRes.data.filter(isPublicCustomSet))
     } else {
       setRelatedSets([])
+    }
+    if (cRes.success && cRes.data) {
+      setRelatedContests(cRes.data)
+    } else {
+      setRelatedContests([])
     }
 
     if (isLogin && !isSiteAdmin) {
@@ -396,12 +430,7 @@ export function QuestionBankDetail() {
     <PageShell>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-2">
-          <h2
-            className="text-lg font-semibold vt-shared"
-            style={sharedElementStyle('problem', problem.id)}
-          >
-            {problem.title}
-          </h2>
+          <h2 className="text-lg font-semibold">{problem.title}</h2>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">{problem.platform}</Badge>
             <Badge variant="outline">{problem.externalId}</Badge>
@@ -420,6 +449,65 @@ export function QuestionBankDetail() {
             )}
             {problem.userStatus && (
               <StatusBadge status={problem.userStatus} userStatus />
+            )}
+            {relatedContests.length > 0 && (
+              <>
+                {relatedContests.slice(0, 2).map((c) => {
+                  const path = contestDetailPath(c)
+                  const text = c.label
+                    ? `${contestDisplayName(c)} · ${c.label}`
+                    : contestDisplayName(c)
+                  const key = `${c.platform}-${c.contestId}-${c.label}-${c.contestLogId}`
+                  if (path) {
+                    return (
+                      <Badge
+                        key={key}
+                        variant="outline"
+                        className="gap-1 font-normal"
+                        asChild
+                      >
+                        <Link to={path} title="查看本站比赛详情">
+                          <TrophyIcon className="size-3" />
+                          {text}
+                        </Link>
+                      </Badge>
+                    )
+                  }
+                  return (
+                    <Badge
+                      key={key}
+                      variant="outline"
+                      className="gap-1 font-normal"
+                    >
+                      <TrophyIcon className="size-3" />
+                      {text}
+                    </Badge>
+                  )
+                })}
+                {relatedContests.length > 2 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2"
+                    onClick={() => setContestsSheetOpen(true)}
+                  >
+                    +{relatedContests.length - 2} 场比赛
+                  </Button>
+                )}
+                {relatedContests.length <= 2 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2"
+                    onClick={() => setContestsSheetOpen(true)}
+                  >
+                    <TrophyIcon data-icon="inline-start" />
+                    全部比赛
+                  </Button>
+                )}
+              </>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -614,15 +702,151 @@ export function QuestionBankDetail() {
             </CardContent>
           </Card>
 
-          <ProblemSolutionsPanel
-            problemId={problem.id}
+          <div
             className={cn(
+              'flex min-w-0 flex-col gap-4',
               'md:sticky md:top-4 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto',
               mobilePane !== 'solutions' && 'hidden md:flex',
             )}
-          />
+          >
+            {relatedContests.length > 0 && (
+              <Card className="gap-3 py-4">
+                <CardHeader className="px-4">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <TrophyIcon className="size-4" />
+                    关联比赛
+                  </CardTitle>
+                  <CardDescription>
+                    本题在站内出现过的比赛，可进入详情看榜单与同场题目
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2 px-4">
+                  {relatedContests.slice(0, 6).map((c) => {
+                    const path = contestDetailPath(c)
+                    const key = `${c.platform}-${c.contestId}-${c.label}-${c.contestLogId}`
+                    const body = (
+                      <>
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="truncate text-sm font-medium">
+                            {contestDisplayName(c)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {[
+                              c.platform,
+                              c.label ? `题 ${c.label}` : '',
+                              c.contestTime
+                                ? formatTime(c.contestTime)
+                                : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </span>
+                        </div>
+                        {c.label && (
+                          <Badge variant="secondary" className="shrink-0">
+                            {c.label}
+                          </Badge>
+                        )}
+                      </>
+                    )
+                    if (path) {
+                      return (
+                        <Link
+                          key={key}
+                          to={path}
+                          className="flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors hover:bg-muted/50"
+                        >
+                          {body}
+                        </Link>
+                      )
+                    }
+                    return (
+                      <div
+                        key={key}
+                        className="flex items-center gap-2 rounded-lg border px-3 py-2"
+                      >
+                        {body}
+                      </div>
+                    )
+                  })}
+                  {relatedContests.length > 6 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setContestsSheetOpen(true)}
+                    >
+                      查看全部 {relatedContests.length} 场
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+            <ProblemSolutionsPanel problemId={problem.id} />
+          </div>
         </div>
       </div>
+
+      <Sheet open={contestsSheetOpen} onOpenChange={setContestsSheetOpen}>
+        <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>关联比赛</SheetTitle>
+            <SheetDescription>
+              本题在站内出现过的全部比赛（{relatedContests.length} 场）
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 pb-4">
+            {relatedContests.map((c) => {
+              const path = contestDetailPath(c)
+              const key = `${c.platform}-${c.contestId}-${c.label}-${c.contestLogId}-sheet`
+              const inner = (
+                <>
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate text-sm font-medium">
+                      {contestDisplayName(c)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {[
+                        c.platform,
+                        c.label ? `题 ${c.label}` : '',
+                        c.contestTime ? formatTime(c.contestTime) : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </span>
+                  </div>
+                  {c.label && (
+                    <Badge variant="secondary" className="shrink-0">
+                      {c.label}
+                    </Badge>
+                  )}
+                </>
+              )
+              if (path) {
+                return (
+                  <Link
+                    key={key}
+                    to={path}
+                    onClick={() => setContestsSheetOpen(false)}
+                    className="flex items-center gap-2 rounded-lg border px-3 py-2.5 transition-colors hover:bg-muted/50"
+                  >
+                    {inner}
+                  </Link>
+                )
+              }
+              return (
+                <div
+                  key={key}
+                  className="flex items-center gap-2 rounded-lg border px-3 py-2.5"
+                >
+                  {inner}
+                </div>
+              )
+            })}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {problem.solutions.length > 0 && (
         <Card className="gap-3 py-4">

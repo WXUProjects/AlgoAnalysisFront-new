@@ -14,16 +14,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
-import {
-  prepareSharedElement,
-  sharedElementStyle,
-} from '@/lib/view-transition'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogArticle, BlogCategory } from '@shared/api'
-
-function blogSharedKey(username: string, a: { id?: number; slug?: string }) {
-  return a.slug ? `${username}--${a.slug}` : String(a.id || username)
-}
 
 function formatDate(sec?: number) {
   if (!sec) return ''
@@ -135,18 +127,11 @@ export function BlogHome() {
                 key={a.id}
                 to={`/blog/${username}/${a.slug}`}
                 className="chirpy-card"
-                onClick={() =>
-                  prepareSharedElement('blog', blogSharedKey(username, a))
-                }
               >
                 <div className="chirpy-card-body">
                   {/* 卡片标题用 h2：列表页不要文章头级 h1 */}
                   <h2
-                    className="chirpy-card-title vt-shared"
-                    style={sharedElementStyle(
-                      'blog',
-                      blogSharedKey(username, a),
-                    )}
+                    className="chirpy-card-title"
                   >
                     {a.title}
                   </h2>
@@ -257,21 +242,10 @@ export function BlogHome() {
                 key={a.id}
                 to={`/blog/${username}/${a.slug}`}
                 className={cn('mz-post-card', a.coverUrl && 'has-cover')}
-                onClick={() =>
-                  prepareSharedElement('blog', blogSharedKey(username, a))
-                }
               >
                 <div className="mz-post-body">
                   <h2
-                    className="mz-post-title vt-shared"
-                    style={
-                      a.coverUrl
-                        ? undefined
-                        : sharedElementStyle(
-                            'blog',
-                            blogSharedKey(username, a),
-                          )
-                    }
+                    className="mz-post-title"
                   >
                     {a.title}
                   </h2>
@@ -305,11 +279,7 @@ export function BlogHome() {
                 </div>
                 {a.coverUrl ? (
                   <span
-                    className="mz-post-cover vt-shared"
-                    style={sharedElementStyle(
-                      'blog',
-                      blogSharedKey(username, a),
-                    )}
+                    className="mz-post-cover"
                   >
                     <img src={a.coverUrl} alt="" loading="lazy" />
                   </span>
@@ -448,17 +418,10 @@ export function BlogHome() {
               <Link
                 to={`/blog/${username}/${a.slug}`}
                 className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition hover:border-primary/40 hover:shadow-md"
-                onClick={() =>
-                  prepareSharedElement('blog', blogSharedKey(username, a))
-                }
               >
                 {a.coverUrl ? (
                   <div
-                    className="aspect-[16/9] overflow-hidden bg-muted vt-shared"
-                    style={sharedElementStyle(
-                      'blog',
-                      blogSharedKey(username, a),
-                    )}
+                    className="aspect-[16/9] overflow-hidden bg-muted"
                   >
                     <img
                       src={a.coverUrl}
@@ -476,15 +439,7 @@ export function BlogHome() {
                     )}
                   </div>
                   <h2
-                    className="line-clamp-2 text-base font-semibold leading-snug group-hover:text-primary vt-shared"
-                    style={
-                      a.coverUrl
-                        ? undefined
-                        : sharedElementStyle(
-                            'blog',
-                            blogSharedKey(username, a),
-                          )
-                    }
+                    className="line-clamp-2 text-base font-semibold leading-snug group-hover:text-primary"
                   >
                     {a.title}
                   </h2>

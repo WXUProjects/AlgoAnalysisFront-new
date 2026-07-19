@@ -899,13 +899,14 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/core/user/recent-comments` | 否 | query: `userId`, `limit?` → 用户近期评论（资料页） |
 | GET | `/core/user/recent-solutions` | 否 | query: `userId`, `limit?` → 用户近期题解（资料页） |
 | GET | `/core/problem/user-profile` | 否 | query: `userId` 做题画像 |
+| GET | `/core/problem/related-contests` | 否 | query: `problemId` → 本题出现过的比赛（`contest_problems` 反查，含站内 `contestLogId` / 题号 label） |
 | GET | `/core/problem/progress` | 是(管理员) | 爬取/分析进度 |
 | POST | `/core/problem/backfill` | 是(管理员) | 近6月提交回填入队；body: `{ limit }`；**仅组织用户提交**的题才爬题面/跑 AI；纯公共域/散户只入库（前端「题面准备中」） |
 | POST | `/core/problem/emergency-stop` | 是(管理员) | 暂停分析（队列保留） |
 | POST | `/core/problem/reset-all` | 是(管理员) | 重置 AI 标签；body: `{ requeue, requeueSet }` |
 | POST | `/core/problem/reset-queues` | 是(管理员) | purge MQ 后按 DB 待爬/待分析重灌 |
 | POST | `/core/problem/resume` | 是(管理员) | 恢复分析 |
-| POST | `/core/problem/retry-failed` | 是(管理员) | body: `{ limit }` |
+| POST | `/core/problem/retry-failed` | 是(管理员) | body: `{ limit, includePermanent? }`；`includePermanent=true` 时重试近 6 月可恢复的永久失败（DOM/WAF/暂无权限等，不含付费题/QOJ403 等硬永久） |
 | POST | `/core/problem/toggle-analyze` | 是(管理员) | 暂停/恢复分析（不清队列）；`{ pause?, pauseSet? }` |
 | POST | `/core/problem/toggle-fetch` | 是(管理员) | 暂停/恢复爬取（不清队列）；`{ pause?, pauseSet? }` |
 | POST | `/core/problem/admin-update` | 是(**站点管理员**) | 直接改标签/题面（无需审核）；`{ id, updateTags?, tags?, updateContent?, contentMd?, title? }` |

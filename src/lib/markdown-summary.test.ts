@@ -1,12 +1,33 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import {
+import { JSDOM } from 'jsdom'
+
+const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+  url: 'http://localhost/',
+})
+const win = dom.window
+Object.defineProperty(globalThis, 'window', { value: win, configurable: true })
+Object.defineProperty(globalThis, 'document', {
+  value: win.document,
+  configurable: true,
+})
+Object.defineProperty(globalThis, 'HTMLElement', {
+  value: win.HTMLElement,
+  configurable: true,
+})
+Object.defineProperty(globalThis, 'Node', { value: win.Node, configurable: true })
+Object.defineProperty(globalThis, 'NodeFilter', {
+  value: win.NodeFilter,
+  configurable: true,
+})
+
+const {
   plainTextFromMarkdown,
   renderSummaryMarkdown,
-} from './markdown.ts'
+} = await import('./markdown.ts')
 
-describe('plainTextFromMarkdown / renderSummaryMarkdown', () => {
-  it('strips latex delimiters and keeps tex body', () => {
+describe('plainTextFromMarkdown', () => {
+  it('strips latex delimiters and keeps tex body (meta / plain use)', () => {
     const text = plainTextFromMarkdown(
       '$N$ 最大能到 $10^{500}$，以及 $$a+b$$',
     )
@@ -16,9 +37,33 @@ describe('plainTextFromMarkdown / renderSummaryMarkdown', () => {
     assert.doesNotMatch(text, /\$/)
   })
 
-  it('strips bold and inline code markers (no HTML render)', () => {
+  it('strips bold and inline code markers', () => {
     const text = plainTextFromMarkdown('用 **数位 DP** 与 `rem` 记录余数')
     assert.equal(text, '用 数位 DP 与 rem 记录余数')
+  })
+
+  it('strips images and list markers to plain text flow', () => {
+    const text = plainTextFromMarkdown(
+      '![图](https://x.test/a.png)\n- 第一点\n1. 第二点',
+    )
+    assert.match(text, /图/)
+    assert.match(text, /第一点/)
+    assert.match(text, /第二点/)
+  })
+})
+
+describe('renderSummaryMarkdown (cards: KaTeX + plain text)', () => {
+  it('renders latex as katex HTML', () => {
+    const html = renderSummaryMarkdown(
+      '$N$ 最大能到 $10^{500}$，以及 $$a+b$$',
+    )
+    assert.match(html, /class="katex"/)
+    assert.doesNotMatch(html, /\$/)
+    // multiple formulas
+    assert.ok((html.match(/class="katex"/g) || []).length >= 2)
+  })
+
+  it('strips bold/code tags but keeps readable text', () => {
     const html = renderSummaryMarkdown('用 **数位 DP** 与 `rem` 记录余数')
     assert.doesNotMatch(html, /<strong>|<code/)
     assert.match(html, /数位 DP/)
@@ -39,20 +84,19 @@ describe('plainTextFromMarkdown / renderSummaryMarkdown', () => {
     assert.match(html, /加粗/)
   })
 
-  it('strips images and list markers to plain text flow', () => {
-    const text = plainTextFromMarkdown(
-      '![图](https://x.test/a.png)\n- 第一点\n1. 第二点',
-    )
-    assert.match(text, /图/)
-    assert.match(text, /第一点/)
-    assert.match(text, /第二点/)
-  })
-
   it('escapes raw html', () => {
     const html = renderSummaryMarkdown('<script>alert(1)</script> **ok**')
     assert.doesNotMatch(html, /<script>/i)
-    assert.match(html, /&lt;script&gt;/)
+    assert.match(html, /&lt;script&gt;|alert/)
     assert.doesNotMatch(html, /<strong>/)
     assert.match(html, /ok/)
+  })
+
+  it('renders problem-style constraints', () => {
+    const html = renderSummaryMarkdown(
+      '求 $1 \\leq x \\leq N$，且 $1 \\leq N < 10^{500}$',
+    )
+    assert.match(html, /class="katex"/)
+    assert.doesNotMatch(html, /\$1/)
   })
 })

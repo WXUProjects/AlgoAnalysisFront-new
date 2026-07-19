@@ -15,10 +15,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { RankPeriod } from './RankAllSheet'
-import {
-  prepareSharedElement,
-  sharedElementStyle,
-} from '@/lib/view-transition'
 
 const PAGE_SIZE = 20
 const RANK_ALL_START = '2020-01-01'
@@ -155,9 +151,7 @@ export function DiscoverRankPage() {
               </span>
               <Link
                 to={`/profile?id=${r.userId}`}
-                className="min-w-0 flex-1 truncate font-medium hover:underline vt-shared"
-                style={sharedElementStyle('user', r.userId)}
-                onClick={() => prepareSharedElement('user', r.userId)}
+                className="min-w-0 flex-1 truncate font-medium hover:underline"
               >
                 {r.name || `用户${r.userId}`}
               </Link>

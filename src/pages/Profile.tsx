@@ -85,7 +85,10 @@ import {
 } from '@/lib/format'
 import { getPlatformHomeLink, getSubmitLink, OJ_PLATFORMS } from '@/lib/link'
 import { cn } from '@/lib/utils'
-import { sharedElementStyle } from '@/lib/view-transition'
+import {
+  contestSeedFromItem,
+  rememberContestSeed,
+} from '@/lib/contest-nav'
 
 export function Profile() {
   const { user, isLogin, logout } = useAuth()
@@ -619,14 +622,7 @@ export function Profile() {
         <aside className="order-1 flex flex-col gap-3 lg:sticky lg:top-4 lg:order-none lg:gap-4">
           <Card className="gap-0 py-3 lg:gap-4 lg:py-5">
             <CardContent className="flex flex-row items-center gap-3 px-3 lg:flex-col lg:items-center lg:gap-3 lg:px-4">
-              <Avatar
-                className="size-14 shrink-0 border-2 border-background shadow-md sm:size-16 lg:size-36 lg:border-4 vt-shared"
-                style={sharedElementStyle(
-                  'user',
-                  // Prefer numeric id so list cards (rank etc.) pair correctly
-                  targetId || profile.username || 'me',
-                )}
-              >
+              <Avatar className="size-14 shrink-0 border-2 border-background shadow-md sm:size-16 lg:size-36 lg:border-4">
                 <AvatarImage src={avatarSrc} alt="" />
                 <AvatarFallback className="text-lg lg:text-2xl">
                   {displayName.slice(0, 1)}
@@ -979,11 +975,19 @@ export function Profile() {
                   key={c.id}
                   role="link"
                   tabIndex={0}
-                  onClick={() => navigate(`/contest/${c.id}`)}
+                  onClick={() => {
+                    rememberContestSeed(c)
+                    navigate(`/contest/${c.id}`, {
+                      state: { contest: contestSeedFromItem(c) },
+                    })
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
-                      navigate(`/contest/${c.id}`)
+                      rememberContestSeed(c)
+                      navigate(`/contest/${c.id}`, {
+                        state: { contest: contestSeedFromItem(c) },
+                      })
                     }
                   }}
                   className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-sm transition-[background-color,box-shadow] duration-150 ease-out hover:bg-muted/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

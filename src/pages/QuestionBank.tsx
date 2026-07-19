@@ -6,10 +6,6 @@ import { listProblems, listProblemTags, type TagCountItem } from '@/api/problem'
 import { addProblemToSet } from '@/api/problemset'
 import type { ProblemInfo } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
-import {
-  prepareSharedElement,
-  sharedElementStyle,
-} from '@/lib/view-transition'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { Badge } from '@/components/ui/badge'
@@ -560,18 +556,15 @@ export function QuestionBank() {
                     key={p.id}
                     className="cursor-pointer"
                     onClick={() => {
-                      prepareSharedElement('problem', p.id)
                       navigate(`/question-bank/detail/${p.id}`)
                     }}
                   >
                     <TableCell>
                       <Link
                         to={`/question-bank/detail/${p.id}`}
-                        className="font-medium hover:underline vt-shared"
-                        style={sharedElementStyle('problem', p.id)}
+                        className="font-medium hover:underline"
                         onClick={(e) => {
                           e.stopPropagation()
-                          prepareSharedElement('problem', p.id)
                         }}
                       >
                         {p.title || p.externalId}

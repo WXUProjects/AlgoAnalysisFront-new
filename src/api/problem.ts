@@ -6,6 +6,7 @@ import {
   type ProblemEditInfo,
   type ProblemInfo,
   type ProblemListRes,
+  type ProblemRelatedContest,
   type ProblemUserProfile,
   type ProposeProblemEditReq,
   type ReviewProblemEditReq,
@@ -69,6 +70,38 @@ function normalizeProblem(raw: Record<string, unknown>): ProblemInfo {
     lastSubmittedAt: num(raw.lastSubmittedAt),
     userStatus: str(raw.userStatus),
   }
+}
+
+export type { ProblemRelatedContest }
+
+function normalizeRelatedContest(
+  raw: Record<string, unknown>,
+): ProblemRelatedContest {
+  return {
+    platform: str(raw.platform),
+    contestId: str(raw.contestId),
+    label: str(raw.label),
+    contestName: str(raw.contestName),
+    contestLogId: num(raw.contestLogId),
+    contestTime: num(raw.contestTime),
+    problemTitle: str(raw.problemTitle),
+    contestUrl: str(raw.contestUrl),
+  }
+}
+
+/** 本题出现过的比赛（全平台，来自 contest_problems） */
+export async function listProblemRelatedContests(
+  problemId: number | string,
+): Promise<ApiResult<ProblemRelatedContest[]>> {
+  const res = await get<Record<string, unknown>[]>(
+    endpoints.core.problem.relatedContests,
+    { problemId },
+  )
+  if (!res.success) return { ...res, data: null }
+  const list = Array.isArray(res.data)
+    ? res.data.map(normalizeRelatedContest)
+    : []
+  return { ...res, data: list }
 }
 
 export async function listProblems(params: {
@@ -347,8 +380,12 @@ export async function resetProblemQueues(): Promise<ApiResult<unknown>> {
   return post(endpoints.core.problem.resetQueues, {})
 }
 
-export async function retryFailedProblems(limit = 0): Promise<ApiResult<unknown>> {
-  return post(endpoints.core.problem.retryFailed, { limit })
+/** 重试近 6 月失败题。includePermanent=true 时含可恢复的永久失败。 */
+export async function retryFailedProblems(
+  limit = 0,
+  includePermanent = false,
+): Promise<ApiResult<unknown>> {
+  return post(endpoints.core.problem.retryFailed, { limit, includePermanent })
 }
 
 function normalizeEditInfo(raw: Record<string, unknown>): ProblemEditInfo {

@@ -465,32 +465,92 @@ export function toMarkdownSource(src: string): string {
 
 /**
  * 自动：HTML 则消毒；否则按 Markdown 渲染。
+ * 若富文本里仍夹着 `$...$` / `\\(...\\)` 公式，走 Markdown+KaTeX 路径，避免裸公式残留。
  */
 export function renderContent(src: string): string {
   if (!src) return ''
-  if (looksLikeHtml(src)) return sanitizeHtml(src)
+  if (looksLikeHtml(src)) {
+    if (/\$|\\\(|\\\[/.test(src)) return renderMarkdown(src)
+    return sanitizeHtml(src)
+  }
   return renderMarkdown(src)
 }
 
 export async function renderContentAsync(src: string): Promise<string> {
   if (!src) return ''
-  if (looksLikeHtml(src)) return sanitizeHtml(src)
+  if (looksLikeHtml(src)) {
+    if (/\$|\\\(|\\\[/.test(src)) return renderMarkdownAsync(src)
+    return sanitizeHtml(src)
+  }
   return renderMarkdownAsync(src)
 }
 
 /**
- * 列表/卡片「文章简述」→ 纯文本（转义 HTML）。
+ * 列表/卡片「文章简述」→ 安全 HTML。
  *
- * 不渲染任何 Markdown/公式：加粗、代码、KaTeX、链接等一律剥标记只留字，
- * 避免卡片里出现加粗/公式把 line-clamp 挤乱。
+ * - **KaTeX 公式会渲染**（行内/块级；块级在 CSS 里压成行内以兼容 line-clamp）
+ * - 其余 Markdown（加粗/链接/标题/代码）剥成纯文字，避免卡片排版被撑乱
+ * - 输出已 escape + sanitize，可直接 dangerouslySetInnerHTML
  */
 export function renderSummaryMarkdown(md: string): string {
   if (!md) return ''
   try {
-    return escapeHtml(plainTextFromMarkdown(md))
+    const raw = md.replace(/\$\$\$/g, '$').replace(/\r\n/g, '\n')
+    const { text, pieces } = extractMath(raw)
+    // 占位符保护：剥 MD 时勿弄坏 @@MATHn@@
+    const plain = stripMarkdownKeepPlaceholders(text)
+    const escaped = escapeHtml(plain)
+    return sanitizeHtml(restoreMath(escaped, pieces))
   } catch {
     return escapeHtml(md)
   }
+}
+
+/**
+ * 剥 Markdown 标记为可读纯文本，但保留 `@@MATHn@@` 公式占位符。
+ * （与 plainTextFromMarkdown 类似，但不处理公式定界符——公式已在 extractMath 抽出）
+ */
+function stripMarkdownKeepPlaceholders(src: string): string {
+  if (!src) return ''
+  let s = src
+
+  if (looksLikeHtml(s)) {
+    s = s
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&amp;/gi, '&')
+      .replace(/&quot;/gi, '"')
+  }
+
+  // 代码块 / 行内代码 → 内容
+  s = s.replace(/```[\w-]*\n?([\s\S]*?)```/g, ' $1 ')
+  s = s.replace(/`([^`]+)`/g, '$1')
+
+  // 标题 / 引用 / 列表标记
+  s = s.replace(/^#{1,6}\s+/gm, '')
+  s = s.replace(/^>\s?/gm, '')
+  s = s.replace(/^\s*[-*+]\s+/gm, '')
+  s = s.replace(/^\s*\d+\.\s+/gm, '')
+
+  // 图片 / 链接
+  s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+  s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+  s = s.replace(/\[\[([^\]]+)\]\]/g, '$1')
+  s = s.replace(/<(https?:\/\/[^>\s]+)>/gi, '$1')
+
+  // 加粗 / 斜体 / 删除线
+  s = s.replace(/\*\*(.+?)\*\*/g, '$1')
+  s = s.replace(/__(.+?)__/g, '$1')
+  s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1')
+  s = s.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, '$1')
+  s = s.replace(/~~(.+?)~~/g, '$1')
+
+  s = s.replace(/\n+/g, ' ').replace(/[ \t]{2,}/g, ' ').trim()
+  return s
 }
 
 /**

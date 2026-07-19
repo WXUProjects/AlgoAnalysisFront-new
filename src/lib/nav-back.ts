@@ -130,11 +130,11 @@ export function goNavBack(navigate: NavigateFunction, pathname: string): void {
     navigate(-1)
     return
   }
-  // 无可靠历史时落到上级，避免点返回直接离开站点（router wrap 会默认开 VT）
+  // 无可靠历史时落到上级，避免点返回直接离开站点
   const parent = resolveParentPath(pathname)
   if (parent && parent !== normalizePath(pathname)) {
-    navigate(parent, { viewTransition: true })
+    navigate(parent)
     return
   }
-  navigate('/', { viewTransition: true })
+  navigate('/')
 }
