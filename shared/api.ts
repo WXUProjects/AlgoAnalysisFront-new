@@ -228,6 +228,8 @@ export const endpoints = {
       retryFailed: `${API_PREFIX}/core/problem/retry-failed`,
       /** 清空近期失败并停止自动重试 */
       clearRecentFailed: `${API_PREFIX}/core/problem/clear-recent-failed`,
+      /** 清空牛客题面并重爬（保留标签/分析） */
+      clearNowCoderContent: `${API_PREFIX}/core/problem/clear-nowcoder-content`,
       toggleAnalyze: `${API_PREFIX}/core/problem/toggle-analyze`,
       toggleFetch: `${API_PREFIX}/core/problem/toggle-fetch`,
       /** 站点管理员直接改标签/题面 */
