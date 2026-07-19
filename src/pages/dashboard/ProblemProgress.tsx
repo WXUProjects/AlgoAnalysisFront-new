@@ -5,6 +5,7 @@ import {
   backfillProblems,
   getProblemProgress,
   resetProblemQueues,
+  clearRecentFailedProblems,
   retryFailedProblems,
   toggleAnalyze,
   toggleFetch,
@@ -50,12 +51,13 @@ import {
 import { cleanProblemTitle, formatPipelineStage, formatTime } from '@/lib/format'
 import { num, str } from '@/lib/http'
 
-/** 本地隐藏的永久失败题目 ID，不改后端状态 */
+/** 本地隐藏的失败列表题目 ID，不改后端状态 */
 const HIDDEN_PERM_KEY = 'goalgo.problem.hiddenFailedPerm'
+const HIDDEN_FAILED_KEY = 'goalgo.problem.hiddenRecentFailed'
 
-function readHiddenPermIds(): Set<number> {
+function readHiddenIds(key: string): Set<number> {
   try {
-    const raw = localStorage.getItem(HIDDEN_PERM_KEY)
+    const raw = localStorage.getItem(key)
     if (!raw) return new Set()
     const arr = JSON.parse(raw) as unknown
     if (!Array.isArray(arr)) return new Set()
@@ -67,8 +69,8 @@ function readHiddenPermIds(): Set<number> {
   }
 }
 
-function writeHiddenPermIds(ids: Set<number>) {
-  localStorage.setItem(HIDDEN_PERM_KEY, JSON.stringify([...ids]))
+function writeHiddenIds(key: string, ids: Set<number>) {
+  localStorage.setItem(key, JSON.stringify([...ids]))
 }
 
 function ActionTip({
@@ -116,7 +118,10 @@ export function DashboardProblemProgress() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [hiddenPermIds, setHiddenPermIds] = useState<Set<number>>(() =>
-    readHiddenPermIds(),
+    readHiddenIds(HIDDEN_PERM_KEY),
+  )
+  const [hiddenFailedIds, setHiddenFailedIds] = useState<Set<number>>(() =>
+    readHiddenIds(HIDDEN_FAILED_KEY),
   )
 
   const load = useCallback(async (silent = false) => {
@@ -170,17 +175,60 @@ export function DashboardProblemProgress() {
     await run(next ? '暂停获取' : '恢复获取', () => toggleFetch(next))
   }
 
-  function handleClearPermHistory() {
-    const current = data?.recentFailedPerm || []
-    const next = new Set(hiddenPermIds)
-    for (const r of current) {
+  function hideRowsFromList(
+    rows: Record<string, unknown>[],
+    key: string,
+    setIds: (s: Set<number>) => void,
+    prev: Set<number>,
+    okMsg: string,
+  ) {
+    const next = new Set(prev)
+    for (const r of rows) {
       const id = num(r.id ?? r.problemId)
       if (id) next.add(id)
     }
-    writeHiddenPermIds(next)
-    setHiddenPermIds(next)
-    toast.success('已从列表隐藏这些永久失败记录（题目状态未变）')
+    writeHiddenIds(key, next)
+    setIds(next)
+    toast.success(okMsg)
   }
+
+  async function handleClearFailedHistory() {
+    setBusy(true)
+    const res = await clearRecentFailedProblems()
+    setBusy(false)
+    if (!res.success) {
+      toast.error(res.message || '清空失败，请稍后重试')
+      return
+    }
+    // 列表本地也清掉，避免刷新前仍闪旧数据
+    const next = new Set(hiddenFailedIds)
+    for (const r of data?.recentFailed || []) {
+      const id = num(r.id ?? r.problemId)
+      if (id) next.add(id)
+    }
+    writeHiddenIds(HIDDEN_FAILED_KEY, next)
+    setHiddenFailedIds(next)
+    toast.success(res.message || '已停止自动重试')
+    void load(true)
+  }
+
+  function handleClearPermHistory() {
+    hideRowsFromList(
+      data?.recentFailedPerm || [],
+      HIDDEN_PERM_KEY,
+      setHiddenPermIds,
+      hiddenPermIds,
+      '已从列表隐藏这些永久失败记录（题目状态未变）',
+    )
+  }
+
+  const visibleRecentFailed = useMemo(() => {
+    const rows = data?.recentFailed || []
+    return rows.filter((r) => {
+      const id = num(r.id ?? r.problemId)
+      return !id || !hiddenFailedIds.has(id)
+    })
+  }, [data?.recentFailed, hiddenFailedIds])
 
   const visibleFailedPerm = useMemo(() => {
     const rows = data?.recentFailedPerm || []
@@ -446,45 +494,80 @@ export function DashboardProblemProgress() {
       <Card className="gap-0 py-0 overflow-hidden">
         <CardHeader className="px-4 py-3 border-b">
           <CardTitle className="text-base">近期失败</CardTitle>
+          <CardDescription className="text-xs">
+            可恢复的失败；「清空并停重试」会停止自动退避重试（标为永久失败，可再手动重试）
+          </CardDescription>
           {isAdmin && (
             <CardAction>
-              <ActionTip tip="只重试近 6 个月内可恢复的失败题目；永久失败的不会重试">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={busy || !(data?.recentFailed?.length)}
-                    >
-                      重试
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>重试失败的题目？</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        仅重试近 6 个月内可恢复的失败项。有题面的会重新分析，没有题面的会先获取题面。永久失败不会纳入。
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>取消</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() =>
-                          void run('重试失败', () => retryFailedProblems(0))
-                        }
+              <div className="flex flex-wrap items-center gap-2">
+                <ActionTip tip="只重试近 6 个月内可恢复的失败题目；永久失败的不会重试">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || !visibleRecentFailed.length}
                       >
-                        确认
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </ActionTip>
+                        重试
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>重试失败的题目？</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          仅重试近 6 个月内可恢复的失败项。有题面的会重新分析，没有题面的会先获取题面。永久失败不会纳入。
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() =>
+                            void run('重试失败', () => retryFailedProblems(0))
+                          }
+                        >
+                          确认
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </ActionTip>
+                <ActionTip tip="将近 6 个月内所有可恢复失败标为永久失败，停止自动退避重试；之后可用「重试永久失败」手动再试">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || !visibleRecentFailed.length}
+                      >
+                        清空并停重试
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>清空近期失败并停止自动重试？</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          近 6 个月内所有「可恢复失败」将停止自动重试（不再退避排队）。题目会进入永久失败列表，需要时再手动点「重试永久失败」。之后新出现的失败仍会显示在近期失败。
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => void handleClearFailedHistory()}
+                        >
+                          确认停止
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </ActionTip>
+              </div>
             </CardAction>
           )}
         </CardHeader>
         <CardContent className="p-0">
-          <JobTable rows={data?.recentFailed || []} showError />
+          <JobTable rows={visibleRecentFailed} showError />
         </CardContent>
       </Card>
 

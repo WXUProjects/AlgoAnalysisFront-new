@@ -388,6 +388,11 @@ export async function retryFailedProblems(
   return post(endpoints.core.problem.retryFailed, { limit, includePermanent })
 }
 
+/** 清空近期失败并停止自动退避重试（FAILED → FAILED_PERM）。 */
+export async function clearRecentFailedProblems(): Promise<ApiResult<unknown>> {
+  return post(endpoints.core.problem.clearRecentFailed, {})
+}
+
 function normalizeEditInfo(raw: Record<string, unknown>): ProblemEditInfo {
   return {
     id: num(raw.id),

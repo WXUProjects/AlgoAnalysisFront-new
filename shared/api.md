@@ -907,6 +907,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problem/reset-queues` | 是(管理员) | purge MQ 后按 DB 待爬/待分析重灌 |
 | POST | `/core/problem/resume` | 是(管理员) | 恢复分析 |
 | POST | `/core/problem/retry-failed` | 是(管理员) | body: `{ limit, includePermanent? }`；`includePermanent=true` 时重试近 6 月可恢复的永久失败（DOM/WAF/暂无权限等，不含付费题/QOJ403 等硬永久） |
+| POST | `/core/problem/clear-recent-failed` | 是(管理员) | 近 6 月 `FAILED` → `FAILED_PERM`，**停止自动退避重试**；body 可空；返回 `cleared` |
 | POST | `/core/problem/toggle-analyze` | 是(管理员) | 暂停/恢复分析（不清队列）；`{ pause?, pauseSet? }` |
 | POST | `/core/problem/toggle-fetch` | 是(管理员) | 暂停/恢复爬取（不清队列）；`{ pause?, pauseSet? }` |
 | POST | `/core/problem/admin-update` | 是(**站点管理员**) | 直接改标签/题面（无需审核）；`{ id, updateTags?, tags?, updateContent?, contentMd?, title? }` |

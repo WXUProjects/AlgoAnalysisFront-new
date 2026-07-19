@@ -226,6 +226,8 @@ export const endpoints = {
       resetQueues: `${API_PREFIX}/core/problem/reset-queues`,
       resume: `${API_PREFIX}/core/problem/resume`,
       retryFailed: `${API_PREFIX}/core/problem/retry-failed`,
+      /** 清空近期失败并停止自动重试 */
+      clearRecentFailed: `${API_PREFIX}/core/problem/clear-recent-failed`,
       toggleAnalyze: `${API_PREFIX}/core/problem/toggle-analyze`,
       toggleFetch: `${API_PREFIX}/core/problem/toggle-fetch`,
       /** 站点管理员直接改标签/题面 */
