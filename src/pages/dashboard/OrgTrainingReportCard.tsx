@@ -26,7 +26,6 @@ import { Switch } from '@/components/ui/switch'
 const MAX_AI_RANGE_DAYS = 243
 
 function defaultRange(): { start: string; end: string } {
-  // 默认上周：相对今天，昨天往前 6 天
   const end = new Date()
   end.setHours(0, 0, 0, 0)
   end.setDate(end.getDate() - 1)
@@ -57,6 +56,18 @@ function formatExpires(ts?: number): string {
   }
 }
 
+/** 按 jobId 去重，保留先出现的（列表按时间新→旧） */
+function dedupeJobs(list: TrainingReportJob[]): TrainingReportJob[] {
+  const seen = new Set<string>()
+  const out: TrainingReportJob[] = []
+  for (const j of list) {
+    if (!j?.jobId || seen.has(j.jobId)) continue
+    seen.add(j.jobId)
+    out.push(j)
+  }
+  return out
+}
+
 export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
   const defaults = useMemo(() => defaultRange(), [])
   const [startDate, setStartDate] = useState(defaults.start)
@@ -73,9 +84,9 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
   const loadJobs = useCallback(async () => {
     if (!orgId) return
     setLoadingJobs(true)
-    const res = await listTrainingReportJobs({ orgId, limit: 8 })
+    const res = await listTrainingReportJobs({ orgId, limit: 12 })
     setLoadingJobs(false)
-    if (res.success && res.data) setJobs(res.data)
+    if (res.success && res.data) setJobs(dedupeJobs(res.data))
   }, [orgId])
 
   useEffect(() => {
@@ -115,8 +126,14 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
     }
   }, [activeJobId, loadJobs])
 
+  const busy =
+    starting ||
+    activeJob?.status === 'pending' ||
+    activeJob?.status === 'running' ||
+    jobs.some((j) => j.status === 'pending' || j.status === 'running')
+
   async function onStart() {
-    if (!orgId) return
+    if (!orgId || starting) return
     if (!startDate || !endDate) {
       toast.error('请选择分析起止日期')
       return
@@ -132,12 +149,29 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
         return
       }
     }
+    // 本地已有同区间进行中任务则直接跟进，不重复创建
+    const gid = groupId === 'all' ? 0 : Number(groupId)
+    const sameActive = jobs.find(
+      (j) =>
+        (j.status === 'pending' || j.status === 'running') &&
+        j.startDate === startDate &&
+        j.endDate === endDate &&
+        (j.groupId ?? 0) === gid &&
+        Boolean(j.useAi) === useAi,
+    )
+    if (sameActive?.jobId) {
+      toast.message('已有相同任务在生成，正在跟踪进度')
+      setActiveJobId(sameActive.jobId)
+      setActiveJob(sameActive)
+      return
+    }
+
     setStarting(true)
     const res = await startTrainingReport({
       orgId,
       startDate,
       endDate,
-      groupId: groupId === 'all' ? 0 : Number(groupId),
+      groupId: gid,
       useAi,
     })
     setStarting(false)
@@ -170,7 +204,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
         <CardTitle className="text-base">导出训练报告</CardTitle>
         <CardDescription>
           按日期区间汇总组织训练数据（提交、排行、标签、比赛、博客、动态等），可限定分组。可选 AI
-          多维度分析（最长约 8 个月）；完成后发邮件，24 小时内可下载 HTML。
+          多维度分析（最长约 8 个月）；完成后发邮件，24 小时内可下载报告（HTML）。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -217,7 +251,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
           <div className="space-y-0.5">
             <Label>启用 AI 分析</Label>
             <p className="text-xs text-muted-foreground">
-              关闭时用规则模板（维度齐全）；开启后多维 AI 分析，最长约 8 个月，耗时更长。
+              关闭时用精美规则模板回填数据；开启后多维 AI 分析，最长约 8 个月，耗时更长。
             </p>
           </div>
           <Switch checked={useAi} onCheckedChange={setUseAi} />
@@ -225,7 +259,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => void onStart()} disabled={starting || !orgId}>
-            {starting ? '提交中…' : '开始生成'}
+            {starting ? '提交中…' : busy ? '开始生成（有任务进行中）' : '开始生成'}
           </Button>
           <Button
             variant="outline"
@@ -246,13 +280,12 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
               <span>
                 当前任务：{statusLabel(activeJob.status)}
                 {activeJob.progress != null ? ` · ${activeJob.progress}%` : ''}
+                {activeJob.useAi ? ' · AI' : ''}
               </span>
-              {activeJob.downloadable && (
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => onDownload(activeJob.jobId)}>
-                    下载 HTML
-                  </Button>
-                </div>
+              {(activeJob.downloadable || activeJob.status === 'done') && (
+                <Button size="sm" onClick={() => onDownload(activeJob.jobId)}>
+                  下载报告
+                </Button>
               )}
             </div>
             {activeJob.message && (
@@ -301,15 +334,15 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
                       <span className="ml-1 text-xs text-muted-foreground">AI</span>
                     ) : null}
                   </div>
-                  {j.expiresAt && j.status === 'done' ? (
+                  {j.expiresAt && (j.status === 'done' || j.downloadable) ? (
                     <div className="text-xs text-muted-foreground">
                       有效至 {formatExpires(j.expiresAt)}
                     </div>
                   ) : null}
                 </div>
-                {j.downloadable ? (
+                {j.downloadable || j.status === 'done' ? (
                   <Button size="sm" variant="secondary" onClick={() => onDownload(j.jobId)}>
-                    下载 HTML
+                    下载报告
                   </Button>
                 ) : null}
               </li>
