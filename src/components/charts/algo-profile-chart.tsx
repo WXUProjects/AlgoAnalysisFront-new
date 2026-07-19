@@ -59,6 +59,23 @@ const DIFF_ORDER: Record<string, number> = {
   Hard: 2,
 }
 
+/** 平台过题饼图展示名（后端已拆牛客；兼容旧缓存 NowCoder） */
+const PLATFORM_PIE_LABEL: Record<string, string> = {
+  NowCoder: '竞赛站',
+  竞赛站: '竞赛站',
+  牛客Tracker: '牛客Tracker',
+  CodeForces: 'Codeforces',
+  LuoGu: '洛谷',
+  LeetCode: '力扣',
+  AtCoder: 'AtCoder',
+  QOJ: 'QOJ',
+}
+
+function platformPieLabel(name: string): string {
+  const t = name.trim()
+  return PLATFORM_PIE_LABEL[t] || t
+}
+
 function isJunkLabel(name?: string | null): boolean {
   const s = (name || '').trim()
   if (!s) return true
@@ -360,10 +377,13 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
 
   const maxAc = Math.max(...radarAll.map((r) => r.count), 1)
 
-  // 平台过题数（去重题量，非 AC 提交次数）
+  // 平台过题数（去重题量，非 AC 提交次数）；牛客拆「竞赛站 / 牛客Tracker」
   const platformPie = (data.platforms ?? [])
     .filter((p) => p.name?.trim() && !isJunkLabel(p.name) && p.count > 0)
-    .map((p) => ({ name: p.name.trim(), value: p.count }))
+    .map((p) => ({
+      name: platformPieLabel(p.name),
+      value: p.count,
+    }))
     .sort((a, b) => b.value - a.value)
   const platformTotal = platformPie.reduce((s, p) => s + p.value, 0)
 
@@ -452,7 +472,7 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <ul className="flex w-[7.5rem] shrink-0 flex-col justify-center gap-1 overflow-y-auto py-0.5 pr-1 sm:w-[8.5rem]">
+          <ul className="flex w-[8.5rem] shrink-0 flex-col justify-center gap-1 overflow-y-auto py-0.5 pr-1 sm:w-[9.5rem]">
             {platformPie.map((p, i) => (
               <li
                 key={p.name}
@@ -462,7 +482,10 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
                   className="size-2 shrink-0 rounded-sm"
                   style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}
                 />
-                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                <span
+                  className="min-w-0 flex-1 truncate text-muted-foreground"
+                  title={p.name}
+                >
                   {p.name}
                 </span>
                 <span className="shrink-0 tabular-nums text-foreground/80">

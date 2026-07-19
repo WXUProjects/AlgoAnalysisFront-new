@@ -50,6 +50,7 @@ export function getSubmitLink(
 
 export const OJ_PLATFORMS: { value: OjPlatform; label: string }[] = [
   { value: 'AtCoder', label: 'AtCoder' },
+  // 绑定仍是一个 NowCoder 账号；画像饼图再拆「竞赛站 / 牛客Tracker」
   { value: 'NowCoder', label: '牛客' },
   { value: 'CodeForces', label: 'Codeforces' },
   { value: 'LuoGu', label: '洛谷' },
