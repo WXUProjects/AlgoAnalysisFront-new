@@ -94,3 +94,17 @@ export function findOrgByDomainHint<
   }
   return undefined
 }
+
+/** 本域入口 path：`/?domain=<slug|id>`（非邀请） */
+export function buildDomainSharePath(domain: string): string {
+  const key = normalizeDomainHint(domain)
+  if (!key) return '/'
+  return `/?domain=${encodeURIComponent(key)}`
+}
+
+/** 本域入口完整 URL，供组织管理员复制分享 */
+export function buildDomainShareUrl(domain: string): string {
+  const path = buildDomainSharePath(domain)
+  if (typeof window === 'undefined') return path
+  return `${window.location.origin}${path}`
+}

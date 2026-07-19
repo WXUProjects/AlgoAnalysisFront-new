@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  buildDomainSharePath,
   findOrgByDomainHint,
   normalizeDomainHint,
 } from '@/lib/domain-hint'
@@ -31,5 +32,13 @@ describe('domain-hint', () => {
   it('non-member hint returns undefined', () => {
     const list = [{ id: 1, slug: 'public' }]
     assert.equal(findOrgByDomainHint(list, 'other-team'), undefined)
+  })
+
+  it('buildDomainSharePath encodes domain', () => {
+    assert.equal(buildDomainSharePath('public'), '/?domain=public')
+    assert.equal(
+      buildDomainSharePath('org-91216c871527'),
+      '/?domain=org-91216c871527',
+    )
   })
 })

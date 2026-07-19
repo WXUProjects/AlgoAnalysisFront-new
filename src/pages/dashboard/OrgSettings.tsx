@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link2Icon, Share2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
 import {
@@ -21,6 +22,14 @@ import { Pagination } from '@/components/pagination'
 import { useListQueryState } from '@/hooks/use-list-query-state'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -31,6 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { buildDomainShareUrl } from '@/lib/domain-hint'
 import { buildOrgInviteUrl } from '@/lib/org-invite'
 import { orgRoleName } from '@/lib/roles'
 import { OrgTrainingReportCard } from '@/pages/dashboard/OrgTrainingReportCard'
@@ -85,9 +95,34 @@ export function DashboardOrgSettings() {
     userId: number
     name: string
   } | null>(null)
+  /** 本域入口链接弹窗（非邀请） */
+  const [domainShareOpen, setDomainShareOpen] = useState(false)
 
   const isSystemOrg = Boolean(currentOrg?.isSystem)
   const myUserId = user?.userId || 0
+
+  const domainShareKey = useMemo(() => {
+    const slug = (currentOrg?.slug || '').trim()
+    if (slug) return slug
+    if (orgId > 0) return String(orgId)
+    return ''
+  }, [currentOrg?.slug, orgId])
+
+  const domainShareUrl = useMemo(
+    () => (domainShareKey ? buildDomainShareUrl(domainShareKey) : ''),
+    [domainShareKey],
+  )
+
+  function copyDomainShareUrl() {
+    if (!domainShareUrl) {
+      toast.error('暂无法生成链接，请确认已选中组织')
+      return
+    }
+    void navigator.clipboard.writeText(domainShareUrl).then(
+      () => toast.success('已复制本域入口链接'),
+      () => toast.error('复制失败，请手动选择复制'),
+    )
+  }
 
   const loadMembers = useCallback(async () => {
     if (!orgId) return
@@ -333,6 +368,78 @@ export function DashboardOrgSettings() {
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <CardTitle className="text-base">本域入口</CardTitle>
+            <CardDescription>
+              发给已经在本组织里的成员，打开后会自动切到本域。不能用来邀请新人。
+            </CardDescription>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!domainShareKey}
+            onClick={() => setDomainShareOpen(true)}
+          >
+            <Share2Icon data-icon="inline-start" />
+            分享本域链接
+          </Button>
+        </CardHeader>
+      </Card>
+
+      <Dialog open={domainShareOpen} onOpenChange={setDomainShareOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>分享本域链接</DialogTitle>
+            <DialogDescription asChild>
+              <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">
+                  这不是邀请链接，不会把任何人拉进组织。
+                </p>
+                <p>
+                  已经加入「{currentOrg?.name || '本组织'}」的成员打开后，会默认切到本域（前台与后台都生效），直到对方自己换组织。
+                </p>
+                <p>
+                  还没加入的人打开后，只会留在公共域或自己原来的组织，不会自动成为成员。要加人请用上方的邀请链接或识别码。
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="domain-share-url">链接</Label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                id="domain-share-url"
+                readOnly
+                value={domainShareUrl}
+                className="font-mono text-xs sm:text-sm"
+                onFocus={(e) => e.target.select()}
+              />
+              <Button
+                type="button"
+                className="shrink-0"
+                disabled={!domainShareUrl}
+                onClick={copyDomainShareUrl}
+              >
+                <Link2Icon data-icon="inline-start" />
+                复制链接
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDomainShareOpen(false)}
+            >
+              关闭
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {requests.length > 0 && (
         <Card>
