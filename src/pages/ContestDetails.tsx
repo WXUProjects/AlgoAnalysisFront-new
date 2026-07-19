@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { BookOpenIcon, ExternalLinkIcon, FileTextIcon } from 'lucide-react'
+import {
+  BookOpenIcon,
+  ChevronDownIcon,
+  ExternalLinkIcon,
+  FileTextIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { getContestProblems, getContestRanking } from '@/api/contest'
 import { getProblem } from '@/api/problem'
@@ -37,6 +42,11 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { useListQueryState } from '@/hooks/use-list-query-state'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -70,6 +80,8 @@ export function ContestDetails() {
   const [detailLoading, setDetailLoading] = useState(false)
   /** 移动端：题面 / 题解 */
   const [mobilePane, setMobilePane] = useState<'problem' | 'solutions'>('problem')
+  /** 比赛题目区可收起，默认展开 */
+  const [problemsOpen, setProblemsOpen] = useState(true)
 
   useEffect(() => {
     if (!id) {
@@ -212,146 +224,166 @@ export function ContestDetails() {
         </div>
       </div>
 
-      {/* 题目 A B C D Tab */}
-      <Card className="gap-0 py-0 overflow-hidden">
-        <CardHeader className="px-4 py-3 border-b">
-          <CardTitle className="text-base">比赛题目</CardTitle>
-          <CardDescription>
-            {ensureStatus === 'running'
-              ? '正在从 OJ 拉取题目并准备题面…'
-              : ensureStatus === 'failed'
-                ? '未能从 OJ 拉到题目列表（可能已结束或需登录）'
-                : '题面由系统主动爬取；AI 分析仅在有具备权限的用户提交后触发'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 p-4">
-          {problemsLoading && !problems.length ? (
-            <div className="flex flex-col gap-2">
-              <Skeleton className="h-9 w-full max-w-md" />
-              <Skeleton className="h-40 w-full" />
+      {/* 题目 A B C D Tab（可收起，默认展开） */}
+      <Collapsible open={problemsOpen} onOpenChange={setProblemsOpen}>
+        <Card className="gap-0 py-0 overflow-hidden">
+          <CardHeader className="px-4 py-3 border-b">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <CardTitle className="text-base">比赛题目</CardTitle>
+                {ensureStatus === 'running' ? (
+                  <CardDescription>正在拉取题目…</CardDescription>
+                ) : ensureStatus === 'failed' ? (
+                  <CardDescription>未能拉到题目列表</CardDescription>
+                ) : problems.length > 0 ? (
+                  <CardDescription>{problems.length} 题</CardDescription>
+                ) : null}
+              </div>
+              <CollapsibleTrigger asChild>
+                <Button type="button" size="sm" variant="ghost">
+                  {problemsOpen ? '收起' : '展开'}
+                  <ChevronDownIcon
+                    data-icon="inline-end"
+                    className={cn(
+                      'transition-transform',
+                      problemsOpen && 'rotate-180',
+                    )}
+                  />
+                </Button>
+              </CollapsibleTrigger>
             </div>
-          ) : !problems.length ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">
-              {ensureStatus === 'running'
-                ? '题目准备中，请稍候…'
-                : '暂无题目目录'}
-            </p>
-          ) : (
-            <Tabs
-              value={activeLabel || problems[0]?.label}
-              onValueChange={(v) => {
-                setActiveLabel(v)
-                setMobilePane('problem')
-              }}
-            >
-              <TabsList className="h-auto flex-wrap justify-start gap-1">
-                {problems.map((p) => (
-                  <TabsTrigger key={p.label} value={p.label} className="min-w-9">
-                    {p.label}
-                    {p.hasContent ? null : (
-                      <span className="ml-1 text-[10px] text-muted-foreground">
-                        ·
-                      </span>
-                    )}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {problems.map((p) => (
-                <TabsContent key={p.label} value={p.label} className="mt-3">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <h3 className="font-medium">
-                      {p.label}. {problemDetail?.title || p.title || p.externalId}
-                    </h3>
-                    {p.difficulty ? (
-                      <Badge variant="outline">{p.difficulty}</Badge>
-                    ) : null}
-                    {p.problemId > 0 ? (
-                      <Button type="button" size="sm" variant="ghost" asChild>
-                        <Link to={`/question-bank/detail/${p.problemId}`}>
-                          题库页
-                        </Link>
-                      </Button>
-                    ) : null}
-                    {p.url ? (
-                      <Button type="button" size="sm" variant="ghost" asChild>
-                        <a href={p.url} target="_blank" rel="noreferrer">
-                          <ExternalLinkIcon data-icon="inline-start" />
-                          原题
-                        </a>
-                      </Button>
-                    ) : null}
-                  </div>
-
-                  <div className="md:hidden mb-2">
-                    <Tabs
-                      value={mobilePane}
-                      onValueChange={(v) =>
-                        setMobilePane(v as 'problem' | 'solutions')
-                      }
-                    >
-                      <TabsList className="w-full">
-                        <TabsTrigger value="problem" className="flex-1">
-                          <FileTextIcon />
-                          题面
-                        </TabsTrigger>
-                        <TabsTrigger value="solutions" className="flex-1">
-                          <BookOpenIcon />
-                          题解
-                        </TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  </div>
-
-                  <div className="grid min-w-0 gap-4 md:grid-cols-[7fr_3fr] md:items-start">
-                    <Card
-                      className={cn(
-                        'min-w-0 gap-3 py-4',
-                        mobilePane !== 'problem' && 'hidden md:flex',
-                      )}
-                    >
-                      <CardHeader className="px-4 py-0">
-                        <CardTitle className="text-base">题面</CardTitle>
-                      </CardHeader>
-                      <CardContent className="min-w-0 px-4">
-                        {detailLoading ? (
-                          <Skeleton className="h-48 w-full" />
-                        ) : (
-                          <MarkdownBody
-                            content={problemDetail?.contentMd || ''}
-                            mode="auto"
-                            emptyText="题面准备中。系统会主动爬取；若 OJ 不可访问则可能长期为空"
-                          />
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    {p.problemId > 0 ? (
-                      <ProblemSolutionsPanel
-                        problemId={p.problemId}
-                        className={cn(
-                          'md:sticky md:top-4 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto',
-                          mobilePane !== 'solutions' && 'hidden md:flex',
-                        )}
-                      />
-                    ) : (
-                      <Card
-                        className={cn(
-                          'gap-2 py-4',
-                          mobilePane !== 'solutions' && 'hidden md:flex',
-                        )}
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent className="flex flex-col gap-3 p-4">
+              {problemsLoading && !problems.length ? (
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-9 w-full max-w-md" />
+                  <Skeleton className="h-40 w-full" />
+                </div>
+              ) : !problems.length ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">
+                  {ensureStatus === 'running'
+                    ? '题目准备中，请稍候…'
+                    : '暂无题目目录'}
+                </p>
+              ) : (
+                <Tabs
+                  value={activeLabel || problems[0]?.label}
+                  onValueChange={(v) => {
+                    setActiveLabel(v)
+                    setMobilePane('problem')
+                  }}
+                >
+                  <TabsList className="h-auto flex-wrap justify-start gap-1">
+                    {problems.map((p) => (
+                      <TabsTrigger
+                        key={p.label}
+                        value={p.label}
+                        className="min-w-9"
                       >
-                        <CardContent className="px-4 text-sm text-muted-foreground">
-                          题目尚未入库，暂无题解
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-                </TabsContent>
-              ))}
-            </Tabs>
-          )}
-        </CardContent>
-      </Card>
+                        {p.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                  {problems.map((p) => (
+                    <TabsContent key={p.label} value={p.label} className="mt-3">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <h3 className="font-medium">
+                          {p.label}.{' '}
+                          {problemDetail?.title || p.title || p.externalId}
+                        </h3>
+                        {p.difficulty ? (
+                          <Badge variant="outline">{p.difficulty}</Badge>
+                        ) : null}
+                        {p.problemId > 0 ? (
+                          <Button type="button" size="sm" variant="ghost" asChild>
+                            <Link to={`/question-bank/detail/${p.problemId}`}>
+                              题库页
+                            </Link>
+                          </Button>
+                        ) : null}
+                        {p.url ? (
+                          <Button type="button" size="sm" variant="ghost" asChild>
+                            <a href={p.url} target="_blank" rel="noreferrer">
+                              <ExternalLinkIcon data-icon="inline-start" />
+                              原题
+                            </a>
+                          </Button>
+                        ) : null}
+                      </div>
+
+                      <div className="md:hidden mb-2">
+                        <Tabs
+                          value={mobilePane}
+                          onValueChange={(v) =>
+                            setMobilePane(v as 'problem' | 'solutions')
+                          }
+                        >
+                          <TabsList className="w-full">
+                            <TabsTrigger value="problem" className="flex-1">
+                              <FileTextIcon />
+                              题面
+                            </TabsTrigger>
+                            <TabsTrigger value="solutions" className="flex-1">
+                              <BookOpenIcon />
+                              题解
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                      </div>
+
+                      <div className="grid min-w-0 gap-4 md:grid-cols-[7fr_3fr] md:items-start">
+                        <Card
+                          className={cn(
+                            'min-w-0 gap-3 py-4',
+                            mobilePane !== 'problem' && 'hidden md:flex',
+                          )}
+                        >
+                          <CardHeader className="px-4 py-0">
+                            <CardTitle className="text-base">题面</CardTitle>
+                          </CardHeader>
+                          <CardContent className="min-w-0 px-4">
+                            {detailLoading ? (
+                              <Skeleton className="h-48 w-full" />
+                            ) : (
+                              <MarkdownBody
+                                content={problemDetail?.contentMd || ''}
+                                mode="auto"
+                                emptyText="题面准备中，请稍后刷新"
+                              />
+                            )}
+                          </CardContent>
+                        </Card>
+
+                        {p.problemId > 0 ? (
+                          <ProblemSolutionsPanel
+                            problemId={p.problemId}
+                            className={cn(
+                              'md:sticky md:top-4 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto',
+                              mobilePane !== 'solutions' && 'hidden md:flex',
+                            )}
+                          />
+                        ) : (
+                          <Card
+                            className={cn(
+                              'gap-2 py-4',
+                              mobilePane !== 'solutions' && 'hidden md:flex',
+                            )}
+                          >
+                            <CardContent className="px-4 text-sm text-muted-foreground">
+                              题目尚未入库，暂无题解
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       <div className="flex flex-wrap items-center gap-2">
         {groups.length > 0 && (

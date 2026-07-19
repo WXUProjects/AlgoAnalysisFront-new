@@ -51,11 +51,13 @@ export async function listContests(params: {
   userId: number
   limit?: number
   offset?: number
+  platform?: string
 }): Promise<ApiResult<ContestListData>> {
   const res = await get<Record<string, unknown>[]>(endpoints.core.contest.list, {
     userId: params.userId,
     limit: params.limit ?? 10,
     offset: params.offset ?? 0,
+    ...(params.platform ? { platform: params.platform } : {}),
   })
   if (!res.success) return { ...res, data: null }
   const list = Array.isArray(res.data) ? res.data.map(normalizeContest) : []

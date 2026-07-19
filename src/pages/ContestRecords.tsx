@@ -22,12 +22,23 @@ import { formatTime } from '@/lib/format'
 
 const DEFAULT_PAGE_SIZE = 10
 
+const PLATFORM_FILTERS: { value: string; label: string }[] = [
+  { value: '', label: '全部平台' },
+  { value: 'CodeForces', label: 'Codeforces' },
+  { value: 'AtCoder', label: 'AtCoder' },
+  { value: 'LuoGu', label: '洛谷' },
+  { value: 'NowCoder', label: '牛客' },
+  { value: 'LeetCode', label: '力扣' },
+  { value: 'QOJ', label: 'QOJ' },
+]
+
 /** 比赛记录列表（嵌入 Contest 页「比赛记录」Tab） */
 export function ContestRecords() {
   const { isLogin, user } = useAuth()
   const requestId = useRef(0)
   const [searchParams, setSearchParams] = useSearchParams()
   const idParam = searchParams.get('id')
+  const platformParam = searchParams.get('platform') || ''
   const userMode = Boolean(idParam)
   const targetUserId = userMode ? Number(idParam) : -1
 
@@ -46,6 +57,7 @@ export function ContestRecords() {
       userId: targetUserId,
       limit: pageSize,
       offset: (page - 1) * pageSize,
+      platform: platformParam || undefined,
     })
     if (id !== requestId.current) return
     setLoading(false)
@@ -55,20 +67,21 @@ export function ContestRecords() {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page, pageSize, targetUserId])
+  }, [page, pageSize, targetUserId, platformParam])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  // 切换用户筛选时回到第一页
-  const prevTarget = useRef(targetUserId)
+  // 切换用户 / 平台筛选时回到第一页
+  const prevFilter = useRef(`${targetUserId}\0${platformParam}`)
   useEffect(() => {
-    if (prevTarget.current !== targetUserId) {
-      prevTarget.current = targetUserId
+    const key = `${targetUserId}\0${platformParam}`
+    if (prevFilter.current !== key) {
+      prevFilter.current = key
       setPage(1)
     }
-  }, [targetUserId, setPage])
+  }, [targetUserId, platformParam, setPage])
 
   useEffect(() => {
     if (!userMode || !targetUserId || targetUserId < 0) {
@@ -97,6 +110,14 @@ export function ContestRecords() {
     if (!isLogin || !user) return
     patchParams((p) => {
       p.set('id', String(user.userId))
+      p.delete('tab')
+    })
+  }
+
+  function setPlatform(plat: string) {
+    patchParams((p) => {
+      if (plat) p.set('platform', plat)
+      else p.delete('platform')
       p.delete('tab')
     })
   }
@@ -134,6 +155,20 @@ export function ContestRecords() {
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {PLATFORM_FILTERS.map((f) => (
+          <Button
+            key={f.value || 'all'}
+            type="button"
+            size="sm"
+            variant={platformParam === f.value ? 'default' : 'outline'}
+            onClick={() => setPlatform(f.value)}
+          >
+            {f.label}
+          </Button>
+        ))}
       </div>
 
       <div className="flex flex-col gap-2">
