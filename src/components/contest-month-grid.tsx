@@ -157,51 +157,62 @@ export function ContestMonthGrid({
               type="button"
               role="gridcell"
               aria-selected={selected}
+              aria-current={isToday ? 'date' : undefined}
               aria-label={
-                hasContest ? `${cell.ymd}，${count} 场比赛` : cell.ymd
+                [
+                  cell.ymd,
+                  isToday ? '今天' : '',
+                  hasContest ? `${count} 场比赛` : '',
+                  selected ? '已选中' : '',
+                ]
+                  .filter(Boolean)
+                  .join('，')
               }
               onClick={() => onSelectDay(cell.ymd)}
               className={cn(
-                'relative flex min-h-0 flex-col items-center justify-center transition-colors',
+                'relative flex min-h-0 flex-col items-center justify-center gap-0.5 transition-colors',
                 'outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 compact
                   ? 'aspect-square rounded-md p-0'
                   : 'aspect-square rounded-lg p-0.5',
                 !cell.inMonth && 'opacity-35',
-                selected && !hasContest && 'bg-accent text-accent-foreground',
-                !selected && 'hover:bg-muted/70',
-                isToday && !selected && 'font-semibold',
+                !selected && 'hover:bg-muted/50',
               )}
             >
-              {hasContest ? (
-                <ContestHandDrawnRing dayKey={cell.ymd} active={selected} />
+              {/* 选中：手绘圈；有赛默认只显示下方小点 */}
+              {selected ? (
+                <ContestHandDrawnRing dayKey={cell.ymd} active />
               ) : null}
 
               <span
                 className={cn(
-                  'relative z-[1] tabular-nums',
-                  compact ? 'text-xs' : 'text-sm sm:text-[0.9375rem]',
-                  selected && hasContest && 'font-semibold text-primary',
-                  isToday && !hasContest && 'text-primary',
+                  'relative z-[1] flex items-center justify-center tabular-nums',
+                  compact ? 'size-6 text-xs' : 'size-7 text-sm',
+                  // 今天：始终用淡底圆标出，不抢有赛/选中的视觉
+                  isToday &&
+                    !selected &&
+                    'rounded-full bg-muted text-muted-foreground',
+                  isToday && selected && 'text-primary',
+                  selected && !isToday && 'font-semibold text-primary',
                 )}
               >
                 {cell.date.getDate()}
               </span>
 
-              {!compact && hasContest ? (
-                <span
-                  className={cn(
-                    'relative z-[1] mt-0.5 max-w-full truncate text-[10px] leading-none tabular-nums text-muted-foreground',
-                    selected && 'text-primary/80',
-                  )}
-                >
-                  {count > 1 ? `${count} 场` : '有赛'}
-                </span>
-              ) : null}
-
-              {!compact && !hasContest && isToday ? (
-                <span className="relative z-[1] mt-0.5 size-1 rounded-full bg-primary" />
-              ) : null}
+              {/* 有赛：日期下方小点（固定占位，避免格子跳动） */}
+              <span
+                className="relative z-[1] flex h-1.5 items-center justify-center"
+                aria-hidden
+              >
+                {hasContest ? (
+                  <span
+                    className={cn(
+                      'size-1 rounded-full',
+                      selected ? 'bg-primary' : 'bg-foreground/45',
+                    )}
+                  />
+                ) : null}
+              </span>
             </button>
           )
         })}

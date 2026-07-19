@@ -384,7 +384,7 @@ type FeedLayoutProps = {
   mineScope: boolean
   selfUserId?: number
   switchOrg: (orgId: number) => Promise<{ success: boolean; message: string }>
-  refreshOrgs: () => Promise<void>
+  refreshOrgs: () => Promise<unknown>
 }
 
 function DiscoverFeedLayout({

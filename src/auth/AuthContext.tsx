@@ -16,6 +16,13 @@ import {
   refreshToken,
 } from '@/api/auth'
 import { listMyOrgs, switchOrg as apiSwitchOrg } from '@/api/org'
+import {
+  captureDomainFromLocation,
+  clearDomainHint,
+  DOMAIN_HINT_EVENT,
+  findOrgByDomainHint,
+  getDomainHint,
+} from '@/lib/domain-hint'
 import { setAuthExpiredHandler } from '@/lib/http'
 import { jwt, jwtPayloadEquals, type JwtPayload } from '@/lib/jwt'
 import {
@@ -58,8 +65,18 @@ interface AuthState {
   }>
   logout: () => void
   sync: () => Promise<void>
-  switchOrg: (orgId: number) => Promise<{ success: boolean; message: string }>
-  refreshOrgs: () => Promise<void>
+  /**
+   * 切换当前组织。
+   * - 默认视为用户手动切换：清除 `?domain=` 持久标记
+   * - `fromDomainHint: true`：由域标记自动切换，保留标记
+   */
+  switchOrg: (
+    orgId: number,
+    opts?: { fromDomainHint?: boolean },
+  ) => Promise<{ success: boolean; message: string }>
+  refreshOrgs: () => Promise<OrgInfo[]>
+  /** 按本地 domain 标记尝试切域（非成员则保持当前/默认） */
+  applyDomainHint: (list?: OrgInfo[]) => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -89,13 +106,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [orgs, setOrgs] = useState<OrgInfo[]>([])
   const [ready, setReady] = useState(false)
   const userRef = useRef<JwtPayload | null>(null)
+  const orgsRef = useRef<OrgInfo[]>([])
   const lastRenewAtRef = useRef(0)
   const profileLoadedForRef = useRef<number | null>(null)
+  /** 避免 domain hint 自动切域与 sync 重入 */
+  const applyingDomainHintRef = useRef(false)
 
   const setUser = useCallback((next: JwtPayload | null) => {
     if (jwtPayloadEquals(userRef.current, next)) return
     userRef.current = next
     setUserState(next)
+  }, [])
+
+  const setOrgsBoth = useCallback((list: OrgInfo[]) => {
+    orgsRef.current = list
+    setOrgs(list)
   }, [])
 
   const logout = useCallback(() => {
@@ -104,28 +129,88 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profileLoadedForRef.current = null
     setUser(null)
     setProfile(null)
-    setOrgs([])
-  }, [setUser])
+    setOrgsBoth([])
+  }, [setUser, setOrgsBoth])
 
-  const refreshOrgs = useCallback(async () => {
+  const refreshOrgs = useCallback(async (): Promise<OrgInfo[]> => {
     if (!jwt.isValid()) {
-      setOrgs([])
-      return
+      setOrgsBoth([])
+      return []
     }
     const res = await listMyOrgs()
-    if (res.success) setOrgs(res.list)
-  }, [])
+    if (res.success) {
+      setOrgsBoth(res.list)
+      return res.list
+    }
+    return orgsRef.current
+  }, [setOrgsBoth])
+
+  /**
+   * 按 `?domain=` / 本地标记切到目标组织。
+   * 非成员：不切换（留在公共域或用户当前默认），标记仍保留以便日后加入后再生效。
+   */
+  const applyDomainHint = useCallback(
+    async (list?: OrgInfo[]) => {
+      if (applyingDomainHintRef.current) return
+      if (!jwt.isValid()) return
+      const hint = getDomainHint()
+      if (!hint) return
+      const orgsList = list ?? orgsRef.current
+      if (!orgsList.length) return
+
+      const target = findOrgByDomainHint(orgsList, hint)
+      if (!target) {
+        // 不是该域成员 → 回退：保持 JWT 当前组织（公共域/默认），不 toast
+        return
+      }
+      const cur = userRef.current?.orgId
+      if (cur && cur === target.id) return
+
+      applyingDomainHintRef.current = true
+      try {
+        const res = await apiSwitchOrg(target.id)
+        if (!res.success) return
+        profileLoadedForRef.current = null
+        // 切完后刷新会话；fromDomainHint 路径不经 switchOrg 包装，标记保留
+        try {
+          await refreshToken()
+        } catch {
+          /* token 已在 apiSwitchOrg 写入 */
+        }
+        if (!jwt.isValid()) return
+        const payload = jwt.getUserInfo()
+        if (!payload) return
+        setUser(payload)
+        const resProf = await fetchProfileById(payload.userId)
+        if (resProf.success && resProf.data) {
+          setProfile(resProf.data)
+          profileLoadedForRef.current = payload.userId
+        }
+        await refreshOrgs()
+      } finally {
+        applyingDomainHintRef.current = false
+      }
+    },
+    [refreshOrgs, setUser],
+  )
 
   /**
    * 会话同步：
    * - 内存 token 仍有效：不调 refresh，避免无意义重签 + 全站重渲染
    * - 无内存 token：用 HttpOnly Cookie 调 refresh 一次恢复
    * - profile/orgs 仅在 userId 变化或尚未加载时拉取
+   * - 拉完组织后尝试应用 domain 标记
    */
   const sync = useCallback(
-    async (opts?: { forceRefresh?: boolean; forceProfile?: boolean }) => {
+    async (opts?: {
+      forceRefresh?: boolean
+      forceProfile?: boolean
+      /** 即使 profile 已缓存也再试 domain 切域 */
+      applyHint?: boolean
+    }) => {
       const forceRefresh = Boolean(opts?.forceRefresh)
       const forceProfile = Boolean(opts?.forceProfile)
+      const applyHint = opts?.applyHint !== false
 
       if (forceRefresh || !jwt.isValid()) {
         try {
@@ -139,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileLoadedForRef.current = null
         setUser(null)
         setProfile(null)
-        setOrgs([])
+        setOrgsBoth([])
         return
       }
 
@@ -149,7 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileLoadedForRef.current = null
         setUser(null)
         setProfile(null)
-        setOrgs([])
+        setOrgsBoth([])
         return
       }
 
@@ -157,16 +242,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const needProfile =
         forceProfile || profileLoadedForRef.current !== payload.userId
+      let list: OrgInfo[] = orgsRef.current
       if (needProfile) {
         const res = await fetchProfileById(payload.userId)
         if (res.success && res.data) {
           setProfile(res.data)
           profileLoadedForRef.current = payload.userId
         }
-        await refreshOrgs()
+        list = await refreshOrgs()
+      } else if (!list.length) {
+        list = await refreshOrgs()
+      }
+
+      if (applyHint) {
+        await applyDomainHint(list)
       }
     },
-    [refreshOrgs, setUser],
+    [refreshOrgs, setUser, setOrgsBoth, applyDomainHint],
   )
 
   useEffect(() => {
@@ -174,14 +266,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileLoadedForRef.current = null
       setUser(null)
       setProfile(null)
-      setOrgs([])
+      setOrgsBoth([])
     })
     return () => setAuthExpiredHandler(null)
-  }, [setUser])
+  }, [setUser, setOrgsBoth])
 
   useEffect(() => {
     let cancelled = false
     void (async () => {
+      // 首屏就捕获 URL domain，未登录时先落本地，登录后再切
+      captureDomainFromLocation()
       await sync()
       if (!cancelled) setReady(true)
     })()
@@ -191,6 +285,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 仅冷启动一次；勿依赖 sync 引用以免重跑
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // URL/本地 domain 标记变化时（登录态）再尝试切域
+  useEffect(() => {
+    const onHint = () => {
+      if (!jwt.isValid()) return
+      void applyDomainHint()
+    }
+    window.addEventListener(DOMAIN_HINT_EVENT, onHint)
+    return () => window.removeEventListener(DOMAIN_HINT_EVENT, onHint)
+  }, [applyDomainHint])
 
   // 接近过期时静默续期；成功后幂等 setUser，不重拉整站数据
   useEffect(() => {
@@ -250,7 +354,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiLogin(username, password)
       if (res.success) {
         profileLoadedForRef.current = null
-        await sync({ forceRefresh: false, forceProfile: true })
+        // 登录后按 domain 标记切域（未登录时访问 ?domain= 已写入本地）
+        await sync({ forceRefresh: false, forceProfile: true, applyHint: true })
       }
       return {
         success: res.success,
@@ -268,12 +373,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const switchOrg = useCallback(
-    async (orgId: number) => {
+    async (orgId: number, opts?: { fromDomainHint?: boolean }) => {
       const res = await apiSwitchOrg(orgId)
       if (res.success) {
-        // 切组织会重签 JWT，需强制 refresh 语义：switchOrg API 已写新 token
+        // 用户手动切域 → 结束 domain 标记；自动切域则保留
+        if (!opts?.fromDomainHint) {
+          clearDomainHint()
+        }
+        // 切组织会重签 JWT；applyHint=false 避免与手动切换打架
         profileLoadedForRef.current = null
-        await sync({ forceRefresh: false, forceProfile: true })
+        await sync({
+          forceRefresh: false,
+          forceProfile: true,
+          applyHint: false,
+        })
       }
       return { success: res.success, message: res.message }
     },
@@ -299,8 +412,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sync,
       switchOrg,
       refreshOrgs,
+      applyDomainHint,
     }),
-    [flags, user, profile, orgs, currentOrg, ready, login, logout, sync, switchOrg, refreshOrgs],
+    [
+      flags,
+      user,
+      profile,
+      orgs,
+      currentOrg,
+      ready,
+      login,
+      logout,
+      sync,
+      switchOrg,
+      refreshOrgs,
+      applyDomainHint,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

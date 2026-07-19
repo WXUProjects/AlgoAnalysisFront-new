@@ -28,6 +28,7 @@ import { staffNavLabel } from '@/lib/roles'
 import { trackPageVisit } from '@/lib/visit-tracker'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
+import { DomainHintSync } from '@/components/domain-hint-sync'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { EmergencyDialogHost } from '@/components/emergency-dialog'
 import { NotificationInbox } from '@/components/notification-inbox'
@@ -150,6 +151,7 @@ export function AppLayout() {
   return (
     <MotionProvider>
     <TooltipProvider>
+      <DomainHintSync />
       <SidebarProvider>
         <Sidebar collapsible="icon">
           <SidebarHeader>

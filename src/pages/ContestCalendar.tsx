@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import {
   BellIcon,
   BellOffIcon,
+  CalendarDaysIcon,
   ExternalLinkIcon,
   SearchIcon,
   Settings2Icon,
@@ -56,6 +57,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { useListQueryState } from '@/hooks/use-list-query-state'
@@ -190,6 +198,8 @@ export function ContestCalendar() {
   const [platOffTarget, setPlatOffTarget] = useState<ContestCalendarPlatform | null>(
     null,
   )
+  /** 移动端月历 Sheet */
+  const [calSheetOpen, setCalSheetOpen] = useState(false)
 
   const { timeFrom, timeTo } = useMemo(
     () => (selectedDayYmd ? dayTimeRange(selectedDayYmd) : {}),
@@ -318,6 +328,7 @@ export function ContestCalendar() {
     // 再点同一天：取消按日筛选
     if (selectedDayYmd === ymd) {
       patchParams({ cday: null, cpage: '1' })
+      setCalSheetOpen(false)
       return
     }
     // 按日查看时放宽为「全部」，避免「即将开始」把当天已结束场次滤掉
@@ -326,6 +337,7 @@ export function ContestCalendar() {
       cday: ymd,
       cpage: '1',
     })
+    setCalSheetOpen(false)
   }
 
   function onSidePrevMonth() {
@@ -539,6 +551,17 @@ export function ContestCalendar() {
                 清空筛选
               </Button>
             )}
+            {/* 移动端：顶部打开月历板，避免滚到列表最底才看见 */}
+            <Button
+              type="button"
+              variant={selectedDayYmd ? 'default' : 'outline'}
+              size="sm"
+              className="lg:hidden"
+              onClick={() => setCalSheetOpen(true)}
+            >
+              <CalendarDaysIcon data-icon="inline-start" />
+              {selectedDayYmd ? selectedDayYmd.slice(5) : '月历'}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -745,8 +768,8 @@ export function ContestCalendar() {
             )}
           </div>
 
-          {/* 右侧紧凑月历：辅助按日筛选，不占主视觉 */}
-          <aside className="lg:col-span-4 xl:col-span-3">
+          {/* 大屏：右侧紧凑月历；小屏改顶部按钮 + 底部 Sheet */}
+          <aside className="hidden lg:col-span-4 lg:block xl:col-span-3">
             <Card className="gap-0 py-3 lg:sticky lg:top-4">
               <CardHeader className="gap-1 px-3 pb-2 pt-0">
                 <CardTitle className="text-sm font-medium">月历</CardTitle>
@@ -773,6 +796,35 @@ export function ContestCalendar() {
           </aside>
         </div>
       </div>
+
+      <Sheet open={calSheetOpen} onOpenChange={setCalSheetOpen}>
+        <SheetContent
+          side="bottom"
+          className="flex max-h-[85vh] flex-col gap-0 overflow-y-auto rounded-t-xl p-0 lg:hidden"
+        >
+          <SheetHeader className="border-b px-4 py-3 text-left">
+            <SheetTitle>月历</SheetTitle>
+            <SheetDescription>
+              点日期可只看当天赛程，再点一次取消
+            </SheetDescription>
+          </SheetHeader>
+          <div className="px-4 py-4">
+            <ContestMonthGrid
+              compact
+              year={sideYear}
+              monthIndex={sideMonthIndex}
+              selectedYmd={selectedDayYmd}
+              todayYmd={todayYmd}
+              countByDay={countByDay}
+              onSelectDay={onSelectSideDay}
+              onPrevMonth={onSidePrevMonth}
+              onNextMonth={onSideNextMonth}
+              onGoToday={onSideGoToday}
+              loading={monthLoading}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={subDialogOpen} onOpenChange={setSubDialogOpen}>
         <DialogContent>

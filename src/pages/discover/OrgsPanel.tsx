@@ -46,7 +46,7 @@ export function OrgsPanel({
 }: {
   isLogin: boolean
   switchOrg: (orgId: number) => Promise<{ success: boolean; message: string }>
-  refreshOrgs: () => Promise<void>
+  refreshOrgs: () => Promise<unknown>
 }) {
   const [qInput, setQInput] = useState('')
   const [q, setQ] = useState('')
