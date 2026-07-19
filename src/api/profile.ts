@@ -199,6 +199,50 @@ export async function clearDormant(
   }
 }
 
+/**
+ * 站点管理员：批量冻结不活跃
+ * - userIds：勾选冻结（仍跳过豁免）
+ * - inactiveDays：一键冻结「最近 N 天未登录且可冻结」
+ * 会把最近活跃回拨到超过站点阈值；登录或「解除不活跃」后仍按原规则
+ */
+export async function forceDormant(opts: {
+  userIds?: number[]
+  inactiveDays?: number
+}): Promise<
+  ApiResult<{ updated: number; skipped: number; message?: string }>
+> {
+  const ids = Array.from(
+    new Set(
+      (opts.userIds || []).filter((id) => Number.isFinite(id) && id > 0),
+    ),
+  )
+  const days = Math.floor(Number(opts.inactiveDays) || 0)
+  if (!ids.length && days <= 0) {
+    return {
+      success: false,
+      message: '请勾选用户，或填写未登录天数',
+      data: null,
+    }
+  }
+  const body: Record<string, unknown> = ids.length
+    ? { userIds: ids }
+    : { inactiveDays: Math.max(1, Math.min(365, days)) }
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.profile.forceDormant,
+    body,
+  )
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
+  return {
+    ...res,
+    data: {
+      updated: num(raw.updated),
+      skipped: num(raw.skipped),
+      message: str(raw.message) || res.message || undefined,
+    },
+  }
+}
+
 export async function moveGroup(body: {
   userId: number
   groupId: number
@@ -215,16 +259,21 @@ export async function listProfiles(
   pageSize = 10,
   scope?: 'org' | 'site',
   keyword?: string,
-  opts?: { dormantOnly?: boolean },
+  opts?: { dormantOnly?: boolean; inactiveDays?: number },
 ): Promise<ApiResult<UserListRes>> {
   const kw = keyword?.trim()
+  const inactiveDays = Math.floor(Number(opts?.inactiveDays) || 0)
   const res = await get<Record<string, unknown>>(endpoints.user.profile.list, {
     pageNum,
     pageSize,
     ...(scope ? { scope } : {}),
     ...(kw ? { keyword: kw } : {}),
-    // 同时传 dormantOnly 与 dormant，兼容 query 绑定差异
-    ...(opts?.dormantOnly ? { dormantOnly: true, dormant: true } : {}),
+    // inactiveDays 优先：最近 N 天未登录且可冻结；否则 dormantOnly=已暂停同步
+    ...(inactiveDays > 0
+      ? { inactiveDays: Math.max(1, Math.min(365, inactiveDays)) }
+      : opts?.dormantOnly
+        ? { dormantOnly: true, dormant: true }
+        : {}),
   })
   // list 可能无 success 字段，裸 { list, total }
   const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>

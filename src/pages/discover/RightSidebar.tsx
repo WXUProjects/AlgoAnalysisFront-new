@@ -122,8 +122,8 @@ export function RightSidebar() {
           </CardTitle>
           <CardDescription className="text-xs">
             {rankPeriod === 'week'
-              ? `${range.start} ~ ${range.end}`
-              : '按累计 AC 题数'}
+              ? `${range.start} ~ ${range.end} · 过题数`
+              : '累计过题数'}
           </CardDescription>
           <CardAction>
             <ToggleGroup
@@ -136,10 +136,10 @@ export function RightSidebar() {
               }}
             >
               <ToggleGroupItem value="week" className="px-2 text-xs">
-                近 7 日
+                本周榜
               </ToggleGroupItem>
               <ToggleGroupItem value="all" className="px-2 text-xs">
-                全部
+                全部时间
               </ToggleGroupItem>
             </ToggleGroup>
           </CardAction>
@@ -195,7 +195,7 @@ export function RightSidebar() {
         open={rankAllOpen}
         onOpenChange={setRankAllOpen}
         period={rankPeriod}
-        range={range}
+        onPeriodChange={setRankPeriod}
       />
       <Card data-discover-hot-problems="" className="gap-0 py-0 shadow-none">
         <CardHeader className="border-b px-4 py-3">

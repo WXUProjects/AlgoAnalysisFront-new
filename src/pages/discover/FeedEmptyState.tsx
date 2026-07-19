@@ -144,7 +144,7 @@ export function FeedEmptyState({
       <section className="rounded-xl border bg-card/50 px-4 py-4">
         <h3 className="text-sm font-semibold">推荐关注</h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          近 7 日 AC 较多 · 关注后刷新列表
+          本周过题较多 · 关注后刷新列表
         </p>
         <ul className="mt-3 flex flex-col divide-y">
           {loading &&
@@ -177,7 +177,7 @@ export function FeedEmptyState({
                       {c.name || `用户${c.userId}`}
                     </Link>
                     <p className="text-xs text-muted-foreground">
-                      近 7 日 AC {c.score}
+                      本周过题 {c.score}
                     </p>
                   </div>
                   {isLogin ? (

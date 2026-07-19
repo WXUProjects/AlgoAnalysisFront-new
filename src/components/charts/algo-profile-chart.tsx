@@ -4,6 +4,9 @@ import { MOTION, prefersReducedMotion } from '@/lib/motion'
 import {
   Bar,
   BarChart,
+  Cell,
+  Pie,
+  PieChart,
   PolarAngleAxis,
   PolarGrid,
   PolarRadiusAxis,
@@ -35,6 +38,18 @@ const CLOUD_COLORS = [
   'text-fuchsia-600 dark:text-fuchsia-400',
 ]
 
+/** 饼图切片色（与 CSS chart token 对齐，带兜底） */
+const PIE_COLORS = [
+  'var(--color-chart-1, #6366f1)',
+  'var(--color-chart-2, #22c55e)',
+  'var(--color-chart-3, #f59e0b)',
+  'var(--color-chart-4, #ec4899)',
+  'var(--color-chart-5, #06b6d4)',
+  '#8b5cf6',
+  '#14b8a6',
+  '#f97316',
+]
+
 const DIFF_ORDER: Record<string, number> = {
   简单: 0,
   中等: 1,
@@ -59,7 +74,7 @@ function shortLabel(name: string, max = 12): string {
 
 function TagWordCloud({ items }: { items: { name: string; count: number }[] }) {
   if (!items.length) {
-    return <p className="px-2 text-sm text-muted-foreground">暂无标签</p>
+    return <p className="px-2 text-sm text-muted-foreground">还没有标签统计</p>
   }
   const max = Math.max(...items.map((i) => i.count), 1)
   const ordered = [...items].sort((a, b) => b.count - a.count).slice(0, 36)
@@ -162,12 +177,28 @@ function ProfilePanels({
     })
   }, [index, n, all.length])
 
+  // 第一行：雷达 + 平台过题（共用顶部位置，大屏并排）；其余进第二行
+  const primary = row1
+  const secondary = row2
+  const primaryCols =
+    primary.length >= 3
+      ? 'lg:grid-cols-2 xl:grid-cols-3'
+      : primary.length === 2
+        ? 'lg:grid-cols-2'
+        : 'lg:grid-cols-1'
+  const secondaryCols =
+    secondary.length >= 3
+      ? 'lg:grid-cols-2 xl:grid-cols-3'
+      : secondary.length === 2
+        ? 'lg:grid-cols-2'
+        : 'lg:grid-cols-1'
+
   return (
     <>
-      {/* 桌面：两行 — 第一行雷达/难度，第二行词云/Top */}
+      {/* 桌面：第一行雷达/平台过题并排，第二行难度/词云/Top */}
       <div className="hidden flex-col gap-3 lg:flex">
-        <div className="grid gap-3 lg:grid-cols-2">
-          {row1.map((p) => (
+        <div className={cn('grid gap-3', primaryCols)}>
+          {primary.map((p) => (
             <Card key={p.key} className="gap-2 py-3">
               <CardHeader className="flex flex-row items-center justify-between px-4 py-0">
                 <CardTitle className="text-sm font-medium">{p.title}</CardTitle>
@@ -179,8 +210,8 @@ function ProfilePanels({
             </Card>
           ))}
         </div>
-        <div className="grid gap-3 lg:grid-cols-2">
-          {row2.map((p) => (
+        <div className={cn('grid gap-3', secondaryCols)}>
+          {secondary.map((p) => (
             <Card key={p.key} className="gap-2 py-3">
               <CardHeader className="flex flex-row items-center justify-between px-4 py-0">
                 <CardTitle className="text-sm font-medium">{p.title}</CardTitle>
@@ -283,9 +314,26 @@ function ProfilePanels({
   )
 }
 
+/** 是否已有可展示的画像内容（雷达 / 平台过题 / 难度任一有数据） */
+function hasProfileContent(data: ProblemUserProfile): boolean {
+  if (data.totalAc > 0) return true
+  if (data.radar?.some((r) => r.tag?.trim() && r.acCount > 0)) return true
+  if (data.platforms?.some((p) => p.name?.trim() && p.count > 0)) return true
+  if (data.difficulties?.some((d) => d.name?.trim() && d.count > 0)) return true
+  return false
+}
+
 export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) {
-  if (!data) {
-    return <p className="text-sm text-muted-foreground">暂无数据，通过题目后生成</p>
+  // 无画像（接口未返回 / 内容全空）：提示后台正在构建
+  if (!data || !hasProfileContent(data)) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-1.5 py-10 text-center">
+        <p className="text-sm text-foreground/80">画像正在加紧构建中</p>
+        <p className="text-xs text-muted-foreground">
+          同步做题数据后会自动生成，稍后再刷新看看
+        </p>
+      </div>
+    )
   }
 
   const radarAll = data.radar
@@ -312,6 +360,14 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
 
   const maxAc = Math.max(...radarAll.map((r) => r.count), 1)
 
+  // 平台过题数（去重题量，非 AC 提交次数）
+  const platformPie = (data.platforms ?? [])
+    .filter((p) => p.name?.trim() && !isJunkLabel(p.name) && p.count > 0)
+    .map((p) => ({ name: p.name.trim(), value: p.count }))
+    .sort((a, b) => b.value - a.value)
+  const platformTotal = platformPie.reduce((s, p) => s + p.value, 0)
+
+  // 第一行：能力雷达 + 平台过题（大屏并排共用顶部位置；小屏各成滑动卡片）
   const row1: Panel[] = [
     {
       key: 'radar',
@@ -351,9 +407,79 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
           </RadarChart>
         </ResponsiveContainer>
       ) : (
-        <p className="px-2 text-sm text-muted-foreground">暂无</p>
+        <p className="px-2 text-sm text-muted-foreground">通过题目后会生成能力雷达</p>
       ),
     },
+    {
+      key: 'platform',
+      title: '平台过题',
+      hint: platformTotal > 0 ? `共 ${platformTotal} 题` : undefined,
+      body: platformPie.length ? (
+        <div className="relative h-full w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={platformPie}
+                dataKey="value"
+                nameKey="name"
+                cx="42%"
+                cy="50%"
+                innerRadius="42%"
+                outerRadius="72%"
+                paddingAngle={platformPie.length > 1 ? 2 : 0}
+                stroke="var(--card)"
+                strokeWidth={1}
+              >
+                {platformPie.map((entry, i) => (
+                  <Cell
+                    key={entry.name}
+                    fill={PIE_COLORS[i % PIE_COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(value, name) => {
+                  const v = typeof value === 'number' ? value : Number(value) || 0
+                  const pct =
+                    platformTotal > 0
+                      ? Math.round((v / platformTotal) * 1000) / 10
+                      : 0
+                  return [`${v} 题（${pct}%）`, String(name)]
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          {/* 右侧图例：平台名 + 过题数 */}
+          <ul className="pointer-events-none absolute inset-y-1 right-1 flex w-[42%] flex-col justify-center gap-1 overflow-y-auto pr-1">
+            {platformPie.map((p, i) => (
+              <li
+                key={p.name}
+                className="flex items-center gap-1.5 text-[11px] leading-tight"
+              >
+                <span
+                  className="size-2 shrink-0 rounded-sm"
+                  style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}
+                />
+                <span className="min-w-0 truncate text-muted-foreground">
+                  {p.name}
+                </span>
+                <span className="ml-auto shrink-0 tabular-nums text-foreground/80">
+                  {p.value}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="px-2 text-sm text-muted-foreground">
+          还没有过题记录，绑定 OJ 并同步后会出现在这里
+        </p>
+      ),
+    },
+  ]
+
+  // 第二行：难度 / 词云 / Top
+  const row2: Panel[] = [
     {
       key: 'diff',
       title: '难度分布',
@@ -367,12 +493,9 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
           </BarChart>
         </ResponsiveContainer>
       ) : (
-        <p className="px-2 text-sm text-muted-foreground">暂无</p>
+        <p className="px-2 text-sm text-muted-foreground">还没有难度统计</p>
       ),
     },
-  ]
-
-  const row2: Panel[] = [
     {
       key: 'cloud',
       title: '标签词云',
@@ -408,7 +531,7 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
           </div>
         </div>
       ) : (
-        <p className="px-2 text-sm text-muted-foreground">暂无标签</p>
+        <p className="px-2 text-sm text-muted-foreground">还没有标签统计</p>
       ),
     },
   ]

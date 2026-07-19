@@ -51,7 +51,7 @@ import { useListQueryState } from '@/hooks/use-list-query-state'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-const DEFAULT_PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 10
 
 /**
  * 比赛详情：站内榜 + 题目 A/B/C Tab（题面 + 右侧题解，复用题库组件）。

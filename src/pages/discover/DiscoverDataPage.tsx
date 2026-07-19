@@ -380,9 +380,13 @@ export function DiscoverDataPage({ isLogin, userId }: Props) {
         </CardContent>
       </Card>
 
-      {isLogin && algo ? (
+      {isLogin ? (
         <div className="min-w-0">
-          <AlgoProfileChart data={algo} />
+          {loading ? (
+            <Skeleton className="h-48 w-full" />
+          ) : (
+            <AlgoProfileChart data={algo} />
+          )}
         </div>
       ) : null}
 

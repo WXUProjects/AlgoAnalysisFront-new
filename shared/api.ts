@@ -28,6 +28,7 @@ export const endpoints = {
       setSyncIntervals: `${API_PREFIX}/user/profile/set-sync-intervals`,
       setSyncExempt: `${API_PREFIX}/user/profile/set-sync-exempt`,
       clearDormant: `${API_PREFIX}/user/profile/clear-dormant`,
+      forceDormant: `${API_PREFIX}/user/profile/force-dormant`,
       idsByGroup: `${API_PREFIX}/user/profile/ids-by-group`,
       getByIds: `${API_PREFIX}/user/profile/get-by-ids`,
       nonPublicOrgUserIds: `${API_PREFIX}/user/profile/non-public-org-user-ids`,

@@ -5,6 +5,7 @@ import { listAllGroups } from '@/api/group'
 import {
   clearDormant,
   deleteUser,
+  forceDormant,
   listProfiles,
   moveGroup,
   setEmailEnabled,
@@ -106,7 +107,16 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const dormantOnly =
     searchParams.get('dormant') === '1' ||
     searchParams.get('dormant') === 'true'
+  /** 最近 N 天未登录筛选（>0 时优先于 dormantOnly） */
+  const inactiveDaysParam = (() => {
+    const raw = Number(searchParams.get('inactiveDays') || 0)
+    if (!Number.isFinite(raw) || raw <= 0) return 0
+    return Math.max(1, Math.min(365, Math.floor(raw)))
+  })()
   const [keywordDraft, setKeywordDraft] = useState(keyword)
+  const [inactiveDaysDraft, setInactiveDaysDraft] = useState(
+    String(inactiveDaysParam || 14),
+  )
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<UserListItem[]>([])
   const [groups, setGroups] = useState<GroupInfo[]>([])
@@ -115,6 +125,12 @@ function UserListPage({ scope }: { scope: UserScope }) {
   useEffect(() => {
     setKeywordDraft(keyword)
   }, [keyword])
+
+  useEffect(() => {
+    if (inactiveDaysParam > 0) {
+      setInactiveDaysDraft(String(inactiveDaysParam))
+    }
+  }, [inactiveDaysParam])
 
   const [editUser, setEditUser] = useState<UserListItem | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -126,6 +142,10 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [savingIntervals, setSavingIntervals] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
   const [clearingDormant, setClearingDormant] = useState(false)
+  const [freezingDormant, setFreezingDormant] = useState(false)
+  /** 一键冻结对话框 */
+  const [freezeDialogOpen, setFreezeDialogOpen] = useState(false)
+  const [freezeDaysDraft, setFreezeDaysDraft] = useState('14')
   /** 「始终同步」开关二次确认目标 */
   const [syncExemptConfirmUser, setSyncExemptConfirmUser] =
     useState<UserListItem | null>(null)
@@ -143,7 +163,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const load = useCallback(async () => {
     setLoading(true)
     const res = await listProfiles(page, pageSize, scope, keyword || undefined, {
-      dormantOnly,
+      dormantOnly: inactiveDaysParam > 0 ? false : dormantOnly,
+      inactiveDays: inactiveDaysParam > 0 ? inactiveDaysParam : undefined,
     })
     setLoading(false)
     if (!res.success || !res.data) {
@@ -152,7 +173,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page, pageSize, scope, keyword, dormantOnly])
+  }, [page, pageSize, scope, keyword, dormantOnly, inactiveDaysParam])
 
   useEffect(() => {
     void load()
@@ -161,7 +182,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
   // 筛选/范围变化时清空勾选，避免误操作跨筛选用户
   useEffect(() => {
     setSelectedIds(new Set())
-  }, [scope, keyword, dormantOnly])
+  }, [scope, keyword, dormantOnly, inactiveDaysParam])
 
   useEffect(() => {
     if (isSite) return
@@ -294,7 +315,56 @@ function UserListPage({ scope }: { scope: UserScope }) {
         : cur,
     )
     // 在「仅不活跃」筛选下刷新，让已解除的人从列表消失
-    if (dormantOnly) void load()
+    if (dormantOnly || inactiveDaysParam > 0) void load()
+  }
+
+  async function handleForceDormant(opts: {
+    userIds?: number[]
+    inactiveDays?: number
+  }) {
+    if (!isAdmin) return
+    const ids = Array.from(
+      new Set((opts.userIds || []).filter((id) => id > 0)),
+    )
+    const days = Math.floor(Number(opts.inactiveDays) || 0)
+    if (!ids.length && days <= 0) {
+      toast.error('请勾选用户，或填写未登录天数')
+      return
+    }
+    setFreezingDormant(true)
+    const res = await forceDormant(
+      ids.length ? { userIds: ids } : { inactiveDays: days },
+    )
+    setFreezingDormant(false)
+    if (!res.success) {
+      toast.error(res.message || '冻结失败，请稍后重试')
+      return
+    }
+    toast.success(
+      res.data?.message ||
+        res.message ||
+        `已冻结 ${res.data?.updated ?? 0} 人`,
+    )
+    setFreezeDialogOpen(false)
+    if (ids.length) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        for (const id of ids) next.delete(id)
+        return next
+      })
+    } else {
+      setSelectedIds(new Set())
+    }
+    void load()
+  }
+
+  function applyInactiveDaysFilter() {
+    const days = Math.max(
+      1,
+      Math.min(365, Math.floor(Number(inactiveDaysDraft) || 14)),
+    )
+    setInactiveDaysDraft(String(days))
+    patch({ dormant: null, inactiveDays: String(days) })
   }
 
   const pageAllSelected =
@@ -484,7 +554,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
       ? `${currentOrg.name} · 成员`
       : '组织成员'
   const desc = isSite
-    ? '管理全站用户与所属组织。长期未登录会暂停自动同步；组织开启永不冻结或个人始终同步的用户不受影响。'
+    ? '管理全站用户与所属组织。可按「最近几天未登录」筛选并一键冻结；站管、教练/队长、始终同步、永不冻结组织与付费组织不会被冻结。'
     : '当前组织成员。长期未登录会暂停自动同步；组织永不冻结或个人始终同步的成员不受影响。'
 
   return (
@@ -513,20 +583,68 @@ function UserListPage({ scope }: { scope: UserScope }) {
               aria-label="搜索用户"
             />
             <Select
-              value={dormantOnly ? 'dormant' : 'all'}
+              value={
+                inactiveDaysParam > 0
+                  ? 'inactive'
+                  : dormantOnly
+                    ? 'dormant'
+                    : 'all'
+              }
               onValueChange={(v) => {
                 const next = String(v ?? 'all')
-                patch({ dormant: next === 'dormant' ? '1' : null })
+                if (next === 'dormant') {
+                  patch({ dormant: '1', inactiveDays: null })
+                } else if (next === 'inactive') {
+                  const days = Math.max(
+                    1,
+                    Math.min(365, Math.floor(Number(inactiveDaysDraft) || 14)),
+                  )
+                  setInactiveDaysDraft(String(days))
+                  patch({ dormant: null, inactiveDays: String(days) })
+                } else {
+                  patch({ dormant: null, inactiveDays: null })
+                }
               }}
             >
-              <SelectTrigger className="w-full sm:w-[11.5rem]" size="sm" aria-label="活跃状态筛选">
+              <SelectTrigger className="w-full sm:w-[13rem]" size="sm" aria-label="活跃状态筛选">
                 <SelectValue placeholder="全部用户" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部用户</SelectItem>
-                <SelectItem value="dormant">不活跃（已暂停同步）</SelectItem>
+                <SelectItem value="dormant">已暂停同步</SelectItem>
+                <SelectItem value="inactive">最近未登录（可冻结）</SelectItem>
               </SelectContent>
             </Select>
+            {inactiveDaysParam > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  最近
+                </span>
+                <Input
+                  className="w-16 h-8"
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={inactiveDaysDraft}
+                  onChange={(e) => setInactiveDaysDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') applyInactiveDaysFilter()
+                  }}
+                  aria-label="未登录天数"
+                />
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  天未登录
+                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={applyInactiveDaysFilter}
+                >
+                  应用
+                </Button>
+              </div>
+            )}
             <div className="flex gap-2 flex-wrap">
               <Button
                 variant="secondary"
@@ -535,53 +653,118 @@ function UserListPage({ scope }: { scope: UserScope }) {
               >
                 搜索
               </Button>
-              {(keyword || keywordDraft || dormantOnly) && (
+              {(keyword || keywordDraft || dormantOnly || inactiveDaysParam > 0) && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
                     setKeywordDraft('')
-                    patch({ keyword: null, dormant: null })
+                    setInactiveDaysDraft('14')
+                    patch({ keyword: null, dormant: null, inactiveDays: null })
                   }}
                 >
                   清空
                 </Button>
               )}
+              {isAdmin && isSite && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={freezingDormant}
+                  onClick={() => {
+                    setFreezeDaysDraft(
+                      String(
+                        inactiveDaysParam > 0
+                          ? inactiveDaysParam
+                          : Math.max(
+                              1,
+                              Math.min(
+                                365,
+                                Math.floor(Number(inactiveDaysDraft) || 14),
+                              ),
+                            ),
+                      ),
+                    )
+                    setFreezeDialogOpen(true)
+                  }}
+                >
+                  一键冻结不活跃
+                </Button>
+              )}
               {isAdmin && selectedIds.size > 0 && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="default"
-                      disabled={clearingDormant}
-                    >
-                      {clearingDormant
-                        ? '处理中…'
-                        : `解除不活跃（${selectedIds.size}）`}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        解除 {selectedIds.size} 人的不活跃状态？
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        会把这些人的「最近活跃」更新为现在，后台同步会恢复。这只是一次性操作：之后如果长时间不再登录，仍会再次被标记为不活跃。不会设为「始终同步」。
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>取消</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() =>
-                          void handleClearDormant(Array.from(selectedIds))
-                        }
+                <>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="default"
+                        disabled={clearingDormant || freezingDormant}
                       >
-                        确认解除
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        {clearingDormant
+                          ? '处理中…'
+                          : `解除不活跃（${selectedIds.size}）`}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          解除 {selectedIds.size} 人的不活跃状态？
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          会把这些人的「最近活跃」更新为现在，后台同步会恢复。这只是一次性操作：之后如果长时间不再登录，仍会再次被标记为不活跃。不会设为「始终同步」。
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() =>
+                            void handleClearDormant(Array.from(selectedIds))
+                          }
+                        >
+                          确认解除
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        disabled={freezingDormant || clearingDormant}
+                      >
+                        {freezingDormant
+                          ? '处理中…'
+                          : `冻结（${selectedIds.size}）`}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          冻结 {selectedIds.size} 人的自动同步？
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          将暂停这些人的后台同步。站管、教练/队长、始终同步、永不冻结组织与付费组织会被自动跳过。对方再次登录或你手动「解除不活跃」后会恢复；之后仍按站点未登录天数规则判定。
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() =>
+                            void handleForceDormant({
+                              userIds: Array.from(selectedIds),
+                            })
+                          }
+                        >
+                          确认冻结
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
               )}
             </div>
           </div>
@@ -593,15 +776,19 @@ function UserListPage({ scope }: { scope: UserScope }) {
             </div>
           ) : list.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              {dormantOnly && keyword
-                ? `没有找到与「${keyword}」相关的不活跃用户`
-                : dormantOnly
-                  ? '当前没有不活跃（已暂停同步）的用户'
-                  : keyword
-                    ? `没有找到与「${keyword}」相关的用户`
-                    : isSite
-                      ? '暂无用户'
-                      : '暂无成员'}
+              {inactiveDaysParam > 0 && keyword
+                ? `没有找到与「${keyword}」相关、且最近 ${inactiveDaysParam} 天未登录的可冻结用户`
+                : inactiveDaysParam > 0
+                  ? `最近 ${inactiveDaysParam} 天没有可冻结的未登录用户（豁免对象不会出现在此列表）`
+                  : dormantOnly && keyword
+                    ? `没有找到与「${keyword}」相关的已暂停同步用户`
+                    : dormantOnly
+                      ? '当前没有已暂停同步的用户'
+                      : keyword
+                        ? `没有找到与「${keyword}」相关的用户`
+                        : isSite
+                          ? '暂无用户'
+                          : '暂无成员'}
             </div>
           ) : (
             <Table>
@@ -1067,6 +1254,41 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     </div>
                   </div>
                 )}
+                {isAdmin &&
+                  !detailUser.dormant &&
+                  !detailUser.syncExempt &&
+                  !detailUser.isSiteAdmin && (
+                    <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+                      <div className="flex flex-col gap-1">
+                        <p className="text-sm font-medium">冻结自动同步</p>
+                        <p className="text-xs text-muted-foreground">
+                          暂停此人的后台同步。若对方属于永不冻结组织、教练/队长或付费组织，系统会自动跳过。登录或解除后仍按站点规则判定。
+                        </p>
+                      </div>
+                      <div>
+                        <ConfirmDialog
+                          title="冻结自动同步？"
+                          description={`确定冻结「${detailUser.name || detailUser.username}」的自动同步？对方再次登录或你手动解除后会恢复。`}
+                          confirmLabel="确认冻结"
+                          loading={freezingDormant}
+                          onConfirm={() =>
+                            void handleForceDormant({
+                              userIds: [detailUser.userId],
+                            })
+                          }
+                        >
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={freezingDormant}
+                          >
+                            {freezingDormant ? '处理中…' : '立即冻结'}
+                          </Button>
+                        </ConfirmDialog>
+                      </div>
+                    </div>
+                  )}
                 <Field orientation="horizontal">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <FieldLabel htmlFor="pipeline-fetch">抓取题面</FieldLabel>
@@ -1293,6 +1515,60 @@ function UserListPage({ scope }: { scope: UserScope }) {
           void handleToggleSyncExempt(target)
         }}
       />
+
+      <Dialog open={freezeDialogOpen} onOpenChange={setFreezeDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>一键冻结不活跃用户</DialogTitle>
+            <DialogDescription>
+              冻结最近若干天未登录、且符合冻结规则的用户。站管、教练/队长、始终同步、永不冻结组织与付费组织会自动跳过。冻结后对方登录或你手动解除即可恢复，之后仍按站点未登录天数规则判定。
+            </DialogDescription>
+          </DialogHeader>
+          <FieldGroup className="gap-3">
+            <Field>
+              <FieldLabel htmlFor="freeze-inactive-days">
+                最近多少天未登录
+              </FieldLabel>
+              <Input
+                id="freeze-inactive-days"
+                type="number"
+                min={1}
+                max={365}
+                value={freezeDaysDraft}
+                onChange={(e) => setFreezeDaysDraft(e.target.value)}
+              />
+              <FieldDescription>
+                范围 1–365。可先用上方筛选预览名单，再在此一键冻结；也可勾选后点「冻结」。
+              </FieldDescription>
+            </Field>
+          </FieldGroup>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setFreezeDialogOpen(false)}
+              disabled={freezingDormant}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={freezingDormant}
+              onClick={() => {
+                const days = Math.max(
+                  1,
+                  Math.min(365, Math.floor(Number(freezeDaysDraft) || 14)),
+                )
+                setFreezeDaysDraft(String(days))
+                void handleForceDormant({ inactiveDays: days })
+              }}
+            >
+              {freezingDormant ? '处理中…' : '确认冻结'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   )
 }

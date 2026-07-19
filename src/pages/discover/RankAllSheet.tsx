@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { TrophyIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -24,29 +24,59 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 const PAGE_SIZE = 20
+const RANK_ALL_START = '2020-01-01'
 
 export type RankPeriod = 'week' | 'all'
+
+function fmtYmd(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function rankRange(period: RankPeriod): { start: string; end: string } {
+  const end = new Date()
+  if (period === 'all') {
+    return { start: RANK_ALL_START, end: fmtYmd(end) }
+  }
+  const start = new Date()
+  start.setDate(end.getDate() - 6)
+  return { start: fmtYmd(start), end: fmtYmd(end) }
+}
 
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  period: RankPeriod
-  range: { start: string; end: string }
+  /** 打开时默认时间范围（侧栏当前选中） */
+  period?: RankPeriod
+  /** 兼容旧调用；有 period 时内部自算 range */
+  range?: { start: string; end: string }
+  /** 侧栏切换时间范围时回写，保持两侧一致 */
+  onPeriodChange?: (period: RankPeriod) => void
 }
 
-/** 全站用户排行（分页），从侧栏「查看全部用户」打开；时间范围由侧栏切换 */
-export function RankAllSheet({ open, onOpenChange, period, range }: Props) {
+/** 全站用户排行（分页），从侧栏「查看全部用户」打开 */
+export function RankAllSheet({
+  open,
+  onOpenChange,
+  period: periodProp = 'week',
+  onPeriodChange,
+}: Props) {
+  const [period, setPeriod] = useState<RankPeriod>(periodProp)
   const [scoreType, setScoreType] = useState<'ac' | 'submit'>('ac')
   const [page, setPage] = useState(1)
   const [list, setList] = useState<StatisticRankItem[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
+  const range = useMemo(() => rankRange(period), [period])
 
   useEffect(() => {
     if (!open) return
+    setPeriod(periodProp)
     setPage(1)
     setScoreType('ac')
-  }, [open])
+  }, [open, periodProp])
 
   useEffect(() => {
     if (!open) return
@@ -75,9 +105,15 @@ export function RankAllSheet({ open, onOpenChange, period, range }: Props) {
     }
   }, [open, scoreType, page, range.start, range.end])
 
-  const periodLabel = period === 'week' ? '近 7 日' : '全部'
+  const periodLabel = period === 'week' ? '本周榜' : '全部时间'
   const emptyHint =
-    period === 'week' ? '近 7 日还没有排行数据' : '暂时还没有排行数据'
+    period === 'week' ? '本周还没有排行数据' : '暂时还没有排行数据'
+
+  const handlePeriodChange = (v: RankPeriod) => {
+    setPeriod(v)
+    setPage(1)
+    onPeriodChange?.(v)
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -91,32 +127,50 @@ export function RankAllSheet({ open, onOpenChange, period, range }: Props) {
             <TrophyIcon className="size-4 text-muted-foreground" />
             全站热门 · {periodLabel}
           </SheetTitle>
-          <SheetDescription className="flex flex-wrap items-center justify-between gap-2">
+          <SheetDescription className="flex flex-col gap-2">
             <span>
               {period === 'week'
-                ? `${range.start} ~ ${range.end}`
-                : '按累计 AC 题数'}
+                ? `${range.start} ~ ${range.end} · 本周过题数`
+                : '累计过题数'}
               {total > 0 ? ` · 共 ${total} 人` : ''}
             </span>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              size="sm"
-              value={scoreType}
-              onValueChange={(v) => {
-                if (v === 'ac' || v === 'submit') {
-                  setScoreType(v)
-                  setPage(1)
-                }
-              }}
-            >
-              <ToggleGroupItem value="ac" className="px-2 text-xs">
-                AC
-              </ToggleGroupItem>
-              <ToggleGroupItem value="submit" className="px-2 text-xs">
-                提交
-              </ToggleGroupItem>
-            </ToggleGroup>
+            <div className="flex flex-wrap gap-2">
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                size="sm"
+                value={period}
+                onValueChange={(v) => {
+                  if (v === 'week' || v === 'all') handlePeriodChange(v)
+                }}
+              >
+                <ToggleGroupItem value="week" className="px-2 text-xs">
+                  本周榜
+                </ToggleGroupItem>
+                <ToggleGroupItem value="all" className="px-2 text-xs">
+                  全部时间
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                size="sm"
+                value={scoreType}
+                onValueChange={(v) => {
+                  if (v === 'ac' || v === 'submit') {
+                    setScoreType(v)
+                    setPage(1)
+                  }
+                }}
+              >
+                <ToggleGroupItem value="ac" className="px-2 text-xs">
+                  过题榜
+                </ToggleGroupItem>
+                <ToggleGroupItem value="submit" className="px-2 text-xs">
+                  提交
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </SheetDescription>
         </SheetHeader>
 
@@ -134,7 +188,7 @@ export function RankAllSheet({ open, onOpenChange, period, range }: Props) {
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>用户</TableHead>
                   <TableHead className="text-right">
-                    {scoreType === 'ac' ? 'AC' : '提交'}
+                    {scoreType === 'ac' ? '过题' : '提交'}
                   </TableHead>
                 </TableRow>
               </TableHeader>

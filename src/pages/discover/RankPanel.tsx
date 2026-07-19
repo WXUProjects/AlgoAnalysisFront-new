@@ -91,10 +91,10 @@ export function RankPanel() {
       <CardHeader className="border-b px-4 py-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <TrophyIcon className="size-4 text-muted-foreground" />
-          近 7 日排行
+          本周榜
         </CardTitle>
         <CardDescription>
-          {range.start} ~ {range.end}
+          {range.start} ~ {range.end} · 过题数
         </CardDescription>
         <CardAction>
           <ToggleGroup
@@ -109,7 +109,7 @@ export function RankPanel() {
               }
             }}
           >
-            <ToggleGroupItem value="ac">AC</ToggleGroupItem>
+            <ToggleGroupItem value="ac">过题榜</ToggleGroupItem>
             <ToggleGroupItem value="submit">提交</ToggleGroupItem>
           </ToggleGroup>
         </CardAction>
@@ -128,7 +128,7 @@ export function RankPanel() {
                 <TableHead className="w-16">#</TableHead>
                 <TableHead>用户</TableHead>
                 <TableHead className="text-right">
-                  {scoreType === 'ac' ? 'AC' : '提交'}
+                  {scoreType === 'ac' ? '过题' : '提交'}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -159,7 +159,7 @@ export function RankPanel() {
                         </EmptyMedia>
                         <EmptyTitle>暂无排行</EmptyTitle>
                         <EmptyDescription>
-                          近 7 日有提交后会出现在这里
+                          本周有提交后会出现在这里
                         </EmptyDescription>
                       </EmptyHeader>
                     </Empty>

@@ -76,7 +76,7 @@ export function DiscoverRankPage() {
     }
   }, [range.start, range.end, scoreType, page])
 
-  const periodLabel = period === 'week' ? '近 7 日' : '全部'
+  const periodLabel = period === 'week' ? '本周榜' : '全部时间'
 
   return (
     <Card
@@ -91,8 +91,8 @@ export function DiscoverRankPage() {
         <CardDescription className="flex flex-col gap-2">
           <span>
             {period === 'week'
-              ? `${range.start} ~ ${range.end}`
-              : '按累计 AC 题数'}
+              ? `${range.start} ~ ${range.end} · 本周过题数`
+              : '累计过题数'}
             {total > 0 ? ` · 共 ${total} 人` : ''}
           </span>
           <div className="flex flex-wrap gap-2">
@@ -106,10 +106,10 @@ export function DiscoverRankPage() {
               }}
             >
               <ToggleGroupItem value="week" className="px-2 text-xs">
-                近 7 日
+                本周榜
               </ToggleGroupItem>
               <ToggleGroupItem value="all" className="px-2 text-xs">
-                全部
+                全部时间
               </ToggleGroupItem>
             </ToggleGroup>
             <ToggleGroup
@@ -122,7 +122,7 @@ export function DiscoverRankPage() {
               }}
             >
               <ToggleGroupItem value="ac" className="px-2 text-xs">
-                AC
+                过题榜
               </ToggleGroupItem>
               <ToggleGroupItem value="submit" className="px-2 text-xs">
                 提交
@@ -162,7 +162,7 @@ export function DiscoverRankPage() {
           ))}
         {!loading && !list.length ? (
           <p className="px-4 py-12 text-center text-sm text-muted-foreground">
-            {period === 'week' ? '近 7 日还没有排行数据' : '暂时还没有排行数据'}
+            {period === 'week' ? '本周还没有排行数据' : '暂时还没有排行数据'}
           </p>
         ) : null}
       </CardContent>
