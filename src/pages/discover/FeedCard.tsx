@@ -31,6 +31,39 @@ function getDetailHref(item: DiscoverStreamItem): string | null {
   return null
 }
 
+/** 关联题目详情（题解/讨论标注用） */
+function getProblemHref(item: DiscoverStreamItem): string | null {
+  const pid =
+    item.activity?.problemId ||
+    item.submit?.problemId ||
+    0
+  return pid > 0 ? `/question-bank/detail/${pid}` : null
+}
+
+/** 平台 · 题目标题（优先 activity / submit） */
+function getProblemLabel(item: DiscoverStreamItem): string | null {
+  const activity = item.activity
+  if (activity?.problemId) {
+    const platform = activity.platform?.trim()
+    const title = activity.problemTitle?.trim()
+    if (platform && title) return `${platform} · ${title}`
+    if (title) return title
+    if (platform) return platform
+  }
+  const submit = item.submit
+  if (submit) {
+    const platform = submit.platform?.trim()
+    const title =
+      submit.problemTitle?.trim() ||
+      submit.problem?.trim() ||
+      ''
+    if (platform && title) return `${platform} · ${title}`
+    if (title) return title
+    if (platform) return platform
+  }
+  return null
+}
+
 function previewTargetFor(item: DiscoverStreamItem): PreviewTarget {
   if (item.kind === 'submit') return { type: 'submit', item }
   if (item.kind === 'comment') return { type: 'comments', item }
@@ -54,6 +87,11 @@ export function FeedCard({ item, onPreview }: FeedCardProps) {
     ? getSubmitLink(submit.platform, submit.contest, submit.submitId)
     : null
   const detailHref = getDetailHref(item)
+  const problemHref = getProblemHref(item)
+  const problemLabel = getProblemLabel(item)
+  const isSolutionLike =
+    item.kind === 'solution' ||
+    (item.kind === 'share' && Boolean(item.activity?.problemId))
 
   function openItem() {
     if (detailHref) {
@@ -92,7 +130,8 @@ export function FeedCard({ item, onPreview }: FeedCardProps) {
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
       className={cn(
-        'flex cursor-pointer flex-col gap-0.5 rounded-md border-b px-1 py-2 last:border-b-0 sm:px-1.5',
+        // 虚拟列表每条包在独立 wrapper 里，勿用 last:border-b-0（会误伤每一行）
+        'flex cursor-pointer flex-col gap-1 border-b border-border px-4 py-3.5',
         'transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
       )}
     >
@@ -167,17 +206,43 @@ export function FeedCard({ item, onPreview }: FeedCardProps) {
             <Badge variant="secondary" className="h-4 text-[10px] font-normal">
               {item.href && isBlogPath(item.href)
                 ? '博客'
-                : item.kind === 'solution' || item.kind === 'share'
+                : isSolutionLike
                   ? '题解'
                   : '讨论'}
             </Badge>
+            {/* 题解/讨论：标注平台 + 题目，点击进题库 */}
+            {problemLabel && problemHref ? (
+              <Badge
+                variant="outline"
+                className="h-4 max-w-full px-1 text-[10px] font-normal"
+                asChild
+              >
+                <Link
+                  to={problemHref}
+                  className="inline-flex max-w-full items-center truncate hover:underline"
+                  title={problemLabel}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className="truncate">{problemLabel}</span>
+                </Link>
+              </Badge>
+            ) : problemLabel ? (
+              <Badge
+                variant="outline"
+                className="h-4 max-w-full px-1 text-[10px] font-normal"
+                title={problemLabel}
+              >
+                <span className="truncate">{problemLabel}</span>
+              </Badge>
+            ) : null}
           </div>
         )}
 
         {summary ? (
-          <div className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-            <MarkdownSummary content={summary} />
-          </div>
+          <MarkdownSummary
+            content={summary}
+            className="line-clamp-2 text-sm leading-snug text-muted-foreground"
+          />
         ) : null}
       </div>
     </article>
@@ -188,7 +253,7 @@ export function FeedCardSkeleton() {
   return (
     <div
       data-discover-card-skeleton=""
-      className="flex flex-col gap-1 border-b px-1 py-2 sm:px-1.5"
+      className="flex flex-col gap-1.5 border-b border-border px-4 py-3.5"
     >
       <div className="flex items-center gap-2">
         <div className="size-6 animate-pulse rounded-full bg-muted" />

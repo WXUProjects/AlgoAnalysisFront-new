@@ -479,49 +479,71 @@ export async function renderContentAsync(src: string): Promise<string> {
 }
 
 /**
- * 列表/卡片「文章简述」专用渲染。
+ * 列表/卡片「文章简述」→ 纯文本（转义 HTML）。
  *
- * 只渲染不影响版式的行内标记：
- * - 行内/块级公式（$…$ / $$…$$ / \(…\) / \[…\]）
- * - 加粗 **…** / __…__
- * - 行内代码 `…`
- *
- * 刻意不渲染（改成纯文本，避免卡片里出现可点链接、大标题等「文章头」）：
- * - 链接、图片、标题、列表、引用等
+ * 不渲染任何 Markdown/公式：加粗、代码、KaTeX、链接等一律剥标记只留字，
+ * 避免卡片里出现加粗/公式把 line-clamp 挤乱。
  */
 export function renderSummaryMarkdown(md: string): string {
   if (!md) return ''
   try {
-    const raw = md.replace(/\$\$\$/g, '$')
-    const { text, pieces } = extractMath(raw)
-
-    let s = text.replace(/\r\n/g, '\n')
-    // 标题 → 去掉 #，保留文字
-    s = s.replace(/^#{1,6}\s+/gm, '')
-    // 图片 → alt
-    s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-    // 链接 [text](url) → text
-    s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    // 裸 URL 尖括号
-    s = s.replace(/<(https?:\/\/[^>\s]+)>/gi, '$1')
-    // 引用行首 >
-    s = s.replace(/^>\s?/gm, '')
-    // 无序/有序列表标记
-    s = s.replace(/^\s*[-*+]\s+/gm, '')
-    s = s.replace(/^\s*\d+\.\s+/gm, '')
-    // 卡片里压成一段，避免多段撑破 line-clamp
-    s = s.replace(/\n+/g, ' ').replace(/[ \t]{2,}/g, ' ').trim()
-
-    s = escapeHtml(s)
-
-    // 行内代码（先于加粗，避免 ** 在 code 里被误伤；code 内已转义）
-    s = s.replace(/`([^`]+)`/g, '<code class="md-summary-code">$1</code>')
-    // 加粗
-    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    s = s.replace(/__(.+?)__/g, '<strong>$1</strong>')
-
-    return restoreMath(s, pieces)
+    return escapeHtml(plainTextFromMarkdown(md))
   } catch {
     return escapeHtml(md)
   }
+}
+
+/**
+ * 从 Markdown/富文本草稿抽出单行纯文本（简述、列表副文案用）。
+ * 保留可读文字，去掉标记与公式定界符。
+ */
+export function plainTextFromMarkdown(md: string): string {
+  if (!md) return ''
+  let s = md.replace(/\$\$\$/g, '$').replace(/\r\n/g, '\n')
+
+  // 若整段像 HTML，先粗剥标签
+  if (looksLikeHtml(s)) {
+    s = s
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&amp;/gi, '&')
+      .replace(/&quot;/gi, '"')
+  }
+
+  // 公式：保留 tex 本体，去掉 $ / \( \)
+  s = s.replace(/\$\$([\s\S]+?)\$\$/g, ' $1 ')
+  s = s.replace(/\$((?:\\.|[^$\\])+?)\$/g, ' $1 ')
+  s = s.replace(/\\\(([\s\S]+?)\\\)/g, ' $1 ')
+  s = s.replace(/\\\[([\s\S]+?)\\\]/g, ' $1 ')
+
+  // 代码块 / 行内代码 → 内容
+  s = s.replace(/```[\w-]*\n?([\s\S]*?)```/g, ' $1 ')
+  s = s.replace(/`([^`]+)`/g, '$1')
+
+  // 标题 / 引用 / 列表标记
+  s = s.replace(/^#{1,6}\s+/gm, '')
+  s = s.replace(/^>\s?/gm, '')
+  s = s.replace(/^\s*[-*+]\s+/gm, '')
+  s = s.replace(/^\s*\d+\.\s+/gm, '')
+
+  // 图片 / 链接 / wiki 链
+  s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+  s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+  s = s.replace(/\[\[([^\]]+)\]\]/g, '$1')
+  s = s.replace(/<(https?:\/\/[^>\s]+)>/gi, '$1')
+
+  // 加粗 / 斜体 / 删除线标记（只留文字）
+  s = s.replace(/\*\*(.+?)\*\*/g, '$1')
+  s = s.replace(/__(.+?)__/g, '$1')
+  s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1')
+  s = s.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, '$1')
+  s = s.replace(/~~(.+?)~~/g, '$1')
+
+  // 压成一段，方便 line-clamp
+  s = s.replace(/\n+/g, ' ').replace(/[ \t]{2,}/g, ' ').trim()
+  return s
 }

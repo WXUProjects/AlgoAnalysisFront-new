@@ -430,9 +430,10 @@ export function BlogHome() {
                     {a.title}
                   </h2>
                   {a.summary ? (
-                    <div className="line-clamp-2 flex-1 text-sm text-muted-foreground">
-                      <MarkdownSummary content={a.summary} />
-                    </div>
+                    <MarkdownSummary
+                      content={a.summary}
+                      className="line-clamp-2 flex-1 text-sm text-muted-foreground"
+                    />
                   ) : null}
                   <div className="mt-auto flex items-center gap-3 pt-1 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1">

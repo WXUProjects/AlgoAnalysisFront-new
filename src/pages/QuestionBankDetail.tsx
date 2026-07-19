@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   BookOpenIcon,
@@ -116,7 +116,12 @@ export function QuestionBankDetail() {
   const [subsTotal, setSubsTotal] = useState(0)
   const [subsPage, setSubsPage] = useState(1)
   const [subsPageSize, setSubsPageSize] = useState(10)
+  /** 仅首次 / 切换题目时整页骨架；筛选分页不走这个，避免滚回顶部 */
   const [loading, setLoading] = useState(true)
+  /** 提交列表局部刷新 */
+  const [subsLoading, setSubsLoading] = useState(false)
+  /** 已成功展示过的题目 id；鉴权变化时静默刷新，不卸整页 */
+  const loadedProblemIdRef = useRef<string | null>(null)
   const [hasPending, setHasPending] = useState(false)
   const [followingOnly, setFollowingOnly] = useState(false)
   const [acOnly, setAcOnly] = useState(false)
@@ -155,30 +160,26 @@ export function QuestionBankDetail() {
       : null,
   )
 
-  const load = useCallback(async () => {
+  /** 题目主体 + 关联题单；不依赖筛选/分页，避免误卸整页 */
+  const loadProblem = useCallback(async () => {
     if (!id) return
-    setLoading(true)
-    const [pRes, sRes, setRes] = await Promise.all([
+    const isNewProblem = loadedProblemIdRef.current !== String(id)
+    if (isNewProblem) setLoading(true)
+    const [pRes, setRes] = await Promise.all([
       getProblem(id),
-      getProblemSubmissions({
-        problemId: id,
-        page: subsPage,
-        pageSize: subsPageSize,
-        followingOnly: followingOnly || undefined,
-        status: acOnly ? 'AC' : undefined,
-      }),
       listProblemsetsByProblem(id),
     ])
-    setLoading(false)
     if (!pRes.success || !pRes.data) {
+      if (isNewProblem) {
+        setLoading(false)
+        setProblem(null)
+        loadedProblemIdRef.current = null
+      }
       toast.error(pRes.message || '题目加载失败，请稍后重试')
       return
     }
     setProblem(pRes.data)
-    if (sRes.success && sRes.data) {
-      setSubs(sRes.data.list || [])
-      setSubsTotal(sRes.data.total || 0)
-    }
+    loadedProblemIdRef.current = String(id)
     // 后端已只返回公有 custom；前端再滤一层，避免收藏/待做误入
     if (setRes.success && setRes.data) {
       setRelatedSets(setRes.data.filter(isPublicCustomSet))
@@ -192,7 +193,28 @@ export function QuestionBankDetail() {
     } else {
       setHasPending(false)
     }
-  }, [id, isLogin, isSiteAdmin, followingOnly, acOnly, subsPage, subsPageSize])
+    if (isNewProblem) setLoading(false)
+  }, [id, isLogin, isSiteAdmin])
+
+  /** 提交历史：筛选/分页只刷新表格区域，保持滚动位置 */
+  const loadSubs = useCallback(async () => {
+    if (!id) return
+    setSubsLoading(true)
+    const sRes = await getProblemSubmissions({
+      problemId: id,
+      page: subsPage,
+      pageSize: subsPageSize,
+      followingOnly: followingOnly || undefined,
+      status: acOnly ? 'AC' : undefined,
+    })
+    setSubsLoading(false)
+    if (sRes.success && sRes.data) {
+      setSubs(sRes.data.list || [])
+      setSubsTotal(sRes.data.total || 0)
+    } else if (!sRes.success) {
+      toast.error(sRes.message || '提交记录加载失败，请稍后重试')
+    }
+  }, [id, followingOnly, acOnly, subsPage, subsPageSize])
 
   async function loadMySetsForProblem(problemId: number | string) {
     setMySetsLoading(true)
@@ -250,8 +272,20 @@ export function QuestionBankDetail() {
   }
 
   useEffect(() => {
-    void load()
-  }, [load])
+    void loadProblem()
+  }, [loadProblem])
+
+  useEffect(() => {
+    void loadSubs()
+  }, [loadSubs])
+
+  // 换题时重置提交筛选与页码，避免沿用上一题状态
+  useEffect(() => {
+    setSubsPage(1)
+    setFollowingOnly(false)
+    setAcOnly(false)
+    setSubTab('history')
+  }, [id])
 
   useEffect(() => {
     if (!id || !isLogin || subTab !== 'following') return
@@ -314,7 +348,7 @@ export function QuestionBankDetail() {
       toast.success(res.message || '标签已更新')
       setTagsOpen(false)
       if (res.data) setProblem(res.data)
-      else void load()
+      else void loadProblem()
       return
     }
     const res = await proposeProblemEdit({
@@ -648,6 +682,7 @@ export function QuestionBankDetail() {
                   type="button"
                   size="sm"
                   variant={followingOnly ? 'default' : 'outline'}
+                  disabled={subsLoading}
                   onClick={() => {
                     setSubsPage(1)
                     setFollowingOnly((v) => !v)
@@ -659,6 +694,7 @@ export function QuestionBankDetail() {
                   type="button"
                   size="sm"
                   variant={acOnly ? 'default' : 'outline'}
+                  disabled={subsLoading}
                   onClick={() => {
                     setSubsPage(1)
                     setAcOnly((v) => !v)
@@ -685,94 +721,111 @@ export function QuestionBankDetail() {
               </TabsList>
             </div>
             <TabsContent value="history" className="mt-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>用户</TableHead>
-                    <TableHead>语言</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead>时间</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {subs.map((s, i) => {
-                    const uid = num(s.userId)
-                    const name = str(
-                      s.userName ||
-                        s.name ||
-                        s.username ||
-                        (uid ? `用户${uid}` : '-'),
-                    )
-                    const status = str(s.status)
-                    const submitUrl = getSubmitLink(
-                      str(s.platform || problem.platform),
-                      str(s.contest),
-                      str(s.submitId),
-                    )
-                    return (
-                      <TableRow key={i}>
-                        <TableCell>
-                          {uid ? (
-                            <Link
-                              to={`/profile?id=${uid}`}
-                              className="hover:underline"
-                            >
-                              {name}
-                            </Link>
-                          ) : (
-                            name
-                          )}
-                        </TableCell>
-                        <TableCell>{str(s.lang, '-')}</TableCell>
-                        <TableCell>
-                          {submitUrl ? (
-                            <StatusBadge status={status} asChild>
-                              <a
-                                href={submitUrl}
-                                target="_blank"
-                                rel="noreferrer"
+              <div
+                className={cn(
+                  'relative transition-opacity',
+                  subsLoading && 'pointer-events-none opacity-60',
+                )}
+                aria-busy={subsLoading}
+              >
+                {subsLoading && (
+                  <div className="absolute inset-x-0 top-0 z-10 flex justify-center pt-3">
+                    <span className="inline-flex items-center gap-2 rounded-full border bg-background/95 px-3 py-1 text-xs text-muted-foreground shadow-sm">
+                      <Spinner className="size-3.5" />
+                      更新中…
+                    </span>
+                  </div>
+                )}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>用户</TableHead>
+                      <TableHead>语言</TableHead>
+                      <TableHead>状态</TableHead>
+                      <TableHead>时间</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {subs.map((s, i) => {
+                      const uid = num(s.userId)
+                      const name = str(
+                        s.userName ||
+                          s.name ||
+                          s.username ||
+                          (uid ? `用户${uid}` : '-'),
+                      )
+                      const status = str(s.status)
+                      const submitUrl = getSubmitLink(
+                        str(s.platform || problem.platform),
+                        str(s.contest),
+                        str(s.submitId),
+                      )
+                      return (
+                        <TableRow key={i}>
+                          <TableCell>
+                            {uid ? (
+                              <Link
+                                to={`/profile?id=${uid}`}
                                 className="hover:underline"
-                                title="查看原站提交"
                               >
-                                {formatSubmitStatus(status)}
-                              </a>
-                            </StatusBadge>
-                          ) : (
-                            <StatusBadge status={status} />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {formatTime(s.time || s.submittedAt || s.createdAt)}
+                                {name}
+                              </Link>
+                            ) : (
+                              name
+                            )}
+                          </TableCell>
+                          <TableCell>{str(s.lang, '-')}</TableCell>
+                          <TableCell>
+                            {submitUrl ? (
+                              <StatusBadge status={status} asChild>
+                                <a
+                                  href={submitUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="hover:underline"
+                                  title="查看原站提交"
+                                >
+                                  {formatSubmitStatus(status)}
+                                </a>
+                              </StatusBadge>
+                            ) : (
+                              <StatusBadge status={status} />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {formatTime(s.time || s.submittedAt || s.createdAt)}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                    {!subs.length && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          className="text-center text-muted-foreground"
+                        >
+                          {subsLoading ? '加载中…' : '暂无提交'}
                         </TableCell>
                       </TableRow>
-                    )
-                  })}
-                  {!subs.length && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        className="text-center text-muted-foreground"
-                      >
-                        暂无提交
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-              {subsTotal > 0 && (
-                <div className="border-t px-3 py-2">
-                  <Pagination
-                    page={subsPage}
-                    total={subsTotal}
-                    pageSize={subsPageSize}
-                    onChange={setSubsPage}
-                    onPageSizeChange={(n) => {
-                      setSubsPageSize(n)
-                      setSubsPage(1)
-                    }}
-                  />
-                </div>
-              )}
+                    )}
+                  </TableBody>
+                </Table>
+                {subsTotal > 0 && (
+                  <div className="border-t px-3 py-2">
+                    <Pagination
+                      page={subsPage}
+                      total={subsTotal}
+                      pageSize={subsPageSize}
+                      disabled={subsLoading}
+                      onChange={setSubsPage}
+                      onPageSizeChange={(n) => {
+                        setSubsPageSize(n)
+                        setSubsPage(1)
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </TabsContent>
             {isLogin && (
               <TabsContent value="following" className="mt-0">

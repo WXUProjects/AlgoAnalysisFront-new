@@ -78,13 +78,15 @@
   "name": "string",
   "email": "string",
   "groupId": 0,
-  "code": "string"
+  "code": "string",
+  "inviteCode": "string"
 }
 ```
 
 `username`：3–64 位，仅 `A-Za-z0-9_-`（字母、数字、下划线、短横线），**不允许中文及其它特殊符号**。  
 `name` = **全局昵称**（非真实姓名；加入校队时另填「组织内名称」）。  
-`code` = 邮箱验证码（先调 `send-code`，`purpose=register`）。邮箱全局唯一。
+`code` = 邮箱验证码（先调 `send-code`，`purpose=register`）。邮箱全局唯一。  
+`inviteCode`（可选）= 组织邀请识别码；注册成功后自动加入该组织（`auto` 则设为默认组织；`review` 则提交待审批）。
 
 **RegisterRes**
 ```json
@@ -179,11 +181,11 @@
 ```json
 {
   "id": 1,
-  "type": "mention|problem_edit_approved|problem_edit_rejected|org_join_approved|org_join_rejected",
+  "type": "mention|problem_edit_approved|problem_edit_rejected|org_join_approved|org_join_rejected|blog_article_like|blog_comment|blog_comment_reply|solution_like|comment_like|blog_moderation|blog_report|community_report|user_registered|user_frozen|user_unfrozen|review_pending",
   "title": "有人提到了你",
   "body": "alice 在评论中 @ 了你",
   "actorId": 2,
-  "refType": "comment|solution|problem_edit|org_join",
+  "refType": "comment|solution|problem_edit|org_join|blog_article|user",
   "refId": 10,
   "problemId": 3,
   "payload": "{}",
@@ -193,9 +195,19 @@
 ```
 
 触发来源：
+- 新用户注册 → 通知全部站点管理员（`user_registered`）
+- 站管冻结/解冻不活跃 → 通知被操作用户（`user_frozen` / `user_unfrozen`）
+- 题面/标签修改首次提交待审 → 通知站管（`review_pending`）+ **邮件**（见 `adminNotifyEmails`）
 - 题面/标签修改审核通过或驳回 → 通知申请人
 - 组织加入申请通过或驳回 → 通知申请人
 - 评论/题解中 `@username` → 通知被 @ 用户
+- 博客/题解点赞、评论、回复 → 通知内容作者
+- 博客/社区举报 → 通知站管（`blog_report` / `community_report`）+ **邮件**
+- 博客审核结果 → 通知作者（`blog_moderation`）
+
+**双入口共享**：网站顶栏与站点后台顶栏使用同一 `notifications` 列表 API，内容完全一致。
+
+**邮件（仅审核待办 + 举报）**：收件人取 `site_configs.admin_notify_emails`；空则 fallback 全部站管账号邮箱。站内信始终发给全部站管（举报时跳过举报者本人）。
 
 ### Upload / Site
 
@@ -204,8 +216,8 @@
 | POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc`，返回 `{ url }`（≤3MB 图片）。**url 带真实扩展名**（如 `.png`/`.jpg`） |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
 | GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo） |
-| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI 密钥脱敏 + `inactiveDays`） |
-| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + 可选 `inactiveDays`/`setInactiveDays`；密钥空串表示不修改 |
+| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI 密钥脱敏 + `inactiveDays` + `adminNotifyEmails`） |
+| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails`（审核/举报邮件收件人，可清空）；密钥空串表示不修改 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
 | POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
 | GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |
@@ -298,11 +310,13 @@
   "aiAnalyzeSecret": "",
   "aiAnalyzeSecretMasked": "••••••••",
   "aiAnalyzeSecretSet": true,
-  "clearAiAnalyzeSecret": false
+  "clearAiAnalyzeSecret": false,
+  "inactiveDays": 14,
+  "adminNotifyEmails": "ops@example.com\nadmin@example.com"
 }
 ```
 
-说明：`smtp` / `agent` / `ai_analyze` 原 yaml 配置已迁入站点设置；服务 yaml 仅作启动兜底。保存后写入 DB 并同步 Redis。`footerIcp` 为空时前端页脚使用默认备案号。
+说明：`smtp` / `agent` / `ai_analyze` 原 yaml 配置已迁入站点设置；服务 yaml 仅作启动兜底。保存后写入 DB 并同步 Redis。`footerIcp` 为空时前端页脚使用默认备案号。`adminNotifyEmails` 为审核/举报邮件接收人（逗号或换行分隔）；留空则发给全部站点管理员账号邮箱；**不影响**站内信收件人。
 
 ### Paste（粘贴板 / Pastebin）
 
@@ -507,6 +521,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/user/profile/ids-by-org` | 否 | query: `orgId` → 组织成员 ids（gRPC/HTTP） |
 | GET | `/user/profile/non-public-org-user-ids` | 否（内部） | 非公共域组织用户 ids（题面 AI：仅这些用户的提交触发分析） |
 | GET | `/user/org/invite` | 组织管理员 | query: `orgId` → 团队识别码 |
+| GET | `/user/org/invite/preview` | 否 | query: `code` → `{ orgId, orgName, name, brandTitle, brandLogo, joinMode }` 邀请页欢迎信息（不返回识别码以外的敏感配置） |
 | POST | `/user/org/invite/rotate` | 组织管理员 | `{ orgId }` 更换识别码 |
 | GET | `/user/org/join-requests` | 组织管理员 | 待审批列表 |
 | POST | `/user/org/join-requests/review` | 组织管理员 | `{ id, approve }` |
@@ -685,7 +700,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| GET | `/core/statistic/heatmap` | 否 | query: `startDate`, `endDate`, `isAc`, `userId?`（个人>0；`0`=当前组织热力；`-2`=**全站公开聚合**） |
+| GET | `/core/statistic/heatmap` | 否 | query: `startDate`, `endDate`, `isAc`, `userId?`（个人>0；`0`=当前组织热力；`-2`=**全站公开聚合**）。**跨度**：个人最多约 20 年，组织/全站最多约 400 天；响应为稀疏日行（仅 `count>0`），前端补空格。日期支持 `YYYY-MM-DD` / `YYYYMMDD`。**缓存**：个人按 `userVer` 稳定 key（爬虫写入即 INCR ver 失效，保证即时）；组织/全站短 TTL + global ver（全局 bump 约 2min 节流）。 |
 | GET | `/core/statistic/period` | 否 | query: `userId`（个人>0；`-1`=当前组织；`-2`=**全站公开聚合**） |
 | GET | `/core/statistic/rank` | 否 | 排行榜 |
 
@@ -1244,6 +1259,7 @@ GET    /api/user/org/members
 POST   /api/user/org/members/set-role
 POST   /api/user/org/members/remove
 GET    /api/user/org/invite
+GET    /api/user/org/invite/preview
 POST   /api/user/org/invite/rotate
 GET    /api/user/org/join-requests
 POST   /api/user/org/join-requests/review

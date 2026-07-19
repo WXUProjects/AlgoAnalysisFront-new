@@ -125,6 +125,8 @@ export async function register(input: {
   name: string
   email: string
   code: string
+  /** 可选：组织邀请识别码，注册后自动加入 */
+  inviteCode?: string
 }): Promise<ApiResult<RegisterRes>> {
   // 注册前清掉残留 token，避免半登录态干扰
   if (jwt.isValid()) {
@@ -162,6 +164,8 @@ export async function register(input: {
     groupId: 0,
     code: input.code.trim(),
   }
+  const invite = input.inviteCode?.trim()
+  if (invite) body.inviteCode = invite
 
   try {
     const res = await http.post<RegisterRes>(endpoints.user.auth.register, body)

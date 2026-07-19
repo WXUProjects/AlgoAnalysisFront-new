@@ -646,9 +646,10 @@ export function BlogArticlePage() {
               >
                 <h4 className="line-clamp-2 font-medium">{a.title}</h4>
                 {a.summary ? (
-                  <div className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                    <MarkdownSummary content={a.summary} />
-                  </div>
+                  <MarkdownSummary
+                    content={a.summary}
+                    className="mt-1 line-clamp-2 text-sm text-muted-foreground"
+                  />
                 ) : null}
               </Link>
             </li>

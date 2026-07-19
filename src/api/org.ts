@@ -250,6 +250,18 @@ export async function setOrgMemberRole(orgId: number, userId: number, role: stri
   }
 }
 
+export async function removeOrgMember(orgId: number, userId: number) {
+  const res = await post<{ code?: number; message?: string }>(
+    endpoints.user.org.removeMember,
+    { orgId, userId },
+  )
+  const body = res.data as { code?: number; message?: string }
+  return {
+    success: res.success && bizOk(body?.code),
+    message: body?.message || res.message,
+  }
+}
+
 export async function getInvite(orgId?: number) {
   const res = await get<{
     code?: number
@@ -261,6 +273,22 @@ export async function getInvite(orgId?: number) {
     success: res.success,
     inviteCode: (res.data as { inviteCode?: string })?.inviteCode,
     joinMode: (res.data as { joinMode?: string })?.joinMode,
+  }
+}
+
+/** 公开：邀请链接欢迎页预览组织名 */
+export async function previewInvite(code: string) {
+  const res = await get<Record<string, unknown>>(endpoints.user.org.invitePreview, {
+    code: code.trim(),
+  })
+  const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
+  return {
+    success: res.success && bizOk(raw.code),
+    message: str(raw.message) || res.message,
+    orgId: num(raw.orgId),
+    orgName: str(raw.orgName) || str(raw.name),
+    brandLogo: normalizeStaticUrl(str(raw.brandLogo)) || undefined,
+    joinMode: str(raw.joinMode),
   }
 }
 

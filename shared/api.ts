@@ -97,6 +97,7 @@ export const endpoints = {
       setDisplayName: `${API_PREFIX}/user/org/members/set-display-name`,
       memberIds: `${API_PREFIX}/user/org/member-ids`,
       invite: `${API_PREFIX}/user/org/invite`,
+      invitePreview: `${API_PREFIX}/user/org/invite/preview`,
       inviteRotate: `${API_PREFIX}/user/org/invite/rotate`,
       joinRequests: `${API_PREFIX}/user/org/join-requests`,
       joinReview: `${API_PREFIX}/user/org/join-requests/review`,
@@ -453,6 +454,8 @@ export interface RegisterReq {
   groupId: number
   /** 邮箱验证码 */
   code: string
+  /** 可选：组织邀请识别码；注册成功后自动加入该组织 */
+  inviteCode?: string
 }
 
 export interface RegisterRes {
@@ -725,7 +728,7 @@ export interface ContestItem {
   id: number
   platform: Platform
   userId: number
-  /** 参赛者展示名；「全部比赛」仅在当前用户参赛时可能带自己的名字 */
+  /** 参赛者展示名（全部比赛列表用） */
   userName?: string
   contestId: string
   contestName: string
@@ -1110,6 +1113,12 @@ export type NotificationType =
   | 'solution_like'
   | 'comment_like'
   | 'blog_moderation'
+  | 'blog_report'
+  | 'community_report'
+  | 'user_registered'
+  | 'user_frozen'
+  | 'user_unfrozen'
+  | 'review_pending'
   | string
 
 export interface NotificationItem {

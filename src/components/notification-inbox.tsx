@@ -34,8 +34,42 @@ function parsePayload(raw?: string): Record<string, unknown> {
 
 function notifLink(n: NotificationItem): string | null {
   const p = parsePayload(n.payload)
-  const blogUser = String(p.blogUsername || '').trim()
-  const blogSlug = String(p.blogSlug || '').trim()
+  const blogUser = String(
+    p.blogUsername || p.authorUsername || '',
+  ).trim()
+  const blogSlug = String(p.blogSlug || p.slug || '').trim()
+
+  // 站点运营：注册 / 冻结 / 解冻 / 待审核 / 举报
+  if (n.type === 'user_registered') {
+    const kw = String(p.username || '').trim()
+    return kw ? `/admin/site-users?keyword=${encodeURIComponent(kw)}` : '/admin/site-users'
+  }
+  if (n.type === 'user_frozen' || n.type === 'user_unfrozen') {
+    return '/profile'
+  }
+  if (n.type === 'review_pending') {
+    if (n.refType === 'problem_edit') return '/admin/problem-edits'
+    if (n.refType === 'blog_article') return '/admin/blog'
+    return '/admin/problem-edits'
+  }
+  if (n.type === 'blog_report') {
+    if (blogUser && blogSlug) return `/blog/${blogUser}/${blogSlug}`
+    return '/admin/blog'
+  }
+  if (n.type === 'community_report') {
+    const pid =
+      n.problemId > 0
+        ? n.problemId
+        : Number(p.problemId || 0)
+    if (pid > 0) {
+      if (n.refType === 'solution' && n.refId > 0) {
+        return `/question-bank/detail/${pid}/solution/${n.refId}`
+      }
+      return `/question-bank/detail/${pid}?tab=comments`
+    }
+    return '/admin/problem-edits'
+  }
+
   if (blogUser && blogSlug) {
     return `/blog/${blogUser}/${blogSlug}`
   }
@@ -47,6 +81,9 @@ function notifLink(n: NotificationItem): string | null {
     n.type === 'blog_moderation'
   ) {
     if (blogUser) return `/blog/${blogUser}`
+  }
+  if (n.type === 'org_join_approved' || n.type === 'org_join_rejected') {
+    return '/orgs'
   }
   if (n.problemId > 0) {
     if (n.refType === 'solution' && n.refId > 0) {
@@ -62,6 +99,12 @@ function notifLink(n: NotificationItem): string | null {
     }
     if (n.type === 'solution_like' && n.refId > 0) {
       return `/question-bank/detail/${n.problemId}/solution/${n.refId}`
+    }
+    if (
+      n.type === 'problem_edit_approved' ||
+      n.type === 'problem_edit_rejected'
+    ) {
+      return `/question-bank/detail/${n.problemId}`
     }
     return `/question-bank/detail/${n.problemId}`
   }
@@ -144,7 +187,7 @@ export function NotificationInbox({ enabled }: { enabled: boolean }) {
         <SheetHeader className="border-b px-4 py-3">
           <SheetTitle>站内通知</SheetTitle>
           <SheetDescription>
-            审核结果、@ 提醒、博客与题解互动等会显示在这里
+            注册与账号状态、审核与举报、点赞回复等都会显示在这里，网站与站点后台共用同一列表
           </SheetDescription>
         </SheetHeader>
         <div className="flex items-center justify-between gap-2 border-b px-4 py-2">

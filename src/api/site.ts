@@ -30,6 +30,8 @@ export type SiteAdminConfig = SiteConfig & {
   aiAnalyzeSecretSet: boolean
   /** 超过多少天未登录视为不活跃阈值，默认 14 */
   inactiveDays: number
+  /** 审核/举报邮件收件人（逗号或换行）；空则发给全部站管账号邮箱 */
+  adminNotifyEmails: string
 }
 
 function normalizeBrand(raw: Record<string, unknown> | null | undefined): SiteConfig {
@@ -60,6 +62,7 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     aiAnalyzeSecretMasked: str(d.aiAnalyzeSecretMasked),
     aiAnalyzeSecretSet: Boolean(d.aiAnalyzeSecretSet),
     inactiveDays: Math.max(1, Math.min(365, num(d.inactiveDays, 14) || 14)),
+    adminNotifyEmails: str(d.adminNotifyEmails),
   }
 }
 
@@ -115,6 +118,8 @@ export async function updateSiteConfig(body: {
   clearAiAnalyzeSecret?: boolean
   inactiveDays?: number
   setInactiveDays?: boolean
+  /** 审核/举报邮件收件人；可传空串清空 */
+  adminNotifyEmails?: string
 }): Promise<ApiResult<SiteConfig>> {
   const res = await post<Record<string, unknown>>(endpoints.user.site.config, body)
   if (!res.success) return { ...res, data: null }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
@@ -15,8 +15,21 @@ import {
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
+
 function postLoginPath(explicitRedirect: string | null): string {
   return explicitRedirect || '/'
+}
+
+function registerPathFromRedirect(redirect: string | null): string {
+  if (!redirect) return '/register'
+  try {
+    const q = redirect.includes('?') ? redirect.slice(redirect.indexOf('?') + 1) : ''
+    const code = new URLSearchParams(q).get('code')?.trim()
+    if (code) return `/register?invite=${encodeURIComponent(code)}`
+  } catch {
+    /* ignore */
+  }
+  return '/register'
 }
 
 export function Login() {
@@ -28,6 +41,10 @@ export function Login() {
   const [pending, setPending] = useState(false)
 
   const redirectParam = searchParams.get('redirect')
+  const registerHref = useMemo(
+    () => registerPathFromRedirect(redirectParam),
+    [redirectParam],
+  )
 
   if (ready && isLogin) {
     return <Navigate to={postLoginPath(redirectParam)} replace />
@@ -114,7 +131,10 @@ export function Login() {
             </Button>
             <p className="text-sm text-muted-foreground">
               没有账号？{' '}
-              <Link to="/register" className="text-foreground underline-offset-4 hover:underline">
+              <Link
+                to={registerHref}
+                className="text-foreground underline-offset-4 hover:underline"
+              >
                 注册
               </Link>
             </p>

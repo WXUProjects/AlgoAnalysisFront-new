@@ -133,42 +133,59 @@ export function RecommendStream() {
   }, [])
 
   return (
-    <div data-discover-recommend-stream="" className="flex flex-col gap-1.5">
-      <div className="flex flex-wrap items-center justify-between gap-1 rounded-md border bg-card/60 px-2 py-1 text-xs">
-        <span className="inline-flex items-center gap-1 text-muted-foreground">
-          <NewspaperIcon className="size-3 shrink-0" />
-          想专门逛文章？
-        </span>
-        <Button variant="ghost" size="sm" className="h-5 gap-1 px-1.5 text-xs" asChild>
-          <Link to="/blog-plaza">去博客广场</Link>
-        </Button>
+    <>
+      <div data-discover-recommend-stream="" className="flex min-w-0 flex-col">
+        <div className="mb-1 flex flex-wrap items-start justify-between gap-2 px-0.5">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-sm font-medium">
+              <CompassIcon className="size-3.5 text-muted-foreground" />
+              推荐
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {isPublicOrg
+                ? '全站题解、讨论与精选文章'
+                : '本组织题解、讨论与精选文章'}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+            asChild
+          >
+            <Link to="/blog-plaza">
+              <NewspaperIcon className="size-3.5" />
+              博客广场
+            </Link>
+          </Button>
+        </div>
+        <VirtualFeedList
+          items={items}
+          hasMore={hasMore}
+          loading={loading}
+          initialLoading={initialLoading}
+          onLoadMore={() => void loadMore(false)}
+          onPreview={setPreview}
+          emptySlot={
+            <Empty className="border-0 py-12">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <CompassIcon />
+                </EmptyMedia>
+                <EmptyTitle>暂无可推荐内容</EmptyTitle>
+                <EmptyDescription>
+                  {isPublicOrg
+                    ? '全站有新的题解或讨论后，会出现在这里。也可切换到「提交动态」看时间线。'
+                    : '本组织有新的题解或讨论后，会出现在这里。也可切换到「提交动态」看时间线。'}
+                </EmptyDescription>
+              </EmptyHeader>
+              <Button variant="outline" size="sm" className="mt-2" asChild>
+                <Link to="/blog-plaza">逛博客广场</Link>
+              </Button>
+            </Empty>
+          }
+        />
       </div>
-      <VirtualFeedList
-        items={items}
-        hasMore={hasMore}
-        loading={loading}
-        initialLoading={initialLoading}
-        onLoadMore={() => void loadMore(false)}
-        onPreview={setPreview}
-        emptySlot={
-          <Empty className="border-0 py-12">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <CompassIcon />
-              </EmptyMedia>
-              <EmptyTitle>暂无可推荐内容</EmptyTitle>
-              <EmptyDescription>
-                {isPublicOrg
-                  ? '全站有新的题解或讨论后，会出现在这里。也可切换到「动态」看提交时间线。'
-                  : '本组织有新的题解或讨论后，会出现在这里。也可切换到「动态」看提交时间线。'}
-              </EmptyDescription>
-            </EmptyHeader>
-            <Button variant="outline" size="sm" className="mt-2" asChild>
-              <Link to="/blog-plaza">逛博客广场</Link>
-            </Button>
-          </Empty>
-        }
-      />
 
       <FeedPreviewSheet
         target={preview}
@@ -176,6 +193,6 @@ export function RecommendStream() {
           if (!open) setPreview(null)
         }}
       />
-    </div>
+    </>
   )
 }

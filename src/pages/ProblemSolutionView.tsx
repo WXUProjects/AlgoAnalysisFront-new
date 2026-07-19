@@ -14,7 +14,7 @@ import {
   toggleCommunityLike,
 } from '@/api/community'
 import { getProblem } from '@/api/problem'
-import type { ProblemUserSolutionItem } from '@shared/api'
+import type { ProblemInfo, ProblemUserSolutionItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { CommunityReportDialog } from '@/components/community-report-dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -29,6 +29,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { clipMetaText } from '@/lib/document-meta'
 import { extractMarkdownOutline } from '@/lib/markdown'
@@ -44,16 +45,21 @@ export function ProblemSolutionView() {
   const navigate = useNavigate()
   const { user, isSiteAdmin, isLogin } = useAuth()
   const [solution, setSolution] = useState<ProblemUserSolutionItem | null>(null)
-  const [problemTitle, setProblemTitle] = useState('')
+  const [problem, setProblem] = useState<ProblemInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [removing, setRemoving] = useState(false)
   const [liking, setLiking] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [activeHeadingId, setActiveHeadingId] = useState('')
+  /** 题面 / 题解：标题区下方切换正文 */
+  const [contentTab, setContentTab] = useState<'problem' | 'solution'>(
+    'solution',
+  )
 
   const problemId = Number(id || 0)
   const sid = Number(solutionId || 0)
 
+  const problemTitle = problem?.title || ''
   const authorName = solution?.name || solution?.username || ''
   const solTitle = solution?.title || '题解'
   useDocumentMeta(
@@ -96,7 +102,9 @@ export function ProblemSolutionView() {
     }
     setSolution(sRes.data)
     if (pRes && pRes.success && pRes.data) {
-      setProblemTitle(pRes.data.title || '')
+      setProblem(pRes.data)
+    } else {
+      setProblem(null)
     }
   }, [sid, problemId])
 
@@ -104,10 +112,16 @@ export function ProblemSolutionView() {
     void load()
   }, [load])
 
-  const outline = useMemo(
+  const solutionOutline = useMemo(
     () => extractMarkdownOutline(solution?.contentMd || ''),
     [solution?.contentMd],
   )
+  const problemOutline = useMemo(
+    () => extractMarkdownOutline(problem?.contentMd || ''),
+    [problem?.contentMd],
+  )
+  const outline =
+    contentTab === 'problem' ? problemOutline : solutionOutline
 
   async function removeSolution() {
     if (!solution) return
@@ -209,6 +223,23 @@ export function ProblemSolutionView() {
             <span className="mx-1.5">·</span>
             {formatTime(solution.createdAt)}
           </p>
+          <Tabs
+            value={contentTab}
+            onValueChange={(v) => {
+              setContentTab(v as 'problem' | 'solution')
+              setActiveHeadingId('')
+            }}
+            className="mt-2.5"
+          >
+            <TabsList className="h-7">
+              <TabsTrigger value="problem" className="px-2.5 text-xs">
+                题面
+              </TabsTrigger>
+              <TabsTrigger value="solution" className="px-2.5 text-xs">
+                题解
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
         <div className="flex flex-wrap gap-2">
           {solution.blogSlug &&
@@ -300,38 +331,47 @@ export function ProblemSolutionView() {
         </div>
       </div>
 
-      {/* 桌面 7:3：左正文+评论 / 右文章提纲；移动端隐藏右侧 */}
+      {/* 桌面 7:3：左正文+评论 / 右文章提纲（随页面滚动，不 sticky）；移动端隐藏右侧 */}
       <div className="grid min-w-0 gap-4 md:grid-cols-[7fr_3fr] md:items-start">
         <div className="flex min-w-0 flex-col gap-3">
           <Card className="min-w-0 gap-3 py-5 sm:py-6">
             <CardContent className="min-w-0 px-5 sm:px-6">
-              <MarkdownBody
-                content={solution.contentMd || ''}
-                mode="markdown"
-                emptyText="暂无题解内容"
-              />
+              {contentTab === 'problem' ? (
+                <MarkdownBody
+                  content={problem?.contentMd || ''}
+                  mode="auto"
+                  emptyText="题面准备中，请稍后刷新；也可返回题目页补充题面"
+                />
+              ) : (
+                <MarkdownBody
+                  content={solution.contentMd || ''}
+                  mode="markdown"
+                  emptyText="暂无题解内容"
+                />
+              )}
             </CardContent>
           </Card>
 
-          <ProblemComments problemId={pid} solutionId={solution.id} />
+          {contentTab === 'solution' && (
+            <ProblemComments problemId={pid} solutionId={solution.id} />
+          )}
         </div>
 
-        <Card
-          className={cn(
-            'hidden min-w-0 gap-3 py-4 md:flex',
-            'md:sticky md:top-4 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto',
-          )}
-        >
+        <Card className="hidden min-w-0 gap-3 py-4 md:flex">
           <CardHeader className="px-4 pb-0">
-            <CardTitle className="text-base">文章内容</CardTitle>
+            <CardTitle className="text-base">
+              {contentTab === 'problem' ? '题面提纲' : '文章内容'}
+            </CardTitle>
           </CardHeader>
           <CardContent className="px-4">
             {outline.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                正文里还没有标题，写上 # 小标题后会出现在这里
+                {contentTab === 'problem'
+                  ? '题面里还没有标题'
+                  : '正文里还没有标题，写上 # 小标题后会出现在这里'}
               </p>
             ) : (
-              <nav aria-label="文章提纲">
+              <nav aria-label={contentTab === 'problem' ? '题面提纲' : '文章提纲'}>
                 <ul className="flex flex-col gap-0.5">
                   {outline.map((item) => (
                     <li key={item.id}>

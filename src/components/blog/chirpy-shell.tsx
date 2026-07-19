@@ -400,9 +400,10 @@ export function ChirpyShell({
                           {a.title}
                         </h2>
                         {a.summary ? (
-                          <div className="mt-1 line-clamp-2 text-sm text-[var(--text-muted-color)]">
-                            <MarkdownSummary content={a.summary} />
-                          </div>
+                          <MarkdownSummary
+                            content={a.summary}
+                            className="mt-1 line-clamp-2 text-sm text-[var(--text-muted-color)]"
+                          />
                         ) : null}
                       </Link>
                     </li>

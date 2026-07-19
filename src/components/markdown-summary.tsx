@@ -1,30 +1,35 @@
 import { useMemo } from 'react'
-import 'katex/dist/katex.min.css'
-import { renderSummaryMarkdown } from '@/lib/markdown'
+import { plainTextFromMarkdown } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 
 type MarkdownSummaryProps = {
-  /** 文章简述 / 摘要原文（可含 LaTeX、加粗等） */
+  /** 文章简述 / 摘要原文（可含 Markdown，展示时剥标记为纯文本） */
   content: string
   className?: string
 }
 
 /**
- * 列表卡片用的轻量 Markdown：公式 + 加粗 + 行内代码。
- * 不渲染链接/标题等，避免卡片里套链或出现「文章头」级标题。
+ * 列表卡片简述：纯文本，不渲染加粗/公式/代码等。
+ *
+ * line-clamp 请直接打在本组件 className 上（不要只包一层外 div），
+ * 否则内层 inline 子节点会按 max-content 撑满一行，看起来「字够却只有一行」。
  */
 export function MarkdownSummary({ content, className }: MarkdownSummaryProps) {
-  const html = useMemo(
-    () => (content?.trim() ? renderSummaryMarkdown(content) : ''),
+  const text = useMemo(
+    () => (content?.trim() ? plainTextFromMarkdown(content) : ''),
     [content],
   )
 
-  if (!html) return null
+  if (!text) return null
 
   return (
-    <span
-      className={cn('markdown-summary', className)}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div
+      className={cn(
+        'markdown-summary min-w-0 max-w-full [overflow-wrap:anywhere]',
+        className,
+      )}
+    >
+      {text}
+    </div>
   )
 }

@@ -94,14 +94,39 @@ export function daysAgoYmd(offsetDays: number): string {
   return dateToYmd(d)
 }
 
-/** 与后端 heatmapMaxDays=400 对齐的默认热力区间起点 */
-export const HEATMAP_MAX_DAYS = 400
+/**
+ * 热力区间上限（与后端 clamp 对齐）：
+ * - 个人 userId>0：约 20 年生涯
+ * - 组织/全站聚合：约 13 个月
+ */
+export const HEATMAP_CAREER_MAX_DAYS = 365 * 20
+export const HEATMAP_AGGREGATE_MAX_DAYS = 400
+/** @deprecated 旧名，等同聚合上限 */
+export const HEATMAP_MAX_DAYS = HEATMAP_AGGREGATE_MAX_DAYS
 
+/** 默认聚合热力起点（组织/全站） */
 export function heatmapStartYmd(endYmd?: string): string {
-  if (!endYmd) return daysAgoYmd(HEATMAP_MAX_DAYS)
+  return heatmapRangeStartYmd(endYmd, HEATMAP_AGGREGATE_MAX_DAYS)
+}
+
+/** 个人生涯热力起点（有多少年数据就能铺多少年） */
+export function heatmapCareerStartYmd(endYmd?: string): string {
+  return heatmapRangeStartYmd(endYmd, HEATMAP_CAREER_MAX_DAYS)
+}
+
+/**
+ * 按 userId 选起点：个人>0 用生涯；0/-2 等聚合用短窗。
+ */
+export function heatmapStartForUser(userId: number | undefined, endYmd?: string): string {
+  if (userId !== undefined && userId > 0) return heatmapCareerStartYmd(endYmd)
+  return heatmapStartYmd(endYmd)
+}
+
+function heatmapRangeStartYmd(endYmd: string | undefined, maxDays: number): string {
+  if (!endYmd) return daysAgoYmd(maxDays)
   const end = ymdToDate(endYmd)
-  if (!end) return daysAgoYmd(HEATMAP_MAX_DAYS)
-  end.setDate(end.getDate() - HEATMAP_MAX_DAYS)
+  if (!end) return daysAgoYmd(maxDays)
+  end.setDate(end.getDate() - maxDays)
   return dateToYmd(end)
 }
 

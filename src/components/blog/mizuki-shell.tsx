@@ -325,9 +325,10 @@ export function MizukiShell({
                     >
                       {a.title}
                       {a.summary ? (
-                        <span className="mt-0.5 block line-clamp-1 text-xs font-normal text-[var(--mz-text-50)]">
-                          <MarkdownSummary content={a.summary} />
-                        </span>
+                        <MarkdownSummary
+                          content={a.summary}
+                          className="mt-0.5 line-clamp-1 text-xs font-normal text-[var(--mz-text-50)]"
+                        />
                       ) : null}
                     </Link>
                   ))

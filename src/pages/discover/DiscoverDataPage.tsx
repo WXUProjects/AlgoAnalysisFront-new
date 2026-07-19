@@ -32,7 +32,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { heatmapStartYmd, todayYmd } from '@/lib/format'
+import { heatmapStartForUser, todayYmd } from '@/lib/format'
 
 type Props = {
   isLogin: boolean
@@ -129,11 +129,12 @@ export function DiscoverDataPage({ isLogin, userId }: Props) {
       setLoading(true)
       setAcHeat([])
       setAcHeatLoaded(false)
+      setAcHeatLoading(false)
       setHeatTab('submit')
       const periodUid = isLogin && userId ? userId : -2
       const heatUid = isLogin && userId ? userId : -2
       const end = todayYmd()
-      const start = heatmapStartYmd(end)
+      const start = heatmapStartForUser(heatUid, end)
       const tasks: Promise<unknown>[] = [
         getPeriod(periodUid).then((res) => {
           if (cancelled) return
@@ -185,33 +186,32 @@ export function DiscoverDataPage({ isLogin, userId }: Props) {
     }
   }, [isLogin, userId])
 
+  // 首屏后空闲预取 AC（勿把 acHeatLoading 放进 deps）
   useEffect(() => {
-    if (heatTab !== 'ac' || acHeatLoaded) return
+    if (loading || acHeatLoaded) return
     let cancelled = false
-    async function loadAc() {
+    const heatUid = isLogin && userId ? userId : -2
+    const end = todayYmd()
+    const t = window.setTimeout(() => {
       setAcHeatLoading(true)
-      try {
-        const heatUid = isLogin && userId ? userId : -2
-        const end = todayYmd()
-        const res = await getHeatmap({
-          startDate: heatmapStartYmd(end),
-          endDate: end,
-          isAc: true,
-          userId: heatUid,
-        })
+      void getHeatmap({
+        startDate: heatmapStartForUser(heatUid, end),
+        endDate: end,
+        isAc: true,
+        userId: heatUid,
+      }).then((res) => {
         if (cancelled) return
         if (res.success) setAcHeat(res.data || [])
         else toast.error(res.message || 'AC 热力图加载失败')
         setAcHeatLoaded(true)
-      } finally {
-        if (!cancelled) setAcHeatLoading(false)
-      }
-    }
-    void loadAc()
+        setAcHeatLoading(false)
+      })
+    }, 80)
     return () => {
       cancelled = true
+      window.clearTimeout(t)
     }
-  }, [heatTab, acHeatLoaded, isLogin, userId])
+  }, [loading, acHeatLoaded, isLogin, userId])
 
   const stats: PeriodItem | null =
     mode === 'ac' ? (period?.ac ?? null) : (period?.submit ?? null)

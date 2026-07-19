@@ -163,7 +163,7 @@ export function BlogPlaza() {
         <div className="min-w-0 space-y-1">
           <h1 className="text-xl font-semibold tracking-tight">博客广场</h1>
           <p className="text-sm text-muted-foreground">
-            浏览大家的公开文章，点标题进正文，点作者进个人博客
+            浏览大家的公开文章
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -422,9 +422,10 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
               {a.title}
             </h2>
             {a.summary ? (
-              <div className="line-clamp-2 text-sm text-muted-foreground">
-                <MarkdownSummary content={a.summary} />
-              </div>
+              <MarkdownSummary
+                content={a.summary}
+                className="line-clamp-2 text-sm text-muted-foreground"
+              />
             ) : null}
           </BlogLink>
           <div className="mt-auto flex items-center gap-3 pt-1 text-xs text-muted-foreground">

@@ -91,6 +91,7 @@ export function DashboardSiteSettings() {
   const [aiSecretSet, setAiSecretSet] = useState(false)
 
   const [inactiveDays, setInactiveDays] = useState('14')
+  const [adminNotifyEmails, setAdminNotifyEmails] = useState('')
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -193,6 +194,7 @@ export function DashboardSiteSettings() {
       setAiSecret(d.aiAnalyzeSecretSet ? SECRET_PLACEHOLDER : '')
       setAiSecretSet(d.aiAnalyzeSecretSet)
       setInactiveDays(String(d.inactiveDays || 14))
+      setAdminNotifyEmails(d.adminNotifyEmails || '')
       const running = await refreshJobs()
       if (!cancelled && running) {
         startPoll(running.id)
@@ -265,6 +267,7 @@ export function DashboardSiteSettings() {
       clearAiAnalyzeSecret: aiSec.clear,
       inactiveDays: days,
       setInactiveDays: true,
+      adminNotifyEmails: adminNotifyEmails.trim(),
     })
     setSaving(false)
     if (res.success) {
@@ -470,11 +473,27 @@ export function DashboardSiteSettings() {
           <CardHeader className="px-4 pb-0">
             <CardTitle>邮件发送设置</CardTitle>
             <CardDescription>
-              用于验证码、找回密码与训练日报/周报。保存后立即生效。
+              用于验证码、找回密码、训练日报/周报，以及审核与举报提醒。保存后立即生效。
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="admin-notify-emails">
+                  审核 / 举报邮件接收人
+                </FieldLabel>
+                <textarea
+                  id="admin-notify-emails"
+                  value={adminNotifyEmails}
+                  onChange={(e) => setAdminNotifyEmails(e.target.value)}
+                  placeholder={'admin@example.com\nops@example.com'}
+                  rows={3}
+                  className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full min-w-0 rounded-md border px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  有内容待审核或收到举报时，会发邮件到这里。每行一个邮箱，也可用逗号分隔。留空则发给全部站点管理员账号邮箱。站内通知仍会发给所有站点管理员。
+                </p>
+              </Field>
               <Field className="gap-1.5">
                 <FieldLabel htmlFor="smtp-host">邮件服务器地址</FieldLabel>
                 <Input

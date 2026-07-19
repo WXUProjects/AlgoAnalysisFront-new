@@ -27,6 +27,7 @@ import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { EmergencyDialogHost } from '@/components/emergency-dialog'
+import { NotificationInbox } from '@/components/notification-inbox'
 import { SiteFooter } from '@/components/site-footer'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
@@ -481,6 +482,9 @@ export function AdminLayout() {
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
             <AnimatedTitle className="text-sm font-medium">{title}</AnimatedTitle>
+            <div className="ml-auto flex items-center gap-1">
+              <NotificationInbox enabled={!!user} />
+            </div>
           </header>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none">
             <div className="flex min-h-full min-w-0 flex-1 flex-col">

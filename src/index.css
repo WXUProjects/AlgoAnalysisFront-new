@@ -189,10 +189,25 @@
   padding: 0.05em 0.3em;
   border-radius: 0.25rem;
   background: color-mix(in srgb, var(--border) 45%, transparent);
+  white-space: normal;
+  word-break: break-all;
 }
 
 .markdown-summary .katex {
   font-size: 1em;
+}
+
+/* 简述里若残留 display 公式，压成行内，避免打断 line-clamp 换行 */
+.markdown-summary .katex-display {
+  display: inline !important;
+  margin: 0 !important;
+  text-align: inherit;
+}
+
+.markdown-summary .katex-display > .katex {
+  display: inline;
+  white-space: normal;
+  text-align: inherit;
 }
 
 /* 题面 Markdown：1:1 对齐旧版 Detail.vue .content-md */

@@ -20,6 +20,7 @@ import type { ProblemCommentItem, ProblemUserSolutionItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { CommunityReportDialog } from '@/components/community-report-dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { MarkdownSummary } from '@/components/markdown-summary'
 import { MentionTextarea } from '@/components/mention-textarea'
 import { Pagination } from '@/components/pagination'
 import { Button } from '@/components/ui/button'
@@ -167,11 +168,12 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {s.name || s.username} · {formatTime(s.createdAt)}
                 </p>
-                {s.excerpt && (
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                    {s.excerpt}
-                  </p>
-                )}
+                {s.excerpt ? (
+                  <MarkdownSummary
+                    content={s.excerpt}
+                    className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground"
+                  />
+                ) : null}
               </Link>
               <div className="flex flex-wrap items-center gap-1">
                 <Button

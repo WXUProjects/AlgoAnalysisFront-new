@@ -6,6 +6,7 @@ import {
   getInvite,
   listJoinRequests,
   listOrgMembers,
+  removeOrgMember,
   reviewJoinRequest,
   rotateInvite,
   setOrgMemberRole,
@@ -30,6 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { buildOrgInviteUrl } from '@/lib/org-invite'
 import { orgRoleName } from '@/lib/roles'
 import { OrgTrainingReportCard } from '@/pages/dashboard/OrgTrainingReportCard'
 
@@ -78,6 +80,14 @@ export function DashboardOrgSettings() {
     from: string
     to: string
   } | null>(null)
+  /** 移除成员前二次确认 */
+  const [removeConfirm, setRemoveConfirm] = useState<{
+    userId: number
+    name: string
+  } | null>(null)
+
+  const isSystemOrg = Boolean(currentOrg?.isSystem)
+  const myUserId = user?.userId || 0
 
   const loadMembers = useCallback(async () => {
     if (!orgId) return
@@ -261,26 +271,66 @@ export function DashboardOrgSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">团队识别码</CardTitle>
-          <CardDescription>把识别码发给队员，即可申请加入本组织。</CardDescription>
+          <CardTitle className="text-base">邀请加入</CardTitle>
+          <CardDescription>
+            复制邀请链接发给队员；对方打开后会看到欢迎提示，注册后自动加入本组织。也可只发识别码。
+          </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3">
-          <code className="rounded bg-muted px-3 py-2 text-sm">{inviteCode || '—'}</code>
-          <ConfirmDialog
-            title="更换团队识别码？"
-            description="更换后旧识别码立即失效，已发出去的邀请将无法再使用。确定继续？"
-            confirmLabel="更换"
-            onConfirm={() =>
-              void rotateInvite(orgId).then((r) => {
-                if (r.success) {
-                  setInviteCode(r.inviteCode || '')
-                  toast.success('已更换识别码')
-                } else toast.error(r.message)
-              })
-            }
-          >
-            <Button variant="secondary">更换识别码</Button>
-          </ConfirmDialog>
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-muted-foreground">识别码</span>
+            <code className="rounded bg-muted px-3 py-2 text-sm">{inviteCode || '—'}</code>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!inviteCode}
+              onClick={() => {
+                if (!inviteCode) return
+                void navigator.clipboard.writeText(inviteCode).then(
+                  () => toast.success('已复制识别码'),
+                  () => toast.error('复制失败，请手动选择复制'),
+                )
+              }}
+            >
+              复制识别码
+            </Button>
+            <ConfirmDialog
+              title="更换团队识别码？"
+              description="更换后旧识别码与旧邀请链接立即失效。确定继续？"
+              confirmLabel="更换"
+              onConfirm={() =>
+                void rotateInvite(orgId).then((r) => {
+                  if (r.success) {
+                    setInviteCode(r.inviteCode || '')
+                    toast.success('已更换识别码')
+                  } else toast.error(r.message)
+                })
+              }
+            >
+              <Button variant="outline" size="sm">
+                更换识别码
+              </Button>
+            </ConfirmDialog>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-muted-foreground">邀请链接</span>
+            <code className="max-w-full truncate rounded bg-muted px-3 py-2 text-xs sm:text-sm">
+              {inviteCode ? buildOrgInviteUrl(inviteCode) : '—'}
+            </code>
+            <Button
+              size="sm"
+              disabled={!inviteCode}
+              onClick={() => {
+                if (!inviteCode) return
+                void navigator.clipboard.writeText(buildOrgInviteUrl(inviteCode)).then(
+                  () => toast.success('已复制邀请链接'),
+                  () => toast.error('复制失败，请手动选择复制'),
+                )
+              }}
+            >
+              复制邀请链接
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -382,10 +432,10 @@ export function DashboardOrgSettings() {
         <CardHeader>
           <CardTitle className="text-base">成员与角色</CardTitle>
           <CardDescription>
-            可设为成员、队长、教练或团队管理员。支持分页与模糊搜索。
+            可设为成员、队长、教练或团队管理员；也可将成员移出本组织。支持分页与模糊搜索。
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               placeholder="搜索组织内名称或用户名"
@@ -423,41 +473,58 @@ export function DashboardOrgSettings() {
           {membersLoading ? (
             <p className="text-sm text-muted-foreground">加载中…</p>
           ) : (
-            members.map((m) => (
-              <div
-                key={m.userId}
-                className="flex items-center justify-between gap-2 rounded border p-2"
-              >
-                <div className="min-w-0 text-sm">
-                  <span className="truncate">{m.name || m.orgDisplayName || m.username}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {orgRoleName(m.role)}
-                  </span>
-                </div>
-                <Select
-                  value={m.role || 'member'}
-                  onValueChange={(role) => {
-                    if (role === (m.role || 'member')) return
-                    setRoleConfirm({
-                      userId: m.userId,
-                      name: m.name || m.orgDisplayName || m.username || String(m.userId),
-                      from: m.role || 'member',
-                      to: role,
-                    })
-                  }}
+            members.map((m) => {
+              const label = m.name || m.orgDisplayName || m.username || String(m.userId)
+              const canRemove = !isSystemOrg && m.userId !== myUserId
+              return (
+                <div
+                  key={m.userId}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded border p-2"
                 >
-                  <SelectTrigger className="w-36 shrink-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="member">成员</SelectItem>
-                    <SelectItem value="captain">队长</SelectItem>
-                    <SelectItem value="coach">教练</SelectItem>
-                    <SelectItem value="org_admin">团队管理员</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            ))
+                  <div className="min-w-0 text-sm">
+                    <span className="truncate">{label}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {orgRoleName(m.role)}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <Select
+                      value={m.role || 'member'}
+                      onValueChange={(role) => {
+                        if (role === (m.role || 'member')) return
+                        setRoleConfirm({
+                          userId: m.userId,
+                          name: label,
+                          from: m.role || 'member',
+                          to: role,
+                        })
+                      }}
+                    >
+                      <SelectTrigger className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="member">成员</SelectItem>
+                        <SelectItem value="captain">队长</SelectItem>
+                        <SelectItem value="coach">教练</SelectItem>
+                        <SelectItem value="org_admin">团队管理员</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {canRemove ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setRemoveConfirm({ userId: m.userId, name: label })
+                        }
+                      >
+                        移除
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              )
+            })
           )}
           {!membersLoading && !members.length && (
             <p className="text-sm text-muted-foreground">暂时还没有成员</p>
@@ -499,6 +566,32 @@ export function DashboardOrgSettings() {
               } else toast.error(r.message)
             },
           )
+        }}
+      />
+
+      <ConfirmDialog
+        open={removeConfirm != null}
+        onOpenChange={(o) => {
+          if (!o) setRemoveConfirm(null)
+        }}
+        title="移出组织？"
+        description={
+          removeConfirm
+            ? `确定将「${removeConfirm.name}」移出本组织？对方将无法再访问本组织内容，可随时用邀请链接重新加入。`
+            : ''
+        }
+        confirmLabel="确认移除"
+        destructive
+        onConfirm={() => {
+          if (!removeConfirm || !orgId) return
+          const target = removeConfirm
+          setRemoveConfirm(null)
+          void removeOrgMember(orgId, target.userId).then(async (r) => {
+            if (r.success) {
+              toast.success(r.message || '已移除成员')
+              await loadMembers()
+            } else toast.error(r.message || '移除失败，请稍后重试')
+          })
         }}
       />
     </div>

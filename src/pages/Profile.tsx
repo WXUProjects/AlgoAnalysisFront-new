@@ -1,6 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ExternalLinkIcon, UserPlusIcon, UserMinusIcon } from 'lucide-react'
+import {
+  ExternalLinkIcon,
+  FlameIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+  UserPlusIcon,
+  UserMinusIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { listBlogByUsername } from '@/api/blog'
 import { getProfileById, getProfileByUsername } from '@/api/profile'
@@ -11,7 +24,7 @@ import {
   getSocialRelation,
   unfollowUser,
 } from '@/api/social'
-import { getHeatmap } from '@/api/statistic'
+import { getHeatmap, getPeriod } from '@/api/statistic'
 import { getSubmitLogs } from '@/api/submitLog'
 import {
   listUserRecentComments,
@@ -22,6 +35,7 @@ import { getProblemUserProfile } from '@/api/problem'
 import type {
   ContestItem,
   HeatmapItem,
+  PeriodData,
   ProblemUserProfile,
   SocialUser,
   UserProfile,
@@ -66,7 +80,7 @@ import { difficultyBadgeClass } from '@/lib/difficulty'
 import {
   formatContestTimeRange,
   formatTime,
-  heatmapStartYmd,
+  heatmapStartForUser,
   todayYmd,
 } from '@/lib/format'
 import { getPlatformHomeLink, getSubmitLink, OJ_PLATFORMS } from '@/lib/link'
@@ -100,6 +114,7 @@ export function Profile() {
   >([])
   const [contests, setContests] = useState<ContestItem[]>([])
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
+  const [period, setPeriod] = useState<PeriodData | null>(null)
   const [loading, setLoading] = useState(true)
   const [followingCount, setFollowingCount] = useState(0)
   const [followerCount, setFollowerCount] = useState(0)
@@ -160,6 +175,7 @@ export function Profile() {
     setBlogActivated(false)
     setAcHeat([])
     setAcHeatLoaded(false)
+    setAcHeatLoading(false)
     setHeatTab('submit')
 
     // 解析目标用户
@@ -180,6 +196,7 @@ export function Profile() {
     if (!pRes.success || !pRes.data) {
       setLoading(false)
       setProfile(null)
+      setPeriod(null)
       const msg = pRes.message || '资料加载失败，请稍后重试'
       if (msg.includes('隐私') || msg.includes('禁止') || msg.includes('未开放')) {
         setDenied(true)
@@ -198,6 +215,7 @@ export function Profile() {
 
     setProfile(pf)
     setTargetId(pf.userId)
+    setPeriod(null)
     const uid = pf.userId
     const end = todayYmd()
     const [
@@ -205,6 +223,7 @@ export function Profile() {
       acts,
       cont,
       algoRes,
+      periodRes,
       countsRes,
       relRes,
       rcRes,
@@ -213,7 +232,7 @@ export function Profile() {
       blogRes,
     ] = await Promise.all([
       getHeatmap({
-        startDate: heatmapStartYmd(end),
+        startDate: heatmapStartForUser(uid, end),
         endDate: end,
         isAc: false,
         userId: uid,
@@ -221,6 +240,7 @@ export function Profile() {
       getSubmitLogs({ userId: uid, cursor: -1, limit: 10 }),
       listContests({ userId: uid, limit: 5, offset: 0 }),
       getProblemUserProfile(uid),
+      getPeriod(uid),
       getSocialCounts(uid),
       isLogin ? getSocialRelation(uid) : Promise.resolve(null),
       listUserRecentComments({ userId: uid, limit: 8 }),
@@ -237,6 +257,8 @@ export function Profile() {
     if (acts.success) setActivities(acts.data || [])
     if (cont.success) setContests(cont.data?.list || [])
     if (algoRes.success) setAlgo(algoRes.data)
+    if (periodRes.success && periodRes.data) setPeriod(periodRes.data)
+    else setPeriod(null)
     if (countsRes.success && countsRes.data) {
       setFollowingCount(countsRes.data.followingCount)
       setFollowerCount(countsRes.data.followerCount)
@@ -266,33 +288,31 @@ export function Profile() {
     }
   }, [load])
 
+  // 主数据就绪后空闲预取 AC（勿把 acHeatLoading 放进 deps）
   useEffect(() => {
-    // 勿把 acHeatLoading 放进 deps：setLoading 会触发 cleanup 把请求标 cancelled，导致永远卡在 Skeleton
-    if (!targetId || heatTab !== 'ac' || acHeatLoaded) return
+    if (!targetId || loading || acHeatLoaded) return
     let cancelled = false
-    async function loadAc() {
+    const end = todayYmd()
+    const t = window.setTimeout(() => {
       setAcHeatLoading(true)
-      try {
-        const end = todayYmd()
-        const res = await getHeatmap({
-          startDate: heatmapStartYmd(end),
-          endDate: end,
-          isAc: true,
-          userId: targetId,
-        })
+      void getHeatmap({
+        startDate: heatmapStartForUser(targetId, end),
+        endDate: end,
+        isAc: true,
+        userId: targetId,
+      }).then((res) => {
         if (cancelled) return
         if (res.success) setAcHeat(res.data || [])
         else toast.error(res.message || '刷题热力图加载失败，请稍后重试')
         setAcHeatLoaded(true)
-      } finally {
-        if (!cancelled) setAcHeatLoading(false)
-      }
-    }
-    void loadAc()
+        setAcHeatLoading(false)
+      })
+    }, 80)
     return () => {
       cancelled = true
+      window.clearTimeout(t)
     }
-  }, [targetId, heatTab, acHeatLoaded])
+  }, [targetId, loading, acHeatLoaded])
 
   function handleLogout() {
     logout()
@@ -354,11 +374,171 @@ export function Profile() {
     toast.success(isFollowing ? '已取消关注' : '已关注')
   }
 
+  function renderOjBindings() {
+    return (
+      <Card className="gap-0 overflow-hidden py-0">
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
+          <p className="text-sm font-medium">OJ 绑定</p>
+          {isSelf ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-6 px-1.5 text-xs"
+              asChild
+            >
+              <Link to="/change-profile">管理</Link>
+            </Button>
+          ) : null}
+        </div>
+        <CardContent className="flex flex-col divide-y px-0 py-0">
+          {OJ_PLATFORMS.map((p) => {
+            const bind = spiderMap.get(p.value)
+            if (!bind) {
+              if (!isSelf) return null
+              return (
+                <div
+                  key={p.value}
+                  className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm"
+                >
+                  <span className="text-muted-foreground">{p.label}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-xs"
+                    asChild
+                  >
+                    <Link to={`/change-profile?oj=${p.value}`}>绑定</Link>
+                  </Button>
+                </div>
+              )
+            }
+            return (
+              <div
+                key={p.value}
+                className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="shrink-0 font-medium">{p.label}</span>
+                  {bind.hasRating ? (
+                    <Badge
+                      variant="secondary"
+                      className="h-5 font-mono tabular-nums"
+                      title={`${p.label} Rating`}
+                    >
+                      {bind.rating}
+                    </Badge>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground">
+                      暂无 Rating
+                    </span>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 gap-1 px-1.5 text-xs"
+                  asChild
+                >
+                  <a
+                    href={getPlatformHomeLink(p.value, bind.username)}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={bind.username}
+                  >
+                    主页
+                    <ExternalLinkIcon className="size-3 opacity-70" />
+                  </a>
+                </Button>
+              </div>
+            )
+          })}
+          {!isSelf && OJ_PLATFORMS.every((p) => !spiderMap.get(p.value)) ? (
+            <p className="px-3 py-2 text-xs text-muted-foreground">暂无绑定</p>
+          ) : null}
+        </CardContent>
+      </Card>
+    )
+  }
+
+  function renderProfileActions(opts: { desktopOnlySelfActions?: boolean }) {
+    return (
+      <div className="flex flex-col gap-2">
+        {blogActivated && profile?.username ? (
+          <Button type="button" variant="outline" asChild>
+            <Link
+              to={`/blog/${profile.username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              访问博客
+            </Link>
+          </Button>
+        ) : null}
+        {isSelf ? (
+          opts.desktopOnlySelfActions ? (
+            <div className="flex flex-col gap-2">
+              <Button type="button" asChild>
+                <Link to="/change-profile">编辑个人资料</Link>
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="ghost">
+                    退出登录
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>确认退出？</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      退出后需要重新登录才能访问个人相关功能。
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>取消</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleLogout}>
+                      退出
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          ) : null
+        ) : (
+          isLogin && (
+            <Button
+              type="button"
+              variant={isFollowing ? 'outline' : 'default'}
+              disabled={followBusy}
+              onClick={() => void handleToggleFollow()}
+            >
+              {isFollowing ? (
+                <>
+                  <UserMinusIcon data-icon="inline-start" />
+                  已关注
+                </>
+              ) : (
+                <>
+                  <UserPlusIcon data-icon="inline-start" />
+                  关注
+                </>
+              )}
+            </Button>
+          )
+        )}
+      </div>
+    )
+  }
+
   return (
     <PageShell className="gap-4">
+      {/*
+        移动端顺序：身份 → 刷题数据/主内容 → OJ 绑定（避免小屏先滚过长列表）
+        桌面：左栏 sticky 身份+OJ，右栏数据
+      */}
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 lg:grid lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start lg:gap-10">
         {/* 身份区：移动端横排紧凑，桌面端左栏竖排 */}
-        <aside className="flex flex-col gap-3 lg:sticky lg:top-4 lg:gap-4">
+        <aside className="order-1 flex flex-col gap-3 lg:sticky lg:top-4 lg:order-none lg:gap-4">
           <Card className="gap-0 py-3 lg:gap-4 lg:py-5">
             <CardContent className="flex flex-row items-center gap-3 px-3 lg:flex-col lg:items-center lg:gap-3 lg:px-4">
               <Avatar className="size-14 shrink-0 border-2 border-background shadow-md sm:size-16 lg:size-36 lg:border-4">
@@ -441,159 +621,17 @@ export function Profile() {
             </CardContent>
           </Card>
 
-          {/* OJ 绑定：紧凑列表，Rating 数字始终可见 */}
-          <Card className="gap-0 overflow-hidden py-0">
-            <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
-              <p className="text-sm font-medium">OJ 绑定</p>
-              {isSelf ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 px-1.5 text-xs"
-                  asChild
-                >
-                  <Link to="/change-profile">管理</Link>
-                </Button>
-              ) : null}
-            </div>
-            <CardContent className="flex flex-col divide-y px-0 py-0">
-              {OJ_PLATFORMS.map((p) => {
-                const bind = spiderMap.get(p.value)
-                if (!bind) {
-                  if (!isSelf) return null
-                  return (
-                    <div
-                      key={p.value}
-                      className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm"
-                    >
-                      <span className="text-muted-foreground">{p.label}</span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-6 px-2 text-xs"
-                        asChild
-                      >
-                        <Link to={`/change-profile?oj=${p.value}`}>绑定</Link>
-                      </Button>
-                    </div>
-                  )
-                }
-                return (
-                  <div
-                    key={p.value}
-                    className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm"
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="shrink-0 font-medium">{p.label}</span>
-                      {bind.hasRating ? (
-                        <Badge
-                          variant="secondary"
-                          className="h-5 font-mono tabular-nums"
-                          title={`${p.label} Rating`}
-                        >
-                          {bind.rating}
-                        </Badge>
-                      ) : (
-                        <span className="text-[11px] text-muted-foreground">
-                          暂无 Rating
-                        </span>
-                      )}
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 gap-1 px-1.5 text-xs"
-                      asChild
-                    >
-                      <a
-                        href={getPlatformHomeLink(p.value, bind.username)}
-                        target="_blank"
-                        rel="noreferrer"
-                        title={bind.username}
-                      >
-                        主页
-                        <ExternalLinkIcon className="size-3 opacity-70" />
-                      </a>
-                    </Button>
-                  </div>
-                )
-              })}
-              {!isSelf &&
-              OJ_PLATFORMS.every((p) => !spiderMap.get(p.value)) ? (
-                <p className="px-3 py-2 text-xs text-muted-foreground">
-                  暂无绑定
-                </p>
-              ) : null}
-            </CardContent>
-          </Card>
-
-          <div className="flex flex-col gap-2">
-            {blogActivated && profile.username ? (
-              <Button type="button" variant="outline" asChild>
-                <Link
-                  to={`/blog/${profile.username}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  访问博客
-                </Link>
-              </Button>
-            ) : null}
-            {isSelf ? (
-              <div className="hidden flex-col gap-2 lg:flex">
-                <Button type="button" asChild>
-                  <Link to="/change-profile">编辑个人资料</Link>
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button type="button" variant="ghost">
-                      退出登录
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>确认退出？</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        退出后需要重新登录才能访问个人相关功能。
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>取消</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleLogout}>
-                        退出
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            ) : (
-              isLogin && (
-                <Button
-                  type="button"
-                  variant={isFollowing ? 'outline' : 'default'}
-                  disabled={followBusy}
-                  onClick={() => void handleToggleFollow()}
-                >
-                  {isFollowing ? (
-                    <>
-                      <UserMinusIcon data-icon="inline-start" />
-                      已关注
-                    </>
-                  ) : (
-                    <>
-                      <UserPlusIcon data-icon="inline-start" />
-                      关注
-                    </>
-                  )}
-                </Button>
-              )
-            )}
+          {/* 桌面：OJ / 操作留在左栏；移动端挪到主内容后 */}
+          <div className="hidden flex-col gap-3 lg:flex lg:gap-4">
+            {renderOjBindings()}
+            {renderProfileActions({ desktopOnlySelfActions: true })}
           </div>
         </aside>
 
-        {/* 右栏：热力 / 动态 / 画像 / 比赛 */}
-        <div className="flex min-w-0 flex-col gap-4">
+        {/* 主内容：刷题数据置顶，再热力 / 动态 / 画像 / 比赛 */}
+        <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-none">
+          <ProfilePeriodPanel period={period} />
+
           <Card className="gap-3 py-4">
             <CardHeader className="px-4">
               <CardTitle className="text-base">热力图</CardTitle>
@@ -857,7 +895,126 @@ export function Profile() {
             </CardContent>
           </Card>
         </div>
+
+        {/* 移动端：OJ / 操作沉到主内容之后，避免挡住刷题数据 */}
+        <div className="order-3 flex flex-col gap-3 lg:hidden">
+          {renderOjBindings()}
+          {renderProfileActions({ desktopOnlySelfActions: false })}
+        </div>
       </div>
     </PageShell>
+  )
+}
+
+function fmtPeriodNum(n: number | null | undefined, empty = '—'): string {
+  if (n == null) return empty
+  return String(n)
+}
+
+function weekAcDelta(thisWeek: number, lastWeek: number): {
+  text: string
+  up: boolean | null
+} {
+  const d = thisWeek - lastWeek
+  if (d === 0) return { text: '与上周持平', up: null }
+  if (d > 0) return { text: `比上周 +${d}`, up: true }
+  return { text: `比上周 ${d}`, up: false }
+}
+
+function ProfileStatCell({
+  label,
+  value,
+  hint,
+  accent,
+}: {
+  label: string
+  value: string
+  /** 次要说明，如「比上周 -1」 */
+  hint?: ReactNode
+  accent?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'flex min-w-0 flex-col gap-0.5 rounded-lg px-2.5 py-2',
+        accent ? 'bg-muted/50' : 'bg-muted/35',
+      )}
+    >
+      <p className="truncate text-xs text-muted-foreground">{label}</p>
+      <p className="text-xl font-semibold tabular-nums leading-none tracking-tight">
+        {value}
+      </p>
+      {hint ? (
+        <div className="mt-0.5 text-[11px] leading-none text-muted-foreground">
+          {hint}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/** 主内容区：统一格子网格，避免「本周单独一栏」的错位感 */
+function ProfilePeriodPanel({ period }: { period: PeriodData | null }) {
+  const ac = period?.ac
+  const submit = period?.submit
+  const delta =
+    ac != null ? weekAcDelta(ac.thisWeek, ac.lastWeek) : null
+  const totalAcTimes = ac
+    ? String(Math.max(ac.totalRaw ?? ac.total, ac.total))
+    : '—'
+  const totalProblems = ac ? String(ac.total) : '—'
+
+  const deltaHint = delta ? (
+    <span
+      className={cn(
+        'inline-flex items-center gap-0.5',
+        delta.up === true && 'text-emerald-600 dark:text-emerald-400',
+        delta.up === false && 'text-destructive',
+        delta.up === null && 'text-muted-foreground',
+      )}
+    >
+      {delta.up === true ? <TrendingUpIcon className="size-3" /> : null}
+      {delta.up === false ? <TrendingDownIcon className="size-3" /> : null}
+      {delta.text}
+    </span>
+  ) : null
+
+  return (
+    <Card className="gap-2 py-3 shadow-none">
+      <CardHeader className="gap-0 px-3 py-0 sm:px-4">
+        <CardTitle className="flex items-center gap-1.5 text-sm font-medium">
+          <FlameIcon className="size-3.5 text-orange-500" />
+          刷题数据
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-3 sm:px-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+          <ProfileStatCell
+            label="本周 AC"
+            value={fmtPeriodNum(ac?.thisWeek)}
+            hint={deltaHint}
+            accent
+          />
+          <ProfileStatCell
+            label="今日 AC"
+            value={fmtPeriodNum(ac?.today)}
+          />
+          <ProfileStatCell
+            label="本月 AC"
+            value={fmtPeriodNum(ac?.thisMonth)}
+          />
+          <ProfileStatCell label="累计 AC" value={totalAcTimes} />
+          <ProfileStatCell label="总题数" value={totalProblems} />
+          <ProfileStatCell
+            label="今日提交"
+            value={fmtPeriodNum(submit?.today)}
+          />
+          <ProfileStatCell
+            label="本周提交"
+            value={fmtPeriodNum(submit?.thisWeek)}
+          />
+        </div>
+      </CardContent>
+    </Card>
   )
 }

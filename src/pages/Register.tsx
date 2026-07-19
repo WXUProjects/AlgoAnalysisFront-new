@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   register as registerApi,
@@ -7,6 +7,7 @@ import {
   USERNAME_HINT,
   validateUsername,
 } from '@/api/auth'
+import { previewInvite } from '@/api/org'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { Button } from '@/components/ui/button'
@@ -21,10 +22,19 @@ import {
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
+import {
+  buildOrgInvitePath,
+  peekInviteCode,
+  rememberInviteCode,
+} from '@/lib/org-invite'
 
 export function Register() {
   const { isLogin, ready } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const inviteFromQuery = (searchParams.get('invite') || '').trim()
+  const [inviteCode, setInviteCode] = useState(inviteFromQuery || peekInviteCode())
+  const [inviteOrgName, setInviteOrgName] = useState('')
   const [form, setForm] = useState({
     username: '',
     password: '',
@@ -36,6 +46,28 @@ export function Register() {
   const [pending, setPending] = useState(false)
   const [sending, setSending] = useState(false)
   const [cooldown, setCooldown] = useState(0)
+
+  useEffect(() => {
+    if (inviteFromQuery) {
+      rememberInviteCode(inviteFromQuery)
+      setInviteCode(inviteFromQuery)
+    }
+  }, [inviteFromQuery])
+
+  useEffect(() => {
+    if (!inviteCode) {
+      setInviteOrgName('')
+      return
+    }
+    let cancelled = false
+    void previewInvite(inviteCode).then((r) => {
+      if (cancelled) return
+      if (r.success && r.orgName) setInviteOrgName(r.orgName)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [inviteCode])
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -72,11 +104,17 @@ export function Register() {
       return
     }
     setPending(true)
-    const res = await registerApi(form)
+    const res = await registerApi({
+      ...form,
+      inviteCode: inviteCode || undefined,
+    })
     setPending(false)
     if (res.success) {
       toast.success(res.message || '注册成功')
-      navigate('/login', { replace: true })
+      const loginPath = inviteCode
+        ? `/login?redirect=${encodeURIComponent(buildOrgInvitePath(inviteCode))}`
+        : '/login'
+      navigate(loginPath, { replace: true })
     } else {
       toast.error(res.message || '注册失败，请稍后重试')
     }
@@ -87,7 +125,11 @@ export function Register() {
       <Card className="w-full max-w-sm gap-4 py-4 motion-lift">
         <CardHeader className="gap-1 px-4">
           <CardTitle>注册</CardTitle>
-          <CardDescription>创建账号，需完成邮箱验证</CardDescription>
+          <CardDescription>
+            {inviteOrgName
+              ? `欢迎加入${inviteOrgName}。创建账号后将自动加入该组织（需邮箱验证）`
+              : '创建账号，需完成邮箱验证'}
+          </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <CardContent className="px-4">
@@ -144,7 +186,9 @@ export function Register() {
                   maxLength={32}
                 />
                 <p className="text-xs text-muted-foreground">
-                  注册后会自动加入「公共域」，此昵称即你在公共域中的对外称呼。加入其他校队时，可再单独设置队内名称。
+                  {inviteOrgName
+                    ? `此昵称将作为你在「${inviteOrgName}」与公共域中的称呼，之后可在组织里再改。`
+                    : '注册后会自动加入「公共域」，此昵称即你在公共域中的对外称呼。加入其他校队时，可再单独设置队内名称。'}
                 </p>
               </Field>
               <Field className="gap-1.5">
@@ -198,7 +242,14 @@ export function Register() {
             </Button>
             <p className="text-sm text-muted-foreground">
               已有账号？{' '}
-              <Link to="/login" className="text-foreground underline-offset-4 hover:underline">
+              <Link
+                to={
+                  inviteCode
+                    ? `/login?redirect=${encodeURIComponent(buildOrgInvitePath(inviteCode))}`
+                    : '/login'
+                }
+                className="text-foreground underline-offset-4 hover:underline"
+              >
                 登录
               </Link>
             </p>

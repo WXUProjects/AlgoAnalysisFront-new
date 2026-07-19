@@ -18,6 +18,9 @@ const Login = lazy(() =>
 const Register = lazy(() =>
   import('@/pages/Register').then((m) => ({ default: m.Register })),
 )
+const OrgInvite = lazy(() =>
+  import('@/pages/OrgInvite').then((m) => ({ default: m.OrgInvite })),
+)
 const ForgotPassword = lazy(() =>
   import('@/pages/ForgotPassword').then((m) => ({ default: m.ForgotPassword })),
 )
@@ -409,6 +412,14 @@ export const router = createBrowserRouter([
         element: (
           <Lazy>
             <Register />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'join',
+        element: (
+          <Lazy>
+            <OrgInvite />
           </Lazy>
         ),
       },
