@@ -95,17 +95,14 @@ export async function listTrainingReportJobs(params?: {
   return { success: true, message: 'ok', data: list }
 }
 
-/** 浏览器直接下载（Cookie + access_token 兜底） */
-export function downloadTrainingReport(
-  jobId: string,
-  format: 'pdf' | 'html' = 'pdf',
-): ApiResult<null> {
+/** 浏览器直接下载 HTML（Cookie + access_token 兜底） */
+export function downloadTrainingReport(jobId: string): ApiResult<null> {
   if (!jwt.isValid()) {
     return { success: false, message: '请先登录后再下载', data: null }
   }
   const url = new URL(endpoints.agent.trainingReport.download, window.location.origin)
   url.searchParams.set('jobId', jobId)
-  url.searchParams.set('format', format)
+  url.searchParams.set('format', 'html')
   url.searchParams.set('access_token', jwt.token)
   const a = document.createElement('a')
   a.href = url.pathname + url.search

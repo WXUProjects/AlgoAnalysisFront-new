@@ -292,7 +292,7 @@ export const endpoints = {
       job: `${API_PREFIX}/agent/training-report/job`,
       /** 当前组织最近任务 query: orgId?, limit? */
       jobs: `${API_PREFIX}/agent/training-report/jobs`,
-      /** 下载报告 query: jobId, format?=pdf|html */
+      /** 下载报告 query: jobId（仅 HTML） */
       download: `${API_PREFIX}/agent/training-report/download`,
     },
   },

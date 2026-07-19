@@ -22,6 +22,9 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 
+/** AI 分析最长约 8 个月（与后端 MaxAIRangeDays=243 对齐） */
+const MAX_AI_RANGE_DAYS = 243
+
 function defaultRange(): { start: string; end: string } {
   // 默认上周：相对今天，昨天往前 6 天
   const end = new Date()
@@ -36,6 +39,13 @@ function defaultRange(): { start: string; end: string } {
     return `${y}-${m}-${day}`
   }
   return { start: fmt(start), end: fmt(end) }
+}
+
+function rangeDays(start: string, end: string): number {
+  const a = new Date(start + 'T00:00:00')
+  const b = new Date(end + 'T00:00:00')
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return 0
+  return Math.floor((b.getTime() - a.getTime()) / 86400000) + 1
 }
 
 function formatExpires(ts?: number): string {
@@ -115,6 +125,13 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
       toast.error('结束日期不能早于开始日期')
       return
     }
+    if (useAi) {
+      const days = rangeDays(startDate, endDate)
+      if (days > MAX_AI_RANGE_DAYS) {
+        toast.error(`AI 分析最长 ${MAX_AI_RANGE_DAYS} 天（约 8 个月），当前 ${days} 天`)
+        return
+      }
+    }
     setStarting(true)
     const res = await startTrainingReport({
       orgId,
@@ -142,8 +159,8 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
     void loadJobs()
   }
 
-  function onDownload(jobId: string, format: 'pdf' | 'html' = 'pdf') {
-    const r = downloadTrainingReport(jobId, format)
+  function onDownload(jobId: string) {
+    const r = downloadTrainingReport(jobId)
     if (!r.success) toast.error(r.message)
   }
 
@@ -152,7 +169,8 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
       <CardHeader>
         <CardTitle className="text-base">导出训练报告</CardTitle>
         <CardDescription>
-          按日期区间汇总组织训练数据，可限定分组。可选生成 AI 评语；完成后发邮件，24 小时内可下载 PDF。
+          按日期区间汇总组织训练数据（提交、排行、标签、比赛、博客、动态等），可限定分组。可选 AI
+          多维度分析（最长约 8 个月）；完成后发邮件，24 小时内可下载 HTML。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -199,7 +217,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
           <div className="space-y-0.5">
             <Label>启用 AI 分析</Label>
             <p className="text-xs text-muted-foreground">
-              关闭时用规则模板；开启后使用与日报/周报相同的分析模型，耗时更长。
+              关闭时用规则模板（维度齐全）；开启后多维 AI 分析，最长约 8 个月，耗时更长。
             </p>
           </div>
           <Switch checked={useAi} onCheckedChange={setUseAi} />
@@ -231,14 +249,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
               </span>
               {activeJob.downloadable && (
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => onDownload(activeJob.jobId, 'pdf')}>
-                    下载 PDF
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onDownload(activeJob.jobId, 'html')}
-                  >
+                  <Button size="sm" onClick={() => onDownload(activeJob.jobId)}>
                     下载 HTML
                   </Button>
                 </div>
@@ -297,8 +308,8 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
                   ) : null}
                 </div>
                 {j.downloadable ? (
-                  <Button size="sm" variant="secondary" onClick={() => onDownload(j.jobId, 'pdf')}>
-                    下载
+                  <Button size="sm" variant="secondary" onClick={() => onDownload(j.jobId)}>
+                    下载 HTML
                   </Button>
                 ) : null}
               </li>
