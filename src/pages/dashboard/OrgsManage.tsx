@@ -455,8 +455,8 @@ export function DashboardOrgsManage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="member">成员</SelectItem>
-                            <SelectItem value="coach">教练</SelectItem>
                             <SelectItem value="captain">队长</SelectItem>
+                            <SelectItem value="coach">教练</SelectItem>
                             <SelectItem value="org_admin">团队管理员</SelectItem>
                           </SelectContent>
                         </Select>

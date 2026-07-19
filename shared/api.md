@@ -1150,6 +1150,8 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 教练 / 队长 / 组织管理员可导出指定日期区间（可选组）的组织训练报告；支持规则模板或 AI 分析。生成在后台异步进行，完成后邮件通知发起人（可附 PDF），下载有效期 **24 小时**。周报即「上周」训练报告，共用此管道。
 
+**周报发送日（周一）组织共享**：同一组织、同一上周区间的 AI 周报文档只生成 **一份**（`source=weekly` job）；同组织其他已开启周报的教练/队长/组织管理员 **复用该文档** 各自收邮件，不重复跑 AI / 不另落盘。
+
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
 | POST | `/agent/training-report/start` | staff | body: `startDate`, `endDate`, `groupId?`, `useAi?`, `orgId?` → `jobId` |

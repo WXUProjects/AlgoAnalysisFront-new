@@ -6,13 +6,18 @@ import {
   FileTextIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { getContestBoard, getContestProblems } from '@/api/contest'
+import {
+  getContestBoard,
+  getContestCellSubmits,
+  getContestProblems,
+} from '@/api/contest'
 import { getProblem } from '@/api/problem'
 import { listAllGroups } from '@/api/group'
 import type {
   ContestBoardCell,
   ContestBoardProblemCol,
   ContestBoardRow,
+  ContestCellSubmitItem,
   ContestItem,
   ContestProblemItem,
   GroupInfo,
@@ -23,6 +28,7 @@ import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { MarkdownBody } from '@/components/markdown-body'
 import { ProblemSolutionsPanel } from '@/components/problem-community'
+import { StatusBadge } from '@/components/status-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -34,6 +40,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Table,
   TableBody,
   TableCell,
@@ -44,7 +57,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useListQueryState } from '@/hooks/use-list-query-state'
-import { formatContestTimeRange } from '@/lib/format'
+import { formatContestTimeRange, formatTime } from '@/lib/format'
+import { getSubmitLink } from '@/lib/link'
 import { cn } from '@/lib/utils'
 
 const DEFAULT_PAGE_SIZE = 20
@@ -104,12 +118,66 @@ export function ContestDetails() {
   /** 顶层：站内榜 | 比赛题目 */
   const [mainTab, setMainTab] = useState<'board' | 'problems'>('board')
 
+  /** 格子弹窗：某用户某题的赛时提交 */
+  const [cellDialog, setCellDialog] = useState<{
+    userId: number
+    userName: string
+    label: string
+    externalId?: string
+  } | null>(null)
+  const [cellSubmits, setCellSubmits] = useState<ContestCellSubmitItem[]>([])
+  const [cellSubmitsLoading, setCellSubmitsLoading] = useState(false)
+  const [cellDialogMeta, setCellDialogMeta] = useState<{
+    platform: string
+    userName: string
+    label: string
+  } | null>(null)
+
   useEffect(() => {
     if (!id) {
       navigate(-1)
       return
     }
   }, [id, navigate])
+
+  useEffect(() => {
+    if (!cellDialog || !id) {
+      setCellSubmits([])
+      setCellDialogMeta(null)
+      return
+    }
+    let cancelled = false
+    setCellSubmitsLoading(true)
+    setCellSubmits([])
+    void getContestCellSubmits({
+      contestId: id,
+      userId: cellDialog.userId,
+      label: cellDialog.label,
+      externalId: cellDialog.externalId,
+    }).then((res) => {
+      if (cancelled) return
+      setCellSubmitsLoading(false)
+      if (!res.success || !res.data) {
+        toast.error(res.message || '提交记录加载失败')
+        setCellSubmits([])
+        setCellDialogMeta({
+          platform: contest?.platform || '',
+          userName: cellDialog.userName,
+          label: cellDialog.label,
+        })
+        return
+      }
+      setCellSubmits(res.data.list)
+      setCellDialogMeta({
+        platform: res.data.platform || contest?.platform || '',
+        userName: res.data.userName || cellDialog.userName,
+        label: res.data.label || cellDialog.label,
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [cellDialog, id, contest?.platform])
 
   useEffect(() => {
     if (!isLogin) return
@@ -347,10 +415,10 @@ export function ContestDetails() {
               <CardDescription>
                 {scoring === 'leetcode'
                   ? hasCellDetail
-                    ? '按得分排序；绿色为通过用时，红色为失败次数'
+                    ? '按得分排序；绿色为通过用时，红色为失败次数。点格子可看赛时提交'
                     : '本场暂无逐题明细，只显示得分'
                   : hasCellDetail
-                    ? '绿色为通过用时，红色为尝试次数'
+                    ? '绿色为通过用时，红色为尝试次数。点格子可看赛时提交'
                     : '本场暂无逐题明细，只显示通过题数'}
                 {followingOnly ? ' · 仅看关注' : ''}
               </CardDescription>
@@ -460,6 +528,23 @@ export function ContestDetails() {
                                   <BoardCellView
                                     cell={cell}
                                     scoring={scoring}
+                                    onClick={
+                                      cell &&
+                                      (cell.status === 'AC' ||
+                                        cell.status === 'TRIED')
+                                        ? () =>
+                                            setCellDialog({
+                                              userId: row.userId,
+                                              userName:
+                                                row.name?.trim() || '未知选手',
+                                              label: p.label,
+                                              externalId:
+                                                cell.externalId ||
+                                                p.externalId ||
+                                                undefined,
+                                            })
+                                        : undefined
+                                    }
                                   />
                                 </TableCell>
                               )
@@ -658,6 +743,124 @@ export function ContestDetails() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog
+        open={!!cellDialog}
+        onOpenChange={(open) => {
+          if (!open) setCellDialog(null)
+        }}
+      >
+        <DialogContent className="max-h-[min(90vh,40rem)] gap-0 overflow-hidden p-0 sm:max-w-lg">
+          <DialogHeader className="border-b px-4 py-3 sm:px-5">
+            <DialogTitle className="text-base">
+              {cellDialogMeta?.userName || cellDialog?.userName || '选手'}
+              {cellDialogMeta?.label || cellDialog?.label
+                ? ` · 题 ${cellDialogMeta?.label || cellDialog?.label}`
+                : ''}
+            </DialogTitle>
+            <DialogDescription>
+              赛时提交记录
+              {cellSubmits.length > 0
+                ? ` · 共 ${cellSubmits.length} 次`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[min(60vh,28rem)] overflow-y-auto px-0">
+            {cellSubmitsLoading ? (
+              <div className="flex flex-col gap-2 p-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-9 w-full" />
+                ))}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-20">赛时</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead className="w-24">语言</TableHead>
+                    <TableHead className="w-16 text-right">代码</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cellSubmits.map((s) => {
+                    const platform =
+                      s.platform ||
+                      cellDialogMeta?.platform ||
+                      contest?.platform ||
+                      ''
+                    const submitUrl = getSubmitLink(
+                      platform,
+                      s.contest || '',
+                      s.submitId,
+                    )
+                    return (
+                      <TableRow key={s.id || `${s.submitId}-${s.time}`}>
+                        <TableCell className="tabular-nums text-muted-foreground">
+                          {s.relativeSec != null
+                            ? formatRelativeSec(s.relativeSec) || '—'
+                            : formatTime(s.time)}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={s.status} />
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {s.lang || '—'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {submitUrl ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2"
+                              asChild
+                            >
+                              <a
+                                href={submitUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="在原站查看代码"
+                              >
+                                <ExternalLinkIcon data-icon="inline-start" />
+                                查看
+                              </a>
+                            </Button>
+                          ) : (
+                            <span
+                              className="text-xs text-muted-foreground"
+                              title={
+                                s.submitId
+                                  ? '本站没有这份提交的代码链接'
+                                  : undefined
+                              }
+                            >
+                              —
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                  {!cellSubmits.length && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="py-8 text-center text-muted-foreground"
+                      >
+                        暂无赛时提交记录
+                        <p className="mt-1 text-xs">
+                          可能尚未同步到本站，或该题只有榜单汇总
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   )
 }
@@ -665,13 +868,16 @@ export function ContestDetails() {
 function BoardCellView({
   cell,
   scoring,
+  onClick,
 }: {
   cell?: ContestBoardCell
   scoring: string
+  onClick?: () => void
 }) {
   if (!cell || cell.status === 'NONE' || !cell.status) {
     return <span className="text-muted-foreground/40">·</span>
   }
+  const clickable = !!onClick
   if (cell.status === 'AC') {
     const timeStr = formatRelativeSec(cell.relativeSec)
     const fail =
@@ -679,15 +885,23 @@ function BoardCellView({
         <span className="opacity-80">(-{cell.attempts})</span>
       ) : null
     return (
-      <div
+      <button
+        type="button"
+        disabled={!clickable}
+        onClick={onClick}
         className={cn(
           'mx-auto flex min-h-9 min-w-[2.75rem] flex-col items-center justify-center rounded-md px-1 py-0.5',
           'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+          clickable &&
+            'cursor-pointer transition-colors hover:bg-emerald-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          !clickable && 'cursor-default',
         )}
         title={
           scoring === 'leetcode' && cell.scoreDelta
             ? `+${cell.scoreDelta}`
-            : undefined
+            : clickable
+              ? '查看赛时提交'
+              : undefined
         }
       >
         <span className="font-semibold tabular-nums leading-tight">
@@ -696,20 +910,27 @@ function BoardCellView({
         {fail ? (
           <span className="text-[10px] leading-none tabular-nums">{fail}</span>
         ) : null}
-      </div>
+      </button>
     )
   }
   // TRIED
   return (
-    <div
+    <button
+      type="button"
+      disabled={!clickable}
+      onClick={onClick}
       className={cn(
         'mx-auto flex min-h-9 min-w-[2.75rem] items-center justify-center rounded-md px-1 py-0.5',
         'bg-rose-500/15 text-rose-700 dark:text-rose-400',
+        clickable &&
+          'cursor-pointer transition-colors hover:bg-rose-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        !clickable && 'cursor-default',
       )}
+      title={clickable ? '查看赛时提交' : undefined}
     >
       <span className="font-semibold tabular-nums">
         {cell.attempts > 0 ? cell.attempts : '–'}
       </span>
-    </div>
+    </button>
   )
 }

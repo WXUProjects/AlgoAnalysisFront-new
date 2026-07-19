@@ -11,11 +11,11 @@ export const Role = {
 
 export type RoleId = (typeof Role)[keyof typeof Role]
 
-/** 组织内角色 */
+/** 组织内角色（展示顺序：成员 → 队长 → 教练 → 团队管理员） */
 export const OrgRole = {
   Member: 'member',
-  Coach: 'coach',
   Captain: 'captain',
+  Coach: 'coach',
   OrgAdmin: 'org_admin',
 } as const
 
@@ -23,8 +23,8 @@ export type OrgRoleValue = (typeof OrgRole)[keyof typeof OrgRole]
 
 export const OrgRoleLabel: Record<string, string> = {
   member: '成员',
-  coach: '教练',
   captain: '队长',
+  coach: '教练',
   org_admin: '团队管理员',
 }
 
@@ -134,7 +134,7 @@ export function staffNavLabel(p?: {
 } | null) {
   if (isSiteAdminFromPayload(p)) return '站点管理'
   if (p?.orgRole === OrgRole.OrgAdmin) return '团队管理'
-  if (p?.orgRole === OrgRole.Captain) return '队长管理'
   if (p?.orgRole === OrgRole.Coach) return '教练管理'
+  if (p?.orgRole === OrgRole.Captain) return '队长管理'
   return '团队管理'
 }

@@ -4,6 +4,8 @@ import {
   type ContestBoardData,
   type ContestBoardProblemCol,
   type ContestBoardRow,
+  type ContestCellSubmitItem,
+  type ContestCellSubmitsData,
   type ContestItem,
   type ContestProblemItem,
   type ContestProblemsData,
@@ -234,6 +236,72 @@ export async function getContestBoard(params: {
       problems,
       rows: rowsRaw.map(normalizeBoardRow),
       total: num(raw.total, rowsRaw.length),
+    },
+  }
+}
+
+/** 站内榜格子：用户本场该题赛时提交明细 */
+export async function getContestCellSubmits(params: {
+  contestId: string | number
+  userId: number
+  label?: string
+  externalId?: string
+}): Promise<ApiResult<ContestCellSubmitsData>> {
+  const res = await get<Record<string, unknown>>(
+    endpoints.core.contest.cellSubmits,
+    {
+      id: params.contestId,
+      contestId: params.contestId,
+      userId: params.userId,
+      ...(params.label ? { label: params.label } : {}),
+      ...(params.externalId ? { externalId: params.externalId } : {}),
+    },
+  )
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
+  const listRaw = Array.isArray(raw.list)
+    ? (raw.list as Record<string, unknown>[])
+    : []
+  const contestRaw = (raw.contest as Record<string, unknown>) || null
+  const list: ContestCellSubmitItem[] = listRaw.map((r) => ({
+    id: num(r.id),
+    submitId: str(r.submitId),
+    status: str(r.status),
+    lang: str(r.lang),
+    time: num(r.time),
+    relativeSec:
+      r.relativeSec !== undefined && r.relativeSec !== null
+        ? num(r.relativeSec)
+        : undefined,
+    problem: str(r.problem),
+    contest: str(r.contest),
+    externalId: str(r.externalId) || undefined,
+    platform: str(r.platform) || undefined,
+    problemId:
+      r.problemId !== undefined && r.problemId !== null
+        ? num(r.problemId)
+        : undefined,
+  }))
+  return {
+    ...res,
+    data: {
+      contest: contestRaw ? normalizeContest(contestRaw) : null,
+      platform: str(raw.platform),
+      contestId: str(raw.contestId),
+      userId: num(raw.userId),
+      userName: str(raw.userName),
+      label: str(raw.label),
+      externalId: str(raw.externalId),
+      startTime:
+        raw.startTime !== undefined && raw.startTime !== null
+          ? num(raw.startTime)
+          : undefined,
+      endTime:
+        raw.endTime !== undefined && raw.endTime !== null
+          ? num(raw.endTime)
+          : undefined,
+      list,
+      total: num(raw.total, list.length),
     },
   }
 }

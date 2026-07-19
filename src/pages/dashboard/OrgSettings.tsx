@@ -382,7 +382,7 @@ export function DashboardOrgSettings() {
         <CardHeader>
           <CardTitle className="text-base">成员与角色</CardTitle>
           <CardDescription>
-            可设为成员、教练、队长或团队管理员。支持分页与模糊搜索。
+            可设为成员、队长、教练或团队管理员。支持分页与模糊搜索。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -451,8 +451,8 @@ export function DashboardOrgSettings() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="member">成员</SelectItem>
-                    <SelectItem value="coach">教练</SelectItem>
                     <SelectItem value="captain">队长</SelectItem>
+                    <SelectItem value="coach">教练</SelectItem>
                     <SelectItem value="org_admin">团队管理员</SelectItem>
                   </SelectContent>
                 </Select>

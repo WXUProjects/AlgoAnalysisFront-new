@@ -183,6 +183,8 @@ export const endpoints = {
       problems: `${API_PREFIX}/core/contest/problems`,
       /** XCPCIO 风格站内榜（人×题格子） */
       board: `${API_PREFIX}/core/contest/board`,
+      /** 站内榜格子：用户本场该题赛时提交明细 */
+      cellSubmits: `${API_PREFIX}/core/contest/cell-submits`,
     },
     contestCalendar: {
       list: `${API_PREFIX}/core/contest-calendar/list`,
@@ -794,6 +796,36 @@ export interface ContestBoardData {
   total: number
 }
 
+/** 站内榜格子弹窗：单条赛时提交 */
+export interface ContestCellSubmitItem {
+  id: number
+  submitId: string
+  status: string
+  lang: string
+  /** unix 秒 */
+  time: number
+  relativeSec?: number
+  problem: string
+  contest: string
+  externalId?: string
+  platform?: string
+  problemId?: number
+}
+
+export interface ContestCellSubmitsData {
+  contest: Partial<ContestItem> | null
+  platform: string
+  contestId: string
+  userId: number
+  userName: string
+  label: string
+  externalId: string
+  startTime?: number
+  endTime?: number
+  list: ContestCellSubmitItem[]
+  total: number
+}
+
 /** 比赛内题目（Tab A/B/C…） */
 export interface ContestProblemItem {
   label: string
@@ -1032,7 +1064,7 @@ export interface HotProblemRes {
 
 export interface ProblemUserProfile {
   radar: { tag: string; score: number; acCount: number }[]
-  /** 平台过题；牛客拆为「竞赛站」(AC 数字题号) 与「牛客Tracker」(主站 UUID) */
+  /** 平台过题；牛客拆为「牛客竞赛站」(AC 数字题号) 与「牛客Tracker」(主站 UUID) */
   platforms: { name: string; count: number }[]
   difficulties: { name: string; count: number }[]
   totalAc: number

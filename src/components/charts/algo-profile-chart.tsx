@@ -59,10 +59,11 @@ const DIFF_ORDER: Record<string, number> = {
   Hard: 2,
 }
 
-/** 平台过题饼图展示名（后端已拆牛客；兼容旧缓存 NowCoder） */
+/** 平台过题饼图展示名（后端已拆牛客；兼容旧缓存 NowCoder / 竞赛站） */
 const PLATFORM_PIE_LABEL: Record<string, string> = {
-  NowCoder: '竞赛站',
-  竞赛站: '竞赛站',
+  NowCoder: '牛客竞赛站',
+  竞赛站: '牛客竞赛站',
+  牛客竞赛站: '牛客竞赛站',
   牛客Tracker: '牛客Tracker',
   CodeForces: 'Codeforces',
   LuoGu: '洛谷',
@@ -377,7 +378,7 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
 
   const maxAc = Math.max(...radarAll.map((r) => r.count), 1)
 
-  // 平台过题数（去重题量，非 AC 提交次数）；牛客拆「竞赛站 / 牛客Tracker」
+  // 平台过题数（去重题量，非 AC 提交次数）；牛客拆「牛客竞赛站 / 牛客Tracker」
   const platformPie = (data.platforms ?? [])
     .filter((p) => p.name?.trim() && !isJunkLabel(p.name) && p.count > 0)
     .map((p) => ({
