@@ -321,7 +321,7 @@ export function ContestDetails() {
     return () => window.clearInterval(t)
   }, [ensureStatus, problems.length, problemsLoading, loadProblems])
 
-  // 当前题详情
+  // 当前题详情（题面未就绪时短轮询，避免 ensure 后仍显示「准备中」）
   const activeItem = problems.find((p) => p.label === activeLabel) || problems[0]
   useEffect(() => {
     const pid = activeItem?.problemId
@@ -330,17 +330,39 @@ export function ContestDetails() {
       return
     }
     let cancelled = false
-    setDetailLoading(true)
-    void getProblem(pid).then((res) => {
-      if (cancelled) return
-      setDetailLoading(false)
-      if (res.success && res.data) setProblemDetail(res.data)
-      else setProblemDetail(null)
-    })
+    let tries = 0
+    const loadDetail = (quiet = false) => {
+      if (!quiet) setDetailLoading(true)
+      void getProblem(pid).then((res) => {
+        if (cancelled) return
+        if (!quiet) setDetailLoading(false)
+        if (res.success && res.data) setProblemDetail(res.data)
+        else if (!quiet) setProblemDetail(null)
+      })
+    }
+    loadDetail(false)
+    // 列表 hasContent=false 或详情尚无题面时继续拉
+    const needPoll = activeItem?.hasContent === false
+    if (!needPoll) {
+      return () => {
+        cancelled = true
+      }
+    }
+    const t = window.setInterval(() => {
+      tries += 1
+      if (tries > 20 || cancelled) {
+        window.clearInterval(t)
+        return
+      }
+      loadDetail(true)
+      // 顺带刷新目录 hasContent
+      if (tries % 3 === 0) void loadProblems({ quiet: true })
+    }, 3000)
     return () => {
       cancelled = true
+      window.clearInterval(t)
     }
-  }, [activeItem?.problemId])
+  }, [activeItem?.problemId, activeItem?.hasContent, loadProblems])
 
   const filterKey = `${id ?? ''}\0${groupId ?? ''}\0${followingOnly ? 1 : 0}`
   const prevFilterKey = useRef(filterKey)
