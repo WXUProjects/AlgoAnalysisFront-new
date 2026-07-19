@@ -164,6 +164,8 @@ export const endpoints = {
       set: `${API_PREFIX}/core/spider/set`,
       update: `${API_PREFIX}/core/spider/update`,
       updateAll: `${API_PREFIX}/core/spider/update-all`,
+      /** 站管：按平台全量回填 body: { platform: "LeetCode" } */
+      updatePlatform: `${API_PREFIX}/core/spider/update-platform`,
       submitInventory: `${API_PREFIX}/core/spider/submit-inventory`,
       purgeSubmitsAndRecrawl: `${API_PREFIX}/core/spider/purge-submits-and-recrawl`,
     },

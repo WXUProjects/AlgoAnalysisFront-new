@@ -649,6 +649,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/spider/set` | 是 | 绑定 OJ 账号（仅全量同步该平台） |
 | POST | `/core/spider/update` | 是(站点管理员) | 手动全量同步单用户全部已绑定平台 |
 | POST | `/core/spider/update-all` | 是(站点管理员) | 全站用户全量更新 |
+| POST | `/core/spider/update-platform` | 是(站点管理员) | 仅某平台全量回填；body `{ platform: "LeetCode" }`；清该平台 pending/inflight 后 needAll 入队 |
 | GET | `/core/spider/submit-inventory` | 是(站点管理员) | 真实入库库存：`submitLogsTotal` / `submitLogsRealTotal` / `oldestTime` / `newestTime`（`countedSubmitIdsTotal` 已废弃恒为 0） |
 | POST | `/core/spider/purge-submits-and-recrawl` | 是(站点管理员) | **硬清**训练数据并全量重爬；body `{ confirm: "PURGE_SUBMITS" }`。删：`submit_logs`（真假全删）、账本、日汇总、AC 预聚合、`contest_logs`、提醒发送日志 + 相关 Redis。**保留**：`platforms`、题库、公告/紧急通知、比赛日历赛程与订阅；用户账号在 user 库不动 |
 
