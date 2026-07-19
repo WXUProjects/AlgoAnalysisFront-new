@@ -73,6 +73,7 @@ import type { ProblemInfo, ProblemsetInfo, ProblemsetVisibility } from '@shared/
 import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { clipMetaText } from '@/lib/document-meta'
 import { cn } from '@/lib/utils'
+import { sharedElementStyle } from '@/lib/view-transition'
 
 const unlockKey = (id: string | number) => `ps_unlock_${id}`
 
@@ -428,7 +429,12 @@ export function ProblemsetDetail() {
     <PageShell>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
-          <h2 className="text-lg font-semibold">{set.title}</h2>
+          <h2
+            className="text-lg font-semibold vt-shared"
+            style={sharedElementStyle('problemset', set.id)}
+          >
+            {set.title}
+          </h2>
           {subtitle && (
             <p className="text-sm text-muted-foreground">{subtitle}</p>
           )}

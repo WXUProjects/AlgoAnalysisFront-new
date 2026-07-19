@@ -60,6 +60,7 @@ import { useListQueryState } from '@/hooks/use-list-query-state'
 import { formatContestTimeRange, formatTime } from '@/lib/format'
 import { getSubmitLink } from '@/lib/link'
 import { cn } from '@/lib/utils'
+import { sharedElementStyle } from '@/lib/view-transition'
 
 const DEFAULT_PAGE_SIZE = 20
 
@@ -321,7 +322,10 @@ export function ContestDetails() {
             {contest?.platform && (
               <Badge variant="secondary">{contest.platform}</Badge>
             )}
-            <h2 className="text-lg font-semibold">
+            <h2
+              className="text-lg font-semibold vt-shared"
+              style={id ? sharedElementStyle('contest', id) : undefined}
+            >
               {contest?.contestName || `比赛 #${id}`}
             </h2>
           </div>

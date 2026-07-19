@@ -126,14 +126,15 @@ function historyIndex(): number | null {
 export function goNavBack(navigate: NavigateFunction, pathname: string): void {
   const idx = historyIndex()
   if (idx !== null && idx > 0) {
+    // POP: RR reuses view transitions when the forward path pair was VT-enabled
     navigate(-1)
     return
   }
-  // 无可靠历史时落到上级，避免点返回直接离开站点
+  // 无可靠历史时落到上级，避免点返回直接离开站点（router wrap 会默认开 VT）
   const parent = resolveParentPath(pathname)
   if (parent && parent !== normalizePath(pathname)) {
-    navigate(parent)
+    navigate(parent, { viewTransition: true })
     return
   }
-  navigate('/')
+  navigate('/', { viewTransition: true })
 }

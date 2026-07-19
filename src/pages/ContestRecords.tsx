@@ -20,6 +20,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatContestTimeRange } from '@/lib/format'
+import {
+  prepareSharedElement,
+  sharedElementStyle,
+} from '@/lib/view-transition'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -450,10 +454,14 @@ export function ContestRecords() {
               <div className="flex min-w-0 flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary">{item.platform || '-'}</Badge>
-                  <CardTitle className="truncate text-base">
+                  <CardTitle
+                    className="truncate text-base vt-shared"
+                    style={sharedElementStyle('contest', item.id)}
+                  >
                     <Link
                       to={`/contest/${item.id}`}
                       className="rounded-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={() => prepareSharedElement('contest', item.id)}
                     >
                       {item.contestName || item.contestId}
                     </Link>

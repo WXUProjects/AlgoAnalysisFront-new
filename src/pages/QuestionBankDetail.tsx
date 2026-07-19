@@ -89,6 +89,7 @@ import { formatTime } from '@/lib/format'
 import { getSubmitLink } from '@/lib/link'
 import { num, str } from '@/lib/http'
 import { cn } from '@/lib/utils'
+import { sharedElementStyle } from '@/lib/view-transition'
 
 /** 题目页「关联题单」只展示公有自定义题单，不含收藏/待做 */
 function isPublicCustomSet(ps: ProblemsetInfo): boolean {
@@ -395,7 +396,12 @@ export function QuestionBankDetail() {
     <PageShell>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-2">
-          <h2 className="text-lg font-semibold">{problem.title}</h2>
+          <h2
+            className="text-lg font-semibold vt-shared"
+            style={sharedElementStyle('problem', problem.id)}
+          >
+            {problem.title}
+          </h2>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">{problem.platform}</Badge>
             <Badge variant="outline">{problem.externalId}</Badge>

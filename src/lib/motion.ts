@@ -86,12 +86,20 @@ export function canHover(): boolean {
   return window.matchMedia('(hover: hover) and (pointer: fine)').matches
 }
 
-/** 路由信息层级：列表浅、详情深，用于进出方向 */
+/** 路由信息层级：列表浅、详情深，用于进出方向 / View Transition */
 export function routeDepth(pathname: string): number {
   if (pathname === '/') return 0
+  // 详情 / 深层
   if (pathname.startsWith('/question-bank/detail/')) return 3
   if (pathname.startsWith('/contest/') && pathname !== '/contest') return 3
-  if (pathname === '/change-profile') return 3
+  if (pathname.startsWith('/problemset/') && pathname !== '/problemset') return 3
+  if (pathname.startsWith('/profile/') && pathname !== '/profile') return 3
+  if (/^\/blog\/[^/]+\/[^/]+/.test(pathname) && !pathname.includes('/manage')) {
+    return 4 // 博客文章
+  }
+  if (/^\/blog\/[^/]+/.test(pathname)) return 3 // 个人博客首页
+  if (pathname === '/change-profile' || pathname === '/privacy') return 3
+  if (pathname.startsWith('/p/')) return 3
   if (pathname.startsWith('/admin/')) return 2
   if (pathname === '/admin') return 1
   if (
@@ -100,7 +108,11 @@ export function routeDepth(pathname: string): number {
     pathname.startsWith('/discover') ||
     pathname.startsWith('/all-activities') ||
     pathname.startsWith('/question-bank') ||
+    pathname.startsWith('/problemset') ||
+    pathname.startsWith('/blog-plaza') ||
     pathname.startsWith('/profile') ||
+    pathname.startsWith('/social') ||
+    pathname.startsWith('/tools') ||
     pathname === '/login' ||
     pathname === '/register' ||
     pathname === '/forgot-password'

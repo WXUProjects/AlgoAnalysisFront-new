@@ -17,6 +17,10 @@ import {
 import { useAuth } from '@/auth/AuthContext'
 import { BlogActivateDialog } from '@/components/blog/blog-activate-dialog'
 import { BlogLink } from '@/components/blog/blog-link'
+import {
+  prepareSharedElement,
+  sharedElementStyle,
+} from '@/lib/view-transition'
 import { MarkdownSummary } from '@/components/markdown-summary'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
@@ -375,6 +379,9 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
   const articleHref =
     username && a.slug ? `/blog/${username}/${a.slug}` : username ? `/blog/${username}` : '#'
   const authorHref = username ? `/blog/${username}` : '#'
+  const blogKey =
+    username && a.slug ? `${username}--${a.slug}` : String(a.id || username)
+  const armShared = () => prepareSharedElement('blog', blogKey)
 
   return (
     <li>
@@ -382,7 +389,9 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
         {a.coverUrl ? (
           <BlogLink
             to={articleHref}
-            className="aspect-[16/9] overflow-hidden bg-muted"
+            className="aspect-[16/9] overflow-hidden bg-muted vt-shared"
+            style={sharedElementStyle('blog', blogKey)}
+            onClick={armShared}
           >
             <img
               src={a.coverUrl}
@@ -417,8 +426,19 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
               </span>
             ) : null}
           </div>
-          <BlogLink to={articleHref} className="min-w-0 space-y-1">
-            <h2 className="line-clamp-2 text-base font-semibold leading-snug group-hover:text-primary">
+          <BlogLink
+            to={articleHref}
+            className="min-w-0 space-y-1"
+            onClick={armShared}
+          >
+            <h2
+              className="line-clamp-2 text-base font-semibold leading-snug group-hover:text-primary vt-shared"
+              style={
+                a.coverUrl
+                  ? undefined
+                  : sharedElementStyle('blog', blogKey)
+              }
+            >
               {a.title}
             </h2>
             {a.summary ? (

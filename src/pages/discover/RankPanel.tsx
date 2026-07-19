@@ -24,6 +24,10 @@ import {
 } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
+  prepareSharedElement,
+  sharedElementStyle,
+} from '@/lib/view-transition'
+import {
   Table,
   TableBody,
   TableCell,
@@ -139,7 +143,9 @@ export function RankPanel() {
                   <TableCell>
                     <Link
                       to={`/profile?id=${r.userId}`}
-                      className="hover:underline"
+                      className="hover:underline vt-shared"
+                      style={sharedElementStyle('user', r.userId)}
+                      onClick={() => prepareSharedElement('user', r.userId)}
                     >
                       {r.name || `用户${r.userId}`}
                     </Link>

@@ -19,12 +19,20 @@ export function PageShell({
   stagger?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const { direction, pathname } = useMotion()
+  const { direction, pathname, useViewTransition } = useMotion()
   const reduced = prefersReducedMotion()
+  // VT owns full-page enter when supported — avoid stacking GSAP + VT on the same root
+  const skipGsapEnter = reduced || useViewTransition
 
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
+
+    if (skipGsapEnter) {
+      // Ensure content is visible; View Transition CSS handles the morph
+      el.style.opacity = ''
+      return
+    }
 
     // 短进入：仅轻微方向感 + opacity，不做重 stagger
     animateEnter(el, direction)
@@ -36,7 +44,7 @@ export function PageShell({
     if (items.length > 1) {
       animateStagger(items, direction, { delay: 0.03, stagger: 0.035 })
     }
-  }, [direction, pathname, stagger])
+  }, [direction, pathname, stagger, skipGsapEnter])
 
   return (
     <div
@@ -46,7 +54,7 @@ export function PageShell({
         className,
       )}
       data-page-shell=""
-      style={reduced ? undefined : { opacity: 0 }}
+      style={skipGsapEnter ? undefined : { opacity: 0 }}
     >
       {children}
     </div>

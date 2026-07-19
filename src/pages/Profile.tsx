@@ -85,6 +85,7 @@ import {
 } from '@/lib/format'
 import { getPlatformHomeLink, getSubmitLink, OJ_PLATFORMS } from '@/lib/link'
 import { cn } from '@/lib/utils'
+import { sharedElementStyle } from '@/lib/view-transition'
 
 export function Profile() {
   const { user, isLogin, logout } = useAuth()
@@ -618,7 +619,14 @@ export function Profile() {
         <aside className="order-1 flex flex-col gap-3 lg:sticky lg:top-4 lg:order-none lg:gap-4">
           <Card className="gap-0 py-3 lg:gap-4 lg:py-5">
             <CardContent className="flex flex-row items-center gap-3 px-3 lg:flex-col lg:items-center lg:gap-3 lg:px-4">
-              <Avatar className="size-14 shrink-0 border-2 border-background shadow-md sm:size-16 lg:size-36 lg:border-4">
+              <Avatar
+                className="size-14 shrink-0 border-2 border-background shadow-md sm:size-16 lg:size-36 lg:border-4 vt-shared"
+                style={sharedElementStyle(
+                  'user',
+                  // Prefer numeric id so list cards (rank etc.) pair correctly
+                  targetId || profile.username || 'me',
+                )}
+              >
                 <AvatarImage src={avatarSrc} alt="" />
                 <AvatarFallback className="text-lg lg:text-2xl">
                   {displayName.slice(0, 1)}

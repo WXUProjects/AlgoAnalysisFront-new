@@ -11,6 +11,7 @@ import { RequireLogin } from '@/auth/RequireLogin'
 import { RequireMemberLike } from '@/auth/RequireMemberLike'
 import { RouteErrorFallback } from '@/components/error-boundary'
 import { Spinner } from '@/components/ui/spinner'
+import { wrapNavigateWithViewTransition } from '@/lib/view-transition'
 
 const Login = lazy(() =>
   import('@/pages/Login').then((m) => ({ default: m.Login })),
@@ -273,7 +274,7 @@ function CoachOutlet() {
   )
 }
 
-export const router = createBrowserRouter([
+const browserRouter = createBrowserRouter([
   // Manage is a standalone shell (new tab from public blog)
   {
     path: '/blog/:username/manage',
@@ -843,3 +844,11 @@ export const router = createBrowserRouter([
     ],
   },
 ])
+
+// Default SPA navigations into document.startViewTransition when the browser allows it.
+// Link / useNavigate / POP pairs that previously used VT all go through this path.
+browserRouter.navigate = wrapNavigateWithViewTransition(
+  browserRouter.navigate.bind(browserRouter),
+)
+
+export const router = browserRouter
