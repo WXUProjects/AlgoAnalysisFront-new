@@ -322,14 +322,15 @@
 .markdown-body .md-code-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.75rem;
-  padding: 0.55rem 0.85rem;
+  padding: 0.4rem 0.55rem 0.4rem 0.85rem;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
 }
 
 .markdown-body .md-code-dots {
   display: inline-flex;
+  flex-shrink: 0;
   gap: 6px;
   width: 52px;
   height: 10px;
@@ -347,6 +348,52 @@
   text-transform: uppercase;
   color: var(--muted-foreground);
   opacity: 0.9;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 代码块右上角复制 */
+.markdown-body .md-code-copy {
+  margin-left: auto;
+  flex-shrink: 0;
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--background) 55%, transparent);
+  color: var(--muted-foreground);
+  font-family: inherit;
+  font-size: 0.72rem;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.markdown-body .md-code-copy:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--background) 85%, transparent);
+  border-color: var(--border);
+}
+
+.markdown-body .md-code-copy:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.markdown-body .md-code-copy[data-state='copied'] {
+  color: var(--foreground);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+
+.markdown-body .md-code-copy[data-state='failed'] {
+  color: var(--destructive, #dc2626);
 }
 
 .markdown-body .md-code-block pre.code-hl {

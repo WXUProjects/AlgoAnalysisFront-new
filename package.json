@@ -10,8 +10,8 @@
     "preview": "vite preview",
     "test:discover": "tsx --test src/lib/discover-feed.test.ts",
     "test:motion": "tsx --test src/lib/motion.test.ts",
-    "test:blog": "tsx --test src/lib/blog-image.test.ts src/lib/blog-theme.test.ts src/lib/markdown-summary.test.ts src/lib/markdown-katex.test.ts",
-    "test": "tsx --test src/lib/discover-feed.test.ts src/lib/motion.test.ts src/lib/blog-image.test.ts src/lib/blog-theme.test.ts src/lib/markdown-summary.test.ts src/lib/markdown-katex.test.ts"
+    "test:blog": "tsx --test src/lib/blog-image.test.ts src/lib/blog-theme.test.ts src/lib/markdown-summary.test.ts src/lib/markdown-katex.test.ts src/lib/markdown-code-copy.test.ts",
+    "test": "tsx --test src/lib/discover-feed.test.ts src/lib/motion.test.ts src/lib/blog-image.test.ts src/lib/blog-theme.test.ts src/lib/markdown-summary.test.ts src/lib/markdown-katex.test.ts src/lib/markdown-code-copy.test.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.2",

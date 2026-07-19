@@ -88,13 +88,13 @@ export function sanitizeHtml(html: string): string {
   if (typeof document === 'undefined') return escapeHtml(html)
 
   const allowedTags = new Set([
-    'a', 'abbr', 'b', 'blockquote', 'br', 'code', 'del', 'details', 'div',
-    'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'kbd',
+    'a', 'abbr', 'b', 'blockquote', 'br', 'button', 'code', 'del', 'details',
+    'div', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'kbd',
     'li', 'ol', 'p', 'pre', 's', 'span', 'strong', 'sub', 'summary', 'sup',
     'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'u', 'ul',
   ])
   const dropWithContent = new Set([
-    'base', 'button', 'embed', 'form', 'iframe', 'input', 'link', 'math',
+    'base', 'embed', 'form', 'iframe', 'input', 'link', 'math',
     'meta', 'object', 'script', 'style', 'svg', 'template', 'textarea',
   ])
   const doc = document.implementation.createHTMLDocument('')
@@ -122,12 +122,28 @@ export function sanitizeHtml(html: string): string {
       continue
     }
 
+    // 仅保留我们渲染的代码块复制按钮，拒绝用户 HTML 里任意 button
+    if (tag === 'button') {
+      const cls = el.getAttribute('class') || ''
+      if (!/\bmd-code-copy\b/.test(cls)) {
+        el.remove()
+        continue
+      }
+      el.setAttribute('type', 'button')
+      el.className = 'md-code-copy'
+      if (!el.getAttribute('aria-label')) {
+        el.setAttribute('aria-label', '复制代码')
+      }
+    }
+
     for (const attr of Array.from(el.attributes)) {
       const name = attr.name.toLowerCase()
       const allowed =
         name === 'title' ||
         name === 'class' ||
         name === 'aria-hidden' ||
+        name === 'aria-label' ||
+        (tag === 'button' && name === 'type') ||
         (tag === 'a' && ['href', 'target', 'rel'].includes(name)) ||
         (tag === 'img' && ['src', 'alt', 'width', 'height', 'loading'].includes(name)) ||
         (['td', 'th'].includes(tag) && ['colspan', 'rowspan', 'align'].includes(name)) ||
@@ -203,7 +219,7 @@ function linesWithBalancedSpans(highlighted: string): string[] {
   return out
 }
 
-/** Carbon 风格代码块：边框 + 行号 + 可选语言标签 */
+/** Carbon 风格代码块：边框 + 行号 + 可选语言标签 + 右上角复制 */
 function formatFencedCodeBlock(
   highlighted: string,
   langClass: string,
@@ -221,16 +237,40 @@ function formatFencedCodeBlock(
       )
     })
     .join('')
-  const label =
+  const lang =
     language && language.toLowerCase() !== 'text' && language.toLowerCase() !== 'plaintext'
-      ? `<div class="md-code-header"><span class="md-code-dots" aria-hidden="true"></span><span class="md-code-lang">${escapeHtml(language)}</span></div>`
-      : `<div class="md-code-header"><span class="md-code-dots" aria-hidden="true"></span></div>`
+      ? `<span class="md-code-lang">${escapeHtml(language)}</span>`
+      : ''
+  const header =
+    `<div class="md-code-header">` +
+    `<span class="md-code-dots" aria-hidden="true"></span>` +
+    lang +
+    `<button type="button" class="md-code-copy" aria-label="复制代码">复制</button>` +
+    `</div>`
   return (
     `<div class="md-code-block">` +
-    label +
+    header +
     `<pre class="code-hl"><code class="hljs${langClass}">${rows}</code></pre>` +
     `</div>\n`
   )
+}
+
+/**
+ * 从渲染后的 `.md-code-block` 取出纯代码（不含行号）。
+ * 供 MarkdownBody 复制按钮使用。
+ */
+export function extractMarkdownCodeText(block: Element): string {
+  const srcs = block.querySelectorAll('.md-code-src')
+  if (srcs.length > 0) {
+    return Array.from(srcs, (el) => el.textContent ?? '').join('\n')
+  }
+  const pre = block.querySelector('pre')
+  if (pre) {
+    const clone = pre.cloneNode(true) as Element
+    clone.querySelectorAll('.md-code-ln').forEach((n) => n.remove())
+    return (clone.textContent ?? '').replace(/\n$/, '')
+  }
+  return ''
 }
 
 function ensureRenderer() {
