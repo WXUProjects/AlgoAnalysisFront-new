@@ -819,6 +819,13 @@ export function Profile() {
                     <span className="text-xs text-muted-foreground">
                       {formatTime(c.time)}
                       {c.rank ? ` · 排名 ${c.rank}` : ''}
+                      {c.platform === 'LeetCode' && c.acCount > 0
+                        ? ` · 得分 ${c.acCount}`
+                        : c.acCount > 0
+                          ? c.totalCount > 0
+                            ? ` · ${c.acCount}/${c.totalCount} 题`
+                            : ` · AC ${c.acCount}`
+                          : ''}
                     </span>
                   </div>
                   {c.contestUrl && (

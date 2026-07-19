@@ -112,7 +112,7 @@ export function RightSidebar() {
   return (
     <aside
       data-discover-right-sidebar=""
-      className="hidden w-[300px] shrink-0 flex-col gap-3 lg:flex"
+      className="hidden w-[260px] shrink-0 flex-col gap-3 xl:w-[300px] lg:flex"
     >
       <Card className="gap-0 py-0 shadow-none">
         <CardHeader className="border-b px-4 py-3">

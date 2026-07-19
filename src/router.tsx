@@ -545,6 +545,16 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'question-bank/add-problem',
+        element: (
+          <RequireLogin>
+            <Lazy>
+              <ProblemsetAddManual />
+            </Lazy>
+          </RequireLogin>
+        ),
+      },
+      {
         path: 'problemset',
         element: (
           <Lazy>

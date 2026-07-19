@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   BellIcon,
   BellOffIcon,
   ExternalLinkIcon,
+  SearchIcon,
   Settings2Icon,
+  XIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -56,6 +59,124 @@ import { cn } from '@/lib/utils'
 
 const DEFAULT_PAGE_SIZE = 15
 
+type CalStatus = 'upcoming' | 'ongoing' | 'ended' | 'all'
+type TimePreset = '' | '7d' | '14d' | '30d' | 'custom'
+
+const STATUS_OPTIONS: { value: CalStatus; label: string }[] = [
+  { value: 'upcoming', label: '即将开始' },
+  { value: 'ongoing', label: '进行中' },
+  { value: 'ended', label: '已结束' },
+  { value: 'all', label: '全部' },
+]
+
+const TIME_PRESETS: { value: TimePreset; label: string }[] = [
+  { value: '', label: '不限时间' },
+  { value: '7d', label: '7 天内' },
+  { value: '14d', label: '14 天内' },
+  { value: '30d', label: '30 天内' },
+  { value: 'custom', label: '自定义' },
+]
+
+function startOfLocalDay(d: Date): Date {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  return x
+}
+
+function endOfLocalDay(d: Date): Date {
+  const x = new Date(d)
+  x.setHours(23, 59, 59, 999)
+  return x
+}
+
+function dateInputToUnix(ymd: string, endOfDay: boolean): number | undefined {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return undefined
+  const d = new Date(`${ymd}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return undefined
+  const t = endOfDay ? endOfLocalDay(d) : startOfLocalDay(d)
+  return Math.floor(t.getTime() / 1000)
+}
+
+function todayDateInput(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function daysOffsetDateInput(days: number): string {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + days)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/**
+ * 时间窗含义随 status 变化：
+ * - upcoming / ongoing：从现在起往后 N 天（开赛时间）
+ * - ended：从现在起往前 N 天
+ * - all：以今天为中心的前后区间（custom 用 from/to）
+ */
+function resolveTimeRange(
+  status: CalStatus,
+  preset: TimePreset,
+  fromYmd: string,
+  toYmd: string,
+): { timeFrom?: number; timeTo?: number } {
+  if (preset === 'custom') {
+    return {
+      timeFrom: fromYmd ? dateInputToUnix(fromYmd, false) : undefined,
+      timeTo: toYmd ? dateInputToUnix(toYmd, true) : undefined,
+    }
+  }
+  const daysMap: Record<string, number> = { '7d': 7, '14d': 14, '30d': 30 }
+  const days = daysMap[preset]
+  if (!days) return {}
+
+  const now = new Date()
+  if (status === 'ended') {
+    const from = startOfLocalDay(now)
+    from.setDate(from.getDate() - days)
+    return {
+      timeFrom: Math.floor(from.getTime() / 1000),
+      timeTo: Math.floor(endOfLocalDay(now).getTime() / 1000),
+    }
+  }
+  if (status === 'all') {
+    const from = startOfLocalDay(now)
+    from.setDate(from.getDate() - days)
+    const to = endOfLocalDay(now)
+    to.setDate(to.getDate() + days)
+    return {
+      timeFrom: Math.floor(from.getTime() / 1000),
+      timeTo: Math.floor(to.getTime() / 1000),
+    }
+  }
+  // upcoming / ongoing：未来 N 天内开赛
+  const to = endOfLocalDay(now)
+  to.setDate(to.getDate() + days)
+  return {
+    timeFrom: Math.floor(startOfLocalDay(now).getTime() / 1000),
+    timeTo: Math.floor(to.getTime() / 1000),
+  }
+}
+
+function parseStatus(raw: string | null): CalStatus {
+  if (raw === 'ongoing' || raw === 'ended' || raw === 'all' || raw === 'upcoming') {
+    return raw
+  }
+  return 'upcoming'
+}
+
+function parseTimePreset(raw: string | null): TimePreset {
+  if (raw === '7d' || raw === '14d' || raw === '30d' || raw === 'custom') return raw
+  return ''
+}
+
 function countdownLabel(startUnix: number, endUnix: number): string {
   const now = Math.floor(Date.now() / 1000)
   if (now >= endUnix) return '已结束'
@@ -77,6 +198,7 @@ function advanceLabel(min: number): string {
 export function ContestCalendar() {
   const { isLogin } = useAuth()
   const requestId = useRef(0)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const { page, pageSize, setPage, setPageSize } = useListQueryState({
     pageKey: 'cpage',
@@ -89,10 +211,14 @@ export function ContestCalendar() {
   const [subs, setSubs] = useState<ContestCalendarSub[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [platform, setPlatform] = useState('')
-  const [keyword, setKeyword] = useState('')
-  const [keywordInput, setKeywordInput] = useState('')
-  const [status, setStatus] = useState<'upcoming' | 'ongoing' | 'all'>('upcoming')
+  const platform = searchParams.get('cplatform') || ''
+  const keyword = (searchParams.get('ckeyword') || '').trim()
+  const status = parseStatus(searchParams.get('cstatus'))
+  const timePreset = parseTimePreset(searchParams.get('ctime'))
+  const fromYmd = searchParams.get('cfrom') || ''
+  const toYmd = searchParams.get('cto') || ''
+
+  const [keywordInput, setKeywordInput] = useState(keyword)
 
   const [subDialogOpen, setSubDialogOpen] = useState(false)
   const [subTarget, setSubTarget] = useState<ContestCalendarItem | null>(null)
@@ -106,6 +232,43 @@ export function ContestCalendar() {
     null,
   )
 
+  const { timeFrom, timeTo } = useMemo(
+    () => resolveTimeRange(status, timePreset, fromYmd, toYmd),
+    [status, timePreset, fromYmd, toYmd],
+  )
+
+  useEffect(() => {
+    setKeywordInput(keyword)
+  }, [keyword])
+
+  const patchParams = useCallback(
+    (patch: Record<string, string | null>) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          // 日历 Tab 下保持 tab=calendar
+          if (!next.get('tab')) next.set('tab', 'calendar')
+          for (const [k, v] of Object.entries(patch)) {
+            if (v === null || v === '') next.delete(k)
+            else next.set(k, v)
+          }
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
+  // 关键词防抖
+  useEffect(() => {
+    if (keywordInput === keyword) return
+    const t = window.setTimeout(() => {
+      patchParams({ ckeyword: keywordInput.trim() || null, cpage: '1' })
+    }, 320)
+    return () => window.clearTimeout(t)
+  }, [keywordInput, keyword, patchParams])
+
   const loadList = useCallback(async () => {
     const id = ++requestId.current
     setLoading(true)
@@ -113,6 +276,8 @@ export function ContestCalendar() {
       platform: platform || undefined,
       keyword: keyword || undefined,
       status,
+      timeFrom,
+      timeTo,
       limit: pageSize,
       offset: (page - 1) * pageSize,
     })
@@ -124,7 +289,7 @@ export function ContestCalendar() {
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page, pageSize, platform, keyword, status])
+  }, [page, pageSize, platform, keyword, status, timeFrom, timeTo])
 
   const loadMeta = useCallback(async () => {
     const platRes = await listContestCalendarPlatforms()
@@ -145,7 +310,7 @@ export function ContestCalendar() {
     void loadMeta()
   }, [loadMeta])
 
-  const filterKey = `${platform}\0${keyword}\0${status}`
+  const filterKey = `${platform}\0${keyword}\0${status}\0${timePreset}\0${fromYmd}\0${toYmd}`
   const prevFilterKey = useRef(filterKey)
   useEffect(() => {
     if (prevFilterKey.current !== filterKey) {
@@ -259,7 +424,11 @@ export function ContestCalendar() {
     void loadMeta()
   }
 
-  async function togglePlatformSub(plat: ContestCalendarPlatform, enabled: boolean, advance: number) {
+  async function togglePlatformSub(
+    plat: ContestCalendarPlatform,
+    enabled: boolean,
+    advance: number,
+  ) {
     if (!isLogin) {
       toast.message('请先登录后再订阅')
       return
@@ -294,6 +463,57 @@ export function ContestCalendar() {
     void loadMeta()
   }
 
+  function setTimePreset(preset: TimePreset) {
+    if (preset === 'custom') {
+      // 默认区间：upcoming 用今天→+30；ended 用 -30→今天
+      let from = fromYmd
+      let to = toYmd
+      if (!from || !to) {
+        if (status === 'ended') {
+          from = daysOffsetDateInput(-30)
+          to = todayDateInput()
+        } else if (status === 'all') {
+          from = daysOffsetDateInput(-14)
+          to = daysOffsetDateInput(14)
+        } else {
+          from = todayDateInput()
+          to = daysOffsetDateInput(30)
+        }
+      }
+      patchParams({ ctime: 'custom', cfrom: from, cto: to, cpage: '1' })
+      return
+    }
+    if (!preset) {
+      patchParams({ ctime: null, cfrom: null, cto: null, cpage: '1' })
+      return
+    }
+    patchParams({ ctime: preset, cfrom: null, cto: null, cpage: '1' })
+  }
+
+  function clearFilters() {
+    setKeywordInput('')
+    patchParams({
+      ckeyword: null,
+      cplatform: null,
+      cstatus: null,
+      ctime: null,
+      cfrom: null,
+      cto: null,
+      cpage: '1',
+    })
+  }
+
+  const hasFilters = Boolean(
+    keyword || platform || status !== 'upcoming' || timePreset || fromYmd || toYmd,
+  )
+
+  const timeHint =
+    status === 'ended'
+      ? '按开赛时间，筛选最近已结束的比赛'
+      : status === 'all'
+        ? '按开赛时间筛选任意状态的比赛'
+        : '按开赛时间，只看未来一段时间内的赛程'
+
   return (
     <>
       <div className="flex flex-col gap-6">
@@ -301,7 +521,7 @@ export function ContestCalendar() {
           <div className="flex flex-col gap-1">
             <h3 className="text-base font-semibold">公开赛程</h3>
             <p className="text-sm text-muted-foreground">
-              聚合 AtCoder / 洛谷 / 牛客 / Codeforces / UOJ / 力扣等近期赛程，支持按平台或单场邮件提醒。
+              聚合 AtCoder / 洛谷 / 牛客 / Codeforces / UOJ / 力扣等近期赛程，可按平台或单场邮件提醒。
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -322,66 +542,130 @@ export function ContestCalendar() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant={platform === '' ? 'default' : 'outline'}
-              onClick={() => setPlatform('')}
-            >
-              全部
-            </Button>
-            {platforms.map((p) => (
-              <Button
-                key={p.platform}
-                size="sm"
-                variant={platform === p.platform ? 'default' : 'outline'}
-                onClick={() => setPlatform(p.platform)}
-              >
-                {p.platformName}
-                <Badge variant="secondary" className="ml-1">
-                  {p.count}
-                </Badge>
-              </Button>
-            ))}
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="flex flex-wrap gap-2">
-              {(
-                [
-                  ['upcoming', '即将开始'],
-                  ['ongoing', '进行中'],
-                  ['all', '全部'],
-                ] as const
-              ).map(([v, label]) => (
+        <Card className="gap-3 py-4">
+          <CardHeader className="px-4 py-0">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-sm font-medium">筛选</CardTitle>
+              {hasFilters && (
                 <Button
-                  key={v}
+                  type="button"
                   size="sm"
-                  variant={status === v ? 'default' : 'outline'}
-                  onClick={() => setStatus(v)}
+                  variant="ghost"
+                  className="h-7 px-2 text-muted-foreground"
+                  onClick={clearFilters}
                 >
-                  {label}
+                  <XIcon data-icon="inline-start" />
+                  清空筛选
                 </Button>
-              ))}
+              )}
             </div>
-            <form
-              className="flex flex-1 gap-2"
-              onSubmit={(e) => {
-                e.preventDefault()
-                setKeyword(keywordInput.trim())
-              }}
-            >
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 px-4">
+            <div className="relative">
+              <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="搜索比赛名称"
+                className="pl-8"
                 value={keywordInput}
                 onChange={(e) => setKeywordInput(e.target.value)}
+                placeholder="搜索比赛名称"
+                autoComplete="off"
               />
-              <Button type="submit" variant="secondary">
-                搜索
-              </Button>
-            </form>
-          </div>
-        </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs text-muted-foreground">状态</span>
+              <div className="flex flex-wrap gap-1.5">
+                {STATUS_OPTIONS.map((s) => (
+                  <Button
+                    key={s.value}
+                    type="button"
+                    size="sm"
+                    variant={status === s.value ? 'default' : 'outline'}
+                    onClick={() =>
+                      patchParams({
+                        cstatus: s.value === 'upcoming' ? null : s.value,
+                        cpage: '1',
+                      })
+                    }
+                  >
+                    {s.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs text-muted-foreground">平台</span>
+              <div className="flex flex-wrap gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={platform === '' ? 'default' : 'outline'}
+                  onClick={() => patchParams({ cplatform: null, cpage: '1' })}
+                >
+                  全部
+                </Button>
+                {platforms.map((p) => (
+                  <Button
+                    key={p.platform}
+                    type="button"
+                    size="sm"
+                    variant={platform === p.platform ? 'default' : 'outline'}
+                    onClick={() =>
+                      patchParams({ cplatform: p.platform, cpage: '1' })
+                    }
+                  >
+                    {p.platformName}
+                    <Badge variant="secondary" className="ml-1">
+                      {p.count}
+                    </Badge>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs text-muted-foreground">开赛时间</span>
+              <p className="text-xs text-muted-foreground">{timeHint}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {TIME_PRESETS.map((f) => (
+                  <Button
+                    key={f.value || 'all-time'}
+                    type="button"
+                    size="sm"
+                    variant={timePreset === f.value ? 'default' : 'outline'}
+                    onClick={() => setTimePreset(f.value)}
+                  >
+                    {f.label}
+                  </Button>
+                ))}
+              </div>
+              {timePreset === 'custom' && (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <Input
+                    type="date"
+                    className="w-auto max-w-[11rem]"
+                    value={fromYmd}
+                    max={toYmd || undefined}
+                    onChange={(e) =>
+                      patchParams({ cfrom: e.target.value || null, cpage: '1' })
+                    }
+                  />
+                  <span className="text-sm text-muted-foreground">至</span>
+                  <Input
+                    type="date"
+                    className="w-auto max-w-[11rem]"
+                    value={toYmd}
+                    min={fromYmd || undefined}
+                    onChange={(e) =>
+                      patchParams({ cto: e.target.value || null, cpage: '1' })
+                    }
+                  />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {loading ? (
           <div className="flex flex-col gap-3">
@@ -394,7 +678,9 @@ export function ContestCalendar() {
             <CardHeader>
               <CardTitle>暂时还没有赛程</CardTitle>
               <CardDescription>
-                当前筛选下没有比赛。赛程约每 12 小时自动更新一次。
+                {hasFilters
+                  ? '当前筛选下没有比赛，试试放宽条件。赛程约每 12 小时自动更新一次。'
+                  : '暂时没有可展示的赛程，稍后再来看看。赛程约每 12 小时自动更新一次。'}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -405,13 +691,17 @@ export function ContestCalendar() {
               const contestSub = contestSubMap.get(item.id)
               const now = Math.floor(Date.now() / 1000)
               const ongoing = now >= item.startTime && now < item.endTime
+              const ended = now >= item.endTime
               return (
                 <Card key={item.id}>
                   <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
                     <div className="flex min-w-0 flex-col gap-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary">{item.platformName || item.platform}</Badge>
+                        <Badge variant="secondary">
+                          {item.platformName || item.platform}
+                        </Badge>
                         {ongoing && <Badge>进行中</Badge>}
+                        {ended && <Badge variant="outline">已结束</Badge>}
                         {subbed && (
                           <Badge variant="outline">
                             <BellIcon data-icon="inline-start" />
@@ -450,24 +740,25 @@ export function ContestCalendar() {
                           </a>
                         </Button>
                       ) : null}
-                      {subbed ? (
-                        <ConfirmDialog
-                          title="取消本场提醒？"
-                          description={`确定取消「${item.name}」的邮件提醒？`}
-                          confirmLabel="取消订阅"
-                          onConfirm={() => void removeContestSub(item)}
-                        >
-                          <Button variant="secondary" size="sm">
-                            <BellOffIcon data-icon="inline-start" />
-                            取消订阅
+                      {!ended &&
+                        (subbed ? (
+                          <ConfirmDialog
+                            title="取消本场提醒？"
+                            description={`确定取消「${item.name}」的邮件提醒？`}
+                            confirmLabel="取消订阅"
+                            onConfirm={() => void removeContestSub(item)}
+                          >
+                            <Button variant="secondary" size="sm">
+                              <BellOffIcon data-icon="inline-start" />
+                              取消订阅
+                            </Button>
+                          </ConfirmDialog>
+                        ) : (
+                          <Button size="sm" onClick={() => openContestSub(item)}>
+                            <BellIcon data-icon="inline-start" />
+                            订阅
                           </Button>
-                        </ConfirmDialog>
-                      ) : (
-                        <Button size="sm" onClick={() => openContestSub(item)}>
-                          <BellIcon data-icon="inline-start" />
-                          订阅
-                        </Button>
-                      )}
+                        ))}
                     </div>
                   </CardHeader>
                 </Card>

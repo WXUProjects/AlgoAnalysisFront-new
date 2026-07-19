@@ -415,55 +415,57 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
       title: '平台过题',
       hint: platformTotal > 0 ? `共 ${platformTotal} 题` : undefined,
       body: platformPie.length ? (
-        <div className="relative h-full w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={platformPie}
-                dataKey="value"
-                nameKey="name"
-                cx="42%"
-                cy="50%"
-                innerRadius="42%"
-                outerRadius="72%"
-                paddingAngle={platformPie.length > 1 ? 2 : 0}
-                stroke="var(--card)"
-                strokeWidth={1}
-              >
-                {platformPie.map((entry, i) => (
-                  <Cell
-                    key={entry.name}
-                    fill={PIE_COLORS[i % PIE_COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(value, name) => {
-                  const v = typeof value === 'number' ? value : Number(value) || 0
-                  const pct =
-                    platformTotal > 0
-                      ? Math.round((v / platformTotal) * 1000) / 10
-                      : 0
-                  return [`${v} 题（${pct}%）`, String(name)]
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          {/* 右侧图例：平台名 + 过题数 */}
-          <ul className="pointer-events-none absolute inset-y-1 right-1 flex w-[42%] flex-col justify-center gap-1 overflow-y-auto pr-1">
+        // 左右分栏：饼图与图例各占一列，避免绝对定位叠在一起
+        <div className="flex h-full w-full min-w-0 items-stretch gap-2">
+          <div className="min-h-0 min-w-0 flex-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+                <Pie
+                  data={platformPie}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="38%"
+                  outerRadius="68%"
+                  paddingAngle={platformPie.length > 1 ? 2 : 0}
+                  stroke="var(--card)"
+                  strokeWidth={1}
+                >
+                  {platformPie.map((entry, i) => (
+                    <Cell
+                      key={entry.name}
+                      fill={PIE_COLORS[i % PIE_COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value, name) => {
+                    const v = typeof value === 'number' ? value : Number(value) || 0
+                    const pct =
+                      platformTotal > 0
+                        ? Math.round((v / platformTotal) * 1000) / 10
+                        : 0
+                    return [`${v} 题（${pct}%）`, String(name)]
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <ul className="flex w-[7.5rem] shrink-0 flex-col justify-center gap-1 overflow-y-auto py-0.5 pr-1 sm:w-[8.5rem]">
             {platformPie.map((p, i) => (
               <li
                 key={p.name}
-                className="flex items-center gap-1.5 text-[11px] leading-tight"
+                className="flex min-w-0 items-center gap-1.5 text-[11px] leading-tight"
               >
                 <span
                   className="size-2 shrink-0 rounded-sm"
                   style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}
                 />
-                <span className="min-w-0 truncate text-muted-foreground">
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
                   {p.name}
                 </span>
-                <span className="ml-auto shrink-0 tabular-nums text-foreground/80">
+                <span className="shrink-0 tabular-nums text-foreground/80">
                   {p.value}
                 </span>
               </li>

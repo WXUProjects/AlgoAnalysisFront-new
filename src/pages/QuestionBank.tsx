@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
+import { ChevronDownIcon, ChevronUpIcon, PlusIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { listProblems, listProblemTags, type TagCountItem } from '@/api/problem'
+import { addProblemToSet } from '@/api/problemset'
 import type { ProblemInfo } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
@@ -11,11 +12,30 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/status-badge'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -63,7 +83,6 @@ export function QuestionBank() {
   const tagsKey = searchParams.get('tags') || ''
   const difficulty = searchParams.get('difficulty') || ''
   const userStatus = searchParams.get('userStatus') || ''
-  const followingOnly = searchParams.get('following') === '1'
   const userId = isLogin && user ? user.userId : undefined
 
   const platforms = useMemo(() => parseList(platformsKey), [platformsKey])
@@ -78,6 +97,14 @@ export function QuestionBank() {
   const [loading, setLoading] = useState(true)
   const [allTags, setAllTags] = useState<TagCountItem[]>([])
   const [tagsExpanded, setTagsExpanded] = useState(false)
+
+  // 加题
+  const [addOpen, setAddOpen] = useState(false)
+  const [addUrl, setAddUrl] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [manualPromptOpen, setManualPromptOpen] = useState(false)
+  const [pendingManualUrl, setPendingManualUrl] = useState('')
+  const [listVersion, setListVersion] = useState(0)
 
   useEffect(() => {
     setKeywordInput(keyword)
@@ -164,7 +191,6 @@ export function QuestionBank() {
         userStatus: userStatus || undefined,
         keyword: keyword || undefined,
         userId,
-        followingOnly: followingOnly || undefined,
       })
       if (cancelled) return
       setLoading(false)
@@ -189,7 +215,7 @@ export function QuestionBank() {
     userStatus,
     keyword,
     userId,
-    followingOnly,
+    listVersion,
   ])
 
   function toggleInList(key: 'platforms' | 'tags', value: string) {
@@ -214,6 +240,53 @@ export function QuestionBank() {
     setSearchParams({}, { replace: true })
   }
 
+  async function handleAddByUrl() {
+    const u = addUrl.trim()
+    if (!u) {
+      toast.error('请粘贴题目链接')
+      return
+    }
+    if (!isLogin) {
+      toast.error('请先登录')
+      navigate('/login')
+      return
+    }
+    setAdding(true)
+    const res = await addProblemToSet({ url: u })
+    setAdding(false)
+    if (!res.success) {
+      if (res.code === 'URL_PARSE_FAILED') {
+        setPendingManualUrl(u)
+        setManualPromptOpen(true)
+        setAddOpen(false)
+        return
+      }
+      toast.error(res.message || '无法识别该链接')
+      return
+    }
+    toast.success(
+      res.data?.fetchTriggered
+        ? '已加入题库，正在后台拉取题面'
+        : '已加入题库',
+    )
+    setAddUrl('')
+    setAddOpen(false)
+    const pid = res.data?.problemId
+    if (pid) {
+      navigate(`/question-bank/detail/${pid}`)
+      return
+    }
+    setListVersion((v) => v + 1)
+  }
+
+  function goManualAdd() {
+    const q = pendingManualUrl
+      ? `?url=${encodeURIComponent(pendingManualUrl)}`
+      : ''
+    setManualPromptOpen(false)
+    navigate(`/question-bank/add-problem${q}`)
+  }
+
   const hasFilters = useMemo(
     () =>
       Boolean(
@@ -221,17 +294,9 @@ export function QuestionBank() {
           platforms.length ||
           tags.length ||
           difficulty ||
-          userStatus ||
-          followingOnly,
+          userStatus,
       ),
-    [
-      keyword,
-      platforms.length,
-      tags.length,
-      difficulty,
-      userStatus,
-      followingOnly,
-    ],
+    [keyword, platforms.length, tags.length, difficulty, userStatus],
   )
 
   const platformLabel = (p: string) =>
@@ -259,15 +324,13 @@ export function QuestionBank() {
           <Button
             type="button"
             size="sm"
-            variant={followingOnly ? 'default' : 'outline'}
-            onClick={() =>
-              patchParams({
-                following: followingOnly ? null : '1',
-                page: '1',
-              })
-            }
+            onClick={() => {
+              setAddUrl('')
+              setAddOpen(true)
+            }}
           >
-            {followingOnly ? '仅关注 · 开' : '仅关注'}
+            <PlusIcon data-icon="inline-start" />
+            加题
           </Button>
         )}
       </div>
@@ -589,6 +652,92 @@ export function QuestionBank() {
         }
         disabled={loading}
       />
+
+      {/* 向题库加题：粘贴链接 */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>向题库加题</DialogTitle>
+            <DialogDescription>
+              粘贴常见 OJ 题目链接。未入库题面会自动拉取；是否做标签分析取决于你的 AI
+              权限。链接无法识别时可手动填写。
+            </DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="qb-url">题目链接</FieldLabel>
+              <Input
+                id="qb-url"
+                value={addUrl}
+                onChange={(e) => setAddUrl(e.target.value)}
+                placeholder="https://codeforces.com/contest/… 等"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    void handleAddByUrl()
+                  }
+                }}
+              />
+            </Field>
+          </FieldGroup>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => {
+                setAddOpen(false)
+                navigate('/question-bank/add-problem')
+              }}
+            >
+              手写加题
+            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
+                取消
+              </Button>
+              <Button
+                type="button"
+                disabled={adding}
+                onClick={() => void handleAddByUrl()}
+              >
+                {adding ? '处理中…' : '加入'}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={manualPromptOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setManualPromptOpen(false)
+            setPendingManualUrl('')
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>无法识别该链接</AlertDialogTitle>
+            <AlertDialogDescription>
+              系统无法从该链接识别题目。是否手动填写并加入题库？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                goManualAdd()
+              }}
+            >
+              手写加题
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   )
 }

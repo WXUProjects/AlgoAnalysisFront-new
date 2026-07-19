@@ -53,7 +53,11 @@ function normalizeSub(raw: Record<string, unknown>): ContestCalendarSub {
 export async function listContestCalendar(params?: {
   platform?: string
   keyword?: string
-  status?: 'upcoming' | 'ongoing' | 'all'
+  status?: 'upcoming' | 'ongoing' | 'ended' | 'all'
+  /** 开赛时间下界 unix 秒（含） */
+  timeFrom?: number
+  /** 开赛时间上界 unix 秒（含） */
+  timeTo?: number
   limit?: number
   offset?: number
 }): Promise<ApiResult<ContestCalendarListData>> {
@@ -61,6 +65,8 @@ export async function listContestCalendar(params?: {
     platform: params?.platform || undefined,
     keyword: params?.keyword || undefined,
     status: params?.status || 'upcoming',
+    ...(params?.timeFrom ? { timeFrom: params.timeFrom } : {}),
+    ...(params?.timeTo ? { timeTo: params.timeTo } : {}),
     limit: params?.limit ?? 20,
     offset: params?.offset ?? 0,
   })

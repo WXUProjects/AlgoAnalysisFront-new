@@ -704,10 +704,11 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| GET | `/core/contest/list` | 否 | query: `userId`(-1=全部), `limit`, `offset`, `platform?` |
+| GET | `/core/contest/list` | 否 | query: `userId`(-1=全部), `limit`, `offset`, `platform?`, `keyword?`（名称/场次 ID 模糊）, `timeFrom?`/`timeTo?`（unix 秒，按比赛时间含端点）；项含 `rank` / `acCount` / `totalCount` / `userId` |
 | GET | `/core/contest/history` | 否 | query: `userId`, `limit`, `cursor`, `platform?` |
 | GET | `/core/contest/ranking` | 否 | query: `contestId` 或 `contest_id`（**contest_logs 行 id**）, `limit`, `offset`, `groupId?`, `followingOnly?`（与组织/分组求交） |
 | GET | `/core/contest/problems` | 否 | query: `id` 或 `contestId`（**contest_logs 行 id**）→ 比赛题目 Tab 列表；**每场（platform+OJ contest_id）只 ensure 一次**：主动从 OJ 发现题目并入库（`external_id` 与提交解析一致）+ **强制爬题面**；AI 分析仍依赖「有资格用户提交」闸门 |
+| GET | `/core/contest/board` | 否 | query: `id`/`contestId`（**contest_logs 行 id**）, `groupId?`, `followingOnly?` → XCPCIO 风格站内榜：`scoring`（icpc\|leetcode）、`problems[]`、`rows[{cells: status/attempts/relativeSec}]`；明细来自 `contest_user_problems`（爬虫写入，CF/AT 可从 submit 异步反推） |
 
 ### ContestCalendar（比赛日历 / 公开赛程）
 
@@ -715,7 +716,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| GET | `/core/contest-calendar/list` | 否 | query: `platform?`, `keyword?`, `status?`(upcoming\|ongoing\|all), `limit`, `offset` |
+| GET | `/core/contest-calendar/list` | 否 | query: `platform?`, `keyword?`, `status?`(upcoming\|ongoing\|ended\|all), `timeFrom?`/`timeTo?`（unix 秒，按开赛时间含端点）, `limit`, `offset` |
 | GET | `/core/contest-calendar/platforms` | 否 | 平台及即将开始场次统计 |
 | GET | `/core/contest-calendar/sub` | 是 | 我的邮件订阅 |
 | POST | `/core/contest-calendar/sub` | 是 | 创建/更新订阅 body: `{ scope, platform?, calendarId?, advanceMinutes, enabled }` |
@@ -843,8 +844,8 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problemset/update` | 是 | body: `{ id, title?, description?, visibility?, password?, clearPassword? }`；系统题单仅可改描述 |
 | POST | `/core/problemset/delete` | 是 | body: `{ id }`；系统题单不可删 |
 | POST | `/core/problemset/unlock` | 否 | body: `{ id, password }` → `{ unlockToken, expiresIn }` |
-| POST | `/core/problemset/add` | 是 | body: `{ problemsetId, problemId? }` 或 `{ problemsetId, url? }`；缺题面**强制爬取**（不受爬取资格限制）；AI 分析按**操作者**题面 AI 资格；无法识别链接 → `success=false, code=URL_PARSE_FAILED`（HTTP 200）。**加题链接识别 + 题面爬取**均支持：`CodeForces`（含 gym/group）、`AtCoder`、`LuoGu`（P/B/CF/AT_/SP/UVA 等）、`NowCoder`（AC 站+主站 practice）、`QOJ`、`LeetCode`（cn/com） |
-| POST | `/core/problemset/add-manual` | 是 | 链接无法识别时手动建题并入题单（**无需审核**）；body: `{ problemsetId, title, contentMd?, tags?, sourceUrl? }` → `{ problemId }`；`platform=Manual` |
+| POST | `/core/problemset/add` | 是 | body: `{ problemsetId?, problemId? }` 或 `{ problemsetId?, url? }`；**`problemsetId` 可省略**：仅向题库入库（须 `url`）；有 `problemsetId` 时同时加入该题单（须本人题单）。缺题面**强制爬取**；AI 按操作者资格；无法识别链接 → `success=false, code=URL_PARSE_FAILED`（HTTP 200）。支持：`CodeForces`（含 gym/group）、`AtCoder`、`LuoGu`、`NowCoder`、`QOJ`、`LeetCode`（cn/com） |
+| POST | `/core/problemset/add-manual` | 是 | 链接无法识别时手动建题（**无需审核**）；body: `{ problemsetId?, title, contentMd?, tags?, sourceUrl? }` → `{ problemId }`；`problemsetId` 可省略（仅入库）；`platform=Manual` |
 | POST | `/core/problemset/remove` | 是 | body: `{ problemsetId, problemId }` 手动剔除 |
 | POST | `/core/problemset/like` | 是 | body: `{ id }` toggle 点赞 → `{ liked, likeCount }` |
 | POST | `/core/problemset/favorite` | 是 | body: `{ id }` toggle **收藏**（与点赞分离；仅公开自定义题单）→ `{ favorited }` |

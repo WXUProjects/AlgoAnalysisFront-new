@@ -409,7 +409,7 @@ function DiscoverFeedLayout({
   return (
     <div
       data-discover-layout=""
-      className="mx-auto flex w-full max-w-[1340px] flex-col gap-3 lg:flex-row lg:items-start lg:justify-center lg:gap-4"
+      className="mx-auto flex w-full min-w-0 max-w-[1340px] flex-col gap-3 lg:flex-row lg:items-start lg:justify-center lg:gap-3 xl:gap-4"
     >
       <LeftRail
         feedScope={feedScope}
@@ -421,9 +421,13 @@ function DiscoverFeedLayout({
         showFeedScope={showFeedScope}
       />
 
+      {/*
+        中间栏：max 780，可 flex 收缩。
+        勿再写 lg:w-[780px] + flex-none，中等宽度会把左右侧栏挤出视口被 clip。
+      */}
       <div
         data-discover-center-column=""
-        className="min-w-0 w-full max-w-[780px] flex-1 lg:w-[780px] lg:max-w-[780px] lg:flex-none"
+        className="min-w-0 w-full max-w-[780px] flex-1"
       >
         <Tabs
           value={activeTab}

@@ -1,5 +1,9 @@
 import {
   endpoints,
+  type ContestBoardCell,
+  type ContestBoardData,
+  type ContestBoardProblemCol,
+  type ContestBoardRow,
   type ContestItem,
   type ContestProblemItem,
   type ContestProblemsData,
@@ -52,12 +56,21 @@ export async function listContests(params: {
   limit?: number
   offset?: number
   platform?: string
+  /** 比赛名称 / 场次 ID 关键字 */
+  keyword?: string
+  /** 时间下界 unix 秒（含） */
+  timeFrom?: number
+  /** 时间上界 unix 秒（含） */
+  timeTo?: number
 }): Promise<ApiResult<ContestListData>> {
   const res = await get<Record<string, unknown>[]>(endpoints.core.contest.list, {
     userId: params.userId,
     limit: params.limit ?? 10,
     offset: params.offset ?? 0,
     ...(params.platform ? { platform: params.platform } : {}),
+    ...(params.keyword ? { keyword: params.keyword } : {}),
+    ...(params.timeFrom ? { timeFrom: params.timeFrom } : {}),
+    ...(params.timeTo ? { timeTo: params.timeTo } : {}),
   })
   if (!res.success) return { ...res, data: null }
   const list = Array.isArray(res.data) ? res.data.map(normalizeContest) : []
@@ -131,6 +144,83 @@ function normalizeContestProblem(r: Record<string, unknown>): ContestProblemItem
     hasContent: bool(r.hasContent),
     difficulty: str(r.difficulty),
     tags,
+  }
+}
+
+function normalizeBoardCell(r: Record<string, unknown>): ContestBoardCell {
+  return {
+    label: str(r.label),
+    externalId: str(r.externalId) || undefined,
+    status: str(r.status) || 'NONE',
+    attempts: num(r.attempts),
+    relativeSec:
+      r.relativeSec !== undefined && r.relativeSec !== null
+        ? num(r.relativeSec)
+        : undefined,
+    firstAcAt:
+      r.firstAcAt !== undefined && r.firstAcAt !== null
+        ? num(r.firstAcAt)
+        : undefined,
+    scoreDelta:
+      r.scoreDelta !== undefined && r.scoreDelta !== null
+        ? num(r.scoreDelta)
+        : undefined,
+  }
+}
+
+function normalizeBoardRow(r: Record<string, unknown>): ContestBoardRow {
+  const cellsRaw = Array.isArray(r.cells)
+    ? (r.cells as Record<string, unknown>[])
+    : []
+  return {
+    userId: num(r.userId),
+    name: str(r.name),
+    avatar: normalizeStaticUrl(str(r.avatar)),
+    rankOfficial: num(r.rankOfficial),
+    rankLocal: num(r.rankLocal),
+    solved: num(r.solved),
+    penaltySec: num(r.penaltySec),
+    score: num(r.score),
+    acCount: num(r.acCount),
+    cells: cellsRaw.map(normalizeBoardCell),
+  }
+}
+
+/** XCPCIO 风格站内榜 */
+export async function getContestBoard(params: {
+  contestId: string | number
+  groupId?: number
+  followingOnly?: boolean
+}): Promise<ApiResult<ContestBoardData>> {
+  const res = await get<Record<string, unknown>>(endpoints.core.contest.board, {
+    id: params.contestId,
+    contestId: params.contestId,
+    ...(params.groupId !== undefined ? { groupId: params.groupId } : {}),
+    ...(params.followingOnly ? { followingOnly: true } : {}),
+  })
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
+  const problemsRaw = Array.isArray(raw.problems)
+    ? (raw.problems as Record<string, unknown>[])
+    : []
+  const rowsRaw = Array.isArray(raw.rows)
+    ? (raw.rows as Record<string, unknown>[])
+    : []
+  const contestRaw = (raw.contest as Record<string, unknown>) || null
+  const problems: ContestBoardProblemCol[] = problemsRaw.map((p) => ({
+    label: str(p.label),
+    externalId: str(p.externalId),
+    title: str(p.title),
+  }))
+  return {
+    ...res,
+    data: {
+      contest: contestRaw ? normalizeContest(contestRaw) : null,
+      scoring: str(raw.scoring) || 'icpc',
+      problems,
+      rows: rowsRaw.map(normalizeBoardRow),
+      total: num(raw.total, rowsRaw.length),
+    },
   }
 }
 

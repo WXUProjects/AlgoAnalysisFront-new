@@ -2,18 +2,19 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   BookOpenIcon,
-  ChevronDownIcon,
   ExternalLinkIcon,
   FileTextIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { getContestProblems, getContestRanking } from '@/api/contest'
+import { getContestBoard, getContestProblems } from '@/api/contest'
 import { getProblem } from '@/api/problem'
 import { listAllGroups } from '@/api/group'
 import type {
+  ContestBoardCell,
+  ContestBoardProblemCol,
+  ContestBoardRow,
   ContestItem,
   ContestProblemItem,
-  ContestRankingItem,
   GroupInfo,
   ProblemInfo,
 } from '@shared/api'
@@ -42,20 +43,33 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
 import { useListQueryState } from '@/hooks/use-list-query-state'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-const DEFAULT_PAGE_SIZE = 10
+const DEFAULT_PAGE_SIZE = 20
+
+/** 相对开赛秒 → 1:23 / 1:02:03 */
+function formatRelativeSec(sec?: number): string {
+  if (sec == null || sec < 0 || !Number.isFinite(sec)) return ''
+  const s = Math.floor(sec)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const r = s % 60
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`
+  }
+  return `${m}:${String(r).padStart(2, '0')}`
+}
+
+function formatPenalty(sec: number): string {
+  if (!sec || sec < 0) return '0'
+  return formatRelativeSec(sec) || '0'
+}
 
 /**
- * 比赛详情：站内榜 + 题目 A/B/C Tab（题面 + 右侧题解，复用题库组件）。
- * 题目目录由后端按比赛主动发现；题面强制爬取（每场 ensure 一次）。
+ * 比赛详情：顶层 Tab 切换「站内榜 | 比赛题目」。
+ * 站内榜为 XCPCIO 风格矩阵；题目区为 A/B/C + 题面/题解。
  */
 export function ContestDetails() {
   const { id } = useParams()
@@ -65,7 +79,11 @@ export function ContestDetails() {
     defaultPageSize: DEFAULT_PAGE_SIZE,
   })
   const [total, setTotal] = useState(0)
-  const [list, setList] = useState<ContestRankingItem[]>([])
+  const [boardRows, setBoardRows] = useState<ContestBoardRow[]>([])
+  const [boardProblems, setBoardProblems] = useState<ContestBoardProblemCol[]>(
+    [],
+  )
+  const [scoring, setScoring] = useState('icpc')
   const [contest, setContest] = useState<Partial<ContestItem> | null>(null)
   const [groups, setGroups] = useState<GroupInfo[]>([])
   const [groupId, setGroupId] = useState<number | undefined>(undefined)
@@ -80,8 +98,8 @@ export function ContestDetails() {
   const [detailLoading, setDetailLoading] = useState(false)
   /** 移动端：题面 / 题解 */
   const [mobilePane, setMobilePane] = useState<'problem' | 'solutions'>('problem')
-  /** 比赛题目区可收起，默认展开 */
-  const [problemsOpen, setProblemsOpen] = useState(true)
+  /** 顶层：站内榜 | 比赛题目 */
+  const [mainTab, setMainTab] = useState<'board' | 'problems'>('board')
 
   useEffect(() => {
     if (!id) {
@@ -97,13 +115,11 @@ export function ContestDetails() {
     })
   }, [isLogin])
 
-  const loadRanking = useCallback(async () => {
+  const loadBoard = useCallback(async () => {
     if (!id) return
     setLoading(true)
-    const res = await getContestRanking({
+    const res = await getContestBoard({
       contestId: id,
-      limit: pageSize,
-      offset: (page - 1) * pageSize,
       groupId,
       followingOnly: followingOnly || undefined,
     })
@@ -112,10 +128,12 @@ export function ContestDetails() {
       toast.error(res.message || '榜单加载失败，请稍后重试')
       return
     }
-    setList(res.data.list)
+    setBoardRows(res.data.rows)
+    setBoardProblems(res.data.problems)
+    setScoring(res.data.scoring || 'icpc')
     setTotal(res.data.total)
     if (res.data.contest) setContest(res.data.contest)
-  }, [id, page, pageSize, groupId, followingOnly])
+  }, [id, groupId, followingOnly])
 
   const loadProblems = useCallback(async () => {
     if (!id) return
@@ -138,12 +156,38 @@ export function ContestDetails() {
   }, [id])
 
   useEffect(() => {
-    void loadRanking()
-  }, [loadRanking])
+    void loadBoard()
+  }, [loadBoard])
+
+  // 明细异步补全：首屏无格子时短轮询 board
+  useEffect(() => {
+    const hasCells = boardRows.some((r) =>
+      r.cells.some((c) => c.status === 'AC' || c.status === 'TRIED'),
+    )
+    if (loading || hasCells || boardRows.length === 0) return
+    const t = window.setInterval(() => {
+      void loadBoard()
+    }, 4000)
+    return () => window.clearInterval(t)
+  }, [loading, boardRows, loadBoard])
 
   useEffect(() => {
     void loadProblems()
   }, [loadProblems])
+
+  const pageRows = boardRows.slice((page - 1) * pageSize, page * pageSize)
+  const colProblems =
+    boardProblems.length > 0
+      ? boardProblems
+      : // 无目录时从格子推导列
+        Array.from(
+          new Map(
+            boardRows
+              .flatMap((r) => r.cells)
+              .filter((c) => c.label)
+              .map((c) => [c.label, { label: c.label, externalId: c.externalId || '', title: c.label }]),
+          ).values(),
+        )
 
   // ensure 进行中 / 首屏尚无目录时短轮询
   useEffect(() => {
@@ -224,36 +268,204 @@ export function ContestDetails() {
         </div>
       </div>
 
-      {/* 题目 A B C D Tab（可收起，默认展开） */}
-      <Collapsible open={problemsOpen} onOpenChange={setProblemsOpen}>
-        <Card className="gap-0 py-0 overflow-hidden">
-          <CardHeader className="px-4 py-3 border-b">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <CardTitle className="text-base">比赛题目</CardTitle>
-                {ensureStatus === 'running' ? (
-                  <CardDescription>正在拉取题目…</CardDescription>
-                ) : ensureStatus === 'failed' ? (
-                  <CardDescription>未能拉到题目列表</CardDescription>
-                ) : problems.length > 0 ? (
-                  <CardDescription>{problems.length} 题</CardDescription>
-                ) : null}
-              </div>
-              <CollapsibleTrigger asChild>
-                <Button type="button" size="sm" variant="ghost">
-                  {problemsOpen ? '收起' : '展开'}
-                  <ChevronDownIcon
-                    data-icon="inline-end"
-                    className={cn(
-                      'transition-transform',
-                      problemsOpen && 'rotate-180',
-                    )}
-                  />
+      <Tabs
+        value={mainTab}
+        onValueChange={(v) => setMainTab(v as 'board' | 'problems')}
+        className="flex flex-col gap-3"
+      >
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="board" className="flex-1 sm:flex-none">
+            站内榜
+          </TabsTrigger>
+          <TabsTrigger value="problems" className="flex-1 sm:flex-none">
+            比赛题目
+            {problems.length > 0 ? (
+              <span className="text-muted-foreground tabular-nums">
+                ({problems.length})
+              </span>
+            ) : null}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="board" className="mt-0 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {groups.length > 0 && (
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={groupId === undefined ? 'default' : 'outline'}
+                  onClick={() => setGroupId(undefined)}
+                >
+                  全部分组
                 </Button>
-              </CollapsibleTrigger>
-            </div>
-          </CardHeader>
-          <CollapsibleContent>
+                {groups.map((g) => (
+                  <Button
+                    key={g.id}
+                    type="button"
+                    size="sm"
+                    variant={groupId === g.id ? 'default' : 'outline'}
+                    onClick={() => setGroupId(g.id)}
+                  >
+                    {g.name}
+                  </Button>
+                ))}
+              </>
+            )}
+            {isLogin && (
+              <Button
+                type="button"
+                size="sm"
+                variant={followingOnly ? 'default' : 'outline'}
+                onClick={() => setFollowingOnly((v) => !v)}
+              >
+                {followingOnly ? '只看关注 · 开' : '只看关注'}
+              </Button>
+            )}
+          </div>
+
+          <Card className="gap-0 overflow-hidden py-0">
+            <CardHeader className="border-b px-4 py-3">
+              <CardTitle className="text-base">站内榜</CardTitle>
+              <CardDescription>
+                {scoring === 'leetcode'
+                  ? '力扣赛：排名与得分；格子为每题 AC 用时与失败次数'
+                  : '组织内 ICPC 风格榜：绿=AC 用时，红=尝试次数'}
+                {followingOnly ? ' · 仅关注' : ''}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex flex-col gap-2 p-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table className="min-w-max text-xs sm:text-sm">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="sticky left-0 z-10 w-12 bg-background">
+                          #
+                        </TableHead>
+                        <TableHead className="sticky left-12 z-10 min-w-[8rem] bg-background">
+                          选手
+                        </TableHead>
+                        <TableHead className="w-14 text-center">
+                          {scoring === 'leetcode' ? '得分' : '题数'}
+                        </TableHead>
+                        {scoring === 'icpc' && (
+                          <TableHead className="w-16 text-center">
+                            罚时
+                          </TableHead>
+                        )}
+                        {colProblems.map((p) => (
+                          <TableHead
+                            key={p.label}
+                            className="w-14 px-1 text-center font-semibold"
+                            title={p.title || p.label}
+                          >
+                            {p.label}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pageRows.map((row) => (
+                        <TableRow key={row.userId}>
+                          <TableCell className="sticky left-0 z-10 bg-background font-medium tabular-nums">
+                            {row.rankOfficial > 0
+                              ? row.rankOfficial
+                              : row.rankLocal}
+                          </TableCell>
+                          <TableCell className="sticky left-12 z-10 bg-background">
+                            <Link
+                              to={`/profile?id=${row.userId}`}
+                              className="inline-flex items-center gap-2 hover:underline"
+                            >
+                              <Avatar className="size-7">
+                                <AvatarImage src={row.avatar || undefined} />
+                                <AvatarFallback>
+                                  {(row.name || '?').slice(0, 1)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="max-w-[10rem] truncate">
+                                {row.name || `用户${row.userId}`}
+                              </span>
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-center font-medium tabular-nums">
+                            {scoring === 'leetcode'
+                              ? row.score || row.acCount
+                              : row.solved || row.acCount}
+                          </TableCell>
+                          {scoring === 'icpc' && (
+                            <TableCell className="text-center tabular-nums text-muted-foreground">
+                              {formatPenalty(row.penaltySec)}
+                            </TableCell>
+                          )}
+                          {colProblems.map((p) => {
+                            const cell =
+                              row.cells.find((c) => c.label === p.label) ||
+                              row.cells.find(
+                                (c) =>
+                                  p.externalId &&
+                                  c.externalId === p.externalId,
+                              )
+                            return (
+                              <TableCell
+                                key={p.label}
+                                className="p-1 text-center"
+                              >
+                                <BoardCellView
+                                  cell={cell}
+                                  scoring={scoring}
+                                />
+                              </TableCell>
+                            )
+                          })}
+                        </TableRow>
+                      ))}
+                      {!pageRows.length && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={4 + colProblems.length}
+                            className="text-center text-muted-foreground"
+                          >
+                            暂无榜单
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Pagination
+            page={page}
+            total={total}
+            pageSize={pageSize}
+            onChange={setPage}
+            onPageSizeChange={setPageSize}
+            disabled={loading}
+          />
+        </TabsContent>
+
+        <TabsContent value="problems" className="mt-0">
+          <Card className="gap-0 overflow-hidden py-0">
+            <CardHeader className="border-b px-4 py-3">
+              <CardTitle className="text-base">比赛题目</CardTitle>
+              {ensureStatus === 'running' ? (
+                <CardDescription>正在拉取题目…</CardDescription>
+              ) : ensureStatus === 'failed' ? (
+                <CardDescription>未能拉到题目列表</CardDescription>
+              ) : problems.length > 0 ? (
+                <CardDescription>{problems.length} 题</CardDescription>
+              ) : null}
+            </CardHeader>
             <CardContent className="flex flex-col gap-3 p-4">
               {problemsLoading && !problems.length ? (
                 <div className="flex flex-col gap-2">
@@ -261,7 +473,7 @@ export function ContestDetails() {
                   <Skeleton className="h-40 w-full" />
                 </div>
               ) : !problems.length ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">
+                <p className="py-6 text-center text-sm text-muted-foreground">
                   {ensureStatus === 'running'
                     ? '题目准备中，请稍候…'
                     : '暂无题目目录'}
@@ -286,7 +498,11 @@ export function ContestDetails() {
                     ))}
                   </TabsList>
                   {problems.map((p) => (
-                    <TabsContent key={p.label} value={p.label} className="mt-3">
+                    <TabsContent
+                      key={p.label}
+                      value={p.label}
+                      className="mt-3"
+                    >
                       <div className="mb-2 flex flex-wrap items-center gap-2">
                         <h3 className="font-medium">
                           {p.label}.{' '}
@@ -296,15 +512,29 @@ export function ContestDetails() {
                           <Badge variant="outline">{p.difficulty}</Badge>
                         ) : null}
                         {p.problemId > 0 ? (
-                          <Button type="button" size="sm" variant="ghost" asChild>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            asChild
+                          >
                             <Link to={`/question-bank/detail/${p.problemId}`}>
                               题库页
                             </Link>
                           </Button>
                         ) : null}
                         {p.url ? (
-                          <Button type="button" size="sm" variant="ghost" asChild>
-                            <a href={p.url} target="_blank" rel="noreferrer">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            asChild
+                          >
+                            <a
+                              href={p.url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
                               <ExternalLinkIcon data-icon="inline-start" />
                               原题
                             </a>
@@ -312,7 +542,7 @@ export function ContestDetails() {
                         ) : null}
                       </div>
 
-                      <div className="md:hidden mb-2">
+                      <div className="mb-2 md:hidden">
                         <Tabs
                           value={mobilePane}
                           onValueChange={(v) =>
@@ -381,119 +611,61 @@ export function ContestDetails() {
                 </Tabs>
               )}
             </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {groups.length > 0 && (
-          <>
-            <Button
-              type="button"
-              size="sm"
-              variant={groupId === undefined ? 'default' : 'outline'}
-              onClick={() => setGroupId(undefined)}
-            >
-              全部分组
-            </Button>
-            {groups.map((g) => (
-              <Button
-                key={g.id}
-                type="button"
-                size="sm"
-                variant={groupId === g.id ? 'default' : 'outline'}
-                onClick={() => setGroupId(g.id)}
-              >
-                {g.name}
-              </Button>
-            ))}
-          </>
-        )}
-        {isLogin && (
-          <Button
-            type="button"
-            size="sm"
-            variant={followingOnly ? 'default' : 'outline'}
-            onClick={() => setFollowingOnly((v) => !v)}
-          >
-            {followingOnly ? '只看关注 · 开' : '只看关注'}
-          </Button>
-        )}
-      </div>
-
-      <Card className="gap-0 py-0 overflow-hidden">
-        <CardHeader className="px-4 py-3 border-b">
-          <CardTitle className="text-base">站内榜</CardTitle>
-          <CardDescription>
-            当前组织内排名
-            {followingOnly ? ' · 仅显示你关注的成员' : ''}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex flex-col gap-2 p-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">#</TableHead>
-                  <TableHead>选手</TableHead>
-                  <TableHead className="text-right">AC</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {list.map((row) => (
-                  <TableRow key={`${row.userId}-${row.rank}`}>
-                    <TableCell className="font-medium">{row.rank}</TableCell>
-                    <TableCell>
-                      <Link
-                        to={`/profile?id=${row.userId}`}
-                        className={cn(
-                          'inline-flex items-center gap-2 hover:underline',
-                        )}
-                      >
-                        <Avatar className="size-7">
-                          <AvatarImage src={row.avatar || undefined} />
-                          <AvatarFallback>
-                            {(row.name || '?').slice(0, 1)}
-                          </AvatarFallback>
-                        </Avatar>
-                        {row.name || `用户${row.userId}`}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {row.acCount || row.score}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!list.length && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={3}
-                      className="text-center text-muted-foreground"
-                    >
-                      暂无榜单
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Pagination
-        page={page}
-        total={total}
-        pageSize={pageSize}
-        onChange={setPage}
-        onPageSizeChange={setPageSize}
-        disabled={loading}
-      />
+          </Card>
+        </TabsContent>
+      </Tabs>
     </PageShell>
+  )
+}
+
+function BoardCellView({
+  cell,
+  scoring,
+}: {
+  cell?: ContestBoardCell
+  scoring: string
+}) {
+  if (!cell || cell.status === 'NONE' || !cell.status) {
+    return <span className="text-muted-foreground/40">·</span>
+  }
+  if (cell.status === 'AC') {
+    const timeStr = formatRelativeSec(cell.relativeSec)
+    const fail =
+      cell.attempts > 0 ? (
+        <span className="opacity-80">(-{cell.attempts})</span>
+      ) : null
+    return (
+      <div
+        className={cn(
+          'mx-auto flex min-h-9 min-w-[2.75rem] flex-col items-center justify-center rounded-md px-1 py-0.5',
+          'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+        )}
+        title={
+          scoring === 'leetcode' && cell.scoreDelta
+            ? `+${cell.scoreDelta}`
+            : undefined
+        }
+      >
+        <span className="font-semibold tabular-nums leading-tight">
+          {timeStr || '✓'}
+        </span>
+        {fail ? (
+          <span className="text-[10px] leading-none tabular-nums">{fail}</span>
+        ) : null}
+      </div>
+    )
+  }
+  // TRIED
+  return (
+    <div
+      className={cn(
+        'mx-auto flex min-h-9 min-w-[2.75rem] items-center justify-center rounded-md px-1 py-0.5',
+        'bg-rose-500/15 text-rose-700 dark:text-rose-400',
+      )}
+    >
+      <span className="font-semibold tabular-nums">
+        {cell.attempts > 0 ? cell.attempts : '–'}
+      </span>
+    </div>
   )
 }

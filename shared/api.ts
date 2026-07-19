@@ -181,6 +181,8 @@ export const endpoints = {
       ranking: `${API_PREFIX}/core/contest/ranking`,
       /** 比赛题目目录（A/B/C…）；每场 ensure 只跑一次 */
       problems: `${API_PREFIX}/core/contest/problems`,
+      /** XCPCIO 风格站内榜（人×题格子） */
+      board: `${API_PREFIX}/core/contest/board`,
     },
     contestCalendar: {
       list: `${API_PREFIX}/core/contest-calendar/list`,
@@ -400,14 +402,16 @@ export interface UpdateProblemsetReq {
 }
 
 export interface AddProblemsetItemReq {
-  problemsetId: number
+  /** 省略或 0：仅向题库入库（须提供 url）；有值则同时加入该题单 */
+  problemsetId?: number
   problemId?: number
   url?: string
 }
 
-/** 手动向题库加题并加入题单（无需审核） */
+/** 手动向题库加题；可选加入题单（无需审核） */
 export interface AddManualProblemsetItemReq {
-  problemsetId: number
+  /** 省略或 0：仅向题库入库 */
+  problemsetId?: number
   title: string
   contentMd?: string
   tags?: string[]
@@ -736,6 +740,47 @@ export interface ContestRankingItem {
   score: number
   acCount: number
   totalCount: number
+}
+
+/** 站内赛榜单题格子（XCPCIO 风格） */
+export interface ContestBoardCell {
+  label: string
+  externalId?: string
+  /** AC | TRIED | NONE */
+  status: string
+  /** AC 前错误次数；未 AC 为尝试次数 */
+  attempts: number
+  relativeSec?: number
+  firstAcAt?: number
+  scoreDelta?: number
+}
+
+export interface ContestBoardProblemCol {
+  label: string
+  externalId: string
+  title: string
+}
+
+export interface ContestBoardRow {
+  userId: number
+  name: string
+  avatar: string
+  rankOfficial: number
+  rankLocal: number
+  solved: number
+  penaltySec: number
+  score: number
+  acCount: number
+  cells: ContestBoardCell[]
+}
+
+export interface ContestBoardData {
+  contest: Partial<ContestItem> | null
+  /** icpc | leetcode */
+  scoring: string
+  problems: ContestBoardProblemCol[]
+  rows: ContestBoardRow[]
+  total: number
 }
 
 /** 比赛内题目（Tab A/B/C…） */

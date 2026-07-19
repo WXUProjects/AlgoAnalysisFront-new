@@ -19,7 +19,9 @@ import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 
 /**
- * 链接无法识别时：手动向题库加题并加入题单（发布后回题单，无需审核）。
+ * 链接无法识别时：手动向题库加题。
+ * - 有题单 id：发布后加入该题单并返回题单
+ * - 无题单 id（题库入口）：仅入库，跳转题目详情
  */
 export function ProblemsetAddManual() {
   const { id } = useParams()
@@ -28,7 +30,9 @@ export function ProblemsetAddManual() {
   const { isLogin, ready } = useAuth()
 
   const sourceUrl = params.get('url') || ''
-  const backTo = id ? `/problemset/${id}` : '/problemset'
+  const problemsetId = id ? Number(id) : 0
+  const forBankOnly = !problemsetId
+  const backTo = problemsetId ? `/problemset/${problemsetId}` : '/question-bank'
 
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -59,7 +63,6 @@ export function ProblemsetAddManual() {
   }, [])
 
   async function handlePublish() {
-    if (!id) return
     const t = title.trim()
     if (!t) {
       toast.error('请填写题目标题')
@@ -67,7 +70,7 @@ export function ProblemsetAddManual() {
     }
     setSaving(true)
     const res = await addManualProblemToSet({
-      problemsetId: Number(id),
+      problemsetId: problemsetId || undefined,
       title: t,
       contentMd: content.trim() || undefined,
       tags: tags.length ? tags : undefined,
@@ -76,6 +79,12 @@ export function ProblemsetAddManual() {
     setSaving(false)
     if (!res.success) {
       toast.error(res.message || '发布失败')
+      return
+    }
+    if (forBankOnly) {
+      toast.success('已加入题库')
+      const pid = res.data?.problemId
+      navigate(pid ? `/question-bank/detail/${pid}` : '/question-bank')
       return
     }
     toast.success('已发布并加入题单')
@@ -117,7 +126,9 @@ export function ProblemsetAddManual() {
         <CardHeader className="px-4 py-0">
           <CardTitle className="text-base">手动加入题库</CardTitle>
           <CardDescription>
-            链接无法自动识别时，可填写标题后发布。题面与标签可选；发布后会直接加入当前题单，无需审核。
+            {forBankOnly
+              ? '链接无法自动识别时，可填写标题后发布。题面与标签可选；发布后直接进入题库，无需审核。'
+              : '链接无法自动识别时，可填写标题后发布。题面与标签可选；发布后会直接加入当前题单，无需审核。'}
             {sourceUrl ? (
               <>
                 {' '}
@@ -164,7 +175,7 @@ export function ProblemsetAddManual() {
       <p className="text-center text-xs text-muted-foreground">
         发布后返回{' '}
         <Link to={backTo} className="underline underline-offset-2">
-          题单
+          {forBankOnly ? '题库' : '题单'}
         </Link>
       </p>
     </PageShell>

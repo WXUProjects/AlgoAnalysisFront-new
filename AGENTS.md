@@ -161,7 +161,8 @@ Auth 标志：`isAdmin`/`isSiteAdmin` · `isOrgAdmin` · `isCoach` · `isCaptain
 | `/contest` | Contest | 无 | 比赛页（子 Tab：比赛记录 / 比赛日历） |
 | `/contest/:id` | ContestDetails | 无 | 比赛详情 + 站内榜 |
 | `/contest-calendar` | redirect | 无 | 兼容跳转 → `/contest?tab=calendar` |
-| `/question-bank` | QuestionBank | 无 | 题库列表 |
+| `/question-bank` | QuestionBank | 无 | 题库列表（筛选/加题） |
+| `/question-bank/add-problem` | ProblemsetAddManual | 登录 | 链接无法识别时手动加题 |
 | `/question-bank/detail/:id` | QuestionBankDetail | 无 | 题目详情 |
 | `/star` | Star | 登录 | 收藏（半成品，可先占位） |
 | `/problem` | — | — | redirect → `/question-bank` |
