@@ -308,6 +308,7 @@
 
 /* Carbon 风格围栏代码块：边框 + 行号 + 顶栏 */
 .markdown-body .md-code-block {
+  position: relative;
   margin: 1em 0;
   max-width: 100%;
   min-width: 0;
@@ -354,31 +355,32 @@
   white-space: nowrap;
 }
 
-/* 代码块右上角复制 */
+/* 复制按钮（顶栏内 / 样例浮层共用） */
 .markdown-body .md-code-copy {
   margin-left: auto;
   flex-shrink: 0;
   appearance: none;
-  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--background) 55%, transparent);
-  color: var(--muted-foreground);
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  color: var(--foreground);
   font-family: inherit;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   line-height: 1;
   font-weight: 500;
   letter-spacing: 0.02em;
-  padding: 0.35rem 0.55rem;
+  padding: 0.4rem 0.65rem;
   cursor: pointer;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 6%, transparent);
   transition:
     color 0.15s ease,
     background-color 0.15s ease,
-    border-color 0.15s ease;
+    border-color 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .markdown-body .md-code-copy:hover {
-  color: var(--foreground);
-  background: color-mix(in srgb, var(--background) 85%, transparent);
+  background: var(--background);
   border-color: var(--border);
 }
 
@@ -388,12 +390,39 @@
 }
 
 .markdown-body .md-code-copy[data-state='copied'] {
-  color: var(--foreground);
-  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
 }
 
 .markdown-body .md-code-copy[data-state='failed'] {
   color: var(--destructive, #dc2626);
+}
+
+/* 题面样例（无语言围栏）：右上角浮层复制，无行号 */
+.markdown-body .md-code-sample > .md-code-copy {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  z-index: 2;
+  margin-left: 0;
+  opacity: 0.92;
+}
+
+.markdown-body .md-code-sample:hover > .md-code-copy,
+.markdown-body .md-code-sample:focus-within > .md-code-copy {
+  opacity: 1;
+}
+
+.markdown-body .md-code-sample pre.code-hl {
+  /* 右侧/顶侧留白，避免文字压到「复制」 */
+  padding-top: 0.15rem;
+}
+
+.markdown-body .md-code-sample pre.code-hl code.hljs {
+  padding: 0.75rem 3.4rem 0.85rem 1rem;
+}
+
+.markdown-body .md-code-sample .md-code-src {
+  padding-right: 0.25rem;
 }
 
 .markdown-body .md-code-block pre.code-hl {

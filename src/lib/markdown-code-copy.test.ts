@@ -42,8 +42,17 @@ describe('markdown code block copy', () => {
     const html = renderMarkdown('```js\nconsole.log(1)\n```')
     assert.match(html, /class="md-code-block"/)
     assert.match(html, /class="md-code-copy"/)
-    assert.match(html, /aria-label="复制代码"/)
+    assert.match(html, /aria-label="复制"/)
     assert.match(html, />复制</)
+    assert.match(html, /md-code-ln/) // 带语言：有行号
+  })
+
+  it('plain sample fences get floating copy without line numbers', () => {
+    const html = renderMarkdown('### 输入\n\n```\n3 4 4\n```\n')
+    assert.match(html, /md-code-sample/)
+    assert.match(html, /class="md-code-copy"/)
+    assert.doesNotMatch(html, /md-code-ln/)
+    assert.doesNotMatch(html, /md-code-header/)
   })
 
   it('sanitize keeps only md-code-copy buttons', () => {
@@ -52,6 +61,7 @@ describe('markdown code block copy', () => {
       '<button type="submit" class="evil">坏按钮</button></div>'
     const clean = sanitizeHtml(dirty)
     assert.match(clean, /md-code-copy/)
+    assert.match(clean, /aria-label="复制"/)
     assert.doesNotMatch(clean, /evil/)
     assert.doesNotMatch(clean, /onclick/i)
     assert.doesNotMatch(clean, /submit/)

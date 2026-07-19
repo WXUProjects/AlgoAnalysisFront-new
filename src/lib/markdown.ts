@@ -132,7 +132,7 @@ export function sanitizeHtml(html: string): string {
       el.setAttribute('type', 'button')
       el.className = 'md-code-copy'
       if (!el.getAttribute('aria-label')) {
-        el.setAttribute('aria-label', '复制代码')
+        el.setAttribute('aria-label', '复制')
       }
     }
 
@@ -219,16 +219,30 @@ function linesWithBalancedSpans(highlighted: string): string[] {
   return out
 }
 
-/** Carbon 风格代码块：边框 + 行号 + 可选语言标签 + 右上角复制 */
+const COPY_BTN =
+  `<button type="button" class="md-code-copy" aria-label="复制">复制</button>`
+
+/** 是否按「样例/纯文本」渲染：无语言标签的围栏（题面输入输出样例） */
+function isPlainSampleFence(language: string): boolean {
+  const lang = (language || '').trim().toLowerCase()
+  return !lang || lang === 'text' || lang === 'plaintext' || lang === 'plain'
+}
+
+/** Carbon 风格代码块：语言代码带行号；样例块无行号、右上角浮层复制 */
 function formatFencedCodeBlock(
   highlighted: string,
   langClass: string,
   language: string,
 ): string {
+  const plainSample = isPlainSampleFence(language)
   const lines = linesWithBalancedSpans(highlighted)
   const rows = lines
     .map((line, i) => {
       const src = line.length ? line : ' '
+      if (plainSample) {
+        // 样例：不显示行号，便于对照 OJ 与复制
+        return `<span class="md-code-row"><span class="md-code-src">${src}</span></span>`
+      }
       return (
         `<span class="md-code-row">` +
         `<span class="md-code-ln" aria-hidden="true">${i + 1}</span>` +
@@ -237,15 +251,23 @@ function formatFencedCodeBlock(
       )
     })
     .join('')
-  const lang =
-    language && language.toLowerCase() !== 'text' && language.toLowerCase() !== 'plaintext'
-      ? `<span class="md-code-lang">${escapeHtml(language)}</span>`
-      : ''
+
+  if (plainSample) {
+    // 题面样例：块右上角浮层「复制」，一眼能看见
+    return (
+      `<div class="md-code-block md-code-sample">` +
+      COPY_BTN +
+      `<pre class="code-hl"><code class="hljs${langClass}">${rows}</code></pre>` +
+      `</div>\n`
+    )
+  }
+
+  const lang = `<span class="md-code-lang">${escapeHtml(language)}</span>`
   const header =
     `<div class="md-code-header">` +
     `<span class="md-code-dots" aria-hidden="true"></span>` +
     lang +
-    `<button type="button" class="md-code-copy" aria-label="复制代码">复制</button>` +
+    COPY_BTN +
     `</div>`
   return (
     `<div class="md-code-block">` +
