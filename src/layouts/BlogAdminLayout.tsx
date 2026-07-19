@@ -18,6 +18,7 @@ import {
 import { getBlogActivationStatus, listBlogByUsername } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
 import { BlogActivateDialog } from '@/components/blog/blog-activate-dialog'
+import { MobileNavBack } from '@/components/mobile-nav-back'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Toaster } from '@/components/ui/sonner'
@@ -135,7 +136,8 @@ export function BlogAdminLayout() {
           data-blog-admin="1"
         >
           <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-            <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
+            <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-4 sm:gap-3">
+              <MobileNavBack />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">
                   后台设置 · {displayName}

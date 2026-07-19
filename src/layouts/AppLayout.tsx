@@ -29,6 +29,7 @@ import { trackPageVisit } from '@/lib/visit-tracker'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
 import { DomainHintSync } from '@/components/domain-hint-sync'
+import { MobileNavBack } from '@/components/mobile-nav-back'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { EmergencyDialogHost } from '@/components/emergency-dialog'
 import { NotificationInbox } from '@/components/notification-inbox'
@@ -438,10 +439,14 @@ export function AppLayout() {
 
         <SidebarInset className="h-svh min-h-0 overflow-hidden">
           <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
+            {/* 移动端：子页左上角返回，主 Tab 仅侧栏；桌面侧栏常开不显示返回 */}
+            <MobileNavBack />
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <AnimatedTitle className="text-base font-semibold">{title}</AnimatedTitle>
-            <div className="ml-auto flex items-center gap-1">
+            <AnimatedTitle className="min-w-0 flex-1 truncate text-base font-semibold">
+              {title}
+            </AnimatedTitle>
+            <div className="ml-auto flex shrink-0 items-center gap-1">
               <NotificationInbox enabled={isLogin} />
             </div>
           </header>
