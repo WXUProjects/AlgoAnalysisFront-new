@@ -124,6 +124,28 @@ function parseTimePreset(raw: string | null): TimePreset {
   return ''
 }
 
+/** 列表副文案：参赛成绩 or 未参赛时的总题数 */
+function contestListMeta(
+  item: ContestItem,
+  showPersonal: boolean,
+): string {
+  if (showPersonal) {
+    const parts: string[] = []
+    if (item.rank > 0) parts.push(`排名 ${item.rank}`)
+    if (item.platform === 'LeetCode' && item.acCount > 0) {
+      parts.push(`得分 ${item.acCount}`)
+    } else if (item.acCount > 0) {
+      parts.push(
+        item.totalCount > 0
+          ? `${item.acCount}/${item.totalCount} 题`
+          : `AC ${item.acCount}`,
+      )
+    }
+    return parts.length ? ` · ${parts.join(' · ')}` : ''
+  }
+  return item.totalCount > 0 ? ` 共 ${item.totalCount} 题` : ''
+}
+
 /** 比赛记录列表（嵌入 Contest 页「比赛记录」Tab） */
 export function ContestRecords() {
   const { isLogin, user } = useAuth()
@@ -289,7 +311,7 @@ export function ContestRecords() {
           <p className="text-sm text-muted-foreground">
             {userMode
               ? '按平台、名称或时间查找参赛记录，可打开站内榜或原站'
-              : '组织内成员的参赛记录汇总；每条会标明是谁参加的'}
+              : '组织内出现过的比赛；你打过的会显示自己的排名与过题数'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -438,31 +460,17 @@ export function ContestRecords() {
                   </CardTitle>
                 </div>
                 <CardDescription>
-                  {!userMode && (item.userName || item.userId) ? (
-                    <>
-                      <Link
-                        to={`/profile?id=${item.userId}`}
-                        className="text-foreground/80 underline-offset-2 hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {item.userName || '未知选手'}
-                      </Link>
-                      {' · '}
-                    </>
-                  ) : null}
                   {formatContestTimeRange(
                     item.startTime,
                     item.endTime,
                     item.time,
                   )}
-                  {item.rank > 0 ? ` · 排名 ${item.rank}` : ''}
-                  {item.platform === 'LeetCode' && item.acCount > 0
-                    ? ` · 得分 ${item.acCount}`
-                    : item.acCount > 0
-                      ? item.totalCount > 0
-                        ? ` · ${item.acCount}/${item.totalCount} 题`
-                        : ` · AC ${item.acCount}`
-                      : ''}
+                  {contestListMeta(
+                    item,
+                    // 全部比赛：仅自己打过才显示排名/过题；「我参加的」等用户维度始终显示成绩
+                    userMode ||
+                      Boolean(isLogin && user && item.userId === user.userId),
+                  )}
                 </CardDescription>
               </div>
               {item.contestUrl && (

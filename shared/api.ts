@@ -723,7 +723,7 @@ export interface ContestItem {
   id: number
   platform: Platform
   userId: number
-  /** 参赛者展示名（全部比赛列表用） */
+  /** 参赛者展示名；「全部比赛」仅在当前用户参赛时可能带自己的名字 */
   userName?: string
   contestId: string
   contestName: string

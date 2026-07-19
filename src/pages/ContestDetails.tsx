@@ -168,20 +168,7 @@ export function ContestDetails() {
     void loadBoard()
   }, [loadBoard])
 
-  // 明细异步补全：首屏无格子时短轮询 board（最多约 30s）
-  useEffect(() => {
-    if (loading || hasCellDetail || boardRows.length === 0) return
-    let n = 0
-    const t = window.setInterval(() => {
-      n += 1
-      if (n > 8) {
-        window.clearInterval(t)
-        return
-      }
-      void loadBoard()
-    }, 4000)
-    return () => window.clearInterval(t)
-  }, [loading, hasCellDetail, boardRows.length, loadBoard])
+  // 榜单只读一次：历史快照，不轮询自动更新（明细由爬虫/同步写入）
 
   useEffect(() => {
     problemsPollCount.current = 0
