@@ -195,6 +195,13 @@ function Sidebar({
             } as React.CSSProperties
           }
           side={side}
+          // 点侧栏导航（NavLink / Link）后自动收回抽屉
+          onClickCapture={(e) => {
+            const el = e.target as HTMLElement | null
+            if (!el) return
+            const link = el.closest("a[href]")
+            if (link) setOpenMobile(false)
+          }}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>

@@ -374,7 +374,8 @@ export function Profile() {
     toast.success(isFollowing ? '已取消关注' : '已关注')
   }
 
-  function renderOjBindings() {
+  /** 桌面：完整列表（绑定 / 主页 / Rating） */
+  function renderOjBindingsDesktop() {
     return (
       <Card className="gap-0 overflow-hidden py-0">
         <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
@@ -461,6 +462,82 @@ export function Profile() {
     )
   }
 
+  /**
+   * 移动端：取消列表块，已绑定的 OJ 做成可点 Badge
+   * 形如 AtCoder(720)，rating 用强调色；点击进对应 OJ 主页
+   */
+  function renderOjBindingsMobile() {
+    const bound = OJ_PLATFORMS.flatMap((p) => {
+      const bind = spiderMap.get(p.value)
+      if (!bind) return []
+      return [{ platform: p, bind }]
+    })
+    if (bound.length === 0 && !isSelf) return null
+
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2 px-0.5">
+          <p className="text-xs font-medium text-muted-foreground">OJ 账号</p>
+          {isSelf ? (
+            <Link
+              to="/change-profile"
+              className="text-xs text-primary underline-offset-4 hover:underline"
+            >
+              管理绑定
+            </Link>
+          ) : null}
+        </div>
+        {bound.length === 0 ? (
+          <p className="text-xs text-muted-foreground">尚未绑定 OJ，去管理里添加</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {bound.map(({ platform: p, bind }) => {
+              const href = getPlatformHomeLink(p.value, bind.username)
+              const label = (
+                <>
+                  <span className="font-medium text-foreground">{p.label}</span>
+                  {bind.hasRating ? (
+                    <span className="font-mono tabular-nums text-sky-600 dark:text-sky-400">
+                      ({bind.rating})
+                    </span>
+                  ) : null}
+                </>
+              )
+              const className = cn(
+                'inline-flex h-7 max-w-full items-center gap-0 rounded-full border border-border/80',
+                'bg-muted/40 px-2.5 text-xs transition-colors',
+                'hover:bg-muted/70 active:bg-muted',
+              )
+              if (!href) {
+                return (
+                  <span
+                    key={p.value}
+                    className={className}
+                    title={bind.username}
+                  >
+                    {label}
+                  </span>
+                )
+              }
+              return (
+                <a
+                  key={p.value}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={`${p.label} · ${bind.username}`}
+                  className={className}
+                >
+                  {label}
+                </a>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   function renderProfileActions(opts: { desktopOnlySelfActions?: boolean }) {
     return (
       <div className="flex flex-col gap-2">
@@ -533,8 +610,8 @@ export function Profile() {
   return (
     <PageShell className="gap-4">
       {/*
-        移动端顺序：身份 → 刷题数据/主内容 → OJ 绑定（避免小屏先滚过长列表）
-        桌面：左栏 sticky 身份+OJ，右栏数据
+        移动端顺序：身份（含博客/关注）→ OJ Badge → 刷题数据/主内容
+        桌面：左栏 sticky 身份+OJ+操作，右栏数据
       */}
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 lg:grid lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start lg:gap-10">
         {/* 身份区：移动端横排紧凑，桌面端左栏竖排 */}
@@ -584,46 +661,97 @@ export function Profile() {
                     ? formatTime(profile.lastSyncAt)
                     : '尚未同步'}
                 </p>
-                {isSelf && (
-                  <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
-                    <Button type="button" size="sm" className="h-7 px-2 text-xs" asChild>
-                      <Link to="/change-profile">编辑资料</Link>
+                {/* 移动端：博客 / 关注 / 编辑 贴在身份旁，避免滚到页底才看到 */}
+                <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
+                  {blogActivated && profile?.username ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-xs"
+                      asChild
+                    >
+                      <Link
+                        to={`/blog/${profile.username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        访问博客
+                      </Link>
                     </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 px-2 text-xs"
-                        >
-                          退出
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>确认退出？</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            退出后需要重新登录才能访问个人相关功能。
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>取消</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleLogout}>
+                  ) : null}
+                  {isSelf ? (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        asChild
+                      >
+                        <Link to="/change-profile">编辑资料</Link>
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs"
+                          >
                             退出
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>确认退出？</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              退出后需要重新登录才能访问个人相关功能。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleLogout}>
+                              退出
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
+                  ) : (
+                    isLogin && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        variant={isFollowing ? 'outline' : 'default'}
+                        disabled={followBusy}
+                        onClick={() => void handleToggleFollow()}
+                      >
+                        {isFollowing ? (
+                          <>
+                            <UserMinusIcon className="size-3.5" />
+                            已关注
+                          </>
+                        ) : (
+                          <>
+                            <UserPlusIcon className="size-3.5" />
+                            关注
+                          </>
+                        )}
+                      </Button>
+                    )
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* 桌面：OJ / 操作留在左栏；移动端挪到主内容后 */}
+          {/* 移动端：OJ Badge 紧跟身份区 */}
+          <div className="lg:hidden">{renderOjBindingsMobile()}</div>
+
+          {/* 桌面：OJ / 操作留在左栏 */}
           <div className="hidden flex-col gap-3 lg:flex lg:gap-4">
-            {renderOjBindings()}
+            {renderOjBindingsDesktop()}
             {renderProfileActions({ desktopOnlySelfActions: true })}
           </div>
         </aside>
@@ -896,11 +1024,6 @@ export function Profile() {
           </Card>
         </div>
 
-        {/* 移动端：OJ / 操作沉到主内容之后，避免挡住刷题数据 */}
-        <div className="order-3 flex flex-col gap-3 lg:hidden">
-          {renderOjBindings()}
-          {renderProfileActions({ desktopOnlySelfActions: false })}
-        </div>
       </div>
     </PageShell>
   )
@@ -953,7 +1076,7 @@ function ProfileStatCell({
   )
 }
 
-/** 主内容区：统一格子网格，避免「本周单独一栏」的错位感 */
+/** 主内容区：8 格 2×4 / 4×2 铺满，避免移动端 7 格最后一格空一格 */
 function ProfilePeriodPanel({ period }: { period: PeriodData | null }) {
   const ac = period?.ac
   const submit = period?.submit
@@ -988,7 +1111,7 @@ function ProfilePeriodPanel({ period }: { period: PeriodData | null }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="px-3 sm:px-4">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <ProfileStatCell
             label="本周 AC"
             value={fmtPeriodNum(ac?.thisWeek)}
@@ -1012,6 +1135,10 @@ function ProfilePeriodPanel({ period }: { period: PeriodData | null }) {
           <ProfileStatCell
             label="本周提交"
             value={fmtPeriodNum(submit?.thisWeek)}
+          />
+          <ProfileStatCell
+            label="本月提交"
+            value={fmtPeriodNum(submit?.thisMonth)}
           />
         </div>
       </CardContent>
