@@ -70,9 +70,10 @@ export const OJ_BIND_GUIDES: Record<
     example: 'https://atcoder.jp/users/AoralsFout → AoralsFout',
   },
   LuoGu: {
-    fieldLabel: '用户名',
-    placeholder: '填写洛谷用户名',
-    tip: '填写洛谷用户名，不要填用户编号。',
+    fieldLabel: '用户编号',
+    placeholder: '例如 983446',
+    tip: '填写洛谷「用户编号」（纯数字），不要填用户名。打开个人主页，看右侧资料里的「用户编号」，或主页链接最后一串数字。',
+    example: 'https://www.luogu.com.cn/user/983446 → 983446（不是用户名 sanenchen）',
   },
   NowCoder: {
     fieldLabel: '用户 ID',
