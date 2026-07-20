@@ -138,3 +138,20 @@ export function staffNavLabel(p?: {
   if (p?.orgRole === OrgRole.Captain) return '队长管理'
   return '团队管理'
 }
+
+/**
+ * 底栏管理入口文案（与侧栏不同，精确区分）。
+ * 优先级：站点管理员 → 组织管理员 → 教练 → 队长。
+ * 站点管理员优先于组织管理员（避免 isOrgAdmin 同时为 true 时误标）。
+ */
+export function bottomNavStaffLabel(p?: {
+  isSiteAdmin?: boolean
+  orgRole?: string
+  roleId?: number | null
+} | null) {
+  if (isSiteAdminFromPayload(p)) return '后台管理'
+  if (p?.orgRole === OrgRole.OrgAdmin) return '组织管理'
+  if (p?.orgRole === OrgRole.Coach) return '教练管理'
+  if (p?.orgRole === OrgRole.Captain) return '队长管理'
+  return '管理'
+}

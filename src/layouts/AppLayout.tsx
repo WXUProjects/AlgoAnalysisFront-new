@@ -83,6 +83,10 @@ function AppLayoutInner() {
   const {
     isLogin,
     isStaff,
+    isSiteAdmin,
+    isOrgAdmin,
+    isCoach,
+    isCaptain,
     isMemberLike,
     user,
     orgs,
@@ -243,7 +247,7 @@ function AppLayoutInner() {
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem data-bottom-nav="true">
+                  <SidebarMenuItem {...(!isStaff ? { 'data-bottom-nav': 'true' } : {})}>
                     <SidebarMenuButton
                       asChild
                       isActive={
@@ -325,7 +329,7 @@ function AppLayoutInner() {
                   )}
 
                   {isLogin && isStaff && (
-                    <SidebarMenuItem>
+                    <SidebarMenuItem {...{ 'data-bottom-nav': 'true' }}>
                       <SidebarMenuButton
                         asChild
                         isActive={pathname.startsWith('/admin')}
@@ -376,7 +380,7 @@ function AppLayoutInner() {
           <SidebarFooter>
             <SidebarSeparator />
             {isLogin && orgs.length > 0 && (
-              <div className="group-data-[collapsible=icon]:hidden">
+              <div className="group-data-[collapsible=icon]:hidden" data-bottom-nav="true">
                 <label className="mb-1 block px-0.5 text-xs text-muted-foreground">
                   当前组织
                 </label>
@@ -461,7 +465,30 @@ function AppLayoutInner() {
             <AnimatedTitle className="min-w-0 flex-1 truncate text-base font-semibold">
               {title}
             </AnimatedTitle>
-            <div className="ml-auto flex shrink-0 items-center gap-1">
+            {/* 移动端：紧凑组织切换（桌面由 SidebarFooter 提供） */}
+            {isLogin && orgs.length > 0 && (
+              <Select
+                value={String(user?.orgId || currentOrg?.id || '')}
+                onValueChange={(value) => void handleSwitchOrg(Number(value))}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="ml-auto h-11 max-w-[120px] text-xs md:hidden"
+                  aria-label="切换当前组织"
+                >
+                  <SelectValue placeholder="组织" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orgs.map((o) => (
+                    <SelectItem key={o.id} value={String(o.id)}>
+                      {o.name}
+                      {o.myRole === 'org_admin' ? ' · 管' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="flex shrink-0 items-center gap-1">
               <NotificationInbox enabled={isLogin} />
             </div>
           </header>
@@ -494,6 +521,11 @@ function AppLayoutInner() {
           {!isAuthPage && (
             <MainBottomNav
               isLogin={isLogin}
+              isStaff={isStaff}
+              isSiteAdmin={isSiteAdmin}
+              isOrgAdmin={isOrgAdmin}
+              isCoach={isCoach}
+              isCaptain={isCaptain}
               sheetOpen={openMobile}
               onMoreClick={() => setOpenMobile(true)}
             />

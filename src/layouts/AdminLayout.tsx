@@ -418,7 +418,7 @@ export function AdminLayout() {
 
           <SidebarFooter>
             {orgs.length > 0 && (
-              <div className="group-data-[collapsible=icon]:hidden">
+              <div className="group-data-[collapsible=icon]:hidden" data-bottom-nav="true">
                 <label className="mb-1 block px-0.5 text-xs text-muted-foreground">
                   当前组织
                 </label>
@@ -482,14 +482,37 @@ export function AdminLayout() {
         </Sidebar>
 
         <SidebarInset className="h-svh min-h-0 overflow-hidden">
-          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
+          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-1 border-b bg-background px-3 md:gap-2 md:px-4">
             <MobileNavBack />
             <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
+            <Separator orientation="vertical" className="mr-2 h-4 hidden md:block" />
             <AnimatedTitle className="min-w-0 flex-1 truncate text-sm font-medium">
               {title}
             </AnimatedTitle>
-            <div className="ml-auto flex shrink-0 items-center gap-1">
+            {/* 移动端：紧凑组织切换（桌面由 SidebarFooter 提供） */}
+            {orgs.length > 0 && (
+              <Select
+                value={String(user?.orgId || currentOrg?.id || '')}
+                onValueChange={(value) => void handleSwitchOrg(Number(value))}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="ml-auto h-11 max-w-[120px] text-xs md:hidden"
+                  aria-label="切换当前组织"
+                >
+                  <SelectValue placeholder="组织" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orgs.map((o) => (
+                    <SelectItem key={o.id} value={String(o.id)}>
+                      {o.name}
+                      {o.myRole === 'org_admin' ? ' · 管' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="flex shrink-0 items-center gap-1">
               <NotificationInbox enabled={!!user} />
             </div>
           </header>

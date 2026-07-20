@@ -5,9 +5,11 @@ import {
   CalendarIcon,
   HomeIcon,
   InfoIcon,
+  LayoutDashboardIcon,
   MoreHorizontalIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { bottomNavStaffLabel } from '@/lib/roles'
 
 type BottomNavItem = {
   to: string
@@ -25,6 +27,7 @@ const BOTTOM_ITEMS: readonly BottomNavItem[] = [
   { to: '/question-bank', icon: BookOpenIcon, label: '题库', loginOnly: false, matchExact: false },
 ]
 
+/** 非 staff 的 More 匹配路径（/admin 不在其中，因为非 staff 无管理入口） */
 const MORE_ACTIVE_PATTERNS = [
   '/blog',
   '/bulletin',
@@ -32,32 +35,60 @@ const MORE_ACTIVE_PATTERNS = [
   '/tools',
   '/p/',
   '/profile',
-  '/admin',
   '/org',
 ]
 
-/** /about 仅登录态归 More（未登录时 About 在底栏，不归 More） */
-function isMoreActive(pathname: string, sheetOpen: boolean, isLogin: boolean): boolean {
+/**
+ * 判断「更多」是否高亮。
+ * staff：/admin 归底栏管理入口，不触发 More；/contest 归 More（不在底栏）。
+ * 非 staff：/contest 归底栏，/admin 不可见。
+ */
+function isMoreActive(
+  pathname: string,
+  sheetOpen: boolean,
+  isLogin: boolean,
+  isStaff: boolean,
+): boolean {
   if (sheetOpen) return true
   if (isLogin && pathname.startsWith('/about')) return true
+  // staff 的比赛入口不在底栏，归 More
+  if (isStaff && pathname.startsWith('/contest')) return true
   return MORE_ACTIVE_PATTERNS.some((p) => pathname.startsWith(p))
 }
 
 type Props = {
   isLogin: boolean
+  isStaff: boolean
+  isSiteAdmin: boolean
+  isOrgAdmin: boolean
+  isCoach: boolean
+  isCaptain: boolean
   sheetOpen: boolean
   onMoreClick: () => void
 }
 
 /**
- * 移动端全局底部导航栏（仅 md:hidden）。
- * 已登录 5 Tab：首页 / 发现 / 比赛 / 题库 / 更多
+ * 移动端全局底部导航栏（仅 md:hidden），最多 5 个等宽入口。
+ *
+ * 已登录普通成员 5 Tab：首页 / 发现 / 比赛 / 题库 / 更多
+ * 已登录 staff 5 Tab：首页 / 发现 / {管理入口} / 题库 / 更多
+ *   管理入口文案按角色优先级：后台管理 > 组织管理 > 教练管理 > 队长管理
  * 未登录 5 Tab：首页(替换为 关于) / 发现 / 比赛 / 题库 / 更多
+ *
  * Sheet 打开时更多按钮高亮；/about 仅登录态归 More。
  */
-export function MainBottomNav({ isLogin, sheetOpen, onMoreClick }: Props) {
+export function MainBottomNav({
+  isLogin,
+  isStaff,
+  isSiteAdmin,
+  isOrgAdmin,
+  isCoach,
+  isCaptain,
+  sheetOpen,
+  onMoreClick,
+}: Props) {
   const { pathname } = useLocation()
-  const moreActive = isMoreActive(pathname, sheetOpen, isLogin)
+  const moreActive = isMoreActive(pathname, sheetOpen, isLogin, isStaff)
 
   return (
     <nav
@@ -100,6 +131,42 @@ export function MainBottomNav({ isLogin, sheetOpen, onMoreClick }: Props) {
               </NavLink>
             )
           }
+
+          // staff：比赛位置替换为管理入口
+          if (isStaff && to === '/contest') {
+            const adminLabel = bottomNavStaffLabel({
+              isSiteAdmin,
+              orgRole: isOrgAdmin ? 'org_admin' : isCoach ? 'coach' : isCaptain ? 'captain' : undefined,
+            })
+            const adminActive = pathname.startsWith('/admin')
+            return (
+              <NavLink
+                key="/admin"
+                to="/admin"
+                className={cn(
+                  'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md',
+                  'text-[10px] transition-colors',
+                  'min-h-[44px]',
+                  adminActive
+                    ? 'text-foreground font-medium'
+                    : 'text-muted-foreground active:bg-muted/60',
+                )}
+                aria-current={adminActive ? 'page' : undefined}
+              >
+                <LayoutDashboardIcon
+                  className={cn(
+                    'size-5',
+                    adminActive ? 'text-foreground' : 'text-muted-foreground',
+                  )}
+                />
+                <span>{adminLabel}</span>
+                {adminActive && (
+                  <span className="absolute inset-x-3 bottom-1 h-0.5 rounded-full bg-foreground" />
+                )}
+              </NavLink>
+            )
+          }
+
           const active = matchExact
             ? pathname === to
             : pathname.startsWith(to) || (extraPatterns?.some((p) => pathname.startsWith(p)) ?? false)
