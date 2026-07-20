@@ -82,6 +82,8 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   const isSite = scope === 'site'
   const [period, setPeriod] = useState<PeriodData | null>(null)
   const [userCount, setUserCount] = useState(0)
+  /** 已冻结（暂停同步）人数；仅站点统计展示 */
+  const [frozenCount, setFrozenCount] = useState(0)
   const [groupCount, setGroupCount] = useState(0)
   const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
@@ -101,9 +103,17 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       setLoading(true)
       const end = todayYmd()
       const start = daysAgoYmd(TREND_DAYS - 1)
-      const [p, users, groups, hS, hA] = await Promise.all([
+      const listScope = isSite ? 'site' : 'org'
+      const [p, users, frozenUsers, groups, hS, hA] = await Promise.all([
         getPeriod(periodUserId),
-        listProfiles(1, 1, isSite ? 'site' : 'org'),
+        listProfiles(1, 1, listScope),
+        // 已冻结 = dormantOnly（含站管强制冻结/禁用）
+        isSite
+          ? listProfiles(1, 1, 'site', undefined, { dormantOnly: true })
+          : Promise.resolve({
+              success: true,
+              data: { total: 0, list: [] },
+            } as const),
         isSite
           ? Promise.resolve({ success: true, data: { total: 0, list: [] } as const })
           : listGroups(1, 1),
@@ -123,6 +133,11 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       if (cancelled) return
       if (p.success) setPeriod(p.data)
       if (users.success && users.data) setUserCount(users.data.total)
+      if (isSite && frozenUsers.success && frozenUsers.data) {
+        setFrozenCount(frozenUsers.data.total)
+      } else {
+        setFrozenCount(0)
+      }
       if (groups.success && groups.data) setGroupCount(groups.data.total)
       if (hS.success) setSubmitHeat(hS.data || [])
       if (hA.success) setAcHeat(hA.data || [])
@@ -150,6 +165,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     else toast.error(res.message || '全站同步失败，请稍后重试')
   }
 
+  const activeUserCount = Math.max(0, userCount - frozenCount)
   const cards: {
     label: string
     value: string
@@ -162,7 +178,18 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       raw: userCount,
     },
     ...(isSite
-      ? []
+      ? [
+          {
+            label: '已冻结',
+            value: fmtStat(frozenCount),
+            raw: frozenCount,
+          },
+          {
+            label: '未冻结',
+            value: fmtStat(activeUserCount),
+            raw: activeUserCount,
+          },
+        ]
       : [{ label: '分组数', value: fmtStat(groupCount), raw: groupCount }]),
     // 站点/组织：后端 period 已按 AC 条数统计（不去重）
     {
@@ -205,7 +232,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       ? `${currentOrg.name} · 数据统计`
       : '组织数据统计'
   const desc = isSite
-    ? '全站用户提交与 AC 汇总（访问流量见「访问统计」）'
+    ? '全站用户提交与 AC 汇总；已冻结=后台已暂停同步（含站管强制冻结/禁用）。访问流量见「访问统计」。'
     : '按当前组织成员汇总提交与 AC（切换组织后数据随之变化）'
 
   return (

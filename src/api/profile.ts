@@ -200,10 +200,10 @@ export async function clearDormant(
 }
 
 /**
- * 站点管理员：批量冻结不活跃
- * - userIds：勾选冻结（仍跳过豁免）
- * - inactiveDays：一键冻结「最近 N 天未登录且可冻结」
- * 会把最近活跃回拨到超过站点阈值；登录或「解除不活跃」后仍按原规则
+ * 站点管理员：强制冻结（不遵循组织约定/始终同步等豁免）
+ * - userIds：勾选任意用户（不可冻自己）
+ * - inactiveDays：一键冻结「最近 N 天未登录」
+ * 登录或「解除不活跃」后清除强制标记
  */
 export async function forceDormant(opts: {
   userIds?: number[]
@@ -252,6 +252,14 @@ export async function moveGroup(body: {
 
 export async function deleteUser(userId: number): Promise<ApiResult<unknown>> {
   return post(endpoints.user.profile.delete, { userId })
+}
+
+/** 站点管理员：禁用 / 启用账号（禁用后无法登录） */
+export async function setUserDisabled(
+  userId: number,
+  disabled: boolean,
+): Promise<ApiResult<unknown>> {
+  return post(endpoints.user.profile.setDisabled, { userId, disabled })
 }
 
 export async function listProfiles(
@@ -352,6 +360,11 @@ export async function listProfiles(
               ? undefined
               : num(u.lastLoginAt) || undefined,
           dormant: u.dormant === undefined ? undefined : bool(u.dormant),
+          adminForceDormant:
+            u.adminForceDormant === undefined
+              ? undefined
+              : bool(u.adminForceDormant),
+          disabled: u.disabled === undefined ? undefined : bool(u.disabled),
           orgs: orgsRaw.map((o) => ({
             orgId: num(o.orgId),
             name: str(o.name),

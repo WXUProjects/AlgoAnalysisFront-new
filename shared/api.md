@@ -62,12 +62,13 @@
 |----|------|
 | 阈值 | `site_configs.inactive_days`，默认 14，站管可改 1–365 |
 | 主信号 | `users.last_login_at`（登录写；VisitPing 登录用户 1h 节流写） |
-| 豁免 | 站管 / `sync_exempt`（站管开始终同步）/ 组织 staff / 组织 `force_sync`（永不冻结）/ plan∈{team,pro}；**任一豁免则不受休眠与不活跃筛选约束** |
+| 豁免 | 站管 / `sync_exempt`（站管开始终同步）/ 组织 staff / 组织 `force_sync`（永不冻结）/ plan∈{team,pro}；**任一豁免则不受自动休眠约束**（站管强制冻结/禁用除外） |
 | 休眠效果 | 定时爬虫、AI 总结、邮件、画像预热跳过；登录唤醒全量爬 |
-| 手动解除（一次） | 站管 `POST /user/profile/clear-dormant` 批量刷新 `last_login_at`；超时后仍会再休眠（≠ 永久豁免） |
-| 手动冻结 | 站管 `POST /user/profile/force-dormant`：勾选 `userIds` 或一键 `inactiveDays`（最近 N 天未登录）；回拨 `last_login_at` 超过站点阈值；**仍跳过豁免**；登录/解除后按原规则 |
+| 手动解除（一次） | 站管 `POST /user/profile/clear-dormant` 批量刷新 `last_login_at` 并清除 `admin_force_dormant`；超时后仍会再休眠（≠ 永久豁免） |
+| 手动冻结 | 站管 `POST /user/profile/force-dormant`：勾选 `userIds` 或一键 `inactiveDays`；回拨 `last_login_at` + 标记 `admin_force_dormant`；**不遵循组织约定/始终同步等豁免**（不可冻自己）；登录或解除后清除强制标记 |
+| 禁用账号 | 站管 `POST /user/profile/set-disabled`：`{ userId, disabled }`；禁用后登录/刷新返回「账号已被禁用」；不可禁用自己与其他站管；禁用时一并暂停同步 |
 
-相关 API：`POST /user/site/config`（`inactiveDays`+`setInactiveDays`）、`POST /user/org/update`（`forceSync` 仅站管）、`POST /user/profile/set-sync-exempt`、`POST /user/profile/clear-dormant`、`POST /user/profile/force-dormant`
+相关 API：`POST /user/site/config`（`inactiveDays`+`setInactiveDays`）、`POST /user/org/update`（`forceSync` 仅站管）、`POST /user/profile/set-sync-exempt`、`POST /user/profile/clear-dormant`、`POST /user/profile/force-dormant`、`POST /user/profile/set-disabled`
 
 **RegisterReq**
 
@@ -122,7 +123,7 @@
 | GET | `/user/profile/get-by-id` | 否 | query: `userId`；公共域受隐私约束，私人域组织内隐私配置失效 |
 | GET | `/user/profile/get-by-username` | 否 | query: `username` 精确匹配；返回同 get-by-id |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` 模糊（用户名/昵称） |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称），**`dormantOnly=true`（或 `dormant=true`）仅「已暂停同步」用户**（站点阈值 + 豁免）；**`inactiveDays=N`（1–365）「最近 N 天未登录且可冻结」**（优先于 dormantOnly；同样排除豁免）；**org 视图 `name`=组织内名称**；**site 视图 `name`=公共域外显名称**（≡站内昵称）；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`、`problemFetchEnabled`/`problemAiEnabled`、`createdAt`、`spiderIntervalMin`/`aiSummaryIntervalMin`、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`、`syncExempt`/`lastLoginAt`/`dormant` |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称），**`dormantOnly=true`（或 `dormant=true`）仅「已暂停同步」用户**（含站管强制冻结/禁用，或超时且无豁免）；**`inactiveDays=N`（1–365）「最近 N 天未登录」**（优先于 dormantOnly；**不排除豁免**，便于站管预览后强制冻结）；**org 视图 `name`=组织内名称**；**site 视图 `name`=公共域外显名称**（≡站内昵称）；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`、`problemFetchEnabled`/`problemAiEnabled`、`createdAt`、`spiderIntervalMin`/`aiSummaryIntervalMin`、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`、`syncExempt`/`lastLoginAt`/`dormant`/`adminForceDormant`/`disabled` |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新头像/邮箱；`name` 已忽略（昵称改「我的组织」）；邮箱变更须 `emailCode`（`purpose=change_email`） |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
@@ -130,8 +131,9 @@
 | POST | `/user/profile/set-problem-pipeline` | 是(站点管理员) | body: `{ userId, enabled, kind: fetch\|ai }`；个人覆盖：近窗提交是否触发题面爬取 / 题面 AI（默认按是否非公共域组织） |
 | POST | `/user/profile/set-sync-intervals` | 是(站点管理员) | body: `{ userId, setSpider?, spiderIntervalMin?, setAi?, aiSummaryIntervalMin? }`；个人覆盖爬取/AI 总结间隔（分钟，**优先级最高**）；间隔 `0` 表示清除覆盖回落组织 MIN；范围 5–10080 |
 | POST | `/user/profile/set-sync-exempt` | 是(站点管理员) | body: `{ userId, exempt }`；永不休眠（跳过不活跃判定） |
-| POST | `/user/profile/clear-dormant` | 是(站点管理员) | body: `{ userIds: number[] }`（单次最多 200）；**一次性**解除不活跃：将 `last_login_at` 刷新为当前时间；超时后仍会再休眠（≠ `sync_exempt`）；返回 `{ code, message, updated }` |
-| POST | `/user/profile/force-dormant` | 是(站点管理员) | body: `{ userIds?: number[] }` **或** `{ inactiveDays: number }`（1–365，一键模式）；将可冻结用户 `last_login_at` 回拨到超过站点阈值进入休眠；**跳过豁免**（站管/`sync_exempt`/staff/`force_sync`/paid）；登录或 clear-dormant 后仍按原规则；返回 `{ code, message, updated, skipped }` |
+| POST | `/user/profile/clear-dormant` | 是(站点管理员) | body: `{ userIds: number[] }`（单次最多 200）；**一次性**解除不活跃：将 `last_login_at` 刷新为当前时间并清除 `admin_force_dormant`；超时后仍会再休眠（≠ `sync_exempt`）；返回 `{ code, message, updated }` |
+| POST | `/user/profile/force-dormant` | 是(站点管理员) | body: `{ userIds?: number[] }` **或** `{ inactiveDays: number }`（1–365，一键模式）；回拨 `last_login_at` + 标记 `admin_force_dormant`；**不遵循组织约定等豁免**（不可冻自己）；登录或 clear-dormant 后清除强制标记；返回 `{ code, message, updated, skipped }` |
+| POST | `/user/profile/set-disabled` | 是(站点管理员) | body: `{ userId: number, disabled: boolean }`；禁用后无法登录（提示「账号已被禁用」）；不可禁用自己与站管；禁用时一并暂停同步；返回 `{ code, message }` |
 | GET | `/user/profile/ids-by-group` | 否 | query: `groupId` |
 | POST | `/user/profile/get-by-ids` | 否 | body: `{ userIds, orgId? }`；`name`=该组织 `org_display_name`（空则 username）；`orgId` 缺省用 JWT 当前组织，再回落公共域 |
 | GET | `/user/profile/non-public-org-user-ids` | 否（内部） | 题面流水线资格：`userIds`/`fetchUserIds`=爬取资格，`aiUserIds`=AI 资格（默认非公共域组织 + 个人覆盖） |
@@ -726,7 +728,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/core/contest/history` | 否 | query: `userId`, `limit`, `cursor`, `platform?` |
 | GET | `/core/contest/ranking` | 否 | query: `contestId` 或 `contest_id`（**contest_logs 行 id**）, `limit`, `offset`, `groupId?`, `followingOnly?`（与组织/分组求交） |
 | GET | `/core/contest/problems` | 否 | query: `id` 或 `contestId`（**contest_logs 行 id**）→ 比赛题目 Tab 列表；**每场（platform+OJ contest_id）只 ensure 一次**：主动从 OJ 发现题目并入库（`external_id` 与提交解析一致）+ **强制爬题面**；AI 分析仍依赖「有资格用户提交」闸门 |
-| GET | `/core/contest/board` | 否 | query: `id`/`contestId`（**contest_logs 行 id**）, `groupId?`, `followingOnly?` → XCPCIO 风格站内榜：`scoring`（icpc\|leetcode）、`problems[]`、`rows[{cells: status/attempts/relativeSec}]`；明细来自 `contest_user_problems`（爬虫写入，CF/AT 可从 submit 异步反推） |
+| GET | `/core/contest/board` | 否 | query: `id`/`contestId`（**contest_logs 行 id**）, `groupId?`, `followingOnly?` → XCPCIO 风格站内榜：`scoring`（icpc\|leetcode）、`problems[]`、`rows[{isContestant,cells}]`；补题直接由已有全量 `submit_logs` 推导，无需重新爬取。格子 `status`：`AC`（赛时通过，计分）、`UPSOLVE`（补题通过）、`UPSOLVE_TRIED`（补题未过）、`TRIED`（赛时未过）、`NONE`；补题状态均不计分，纯补题用户排在赛时参赛者之后 |
 
 ### ContestCalendar（比赛日历 / 公开赛程）
 
@@ -832,7 +834,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/core/problem/list` | 否 | 题库列表 |
 | GET | `/core/problem/tags` | 否 | 标签聚合 `?limit=`，返回 `{ tag, count }[]` |
 | GET | `/core/problem/hot` | 否 | 全站热题：近 `days` 天（默认 2，1–7）按提交次数/做题人数/AC 综合热度排序；`page`/`pageSize`；项含 `problem` + `submitCount`/`solverCount`/`acCount`/`score`/`lastSubmittedAt`；热度 = submit×1 + solver×3 + ac×2 |
-| GET | `/core/problem/get` | 否 | query: `id` |
+| GET | `/core/problem/get` | 否 | query: `id`；详情含 `contributors[]`（`userId`/`name`/`username`/`avatar`）：审核通过的内容贡献者，多人全列，按首次通过时间升序；列表接口可不带 |
 | GET | `/core/problem/following-status` | 是 | query: `problemId` → 关注用户对本题 `AC|TRIED|NONE` |
 | GET | `/core/problem/submissions` | 否 | query: `problemId`, `page`, `pageSize`, `userId?`, `followingOnly?`（不受域限制）, `status?`=`AC`；返回 `data` + **`total`**（服务端分页） |
 | GET | `/core/problem/comment/list` | 否（登录可带 liked） | query: `problemId` **或** `solutionId`（可同传）、`page`/`pageSize` → **顶层评论分页** + 嵌套 `replies`；`solutionId` 拉题解评论，仅 `problemId` 拉题目讨论（`solutionId=0`）；项含 `solutionId`/`likeCount`/`liked`/`parentId`/`rootId`/`depth` |
@@ -915,7 +917,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problem/toggle-analyze` | 是(管理员) | 暂停/恢复分析（不清队列）；`{ pause?, pauseSet? }` |
 | POST | `/core/problem/toggle-fetch` | 是(管理员) | 暂停/恢复爬取（不清队列）；`{ pause?, pauseSet? }` |
 | POST | `/core/problem/admin-update` | 是(**站点管理员**) | 直接改标签/题面（无需审核）；`{ id, updateTags?, tags?, updateContent?, contentMd?, title? }` |
-| POST | `/core/problem/propose-edit` | 是(登录) | 提交标签/题面修改申请；站管调用时直接保存；`{ problemId, updateTags?, tags?, updateContent?, contentMd?, title?, note? }` |
+| POST | `/core/problem/propose-edit` | 是(登录) | 提交标签/题面修改申请（可同次改题面+标签）；站管调用时直接保存；`{ problemId, updateTags?, tags?, updateContent?, contentMd?, title?, note? }` |
 | GET | `/core/problem/edit-requests` | 是(**站点管理员**) | 审核列表 `?page&pageSize&status=pending\|approved\|rejected` |
 | POST | `/core/problem/review-edit` | 是(**站点管理员**) | 通过/驳回；`{ id, approve, reviewNote? }` |
 | GET | `/core/problem/my-pending-edit` | 是(登录) | 当前用户对该题的待审申请 `?problemId=` |

@@ -59,7 +59,7 @@ export function resolvePageTitle(pathname: string): string {
   if (path.startsWith('/profile/')) return '个人资料'
   if (path.startsWith('/social')) return '关注与粉丝'
   if (path.startsWith('/contest/')) return '比赛详情'
-  if (path.includes('/edit-content')) return '编辑题面'
+  if (path.includes('/edit-content')) return '编辑题目'
   if (path.includes('/solution/new')) return '写题解'
   if (path.includes('/solution/') && path.endsWith('/edit')) return '编辑题解'
   if (path.includes('/solution/')) return '题解'

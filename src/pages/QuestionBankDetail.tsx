@@ -536,6 +536,28 @@ export function QuestionBankDetail() {
               </Button>
             )}
           </div>
+          {problem.contributors && problem.contributors.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              内容贡献：
+              {problem.contributors.map((c, i) => {
+                const label = c.name || c.username || `用户${c.userId}`
+                const href = c.username
+                  ? `/profile/${c.username}`
+                  : `/profile?id=${c.userId}`
+                return (
+                  <span key={c.userId}>
+                    {i > 0 ? '、' : ''}
+                    <Link
+                      to={href}
+                      className="text-foreground/80 underline-offset-2 hover:underline"
+                    >
+                      {label}
+                    </Link>
+                  </span>
+                )
+              })}
+            </p>
+          )}
           {hasPending && (
             <p className="text-xs text-muted-foreground">
               你有一条修改申请正在等待站点管理员审核
@@ -684,10 +706,10 @@ export function QuestionBankDetail() {
                     <PencilIcon data-icon="inline-start" />
                     {isSiteAdmin
                       ? contentEmpty
-                        ? '填写题面'
-                        : '编辑题面'
+                        ? '填写题目'
+                        : '编辑'
                       : contentEmpty
-                        ? '补充题面'
+                        ? '补充题目'
                         : '建议修改'}
                   </Button>
                 </div>

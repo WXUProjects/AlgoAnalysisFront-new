@@ -13,6 +13,7 @@ import {
   setSiteAdmin,
   setSyncExempt,
   setSyncIntervals,
+  setUserDisabled,
 } from '@/api/profile'
 import { updateSpider } from '@/api/spider'
 import type { GroupInfo, UserListItem } from '@shared/api'
@@ -143,6 +144,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
   const [clearingDormant, setClearingDormant] = useState(false)
   const [freezingDormant, setFreezingDormant] = useState(false)
+  const [togglingDisabled, setTogglingDisabled] = useState(false)
   /** 一键冻结对话框 */
   const [freezeDialogOpen, setFreezeDialogOpen] = useState(false)
   const [freezeDaysDraft, setFreezeDaysDraft] = useState('14')
@@ -305,13 +307,23 @@ function UserListPage({ scope }: { scope: UserScope }) {
     setList((prev) =>
       prev.map((row) =>
         ids.includes(row.userId)
-          ? { ...row, dormant: false, lastLoginAt: nowSec }
+          ? {
+              ...row,
+              dormant: false,
+              adminForceDormant: false,
+              lastLoginAt: nowSec,
+            }
           : row,
       ),
     )
     setDetailUser((cur) =>
       cur && ids.includes(cur.userId)
-        ? { ...cur, dormant: false, lastLoginAt: nowSec }
+        ? {
+            ...cur,
+            dormant: false,
+            adminForceDormant: false,
+            lastLoginAt: nowSec,
+          }
         : cur,
     )
     // 在「仅不活跃」筛选下刷新，让已解除的人从列表消失
@@ -382,6 +394,47 @@ function UserListPage({ scope }: { scope: UserScope }) {
       toast.success(res.message || '已移除该用户')
       void load()
     } else toast.error(res.message || '删除失败，请稍后重试')
+  }
+
+  async function handleSetDisabled(u: UserListItem, disabled: boolean) {
+    if (!isAdmin) return
+    if (u.isSiteAdmin) {
+      toast.error('不能禁用站点管理员账号')
+      return
+    }
+    setTogglingDisabled(true)
+    const res = await setUserDisabled(u.userId, disabled)
+    setTogglingDisabled(false)
+    if (!res.success) {
+      toast.error(res.message || (disabled ? '禁用失败，请稍后重试' : '启用失败，请稍后重试'))
+      return
+    }
+    toast.success(
+      res.message ||
+        (disabled ? '已禁用该账号，对方将无法登录' : '已启用该账号'),
+    )
+    setList((prev) =>
+      prev.map((row) =>
+        row.userId === u.userId
+          ? {
+              ...row,
+              disabled,
+              dormant: disabled ? true : row.dormant,
+              adminForceDormant: disabled ? true : row.adminForceDormant,
+            }
+          : row,
+      ),
+    )
+    setDetailUser((cur) =>
+      cur && cur.userId === u.userId
+        ? {
+            ...cur,
+            disabled,
+            dormant: disabled ? true : cur.dormant,
+            adminForceDormant: disabled ? true : cur.adminForceDormant,
+          }
+        : cur,
+    )
   }
 
   async function handleSyncOj(userId: number) {
@@ -554,8 +607,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
       ? `${currentOrg.name} · 成员`
       : '组织成员'
   const desc = isSite
-    ? '管理全站用户与所属组织。可按「最近几天未登录」筛选并一键冻结；站管、教练/队长、始终同步、永不冻结组织与付费组织不会被冻结。'
-    : '当前组织成员。长期未登录会暂停自动同步；组织永不冻结或个人始终同步的成员不受影响。'
+    ? '管理全站用户与所属组织。站管可冻结任意用户（不按组织约定跳过），也可禁用账号使其无法登录。'
+    : '当前组织成员。长期未登录会暂停自动同步；组织永不冻结或个人始终同步的成员不受自动暂停影响。'
 
   return (
     <PageShell className="gap-3">
@@ -611,8 +664,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部用户</SelectItem>
-                <SelectItem value="dormant">已暂停同步</SelectItem>
-                <SelectItem value="inactive">最近未登录（可冻结）</SelectItem>
+                <SelectItem value="dormant">已冻结</SelectItem>
+                <SelectItem value="inactive">最近未登录</SelectItem>
               </SelectContent>
             </Select>
             {inactiveDaysParam > 0 && (
@@ -747,7 +800,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                           冻结 {selectedIds.size} 人的自动同步？
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          将暂停这些人的后台同步。站管、教练/队长、始终同步、永不冻结组织与付费组织会被自动跳过。对方再次登录或你手动「解除不活跃」后会恢复；之后仍按站点未登录天数规则判定。
+                          将暂停这些人的后台同步，不按组织约定或「始终同步」跳过。对方再次登录或你手动「解除不活跃」后会恢复。
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -777,13 +830,13 @@ function UserListPage({ scope }: { scope: UserScope }) {
           ) : list.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
               {inactiveDaysParam > 0 && keyword
-                ? `没有找到与「${keyword}」相关、且最近 ${inactiveDaysParam} 天未登录的可冻结用户`
+                ? `没有找到与「${keyword}」相关、且最近 ${inactiveDaysParam} 天未登录的用户`
                 : inactiveDaysParam > 0
-                  ? `最近 ${inactiveDaysParam} 天没有可冻结的未登录用户（豁免对象不会出现在此列表）`
+                  ? `最近 ${inactiveDaysParam} 天没有未登录用户`
                   : dormantOnly && keyword
-                    ? `没有找到与「${keyword}」相关的已暂停同步用户`
+                    ? `没有找到与「${keyword}」相关的已冻结用户`
                     : dormantOnly
-                      ? '当前没有已暂停同步的用户'
+                      ? '当前没有已冻结的用户'
                       : keyword
                         ? `没有找到与「${keyword}」相关的用户`
                         : isSite
@@ -858,24 +911,33 @@ function UserListPage({ scope }: { scope: UserScope }) {
                               站点管理员
                             </Badge>
                           )}
+                          {u.disabled ? (
+                            <Badge
+                              variant="destructive"
+                              className="text-[10px]"
+                              title="账号已被禁用，无法登录"
+                            >
+                              已禁用
+                            </Badge>
+                          ) : null}
                           {u.dormant ? (
                             <Badge
                               variant="outline"
                               className="text-[10px] border-destructive/40 text-destructive"
-                              title="长时间未登录，后台已暂停自动同步"
+                              title="后台已暂停自动同步"
                             >
-                              已暂停同步
+                              已冻结
                             </Badge>
                           ) : !u.lastLoginAt ? (
                             <Badge
                               variant="outline"
                               className="text-[10px]"
-                              title="尚未记录最近活跃时间，筛选「不活跃」时会列出"
+                              title="尚未记录最近活跃时间，筛选「最近未登录」时会列出"
                             >
                               未记录活跃
                             </Badge>
                           ) : null}
-                          {u.syncExempt && (
+                          {u.syncExempt && !u.disabled && !u.dormant && (
                             <Badge variant="secondary" className="text-[10px]">
                               始终同步
                             </Badge>
@@ -1120,13 +1182,22 @@ function UserListPage({ scope }: { scope: UserScope }) {
                         站点管理员
                       </Badge>
                     )}
+                    {detailUser.disabled ? (
+                      <Badge
+                        variant="destructive"
+                        className="text-[10px]"
+                        title="账号已被禁用，无法登录"
+                      >
+                        已禁用
+                      </Badge>
+                    ) : null}
                     {detailUser.dormant ? (
                       <Badge
                         variant="outline"
                         className="text-[10px] border-destructive/40 text-destructive"
-                        title="长时间未登录，后台已暂停自动同步"
+                        title="后台已暂停自动同步"
                       >
-                        已暂停同步
+                        已冻结
                       </Badge>
                     ) : !detailUser.lastLoginAt ? (
                       <Badge
@@ -1137,11 +1208,13 @@ function UserListPage({ scope }: { scope: UserScope }) {
                         未记录活跃
                       </Badge>
                     ) : null}
-                    {detailUser.syncExempt && (
-                      <Badge variant="secondary" className="text-[10px]">
-                        始终同步
-                      </Badge>
-                    )}
+                    {detailUser.syncExempt &&
+                      !detailUser.disabled &&
+                      !detailUser.dormant && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          始终同步
+                        </Badge>
+                      )}
                   </div>
                   <span className="text-sm text-muted-foreground truncate">
                     @{detailUser.username}
@@ -1254,15 +1327,12 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     </div>
                   </div>
                 )}
-                {isAdmin &&
-                  !detailUser.dormant &&
-                  !detailUser.syncExempt &&
-                  !detailUser.isSiteAdmin && (
+                {isAdmin && !detailUser.dormant && (
                     <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
                       <div className="flex flex-col gap-1">
                         <p className="text-sm font-medium">冻结自动同步</p>
                         <p className="text-xs text-muted-foreground">
-                          暂停此人的后台同步。若对方属于永不冻结组织、教练/队长或付费组织，系统会自动跳过。登录或解除后仍按站点规则判定。
+                          暂停此人的后台同步，不按组织约定或「始终同步」跳过。对方再次登录或你手动解除后会恢复。
                         </p>
                       </div>
                       <div>
@@ -1284,6 +1354,60 @@ function UserListPage({ scope }: { scope: UserScope }) {
                             disabled={freezingDormant}
                           >
                             {freezingDormant ? '处理中…' : '立即冻结'}
+                          </Button>
+                        </ConfirmDialog>
+                      </div>
+                    </div>
+                  )}
+                  {isAdmin && !detailUser.isSiteAdmin && (
+                    <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+                      <div className="flex flex-col gap-1">
+                        <p className="text-sm font-medium">
+                          {detailUser.disabled ? '启用账号' : '禁用账号'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {detailUser.disabled
+                            ? '启用后对方可重新登录。若此前被冻结同步，仍可按规则恢复。'
+                            : '禁用后对方无法登录，后台同步也会暂停。可随时在此重新启用。'}
+                        </p>
+                      </div>
+                      <div>
+                        <ConfirmDialog
+                          title={
+                            detailUser.disabled
+                              ? '启用该账号？'
+                              : '禁用该账号？'
+                          }
+                          description={
+                            detailUser.disabled
+                              ? `确定启用「${detailUser.name || detailUser.username}」？对方将可以重新登录。`
+                              : `确定禁用「${detailUser.name || detailUser.username}」？对方将无法登录，直到你重新启用。`
+                          }
+                          confirmLabel={
+                            detailUser.disabled ? '确认启用' : '确认禁用'
+                          }
+                          destructive={!detailUser.disabled}
+                          loading={togglingDisabled}
+                          onConfirm={() =>
+                            void handleSetDisabled(
+                              detailUser,
+                              !detailUser.disabled,
+                            )
+                          }
+                        >
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={
+                              detailUser.disabled ? 'secondary' : 'destructive'
+                            }
+                            disabled={togglingDisabled}
+                          >
+                            {togglingDisabled
+                              ? '处理中…'
+                              : detailUser.disabled
+                                ? '立即启用'
+                                : '立即禁用'}
                           </Button>
                         </ConfirmDialog>
                       </div>
@@ -1521,7 +1645,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
           <DialogHeader>
             <DialogTitle>一键冻结不活跃用户</DialogTitle>
             <DialogDescription>
-              冻结最近若干天未登录、且符合冻结规则的用户。站管、教练/队长、始终同步、永不冻结组织与付费组织会自动跳过。冻结后对方登录或你手动解除即可恢复，之后仍按站点未登录天数规则判定。
+              冻结最近若干天未登录的用户，不按组织约定或「始终同步」跳过。冻结后对方登录或你手动解除即可恢复。
             </DialogDescription>
           </DialogHeader>
           <FieldGroup className="gap-3">

@@ -29,6 +29,7 @@ export const endpoints = {
       setSyncExempt: `${API_PREFIX}/user/profile/set-sync-exempt`,
       clearDormant: `${API_PREFIX}/user/profile/clear-dormant`,
       forceDormant: `${API_PREFIX}/user/profile/force-dormant`,
+      setDisabled: `${API_PREFIX}/user/profile/set-disabled`,
       idsByGroup: `${API_PREFIX}/user/profile/ids-by-group`,
       getByIds: `${API_PREFIX}/user/profile/get-by-ids`,
       nonPublicOrgUserIds: `${API_PREFIX}/user/profile/non-public-org-user-ids`,
@@ -621,6 +622,10 @@ export interface UserListItem {
   lastLoginAt?: number
   /** 当前是否休眠（后台定时已停） */
   dormant?: boolean
+  /** 站管强制冻结同步（覆盖组织/个人豁免） */
+  adminForceDormant?: boolean
+  /** 账号是否被禁用（禁止登录） */
+  disabled?: boolean
 }
 
 export interface UserListRes {
@@ -974,6 +979,14 @@ export interface SolutionMeta {
   briefExplanation: string
 }
 
+/** 题面/标签审核通过后的贡献者 */
+export interface ProblemContributor {
+  userId: number
+  name: string
+  username: string
+  avatar?: string
+}
+
 export interface ProblemInfo {
   id: number
   platform: string
@@ -989,6 +1002,8 @@ export interface ProblemInfo {
   errorMsg: string
   lastSubmittedAt: number
   userStatus: string
+  /** 审核通过的贡献者（详情 Get 返回；多人全列） */
+  contributors?: ProblemContributor[]
 }
 
 /** 题目关联的一场比赛（站内详情用 contestLogId → /contest/{id}） */

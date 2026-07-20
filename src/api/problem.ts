@@ -3,6 +3,7 @@ import {
   type AdminUpdateProblemReq,
   type HotProblemItem,
   type HotProblemRes,
+  type ProblemContributor,
   type ProblemEditInfo,
   type ProblemInfo,
   type ProblemListRes,
@@ -49,11 +50,25 @@ function cleanTitle(title: string): string {
   return raw.replace(/\s+/g, ' ').trim()
 }
 
+function normalizeContributor(raw: Record<string, unknown>): ProblemContributor {
+  return {
+    userId: num(raw.userId),
+    name: str(raw.name),
+    username: str(raw.username),
+    avatar: str(raw.avatar) || undefined,
+  }
+}
+
 function normalizeProblem(raw: Record<string, unknown>): ProblemInfo {
   const tags = Array.isArray(raw.tags) ? raw.tags.map((t) => str(t)) : []
   const solutions = Array.isArray(raw.solutions)
     ? (raw.solutions as Record<string, unknown>[]).map(normalizeSolution)
     : []
+  const contributors = Array.isArray(raw.contributors)
+    ? (raw.contributors as Record<string, unknown>[])
+        .map(normalizeContributor)
+        .filter((c) => c.userId > 0)
+    : undefined
   return {
     id: num(raw.id),
     platform: str(raw.platform),
@@ -69,6 +84,8 @@ function normalizeProblem(raw: Record<string, unknown>): ProblemInfo {
     errorMsg: str(raw.errorMsg),
     lastSubmittedAt: num(raw.lastSubmittedAt),
     userStatus: str(raw.userStatus),
+    contributors:
+      contributors && contributors.length > 0 ? contributors : undefined,
   }
 }
 
