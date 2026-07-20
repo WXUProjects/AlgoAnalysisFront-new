@@ -629,3 +629,16 @@
     scrollbar-width: thin;
   }
 }
+
+/* Mobile Sheet: hide sidebar items already present in the bottom nav */
+[data-mobile="true"] [data-bottom-nav="true"] {
+  display: none;
+}
+
+/* Reduced transparency: solid background fallback for backdrop-blur nav */
+@media (prefers-reduced-transparency: reduce) {
+  [data-main-bottom-nav] {
+    background-color: var(--background) !important;
+    backdrop-filter: none !important;
+  }
+}

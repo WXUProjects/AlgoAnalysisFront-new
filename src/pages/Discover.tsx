@@ -1,5 +1,4 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import {
   ActivityIcon,
@@ -261,6 +260,11 @@ export function Discover() {
 
   return (
     <PageShell className="gap-3" stagger={false}>
+      {/* 移动端：内联 ToggleGroup 切换子页（桌面由 Tabs 承担） */}
+      <div className="lg:hidden">
+        <DiscoverMobileDock view={mobileView} onViewChange={setMobileView} />
+      </div>
+
       <section className="flex flex-wrap items-center justify-between gap-3">
         {/* 标题/副标题：仅桌面显示，移动端由全局 Header 提供页面标题 */}
         <div className="hidden min-w-0 lg:block">
@@ -346,21 +350,6 @@ export function Discover() {
         {mobileView === 'rank' ? <DiscoverRankPage /> : null}
         {mobileView === 'contest' ? <DiscoverContestPage /> : null}
       </div>
-
-      {/*
-        底部 Tab 占位：留在页面流中预留底部空间。
-        Dock 本体通过 Portal 渲染到 body，
-        逃出 GsapPageTransition 的 transform 上下文，
-        确保 position: fixed 相对视口定位。
-      */}
-      <div
-        aria-hidden
-        className="h-[calc(3.5rem+env(safe-area-inset-bottom,0px))] shrink-0 lg:hidden"
-      />
-      {createPortal(
-        <DiscoverMobileDock view={mobileView} onViewChange={setMobileView} />,
-        document.body,
-      )}
     </PageShell>
   )
 }

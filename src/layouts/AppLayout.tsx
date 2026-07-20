@@ -30,6 +30,7 @@ import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
 import { DomainHintSync } from '@/components/domain-hint-sync'
 import { GsapPageTransition } from '@/components/gsap-page-transition'
+import { MainBottomNav } from '@/components/main-bottom-nav'
 import { MobileNavBack } from '@/components/mobile-nav-back'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { EmergencyDialogHost } from '@/components/emergency-dialog'
@@ -52,17 +53,33 @@ import {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { MotionProvider } from '@/motion/MotionContext'
+import { cn } from '@/lib/utils'
 
 export function AppLayout() {
+  return (
+    <MotionProvider>
+    <TooltipProvider>
+      <DomainHintSync />
+      <SidebarProvider>
+        <AppLayoutInner />
+      </SidebarProvider>
+    </TooltipProvider>
+    </MotionProvider>
+  )
+}
+
+function AppLayoutInner() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { config } = useSiteConfig()
+  const { openMobile, setOpenMobile } = useSidebar()
   const {
     isLogin,
     isStaff,
@@ -151,10 +168,7 @@ export function AppLayout() {
   }
 
   return (
-    <MotionProvider>
-    <TooltipProvider>
-      <DomainHintSync />
-      <SidebarProvider>
+    <>
         <Sidebar collapsible="icon">
           <SidebarHeader>
             <SidebarMenu>
@@ -189,7 +203,7 @@ export function AppLayout() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {isLogin && (
-                    <SidebarMenuItem>
+                    <SidebarMenuItem data-bottom-nav="true">
                       <SidebarMenuButton
                         asChild
                         isActive={pathname === '/'}
@@ -202,7 +216,7 @@ export function AppLayout() {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
-                  <SidebarMenuItem>
+                  <SidebarMenuItem data-bottom-nav="true">
                     <SidebarMenuButton
                       asChild
                       isActive={
@@ -229,7 +243,7 @@ export function AppLayout() {
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
+                  <SidebarMenuItem data-bottom-nav="true">
                     <SidebarMenuButton
                       asChild
                       isActive={
@@ -256,7 +270,7 @@ export function AppLayout() {
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
+                  <SidebarMenuItem data-bottom-nav="true">
                     <SidebarMenuButton
                       asChild
                       isActive={pathname.startsWith('/question-bank')}
@@ -341,7 +355,7 @@ export function AppLayout() {
                   )}
 
                   {showAbout && (
-                    <SidebarMenuItem>
+                    <SidebarMenuItem {...(!isLogin ? { 'data-bottom-nav': 'true' } : {})}>
                       <SidebarMenuButton
                         asChild
                         isActive={pathname.startsWith('/about')}
@@ -440,10 +454,10 @@ export function AppLayout() {
 
         <SidebarInset className="h-svh min-h-0 overflow-hidden">
           <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
-            {/* 移动端：子页左上角返回，主 Tab 仅侧栏；桌面侧栏常开不显示返回 */}
+            {/* 移动端：子页左上角返回，主 Tab 仅底栏；桌面侧栏常开不显示返回 */}
             <MobileNavBack />
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
+            <SidebarTrigger className="-ml-1 hidden md:flex" />
+            <Separator orientation="vertical" className="mr-2 hidden h-4 md:block" />
             <AnimatedTitle className="min-w-0 flex-1 truncate text-base font-semibold">
               {title}
             </AnimatedTitle>
@@ -469,7 +483,7 @@ export function AppLayout() {
               </Link>
             </div>
           )}
-          <main data-app-scroll-container="" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none">
+          <main data-app-scroll-container="" className={cn("flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none md:pb-0", !isAuthPage && "pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))]")}>
             <div className="flex min-h-full min-w-0 flex-1 flex-col">
               <GsapPageTransition>
                 <Outlet />
@@ -477,12 +491,17 @@ export function AppLayout() {
               <SiteFooter />
             </div>
           </main>
+          {!isAuthPage && (
+            <MainBottomNav
+              isLogin={isLogin}
+              sheetOpen={openMobile}
+              onMoreClick={() => setOpenMobile(true)}
+            />
+          )}
         </SidebarInset>
         <Toaster richColors position="top-center" />
         <EmergencyDialogHost />
         <PrivacySetupDialog />
-      </SidebarProvider>
-    </TooltipProvider>
-    </MotionProvider>
+    </>
   )
 }
