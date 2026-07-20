@@ -11,7 +11,7 @@ import type { ProblemInfo } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { PageShell } from '@/components/page-shell'
-import { TagInput } from '@/components/tag-input'
+import { TagInput, type TagSuggestion } from '@/components/tag-input'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -46,7 +46,7 @@ export function ProblemContentEdit() {
   const [contentInput, setContentInput] = useState('')
   const [titleInput, setTitleInput] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [allTags, setAllTags] = useState<string[]>([])
+  const [allTags, setAllTags] = useState<TagSuggestion[]>([])
   const [noteInput, setNoteInput] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -74,7 +74,13 @@ export function ProblemContentEdit() {
 
   useEffect(() => {
     void listProblemTags(200).then((res) => {
-      if (res.success && res.data) setAllTags(res.data)
+      if (res.success && res.data) {
+        setAllTags(
+          res.data
+            .filter((t) => t.tag)
+            .map((t) => ({ tag: t.tag, count: t.count })),
+        )
+      }
     })
   }, [])
 
