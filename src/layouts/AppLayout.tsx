@@ -24,6 +24,7 @@ import {
   DEFAULT_SITE_DESCRIPTION,
   resolvePageTitle,
 } from '@/lib/page-title'
+import { getHomePath } from '@/lib/home-path'
 import { staffNavLabel } from '@/lib/roles'
 import { trackPageVisit } from '@/lib/visit-tracker'
 import { useSiteConfig } from '@/site/SiteConfigContext'
@@ -129,7 +130,7 @@ function AppLayoutInner() {
             pathname.startsWith('/register'),
         },
   )
-  const homeTo = isLogin ? '/' : '/about'
+  const homeTo = getHomePath(isLogin)
   const adminLabel = staffNavLabel(user)
   // 公共域（或未登录默认视图）展示「关于我们」
   const showAbout =

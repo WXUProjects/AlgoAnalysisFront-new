@@ -145,7 +145,7 @@ export function CodeToImage() {
       })
       downloadDataUrl(dataUrl, `code-${Date.now()}.png`)
       toast.success('已下载 PNG')
-    } catch (e) {
+    } catch {
       toast.error('导出失败，请稍后重试')
     } finally {
       setExporting(false)
@@ -179,7 +179,7 @@ export function CodeToImage() {
         downloadDataUrl(dataUrl, `code-${Date.now()}.png`)
         toast.message('当前浏览器无法复制图片，已改为下载文件')
       }
-    } catch (e) {
+    } catch {
       toast.error('复制失败，请稍后重试')
     } finally {
       setExporting(false)

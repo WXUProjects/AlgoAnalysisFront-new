@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -69,17 +70,20 @@ export function Pagination({
   const pageItems = buildPageItems(safePage, totalPages)
 
   const [jumpInput, setJumpInput] = useState(String(safePage))
+  const [jumpError, setJumpError] = useState('')
 
   useEffect(() => {
     setJumpInput(String(safePage))
+    setJumpError('')
   }, [safePage])
 
   function handleJump() {
     const n = Number.parseInt(jumpInput.trim(), 10)
     if (!Number.isFinite(n) || n < 1 || n > totalPages) {
-      setJumpInput(String(safePage))
+      setJumpError(`请输入 1 到 ${totalPages} 之间的页码`)
       return
     }
+    setJumpError('')
     if (n !== safePage) onChange(n)
   }
 
@@ -90,7 +94,7 @@ export function Pagination({
   })()
 
   return (
-    <div className="flex flex-col gap-2 pt-2">
+    <nav className="flex flex-col gap-2 pt-2" aria-label="分页导航">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <span>
@@ -104,6 +108,7 @@ export function Pagination({
               value={jumpInput}
               disabled={disabled}
               onChange={(e) => setJumpInput(e.target.value)}
+              onInput={() => setJumpError('')}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
@@ -112,6 +117,8 @@ export function Pagination({
               }}
               className="h-8 w-16 px-2 text-center"
               aria-label="跳转页码"
+              aria-invalid={Boolean(jumpError)}
+              aria-describedby={jumpError ? 'pagination-jump-error' : undefined}
             />
             <Button
               type="button"
@@ -138,11 +145,13 @@ export function Pagination({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {sizeOptions.map((n) => (
-                    <SelectItem key={n} value={String(n)}>
-                      {n}
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+                    {sizeOptions.map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
               <span className="whitespace-nowrap">条</span>
@@ -157,6 +166,7 @@ export function Pagination({
             size="sm"
             disabled={disabled || !canPrev}
             onClick={() => onChange(safePage - 1)}
+            aria-label={`上一页，第 ${safePage - 1} 页`}
           >
             上一页
           </Button>
@@ -177,6 +187,8 @@ export function Pagination({
                 size="sm"
                 disabled={disabled}
                 onClick={() => onChange(item)}
+                aria-label={`第 ${item} 页`}
+                aria-current={item === safePage ? 'page' : undefined}
               >
                 {item}
               </Button>
@@ -188,11 +200,17 @@ export function Pagination({
             size="sm"
             disabled={disabled || !canNext}
             onClick={() => onChange(safePage + 1)}
+            aria-label={`下一页，第 ${safePage + 1} 页`}
           >
             下一页
           </Button>
         </div>
       </div>
-    </div>
+      {jumpError ? (
+        <p id="pagination-jump-error" className="text-sm text-destructive" role="alert">
+          {jumpError}
+        </p>
+      ) : null}
+    </nav>
   )
 }

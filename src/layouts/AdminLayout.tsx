@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
 import { useDocumentTitle } from '@/hooks/use-document-title'
+import { getHomePath } from '@/lib/home-path'
 import { resolvePageTitle } from '@/lib/page-title'
 import { staffNavLabel } from '@/lib/roles'
 import { useSiteConfig } from '@/site/SiteConfigContext'
@@ -83,6 +84,7 @@ function AdminLayoutInner() {
     isCoach,
     isCaptain,
     isStaff,
+    isLogin,
     user,
     orgs,
     logout,
@@ -106,6 +108,7 @@ function AdminLayoutInner() {
   const canOrgSettings = isAdmin || isOrgAdmin
   const canTrainingReport = isStaff
   const showTeamNav = isStaff
+  const homeTo = getHomePath(isLogin)
 
   function handleLogout() {
     logout()
@@ -461,7 +464,7 @@ function AdminLayoutInner() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="返回前台">
-                <Link to="/">
+                <Link to={homeTo}>
                   <ArrowLeftIcon />
                   <span>返回前台</span>
                 </Link>

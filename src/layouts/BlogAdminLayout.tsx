@@ -29,6 +29,7 @@ import {
   resolveBlogTheme,
   type BlogThemeContext,
 } from '@/lib/blog-theme'
+import { getHomePath } from '@/lib/home-path'
 import { resolvePageTitle } from '@/lib/page-title'
 import { cn } from '@/lib/utils'
 import { MotionProvider } from '@/motion/MotionContext'
@@ -100,6 +101,7 @@ export function BlogAdminLayout() {
   const displayName = author?.name || author?.username || username
   const base = `/blog/${username}`
   const manage = `${base}/manage`
+  const homeTo = getHomePath(ready ? isLogin : false)
   const pageTitle = resolvePageTitle(pathname) || '博客管理'
   useDocumentTitle(pageTitle, displayName || '博客')
 
@@ -153,7 +155,7 @@ export function BlogAdminLayout() {
                 </Link>
               </Button>
               <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
-                <Link to="/">回主站</Link>
+                <Link to={homeTo}>回主站</Link>
               </Button>
             </div>
             <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 pb-2">
@@ -186,7 +188,7 @@ export function BlogAdminLayout() {
             ) : error ? (
               <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
                 <p className="mb-4">{error}</p>
-                <Button variant="outline" onClick={() => navigate('/')}>
+                <Button variant="outline" onClick={() => navigate(homeTo)}>
                   回主站首页
                 </Button>
               </div>

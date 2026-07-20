@@ -18,6 +18,7 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
+import { getHomePath } from '@/lib/home-path'
 import {
   buildOrgInvitePath,
   clearInviteCode,
@@ -33,6 +34,7 @@ export function OrgInvite() {
   const code = (searchParams.get('code') || '').trim()
   const navigate = useNavigate()
   const { isLogin, ready, user, refreshOrgs, switchOrg } = useAuth()
+  const homeTo = getHomePath(ready ? isLogin : false)
 
   const [loading, setLoading] = useState(true)
   const [orgName, setOrgName] = useState('')
@@ -187,14 +189,14 @@ export function OrgInvite() {
                 </>
               )}
               <Button variant="ghost" className="w-full" asChild>
-                <Link to="/">返回首页</Link>
+                <Link to={homeTo}>返回首页</Link>
               </Button>
             </CardFooter>
           </>
         ) : error ? (
           <CardFooter className="flex flex-col gap-2 px-4">
             <Button variant="outline" className="w-full" asChild>
-              <Link to="/">返回首页</Link>
+              <Link to={homeTo}>返回首页</Link>
             </Button>
           </CardFooter>
         ) : null}

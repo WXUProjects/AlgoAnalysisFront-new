@@ -2,7 +2,7 @@
  * KaTeX pipeline smoke tests for markdown render + sanitize.
  * Run: npx tsx --test src/lib/markdown-katex.test.ts
  */
-import { describe, it, before } from 'node:test'
+import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
 

@@ -40,12 +40,13 @@ export function useHoverTransform<T extends Element = HTMLElement>(
   vars: { scale?: number; x?: number; y?: number; rotation?: number },
 ) {
   const ref = useRef<T | null>(null)
+  const { scale, x, y, rotation } = vars
 
   const onPointerEnter = useCallback(() => {
     if (!canHover()) return
     const el = ref.current
-    if (el) animateHoverTransformIn(el, vars)
-  }, [vars.scale, vars.x, vars.y, vars.rotation])
+    if (el) animateHoverTransformIn(el, { scale, x, y, rotation })
+  }, [scale, x, y, rotation])
 
   const onPointerLeave = useCallback(() => {
     const el = ref.current
