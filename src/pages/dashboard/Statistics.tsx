@@ -49,7 +49,12 @@ import {
   WEEKDAY_LABELS,
 } from '@/lib/dashboard-metrics'
 import { cn } from '@/lib/utils'
-import { daysAgoYmd, formatCompactNumber, todayYmd } from '@/lib/format'
+import {
+  daysAgoYmd,
+  formatCompactNumber,
+  todayYmd,
+  ymdToDateKey,
+} from '@/lib/format'
 
 const TIME_RANGES = [
   { value: '7', label: '7 天', days: 7 },
@@ -126,8 +131,9 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     async function load() {
       setLoading(true)
       setErrors([])
-      const end = todayYmd()
-      const start = daysAgoYmd(days - 1)
+      // rank 接口只接受 YYYY-MM-DD；todayYmd 是 YYYYMMDD，必须转换
+      const end = ymdToDateKey(todayYmd())
+      const start = ymdToDateKey(daysAgoYmd(days - 1))
       const listScope = isSite ? 'site' : 'org'
 
       try {
@@ -142,7 +148,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             : listGroups(1, 1),
           getHeatmap({ startDate: start, endDate: end, isAc: false, userId: heatmapUserId }),
           getHeatmap({ startDate: start, endDate: end, isAc: true, userId: heatmapUserId }),
-          getRank({ startDate: start, endDate: end, scoreType: 'ac', pageSize: 100 }),
+          getRank({ startDate: start, endDate: end, scoreType: 'ac', pageSize: 50 }),
           // 仅团队管理员 / 站管拉待审批；教练、队长可能无权限
           !isSite && (isOrgAdmin || isAdmin) && currentOrg?.id
             ? listJoinRequests(currentOrg.id).catch(() => ({

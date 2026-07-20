@@ -16,7 +16,15 @@ interface TrendChartProps {
   days?: number
 }
 
+function localYmd(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export function TrendChart({ submit, ac, days = 30 }: TrendChartProps) {
+  // 与热力 API 一致用本地日历日；禁止 toISOString（UTC 会错一天）
   const acMap = new Map(ac.map((i) => [i.date.slice(0, 10), i.count]))
   const submitMap = new Map(submit.map((i) => [i.date.slice(0, 10), i.count]))
 
@@ -26,7 +34,7 @@ export function TrendChart({ submit, ac, days = 30 }: TrendChartProps) {
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(end)
     d.setDate(d.getDate() - i)
-    const key = d.toISOString().slice(0, 10)
+    const key = localYmd(d)
     data.push({
       date: key.slice(5),
       submit: submitMap.get(key) ?? 0,

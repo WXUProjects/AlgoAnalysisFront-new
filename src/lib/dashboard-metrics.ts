@@ -1,4 +1,5 @@
 import type { HeatmapItem } from '@shared/api'
+import { ymdToDateKey } from '@/lib/format'
 
 /** 对 heatmap 求和（本期范围内总次数） */
 export function sumHeatmap(heat: HeatmapItem[]): number {
@@ -43,7 +44,7 @@ export function computePeakDay(heat: HeatmapItem[]): { date: string; count: numb
   for (const h of heat) {
     if (h.count > peak.count) peak = h
   }
-  return { date: peak.date.slice(0, 10), count: peak.count }
+  return { date: ymdToDateKey(peak.date.slice(0, 10)), count: peak.count }
 }
 
 /** 最长连续活跃天数（有提交的连续天数） */
@@ -51,14 +52,15 @@ export function computeConsecutiveDays(heat: HeatmapItem[]): number {
   if (heat.length === 0) return 0
   const sorted = [...heat]
     .filter((h) => h.count > 0)
+    .map((h) => ({ ...h, date: ymdToDateKey(h.date.slice(0, 10)) }))
     .sort((a, b) => a.date.localeCompare(b.date))
   if (sorted.length === 0) return 0
 
   let maxStreak = 1
   let streak = 1
   for (let i = 1; i < sorted.length; i++) {
-    const prev = new Date(sorted[i - 1].date.slice(0, 10) + 'T00:00:00')
-    const curr = new Date(sorted[i].date.slice(0, 10) + 'T00:00:00')
+    const prev = new Date(`${sorted[i - 1].date}T00:00:00`)
+    const curr = new Date(`${sorted[i].date}T00:00:00`)
     const diff = (curr.getTime() - prev.getTime()) / 86400000
     if (diff === 1) {
       streak++
@@ -87,11 +89,15 @@ export function compareRecent7vsPrev7(
   heat: HeatmapItem[],
   endDate?: string,
 ): { recent: number; prev: number; delta: number; direction: 'up' | 'down' | 'flat' } {
-  const end = endDate ? new Date(endDate + 'T00:00:00') : new Date()
-  if (!endDate) {
-    end.setHours(0, 0, 0, 0)
+  // 兼容 YYYY-MM-DD 与 YYYYMMDD；禁止 Invalid Date 导致洞察全 0
+  const endKey = endDate ? ymdToDateKey(endDate) : localYmd(new Date())
+  const end = new Date(`${endKey}T00:00:00`)
+  if (Number.isNaN(end.getTime())) {
+    return { recent: 0, prev: 0, delta: 0, direction: 'flat' }
   }
-  const map = new Map(heat.map((h) => [h.date.slice(0, 10), h.count]))
+  const map = new Map(
+    heat.map((h) => [ymdToDateKey(h.date.slice(0, 10)), h.count]),
+  )
 
   let recent = 0
   let prev = 0
@@ -130,7 +136,8 @@ export function computeWeekdayDistribution(heat: HeatmapItem[]): number[] {
   const dist = [0, 0, 0, 0, 0, 0, 0]
   for (const h of heat) {
     if (h.count <= 0) continue
-    const d = new Date(h.date.slice(0, 10) + 'T00:00:00')
+    const d = new Date(`${ymdToDateKey(h.date.slice(0, 10))}T00:00:00`)
+    if (Number.isNaN(d.getTime())) continue
     const day = d.getDay()
     dist[day] += h.count
   }
