@@ -84,7 +84,7 @@ function AlertDialogContent({
         ref={composeRefs(motionRef, refProp)}
         className={cn(
           GSAP_PRESENCE_CLASS,
-          "group/alert-dialog-content fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-lg border bg-background p-6 shadow-lg will-change-transform data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-lg",
+          "group/alert-dialog-content fixed top-[50%] left-[50%] z-50 grid w-full max-h-[min(90vh,40rem)] max-w-[calc(100%-2rem)] gap-4 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg will-change-transform data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-lg",
           className,
         )}
         style={{ ...presenceStyleVars("dialog"), ...style }}

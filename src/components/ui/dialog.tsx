@@ -87,7 +87,8 @@ function DialogContent({
         ref={composeRefs(motionRef, refProp)}
         className={cn(
           GSAP_PRESENCE_CLASS,
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-lg border bg-background p-6 shadow-lg outline-none will-change-transform sm:max-w-lg",
+          // 默认限制高度并可滚动，避免长内容撑出视口；长弹窗可自行 overflow-hidden + 内层滚动
+          "fixed top-[50%] left-[50%] z-50 grid w-full max-h-[min(90vh,40rem)] max-w-[calc(100%-2rem)] gap-4 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg outline-none will-change-transform sm:max-w-lg",
           className,
         )}
         style={{ ...presenceStyleVars("dialog"), ...style }}

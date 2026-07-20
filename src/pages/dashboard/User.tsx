@@ -1153,8 +1153,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
           if (!o) setDetailUser(null)
         }}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[min(90vh,40rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+          <DialogHeader className="shrink-0 border-b px-6 py-4 pr-12">
             <DialogTitle>
               用户详情 · {detailUser?.name || detailUser?.username}
             </DialogTitle>
@@ -1164,7 +1164,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
             </DialogDescription>
           </DialogHeader>
           {detailUser ? (
-            <div className="flex flex-col gap-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
               <div className="flex items-center gap-3">
                 <Avatar className="size-10">
                   <AvatarImage src={detailUser.avatar || undefined} />
@@ -1601,7 +1601,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
               </div>
             </div>
           ) : null}
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t px-6 py-4">
             <Button type="button" variant="outline" onClick={() => setDetailUser(null)}>
               关闭
             </Button>
