@@ -91,6 +91,34 @@ function formatPenalty(sec: number): string {
   return formatRelativeSec(sec) || '0'
 }
 
+/** 提交是否赛后补题（无 phase 时：有 relativeSec 视为赛时） */
+function isUpsolveSubmit(s: ContestCellSubmitItem): boolean {
+  if (s.phase === 'upsolve') return true
+  if (s.phase === 'contest') return false
+  return s.relativeSec == null
+}
+
+function cellSubmitsSummary(
+  status: string | undefined,
+  list: ContestCellSubmitItem[],
+): string {
+  if (list.length === 0) {
+    if (status === 'UPSOLVE' || status === 'UPSOLVE_TRIED') {
+      return '补题记录'
+    }
+    return '提交记录'
+  }
+  const upsolveN = list.filter(isUpsolveSubmit).length
+  const contestN = list.length - upsolveN
+  if (upsolveN > 0 && contestN > 0) {
+    return `共 ${list.length} 次（赛时 ${contestN} · 赛后 ${upsolveN}）`
+  }
+  if (upsolveN > 0) {
+    return `赛后补题 · 共 ${list.length} 次`
+  }
+  return `赛时提交 · 共 ${list.length} 次`
+}
+
 /**
  * 比赛详情：顶层 Tab 切换「站内榜 | 比赛题目」。
  * 站内榜为 XCPCIO 风格矩阵；题目区为 A/B/C + 题面/题解。
@@ -671,6 +699,7 @@ export function ContestDetails() {
                                       cell &&
                                       (cell.status === 'AC' ||
                                         cell.status === 'UPSOLVE' ||
+                                        cell.status === 'UPSOLVE_TRIED' ||
                                         cell.status === 'TRIED')
                                         ? () =>
                                             setCellDialog({
@@ -902,10 +931,15 @@ export function ContestDetails() {
             <DialogDescription>
               {cellDialog?.status === 'UPSOLVE'
                 ? '补题通过（不计入榜单）'
-                : '赛时提交记录'}
-              {cellSubmits.length > 0
-                ? ` · 共 ${cellSubmits.length} 次`
-                : ''}
+                : cellDialog?.status === 'UPSOLVE_TRIED'
+                  ? '补题暂未通过（不计入榜单）'
+                  : null}
+              {cellDialog?.status === 'UPSOLVE' ||
+              cellDialog?.status === 'UPSOLVE_TRIED'
+                ? cellSubmits.length > 0
+                  ? ` · ${cellSubmitsSummary(cellDialog?.status, cellSubmits)}`
+                  : ''
+                : cellSubmitsSummary(cellDialog?.status, cellSubmits)}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[min(60vh,28rem)] overflow-y-auto px-0">
@@ -919,9 +953,10 @@ export function ContestDetails() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-20">赛时</TableHead>
+                    <TableHead className="w-16">时段</TableHead>
+                    <TableHead className="min-w-[5.5rem]">时间</TableHead>
                     <TableHead>状态</TableHead>
-                    <TableHead className="w-24">语言</TableHead>
+                    <TableHead className="w-20">语言</TableHead>
                     <TableHead className="w-16 text-right">代码</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -937,12 +972,27 @@ export function ContestDetails() {
                       s.contest || '',
                       s.submitId,
                     )
+                    const post = isUpsolveSubmit(s)
                     return (
                       <TableRow key={s.id || `${s.submitId}-${s.time}`}>
+                        <TableCell>
+                          <Badge
+                            variant={post ? 'secondary' : 'outline'}
+                            className={cn(
+                              'font-normal',
+                              post &&
+                                'bg-sky-500/15 text-sky-700 dark:text-sky-400',
+                            )}
+                          >
+                            {post ? '赛后' : '赛时'}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="tabular-nums text-muted-foreground">
-                          {s.relativeSec != null
-                            ? formatRelativeSec(s.relativeSec) || '—'
-                            : formatTime(s.time)}
+                          {post
+                            ? formatTime(s.time) || '—'
+                            : s.relativeSec != null
+                              ? formatRelativeSec(s.relativeSec) || '—'
+                              : formatTime(s.time) || '—'}
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={s.status} />
@@ -988,16 +1038,15 @@ export function ContestDetails() {
                   {!cellSubmits.length && (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         className="py-8 text-center text-muted-foreground"
                       >
-                        {cellDialog?.status === 'UPSOLVE'
-                          ? '这题是补题通过'
-                          : '暂无赛时提交记录'}
+                        暂时没有提交记录
                         <p className="mt-1 text-xs">
-                          {cellDialog?.status === 'UPSOLVE'
-                            ? '补题不计入 AC 与罚时；赛后提交明细会在后续版本展示'
-                            : '可能尚未同步到本站，或该题只有榜单汇总'}
+                          {cellDialog?.status === 'UPSOLVE' ||
+                          cellDialog?.status === 'UPSOLVE_TRIED'
+                            ? '补题不计入榜单分数；记录可能还没同步到本站'
+                            : '可能还没同步到本站，或该题只有榜单汇总'}
                         </p>
                       </TableCell>
                     </TableRow>

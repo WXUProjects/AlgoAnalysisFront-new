@@ -240,7 +240,7 @@ export async function getContestBoard(params: {
   }
 }
 
-/** 站内榜格子：用户本场该题赛时提交明细 */
+/** 站内榜格子：用户本场该题提交明细（赛时 + 赛后，phase 区分） */
 export async function getContestCellSubmits(params: {
   contestId: string | number
   userId: number
@@ -263,25 +263,35 @@ export async function getContestCellSubmits(params: {
     ? (raw.list as Record<string, unknown>[])
     : []
   const contestRaw = (raw.contest as Record<string, unknown>) || null
-  const list: ContestCellSubmitItem[] = listRaw.map((r) => ({
-    id: num(r.id),
-    submitId: str(r.submitId),
-    status: str(r.status),
-    lang: str(r.lang),
-    time: num(r.time),
-    relativeSec:
-      r.relativeSec !== undefined && r.relativeSec !== null
-        ? num(r.relativeSec)
-        : undefined,
-    problem: str(r.problem),
-    contest: str(r.contest),
-    externalId: str(r.externalId) || undefined,
-    platform: str(r.platform) || undefined,
-    problemId:
-      r.problemId !== undefined && r.problemId !== null
-        ? num(r.problemId)
-        : undefined,
-  }))
+  const list: ContestCellSubmitItem[] = listRaw.map((r) => {
+    const phaseRaw = str(r.phase)
+    const phase =
+      phaseRaw === 'upsolve' || phaseRaw === 'contest'
+        ? phaseRaw
+        : r.relativeSec !== undefined && r.relativeSec !== null
+          ? 'contest'
+          : undefined
+    return {
+      id: num(r.id),
+      submitId: str(r.submitId),
+      status: str(r.status),
+      lang: str(r.lang),
+      time: num(r.time),
+      relativeSec:
+        r.relativeSec !== undefined && r.relativeSec !== null
+          ? num(r.relativeSec)
+          : undefined,
+      phase,
+      problem: str(r.problem),
+      contest: str(r.contest),
+      externalId: str(r.externalId) || undefined,
+      platform: str(r.platform) || undefined,
+      problemId:
+        r.problemId !== undefined && r.problemId !== null
+          ? num(r.problemId)
+          : undefined,
+    }
+  })
   return {
     ...res,
     data: {

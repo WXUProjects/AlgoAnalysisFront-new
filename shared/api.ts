@@ -813,7 +813,7 @@ export interface ContestBoardData {
   total: number
 }
 
-/** 站内榜格子弹窗：单条赛时提交 */
+/** 站内榜格子弹窗：单条提交（赛时或赛后） */
 export interface ContestCellSubmitItem {
   id: number
   submitId: string
@@ -821,7 +821,10 @@ export interface ContestCellSubmitItem {
   lang: string
   /** unix 秒 */
   time: number
+  /** 仅赛时：相对开赛秒 */
   relativeSec?: number
+  /** contest=赛时 | upsolve=赛后补题 */
+  phase?: 'contest' | 'upsolve' | string
   problem: string
   contest: string
   externalId?: string
