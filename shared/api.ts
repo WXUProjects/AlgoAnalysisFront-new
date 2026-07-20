@@ -764,10 +764,11 @@ export interface ContestRankingItem {
 export interface ContestBoardCell {
   label: string
   externalId?: string
-  /** AC | TRIED | NONE */
+  /** AC=赛时通过 | UPSOLVE=补题（不计分） | TRIED | NONE */
   status: string
   /** AC 前错误次数；未 AC 为尝试次数 */
   attempts: number
+  /** 仅赛时 AC 有相对开赛秒；补题格一般为空 */
   relativeSec?: number
   firstAcAt?: number
   scoreDelta?: number

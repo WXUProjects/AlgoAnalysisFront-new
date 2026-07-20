@@ -137,12 +137,14 @@ export function ContestDetails() {
     searchParams.get('tab') === 'problems' ? 'problems' : 'board',
   )
 
-  /** 格子弹窗：某用户某题的赛时提交 */
+  /** 格子弹窗：某用户某题的提交明细 */
   const [cellDialog, setCellDialog] = useState<{
     userId: number
     userName: string
     label: string
     externalId?: string
+    /** AC | UPSOLVE | TRIED */
+    status?: string
   } | null>(null)
   const [cellSubmits, setCellSubmits] = useState<ContestCellSubmitItem[]>([])
   const [cellSubmitsLoading, setCellSubmitsLoading] = useState(false)
@@ -199,7 +201,16 @@ export function ContestDetails() {
         })
         return
       }
-      setCellSubmits(res.data.list)
+      // 赛时提交按时间逆序（新→旧）
+      const sorted = [...res.data.list].sort((a, b) => {
+        const ta = a.time || 0
+        const tb = b.time || 0
+        if (tb !== ta) return tb - ta
+        const ra = a.relativeSec ?? 0
+        const rb = b.relativeSec ?? 0
+        return rb - ra
+      })
+      setCellSubmits(sorted)
       setCellDialogMeta({
         platform: res.data.platform || contest?.platform || '',
         userName: res.data.userName || cellDialog.userName,
@@ -237,7 +248,12 @@ export function ContestDetails() {
     const detail =
       res.data.hasCellDetail ??
       res.data.rows.some((r) =>
-        r.cells.some((c) => c.status === 'AC' || c.status === 'TRIED'),
+        r.cells.some(
+          (c) =>
+            c.status === 'AC' ||
+            c.status === 'UPSOLVE' ||
+            c.status === 'TRIED',
+        ),
       )
     setHasCellDetail(Boolean(detail))
     setTotal(res.data.total)
@@ -475,13 +491,35 @@ export function ContestDetails() {
               <CardDescription>
                 {scoring === 'leetcode'
                   ? hasCellDetail
-                    ? '按得分排序；绿色为通过用时，红色为失败次数。点格子可看赛时提交'
+                    ? '按得分排序。绿色是赛时通过，蓝色是补题（不计入得分），红色是失败次数。点格子可看提交'
                     : '本场暂无逐题明细，只显示得分'
                   : hasCellDetail
-                    ? '绿色为通过用时，红色为尝试次数。点格子可看赛时提交'
+                    ? '绿色是赛时通过用时，蓝色是补题（不计入 AC/罚时），红色是尝试次数。点格子可看提交'
                     : '本场暂无逐题明细，只显示通过题数'}
                 {followingOnly ? ' · 仅看关注' : ''}
               </CardDescription>
+              {hasCellDetail ? (
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex size-5 items-center justify-center rounded bg-emerald-500/15 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                      ✓
+                    </span>
+                    赛时通过
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex size-5 items-center justify-center rounded bg-sky-500/15 text-[10px] font-semibold text-sky-700 dark:text-sky-400">
+                      ✓
+                    </span>
+                    补题
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex size-5 items-center justify-center rounded bg-rose-500/15 text-[10px] font-semibold text-rose-700 dark:text-rose-400">
+                      1
+                    </span>
+                    尝试未过
+                  </span>
+                </div>
+              ) : null}
             </CardHeader>
             <CardContent className="p-0">
               {loading ? (
@@ -525,7 +563,10 @@ export function ContestDetails() {
                         const rowDetail =
                           row.hasDetail !== false &&
                           row.cells.some(
-                            (c) => c.status === 'AC' || c.status === 'TRIED',
+                            (c) =>
+                              c.status === 'AC' ||
+                              c.status === 'UPSOLVE' ||
+                              c.status === 'TRIED',
                           )
                         return (
                           <TableRow key={row.userId}>
@@ -591,6 +632,7 @@ export function ContestDetails() {
                                     onClick={
                                       cell &&
                                       (cell.status === 'AC' ||
+                                        cell.status === 'UPSOLVE' ||
                                         cell.status === 'TRIED')
                                         ? () =>
                                             setCellDialog({
@@ -602,6 +644,7 @@ export function ContestDetails() {
                                                 cell.externalId ||
                                                 p.externalId ||
                                                 undefined,
+                                              status: cell.status,
                                             })
                                         : undefined
                                     }
@@ -819,7 +862,9 @@ export function ContestDetails() {
                 : ''}
             </DialogTitle>
             <DialogDescription>
-              赛时提交记录
+              {cellDialog?.status === 'UPSOLVE'
+                ? '补题通过（不计入榜单）'
+                : '赛时提交记录'}
               {cellSubmits.length > 0
                 ? ` · 共 ${cellSubmits.length} 次`
                 : ''}
@@ -908,9 +953,13 @@ export function ContestDetails() {
                         colSpan={4}
                         className="py-8 text-center text-muted-foreground"
                       >
-                        暂无赛时提交记录
+                        {cellDialog?.status === 'UPSOLVE'
+                          ? '这题是补题通过'
+                          : '暂无赛时提交记录'}
                         <p className="mt-1 text-xs">
-                          可能尚未同步到本站，或该题只有榜单汇总
+                          {cellDialog?.status === 'UPSOLVE'
+                            ? '补题不计入 AC 与罚时；赛后提交明细会在后续版本展示'
+                            : '可能尚未同步到本站，或该题只有榜单汇总'}
                         </p>
                       </TableCell>
                     </TableRow>
@@ -967,6 +1016,33 @@ function BoardCellView({
         <span className="font-semibold tabular-nums leading-tight">
           {timeStr || '✓'}
         </span>
+        {fail ? (
+          <span className="text-[10px] leading-none tabular-nums">{fail}</span>
+        ) : null}
+      </button>
+    )
+  }
+  // 补题：赛后首次 AC，不计入 AC 数与罚时
+  if (cell.status === 'UPSOLVE') {
+    const fail =
+      cell.attempts > 0 ? (
+        <span className="opacity-80">(-{cell.attempts})</span>
+      ) : null
+    return (
+      <button
+        type="button"
+        disabled={!clickable}
+        onClick={onClick}
+        className={cn(
+          'mx-auto flex min-h-9 min-w-[2.75rem] flex-col items-center justify-center rounded-md px-1 py-0.5',
+          'bg-sky-500/15 text-sky-700 dark:text-sky-400',
+          clickable &&
+            'cursor-pointer transition-colors hover:bg-sky-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          !clickable && 'cursor-default',
+        )}
+        title={clickable ? '补题通过（不计入榜单）' : '补题通过'}
+      >
+        <span className="font-semibold leading-tight">✓</span>
         {fail ? (
           <span className="text-[10px] leading-none tabular-nums">{fail}</span>
         ) : null}
