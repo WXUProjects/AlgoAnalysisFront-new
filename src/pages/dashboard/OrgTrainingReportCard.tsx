@@ -9,17 +9,22 @@ import {
   statusLabel,
 } from '@/api/training-report'
 import type { GroupInfo, TrainingReportJob } from '@shared/api'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 
 /** AI 分析最长约 8 个月（与后端 MaxAIRangeDays=243 对齐） */
@@ -203,14 +208,14 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
       <CardHeader>
         <CardTitle className="text-base">导出训练报告</CardTitle>
         <CardDescription>
-          汇总全员活跃排行（剔除未提交）、题目标签、做题概览、提交动态、比赛、博客等。报告 HTML
-          自适应手机与电脑。可选 AI 多维分析（最长约 8 个月）；完成后邮件通知，24
-          小时内可下载。
+          一键汇总队员活跃排行、题目标签、做题概览、比赛与博客。报告可在手机和电脑上打开；可选用
+          AI 深度点评（最长约 8 个月）。生成完成后会发邮件，并在 24 小时内可下载。
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-col gap-4">
+        {/* 日期范围 */}
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="tr-start">开始日期</Label>
             <Input
               id="tr-start"
@@ -219,7 +224,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
               onChange={(e) => setStartDate(e.target.value)}
             />
           </div>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="tr-end">结束日期</Label>
             <Input
               id="tr-end"
@@ -230,26 +235,31 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
           </div>
         </div>
 
-        <div className="space-y-2">
+        {/* 范围选择 */}
+        <div className="flex flex-col gap-2">
           <Label>范围</Label>
           <Select value={groupId} onValueChange={setGroupId}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="整组织" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">整组织</SelectItem>
-              {groups.map((g) => (
-                <SelectItem key={g.id} value={String(g.id)}>
-                  {g.name || `组 #${g.id}`}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectLabel>选择范围</SelectLabel>
+                <SelectItem value="all">整组织</SelectItem>
+                {groups.map((g) => (
+                  <SelectItem key={g.id} value={String(g.id)}>
+                    {g.name || `组 #${g.id}`}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">默认整组织；选分组后只统计该组队员。</p>
         </div>
 
+        {/* AI 分析开关 */}
         <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-          <div className="space-y-0.5">
+          <div className="flex flex-col gap-0.5">
             <Label>启用 AI 分析</Label>
             <p className="text-xs text-muted-foreground">
               关闭：规则模板回填（全员活跃榜、标签、做题概览）。开启：AI 深度点评，最长约 8
@@ -259,6 +269,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
           <Switch checked={useAi} onCheckedChange={setUseAi} />
         </div>
 
+        {/* 操作按钮 */}
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => void onStart()} disabled={starting || !orgId}>
             {starting ? '提交中…' : busy ? '开始生成（有任务进行中）' : '开始生成'}
@@ -276,13 +287,17 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
           </Button>
         </div>
 
+        {/* 当前任务 */}
         {activeJob && (
           <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span>
-                当前任务：{statusLabel(activeJob.status)}
-                {activeJob.progress != null ? ` · ${activeJob.progress}%` : ''}
-                {activeJob.useAi ? ' · AI' : ''}
+              <span className="flex items-center gap-1.5">
+                当前任务：
+                <Badge variant={activeJob.status === 'done' ? 'default' : activeJob.status === 'failed' ? 'destructive' : 'secondary'}>
+                  {statusLabel(activeJob.status)}
+                  {activeJob.progress != null ? ` ${activeJob.progress}%` : ''}
+                </Badge>
+                {activeJob.useAi && <Badge variant="outline">AI</Badge>}
               </span>
               {(activeJob.downloadable || activeJob.status === 'done') && (
                 <Button size="sm" onClick={() => onDownload(activeJob.jobId)}>
@@ -304,7 +319,8 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
           </div>
         )}
 
-        <div className="space-y-2">
+        {/* 最近任务 */}
+        <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <Label>最近任务</Label>
             <Button
@@ -317,24 +333,35 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
             </Button>
           </div>
           {loadingJobs && jobs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">加载中…</p>
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 w-full" />
+              ))}
+            </div>
           ) : null}
           {!loadingJobs && jobs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">还没有导出记录。选好日期后点「开始生成」。</p>
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>还没有导出记录</EmptyTitle>
+                <EmptyDescription>
+                  选好日期范围后点「开始生成」，第一份报告会出现在这里。
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : null}
-          <ul className="space-y-2">
+          <ul className="flex flex-col gap-2">
             {jobs.map((j) => (
               <li
                 key={j.jobId}
                 className="flex flex-wrap items-center justify-between gap-2 rounded border px-3 py-2 text-sm"
               >
                 <div className="min-w-0">
-                  <div>
-                    {j.startDate} ~ {j.endDate}
-                    <span className="ml-2 text-muted-foreground">{statusLabel(j.status)}</span>
-                    {j.useAi ? (
-                      <span className="ml-1 text-xs text-muted-foreground">AI</span>
-                    ) : null}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-muted-foreground">{j.startDate} ~ {j.endDate}</span>
+                    <Badge variant={j.status === 'done' ? 'default' : j.status === 'failed' ? 'destructive' : 'secondary'}>
+                      {statusLabel(j.status)}
+                    </Badge>
+                    {j.useAi && <Badge variant="outline">AI</Badge>}
                   </div>
                   {j.expiresAt && (j.status === 'done' || j.downloadable) ? (
                     <div className="text-xs text-muted-foreground">

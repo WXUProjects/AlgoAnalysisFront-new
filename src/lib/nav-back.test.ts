@@ -8,6 +8,7 @@ describe('nav-back', () => {
     assert.equal(isMobileNavRoot('/discover'), true)
     assert.equal(isMobileNavRoot('/contest'), true)
     assert.equal(isMobileNavRoot('/admin'), true)
+    assert.equal(isMobileNavRoot('/admin/statistics'), true)
     assert.equal(isMobileNavRoot('/profile'), true)
   })
 
@@ -15,6 +16,7 @@ describe('nav-back', () => {
     assert.equal(isMobileNavRoot('/contest/12'), false)
     assert.equal(isMobileNavRoot('/question-bank/detail/1'), false)
     assert.equal(isMobileNavRoot('/admin/user'), false)
+    assert.equal(isMobileNavRoot('/admin/group'), false)
     assert.equal(isMobileNavRoot('/profile/alice'), false)
   })
 

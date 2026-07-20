@@ -35,6 +35,8 @@ export function isMobileNavRoot(pathname: string): boolean {
   if (TOP_LEVEL.has(path)) return true
   // /profile 自己的资料是入口；/profile/xxx 是别人资料，可返回
   if (path === '/profile') return true
+  // 后台默认落地页 /admin → statistics，与 /admin 同视为管理入口根
+  if (path === '/admin/statistics') return true
   return false
 }
 

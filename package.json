@@ -12,7 +12,7 @@
     "test:motion": "tsx --test src/lib/motion.test.ts",
     "test:blog": "tsx --test src/lib/blog-image.test.ts src/lib/blog-theme.test.ts src/lib/markdown-summary.test.ts src/lib/markdown-katex.test.ts src/lib/markdown-code-copy.test.ts",
     "test:roles": "tsx --test src/lib/roles.test.ts",
-    "test": "tsx --test src/lib/discover-feed.test.ts src/lib/motion.test.ts src/lib/blog-image.test.ts src/lib/blog-theme.test.ts src/lib/markdown-summary.test.ts src/lib/markdown-katex.test.ts src/lib/markdown-code-copy.test.ts src/lib/roles.test.ts"
+    "test": "tsx --test src/lib/discover-feed.test.ts src/lib/motion.test.ts src/lib/blog-image.test.ts src/lib/blog-theme.test.ts src/lib/markdown-summary.test.ts src/lib/markdown-katex.test.ts src/lib/markdown-code-copy.test.ts src/lib/roles.test.ts src/components/mobile-org-switcher.test.ts src/lib/dashboard-metrics.test.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.2",

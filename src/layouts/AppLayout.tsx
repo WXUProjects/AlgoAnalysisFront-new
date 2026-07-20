@@ -32,6 +32,7 @@ import { DomainHintSync } from '@/components/domain-hint-sync'
 import { GsapPageTransition } from '@/components/gsap-page-transition'
 import { MainBottomNav } from '@/components/main-bottom-nav'
 import { MobileNavBack } from '@/components/mobile-nav-back'
+import { formatOrgSwitchLabel, MobileOrgSwitcher } from '@/components/mobile-org-switcher'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { EmergencyDialogHost } from '@/components/emergency-dialog'
 import { NotificationInbox } from '@/components/notification-inbox'
@@ -394,8 +395,7 @@ function AppLayoutInner() {
                   <SelectContent>
                   {orgs.map((o) => (
                     <SelectItem key={o.id} value={String(o.id)}>
-                      {o.name}
-                      {o.myRole === 'org_admin' ? ' · 管理' : ''}
+                      {formatOrgSwitchLabel(o.name, o.myRole)}
                     </SelectItem>
                   ))}
                   </SelectContent>
@@ -462,31 +462,17 @@ function AppLayoutInner() {
             <MobileNavBack />
             <SidebarTrigger className="-ml-1 hidden md:flex" />
             <Separator orientation="vertical" className="mr-2 hidden h-4 md:block" />
-            <AnimatedTitle className="min-w-0 flex-1 truncate text-base font-semibold">
+            <AnimatedTitle className="min-w-0 flex-1 truncate text-base font-semibold max-[320px]:hidden">
               {title}
             </AnimatedTitle>
             {/* 移动端：紧凑组织切换（桌面由 SidebarFooter 提供） */}
             {isLogin && orgs.length > 0 && (
-              <Select
-                value={String(user?.orgId || currentOrg?.id || '')}
-                onValueChange={(value) => void handleSwitchOrg(Number(value))}
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="ml-auto h-11 max-w-[120px] text-xs md:hidden"
-                  aria-label="切换当前组织"
-                >
-                  <SelectValue placeholder="组织" />
-                </SelectTrigger>
-                <SelectContent>
-                  {orgs.map((o) => (
-                    <SelectItem key={o.id} value={String(o.id)}>
-                      {o.name}
-                      {o.myRole === 'org_admin' ? ' · 管' : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MobileOrgSwitcher
+                orgs={orgs}
+                currentOrgId={user?.orgId || currentOrg?.id}
+                isSiteAdmin={isSiteAdmin}
+                onSwitch={(id) => void handleSwitchOrg(id)}
+              />
             )}
             <div className="flex shrink-0 items-center gap-1">
               <NotificationInbox enabled={isLogin} />
