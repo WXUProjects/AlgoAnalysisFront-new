@@ -248,7 +248,7 @@ function AppLayoutInner() {
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem {...(!isStaff ? { 'data-bottom-nav': 'true' } : {})}>
+                  <SidebarMenuItem data-bottom-nav="true">
                     <SidebarMenuButton
                       asChild
                       isActive={
@@ -496,8 +496,21 @@ function AppLayoutInner() {
               </Link>
             </div>
           )}
-          <main data-app-scroll-container="" className={cn("flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none md:pb-0", !isAuthPage && "pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))]")}>
-            <div className="flex min-h-full min-w-0 flex-1 flex-col">
+          <main
+            data-app-scroll-container=""
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none"
+          >
+            {/*
+              底栏留白放在 min-h-full 内容盒内部（而非 main 上），
+              这样 mt-auto 的页脚会落在固定底栏上方，而不是被挡住后还要多滚一段。
+            */}
+            <div
+              className={cn(
+                'flex min-h-full min-w-0 flex-1 flex-col',
+                !isAuthPage &&
+                  'pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0',
+              )}
+            >
               <GsapPageTransition>
                 <Outlet />
               </GsapPageTransition>

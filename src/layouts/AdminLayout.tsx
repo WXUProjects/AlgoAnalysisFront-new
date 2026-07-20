@@ -23,7 +23,6 @@ import { useAuth } from '@/auth/AuthContext'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { resolvePageTitle } from '@/lib/page-title'
 import { staffNavLabel } from '@/lib/roles'
-import { cn } from '@/lib/utils'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AnimatedTitle } from '@/components/animated-title'
 import { DomainHintSync } from '@/components/domain-hint-sync'
@@ -524,13 +523,10 @@ function AdminLayoutInner() {
 
         <main
           data-app-scroll-container=""
-          className={cn(
-            'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none',
-            // 与前台一致：为固定底栏 + 安全区留白
-            'pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0',
-          )}
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none"
         >
-          <div className="flex min-h-full min-w-0 flex-1 flex-col">
+          {/* 底栏留白在内容盒内，避免页脚被固定底栏遮挡 */}
+          <div className="flex min-h-full min-w-0 flex-1 flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
             <GsapPageTransition>
               <Outlet />
             </GsapPageTransition>
@@ -538,7 +534,7 @@ function AdminLayoutInner() {
           </div>
         </main>
 
-        {/* 与前台同一套底栏：首页 / 发现 / 教练管理 / 题库 / 更多 */}
+        {/* 与前台同一套底栏：staff 为 首页/发现/比赛/题库/管理/更多 */}
         <MainBottomNav
           isLogin
           isStaff={isStaff}
