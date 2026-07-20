@@ -764,7 +764,7 @@ export interface ContestRankingItem {
 export interface ContestBoardCell {
   label: string
   externalId?: string
-  /** AC=赛时通过 | UPSOLVE=补题（不计分） | TRIED | NONE */
+  /** AC=赛时通过 | UPSOLVE=补题通过 | UPSOLVE_TRIED=补题未过 | TRIED=赛时未过 | NONE */
   status: string
   /** AC 前错误次数；未 AC 为尝试次数 */
   attempts: number
@@ -792,6 +792,8 @@ export interface ContestBoardRow {
   acCount: number
   /** 是否有逐题 AC/尝试明细 */
   hasDetail?: boolean
+  /** true=有赛时参赛记录；false=仅赛后补题 */
+  isContestant?: boolean
   cells: ContestBoardCell[]
 }
 

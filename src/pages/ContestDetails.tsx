@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Link,
   useLocation,
@@ -119,6 +119,7 @@ export function ContestDetails() {
   const [groups, setGroups] = useState<GroupInfo[]>([])
   const [groupId, setGroupId] = useState<number | undefined>(undefined)
   const [followingOnly, setFollowingOnly] = useState(false)
+  const [contestOnly, setContestOnly] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const [problems, setProblems] = useState<ContestProblemItem[]>([])
@@ -252,7 +253,7 @@ export function ContestDetails() {
           (c) =>
             c.status === 'AC' ||
             c.status === 'UPSOLVE' ||
-            c.status === 'TRIED',
+            c.status === 'TRIED' || c.status === 'UPSOLVE_TRIED',
         ),
       )
     setHasCellDetail(Boolean(detail))
@@ -297,7 +298,29 @@ export function ContestDetails() {
     void loadProblems()
   }, [loadProblems])
 
-  const pageRows = boardRows.slice((page - 1) * pageSize, page * pageSize)
+  const visibleRows = useMemo(
+    () =>
+      boardRows
+        .filter((row) => !contestOnly || row.isContestant !== false)
+        .map((row) =>
+          !contestOnly
+            ? row
+            : {
+                ...row,
+                cells: row.cells.map((cell) =>
+                  cell.status === 'UPSOLVE' || cell.status === 'UPSOLVE_TRIED'
+                    ? { ...cell, status: 'NONE' }
+                    : cell,
+              ),
+            },
+        ),
+    [boardRows, contestOnly],
+  )
+  const pageRows = visibleRows.slice((page - 1) * pageSize, page * pageSize)
+
+  useEffect(() => {
+    setPage(1)
+  }, [contestOnly, setPage])
   const colProblems = !hasCellDetail
     ? []
     : boardProblems.length > 0
@@ -483,6 +506,14 @@ export function ContestDetails() {
                 {followingOnly ? '只看关注 · 开' : '只看关注'}
               </Button>
             )}
+            <Button
+              type="button"
+              size="sm"
+              variant={contestOnly ? 'default' : 'outline'}
+              onClick={() => setContestOnly((v) => !v)}
+            >
+              {contestOnly ? '仅赛时 · 开' : '仅赛时'}
+            </Button>
           </div>
 
           <Card className="gap-0 overflow-hidden py-0">
@@ -491,10 +522,10 @@ export function ContestDetails() {
               <CardDescription>
                 {scoring === 'leetcode'
                   ? hasCellDetail
-                    ? '按得分排序。绿色是赛时通过，蓝色是补题（不计入得分），红色是失败次数。点格子可看提交'
+                    ? '绿色是赛时通过，蓝色是补题通过，橙色是补题未过，红色是赛时未过。补题不计分'
                     : '本场暂无逐题明细，只显示得分'
                   : hasCellDetail
-                    ? '绿色是赛时通过用时，蓝色是补题（不计入 AC/罚时），红色是尝试次数。点格子可看提交'
+                    ? '绿色是赛时通过，蓝色是补题通过，橙色是补题未过，红色是赛时未过。补题不计入 AC/罚时'
                     : '本场暂无逐题明细，只显示通过题数'}
                 {followingOnly ? ' · 仅看关注' : ''}
               </CardDescription>
@@ -511,6 +542,12 @@ export function ContestDetails() {
                       ✓
                     </span>
                     补题
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex size-5 items-center justify-center rounded bg-orange-500/15 text-[10px] font-semibold text-orange-700 dark:text-orange-400">
+                      ×
+                    </span>
+                    补题未过
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <span className="inline-flex size-5 items-center justify-center rounded bg-rose-500/15 text-[10px] font-semibold text-rose-700 dark:text-rose-400">
@@ -566,6 +603,7 @@ export function ContestDetails() {
                             (c) =>
                               c.status === 'AC' ||
                               c.status === 'UPSOLVE' ||
+                              c.status === 'UPSOLVE_TRIED' ||
                               c.status === 'TRIED',
                           )
                         return (
@@ -678,7 +716,7 @@ export function ContestDetails() {
 
           <Pagination
             page={page}
-            total={total}
+            total={contestOnly ? visibleRows.length : total}
             pageSize={pageSize}
             onChange={setPage}
             onPageSizeChange={setPageSize}
@@ -1046,6 +1084,26 @@ function BoardCellView({
         {fail ? (
           <span className="text-[10px] leading-none tabular-nums">{fail}</span>
         ) : null}
+      </button>
+    )
+  }
+  // 赛后有提交但尚未通过，不计入赛时榜。
+  if (cell.status === 'UPSOLVE_TRIED') {
+    return (
+      <button
+        type="button"
+        disabled={!clickable}
+        onClick={onClick}
+        className={cn(
+          'mx-auto flex min-h-9 min-w-[2.75rem] items-center justify-center rounded-md px-1 py-0.5',
+          'bg-orange-500/15 text-orange-700 dark:text-orange-400',
+          clickable &&
+            'cursor-pointer transition-colors hover:bg-orange-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          !clickable && 'cursor-default',
+        )}
+        title="补题暂未通过（不计入榜单）"
+      >
+        <span className="font-semibold">×</span>
       </button>
     )
   }
