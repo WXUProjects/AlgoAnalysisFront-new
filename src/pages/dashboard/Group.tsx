@@ -196,7 +196,7 @@ export function DashboardGroup() {
   const members: UserListItem[] = detail?.users || []
 
   return (
-    <PageShell className="grid gap-4 lg:grid-cols-[280px_1fr]">
+    <PageShell className="grid gap-4 grid-cols-1 lg:grid-cols-[280px_1fr]">
       <Card className="gap-2 py-3">
         <CardHeader className="flex flex-row items-center justify-between px-3 space-y-0">
           <CardTitle className="text-base">分组</CardTitle>
@@ -331,7 +331,7 @@ export function DashboardGroup() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
+                    <TableHead className="hidden sm:table-cell">ID</TableHead>
                     <TableHead>组织内名称</TableHead>
                     <TableHead>最后提交</TableHead>
                     <TableHead className="text-right">操作</TableHead>
@@ -340,7 +340,7 @@ export function DashboardGroup() {
                 <TableBody>
                   {members.map((m) => (
                     <TableRow key={m.userId}>
-                      <TableCell>{m.userId}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{m.userId}</TableCell>
                       <TableCell>{m.name || m.username}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {m.lastSubmit ? formatTime(m.lastSubmit) : '-'}

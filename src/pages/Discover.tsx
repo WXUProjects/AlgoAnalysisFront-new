@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import {
   ActivityIcon,
@@ -27,7 +28,6 @@ import { FeedScopeBar } from '@/pages/discover/FeedScopeBar'
 import { FeedStream } from '@/pages/discover/FeedStream'
 import { LeftRail } from '@/pages/discover/LeftRail'
 import {
-  DISCOVER_MOBILE_VIEW_LABEL,
   normalizeDiscoverMobileView,
   type DiscoverMobileView,
 } from '@/pages/discover/mobile-view'
@@ -37,14 +37,6 @@ import { RightSidebar } from '@/pages/discover/RightSidebar'
 import { DiscoverSearchResults } from '@/pages/discover/SearchResults'
 import type { FeedScope } from '@/pages/discover/types'
 import type { PeriodData } from '@shared/api'
-
-const VIEW_SUBTITLE: Record<DiscoverMobileView, string> = {
-  feed: '浏览推荐内容、提交动态与组织',
-  data: '刷题进度、热力图与能力画像',
-  hot: '近两天全站热门题目',
-  rank: '全站 AC / 提交排行',
-  contest: '即将开始的比赛',
-}
 
 /**
  * Discover：桌面三栏；移动端底栏切换全屏子页（发现/数据/热题/排行/赛事）。
@@ -161,8 +153,11 @@ export function Discover() {
       },
       { replace: true },
     )
-    // 切页后滚回顶部，更像独立页面
-    window.scrollTo(0, 0)
+    // 切页后滚回顶部：实际滚动容器是 AppLayout 的 main（overflow-y-auto），
+    // 而非 window，需精确查询。
+    document
+      .querySelector<HTMLElement>('[data-app-scroll-container]')
+      ?.scrollTo(0, 0)
   }
 
   function setTab(next: DiscoverTabKey) {
@@ -264,24 +259,14 @@ export function Discover() {
   const activeTab: DiscoverTabKey = otherUserMode ? 'feed' : tab
   const showFeedScope = activeTab === 'feed' && !otherUserMode
 
-  const headerTitle =
-    mobileView === 'feed'
-      ? '发现'
-      : DISCOVER_MOBILE_VIEW_LABEL[mobileView]
-
   return (
     <PageShell className="gap-3" stagger={false}>
       <section className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold tracking-tight">
-            <span className="lg:hidden">{headerTitle}</span>
-            <span className="hidden lg:inline">发现</span>
-          </h2>
+        {/* 标题/副标题：仅桌面显示，移动端由全局 Header 提供页面标题 */}
+        <div className="hidden min-w-0 lg:block">
+          <h2 className="text-lg font-semibold tracking-tight">发现</h2>
           <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
-            <span className="lg:hidden">{VIEW_SUBTITLE[mobileView]}</span>
-            <span className="hidden lg:inline">
-              浏览推荐内容、提交动态与组织
-            </span>
+            浏览推荐内容、提交动态与组织
           </p>
         </div>
         {/* 搜人：桌面始终显示；移动端仅在「发现」流 */}
@@ -362,7 +347,20 @@ export function Discover() {
         {mobileView === 'contest' ? <DiscoverContestPage /> : null}
       </div>
 
-      <DiscoverMobileDock view={mobileView} onViewChange={setMobileView} />
+      {/*
+        底部 Tab 占位：留在页面流中预留底部空间。
+        Dock 本体通过 Portal 渲染到 body，
+        逃出 GsapPageTransition 的 transform 上下文，
+        确保 position: fixed 相对视口定位。
+      */}
+      <div
+        aria-hidden
+        className="h-[calc(3.5rem+env(safe-area-inset-bottom,0px))] shrink-0 lg:hidden"
+      />
+      {createPortal(
+        <DiscoverMobileDock view={mobileView} onViewChange={setMobileView} />,
+        document.body,
+      )}
     </PageShell>
   )
 }

@@ -169,10 +169,10 @@ export function DashboardProblemEditReview() {
               <TableHeader>
                 <TableRow>
                   <TableHead>题目</TableHead>
-                  <TableHead>提交人</TableHead>
+                  <TableHead className="hidden sm:table-cell">提交人</TableHead>
                   <TableHead>改动</TableHead>
                   <TableHead>状态</TableHead>
-                  <TableHead>时间</TableHead>
+                  <TableHead className="hidden sm:table-cell">时间</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -192,7 +192,7 @@ export function DashboardProblemEditReview() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {item.userId ? (
                         <Link
                           to={`/profile?id=${item.userId}`}
@@ -215,7 +215,7 @@ export function DashboardProblemEditReview() {
                         {statusLabel(item.status)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
                       {formatTime(item.createdAt)}
                     </TableCell>
                     <TableCell className="text-right">

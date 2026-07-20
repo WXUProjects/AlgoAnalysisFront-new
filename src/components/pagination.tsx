@@ -96,7 +96,7 @@ export function Pagination({
           <span>
             共 {total} 条 · 第 {safePage}/{totalPages}
           </span>
-          <div className="flex items-center gap-1">
+          <div className="hidden sm:flex items-center gap-1">
             <Input
               type="number"
               min={1}

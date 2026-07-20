@@ -469,7 +469,7 @@ export function AppLayout() {
               </Link>
             </div>
           )}
-          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none">
+          <main data-app-scroll-container="" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none">
             <div className="flex min-h-full min-w-0 flex-1 flex-col">
               <GsapPageTransition>
                 <Outlet />

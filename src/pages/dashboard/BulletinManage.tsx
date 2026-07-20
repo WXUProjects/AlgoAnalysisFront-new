@@ -193,24 +193,24 @@ export function DashboardBulletinManage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-14">编号</TableHead>
+                  <TableHead className="w-14 hidden sm:table-cell">编号</TableHead>
                   <TableHead>标题</TableHead>
                   <TableHead>作者</TableHead>
                   <TableHead>置顶</TableHead>
-                  <TableHead>更新</TableHead>
+                  <TableHead className="hidden md:table-cell">更新</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {list.map((b) => (
-                  <TableRow key={b.id}>
-                    <TableCell>{b.id}</TableCell>
+                    <TableRow key={b.id}>
+                      <TableCell className="hidden sm:table-cell">{b.id}</TableCell>
                     <TableCell className="font-medium">{b.title}</TableCell>
                     <TableCell>{b.authorName}</TableCell>
                     <TableCell>
                       {b.isPinned ? <Badge>置顶</Badge> : '-'}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
                       {formatTime(b.updatedAt || b.createdAt)}
                     </TableCell>
                     <TableCell className="text-right">

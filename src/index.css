@@ -619,3 +619,13 @@
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+
+/* ── Mobile responsive helpers ── */
+
+/* Ensure tables with overflow-x-auto get a visual scroll hint on mobile */
+@media (max-width: 640px) {
+  [data-slot="table-container"] {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+}

@@ -668,7 +668,7 @@ function JobTable({
       <TableHeader>
         <TableRow>
           <TableHead>题目</TableHead>
-          <TableHead>平台</TableHead>
+          <TableHead className="hidden sm:table-cell">平台</TableHead>
           <TableHead>阶段</TableHead>
           {showError ? <TableHead className="min-w-40">原因</TableHead> : null}
           <TableHead>时间</TableHead>
@@ -697,7 +697,7 @@ function JobTable({
                   title
                 )}
               </TableCell>
-              <TableCell>{str(r.platform, '-')}</TableCell>
+              <TableCell className="hidden sm:table-cell">{str(r.platform, '-')}</TableCell>
               <TableCell>
                 <Badge variant="outline">{stage}</Badge>
               </TableCell>

@@ -864,12 +864,12 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       />
                     </TableHead>
                   )}
-                  <TableHead className="w-12" />
+                  <TableHead className="w-12 hidden sm:table-cell" />
                   <TableHead>{isSite ? '昵称' : '组织内名称'}</TableHead>
                   <TableHead>用户名</TableHead>
                   <TableHead>{isSite ? '所属组织' : '分组'}</TableHead>
-                  <TableHead className="w-[7.5rem]">日报</TableHead>
-                  <TableHead className="w-[7.5rem]">周报</TableHead>
+                  <TableHead className="w-[7.5rem] hidden md:table-cell">日报</TableHead>
+                  <TableHead className="w-[7.5rem] hidden md:table-cell">周报</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -895,7 +895,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                           />
                         </TableCell>
                       )}
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <Avatar className="size-8">
                           <AvatarImage src={u.avatar || undefined} />
                           <AvatarFallback>
@@ -970,7 +970,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                           groupName(u)
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <div className="flex flex-col gap-1">
                           {canToggleEmail ? (
                             <div className="flex items-center gap-2">
@@ -1001,7 +1001,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                           ) : null}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <div className="flex flex-col gap-1">
                           {canToggleEmail ? (
                             <div className="flex items-center gap-2">
@@ -1328,91 +1328,91 @@ function UserListPage({ scope }: { scope: UserScope }) {
                   </div>
                 )}
                 {isAdmin && !detailUser.dormant && (
-                    <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-                      <div className="flex flex-col gap-1">
-                        <p className="text-sm font-medium">冻结自动同步</p>
-                        <p className="text-xs text-muted-foreground">
-                          暂停此人的后台同步，不按组织约定或「始终同步」跳过。对方再次登录或你手动解除后会恢复。
-                        </p>
-                      </div>
-                      <div>
-                        <ConfirmDialog
-                          title="冻结自动同步？"
-                          description={`确定冻结「${detailUser.name || detailUser.username}」的自动同步？对方再次登录或你手动解除后会恢复。`}
-                          confirmLabel="确认冻结"
-                          loading={freezingDormant}
-                          onConfirm={() =>
-                            void handleForceDormant({
-                              userIds: [detailUser.userId],
-                            })
-                          }
-                        >
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={freezingDormant}
-                          >
-                            {freezingDormant ? '处理中…' : '立即冻结'}
-                          </Button>
-                        </ConfirmDialog>
-                      </div>
+                  <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-sm font-medium">冻结自动同步</p>
+                      <p className="text-xs text-muted-foreground">
+                        暂停此人的后台同步，不按组织约定或「始终同步」跳过。对方再次登录或你手动解除后会恢复。
+                      </p>
                     </div>
-                  )}
-                  {isAdmin && !detailUser.isSiteAdmin && (
-                    <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-                      <div className="flex flex-col gap-1">
-                        <p className="text-sm font-medium">
-                          {detailUser.disabled ? '启用账号' : '禁用账号'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {detailUser.disabled
-                            ? '启用后对方可重新登录。若此前被冻结同步，仍可按规则恢复。'
-                            : '禁用后对方无法登录，后台同步也会暂停。可随时在此重新启用。'}
-                        </p>
-                      </div>
-                      <div>
-                        <ConfirmDialog
-                          title={
-                            detailUser.disabled
-                              ? '启用该账号？'
-                              : '禁用该账号？'
-                          }
-                          description={
-                            detailUser.disabled
-                              ? `确定启用「${detailUser.name || detailUser.username}」？对方将可以重新登录。`
-                              : `确定禁用「${detailUser.name || detailUser.username}」？对方将无法登录，直到你重新启用。`
-                          }
-                          confirmLabel={
-                            detailUser.disabled ? '确认启用' : '确认禁用'
-                          }
-                          destructive={!detailUser.disabled}
-                          loading={togglingDisabled}
-                          onConfirm={() =>
-                            void handleSetDisabled(
-                              detailUser,
-                              !detailUser.disabled,
-                            )
-                          }
+                    <div>
+                      <ConfirmDialog
+                        title="冻结自动同步？"
+                        description={`确定冻结「${detailUser.name || detailUser.username}」的自动同步？对方再次登录或你手动解除后会恢复。`}
+                        confirmLabel="确认冻结"
+                        loading={freezingDormant}
+                        onConfirm={() =>
+                          void handleForceDormant({
+                            userIds: [detailUser.userId],
+                          })
+                        }
+                      >
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={freezingDormant}
                         >
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={
-                              detailUser.disabled ? 'secondary' : 'destructive'
-                            }
-                            disabled={togglingDisabled}
-                          >
-                            {togglingDisabled
-                              ? '处理中…'
-                              : detailUser.disabled
-                                ? '立即启用'
-                                : '立即禁用'}
-                          </Button>
-                        </ConfirmDialog>
-                      </div>
+                          {freezingDormant ? '处理中…' : '立即冻结'}
+                        </Button>
+                      </ConfirmDialog>
                     </div>
-                  )}
+                  </div>
+                )}
+                {isAdmin && !detailUser.isSiteAdmin && (
+                  <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-sm font-medium">
+                        {detailUser.disabled ? '启用账号' : '禁用账号'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {detailUser.disabled
+                          ? '启用后对方可重新登录。若此前被冻结同步，仍可按规则恢复。'
+                          : '禁用后对方无法登录，后台同步也会暂停。可随时在此重新启用。'}
+                      </p>
+                    </div>
+                    <div>
+                      <ConfirmDialog
+                        title={
+                          detailUser.disabled
+                            ? '启用该账号？'
+                            : '禁用该账号？'
+                        }
+                        description={
+                          detailUser.disabled
+                            ? `确定启用「${detailUser.name || detailUser.username}」？对方将可以重新登录。`
+                            : `确定禁用「${detailUser.name || detailUser.username}」？对方将无法登录，直到你重新启用。`
+                        }
+                        confirmLabel={
+                          detailUser.disabled ? '确认启用' : '确认禁用'
+                        }
+                        destructive={!detailUser.disabled}
+                        loading={togglingDisabled}
+                        onConfirm={() =>
+                          void handleSetDisabled(
+                            detailUser,
+                            !detailUser.disabled,
+                          )
+                        }
+                      >
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={
+                            detailUser.disabled ? 'secondary' : 'destructive'
+                          }
+                          disabled={togglingDisabled}
+                        >
+                          {togglingDisabled
+                            ? '处理中…'
+                            : detailUser.disabled
+                              ? '立即启用'
+                              : '立即禁用'}
+                        </Button>
+                      </ConfirmDialog>
+                    </div>
+                  </div>
+                )}
                 <Field orientation="horizontal">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <FieldLabel htmlFor="pipeline-fetch">抓取题面</FieldLabel>

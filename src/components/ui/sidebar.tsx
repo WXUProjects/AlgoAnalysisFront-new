@@ -166,6 +166,55 @@ function Sidebar({
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
 
+  const gapRef = React.useRef<HTMLDivElement>(null)
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const firstSidebarAnim = React.useRef(true)
+
+  React.useLayoutEffect(() => {
+    if (isMobile) return
+    const gap = gapRef.current
+    const container = containerRef.current
+    if (!gap || !container) return
+
+    const collapsed = state === "collapsed"
+    const isIcon = collapsed && collapsible === "icon"
+    const isOffcanvas = collapsed && collapsible === "offcanvas"
+    const expandedW = SIDEBAR_WIDTH
+    const iconW =
+      variant === "floating" || variant === "inset"
+        ? `calc(${SIDEBAR_WIDTH_ICON} + 1rem)`
+        : SIDEBAR_WIDTH_ICON
+    const gapTarget = isOffcanvas ? "0rem" : isIcon ? iconW : expandedW
+    const containerW = isIcon ? iconW : expandedW
+
+    const instant = prefersReducedMotion() || firstSidebarAnim.current
+    firstSidebarAnim.current = false
+    const dur = instant ? 0 : MOTION.duration.sidebar
+    const ease = MOTION.ease.sheet
+
+    gsap.killTweensOf([gap, container])
+    gsap.to(gap, { width: gapTarget, duration: dur, ease, overwrite: true })
+
+    const edge =
+      side === "left"
+        ? {
+            left: isOffcanvas ? `-${SIDEBAR_WIDTH}` : "0rem",
+            right: "auto",
+          }
+        : {
+            right: isOffcanvas ? `-${SIDEBAR_WIDTH}` : "0rem",
+            left: "auto",
+          }
+
+    gsap.to(container, {
+      width: containerW,
+      ...edge,
+      duration: dur,
+      ease,
+      overwrite: true,
+    })
+  }, [isMobile, state, collapsible, variant, side])
+
   if (collapsible === "none") {
     return (
       <div
@@ -212,54 +261,6 @@ function Sidebar({
       </Sheet>
     )
   }
-
-  const gapRef = React.useRef<HTMLDivElement>(null)
-  const containerRef = React.useRef<HTMLDivElement>(null)
-  const firstSidebarAnim = React.useRef(true)
-
-  React.useLayoutEffect(() => {
-    const gap = gapRef.current
-    const container = containerRef.current
-    if (!gap || !container) return
-
-    const collapsed = state === "collapsed"
-    const isIcon = collapsed && collapsible === "icon"
-    const isOffcanvas = collapsed && collapsible === "offcanvas"
-    const expandedW = SIDEBAR_WIDTH
-    const iconW =
-      variant === "floating" || variant === "inset"
-        ? `calc(${SIDEBAR_WIDTH_ICON} + 1rem)`
-        : SIDEBAR_WIDTH_ICON
-    const gapTarget = isOffcanvas ? "0rem" : isIcon ? iconW : expandedW
-    const containerW = isIcon ? iconW : expandedW
-
-    const instant = prefersReducedMotion() || firstSidebarAnim.current
-    firstSidebarAnim.current = false
-    const dur = instant ? 0 : MOTION.duration.sidebar
-    const ease = MOTION.ease.sheet
-
-    gsap.killTweensOf([gap, container])
-    gsap.to(gap, { width: gapTarget, duration: dur, ease, overwrite: true })
-
-    const edge =
-      side === "left"
-        ? {
-            left: isOffcanvas ? `-${SIDEBAR_WIDTH}` : "0rem",
-            right: "auto",
-          }
-        : {
-            right: isOffcanvas ? `-${SIDEBAR_WIDTH}` : "0rem",
-            left: "auto",
-          }
-
-    gsap.to(container, {
-      width: containerW,
-      ...edge,
-      duration: dur,
-      ease,
-      overwrite: true,
-    })
-  }, [state, collapsible, variant, side])
 
   return (
     <div
