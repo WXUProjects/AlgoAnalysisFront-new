@@ -123,9 +123,15 @@ export function OrgInvite() {
           ) : (
             <>
               <div className="flex justify-center">
-                <Avatar className="size-16">
-                  {brandLogo ? <AvatarImage src={brandLogo} alt="" /> : null}
-                  <AvatarFallback className="text-lg">
+                <Avatar className="size-16 rounded-xl bg-muted">
+                  {brandLogo ? (
+                    <AvatarImage
+                      src={brandLogo}
+                      alt=""
+                      className="object-contain p-1.5"
+                    />
+                  ) : null}
+                  <AvatarFallback className="rounded-xl text-lg">
                     {(orgName || '组').slice(0, 1)}
                   </AvatarFallback>
                 </Avatar>

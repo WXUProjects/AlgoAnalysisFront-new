@@ -7,6 +7,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
+import { createPortal } from 'react-dom'
 import type { HeatmapItem } from '@shared/api'
 import { cn } from '@/lib/utils'
 import {
@@ -283,16 +284,18 @@ export function HeatmapSimple({
         </div>
       </div>
 
-      {tip && (
-        <div
-          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full rounded-md border bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md"
-          style={{ left: tip.x, top: tip.y - 6 }}
-        >
-          <span className="font-medium">{tip.key}</span>
-          <span className="mx-1.5 opacity-50">·</span>
-          <span>{tip.count} 次</span>
-        </div>
-      )}
+      {tip &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full rounded-md border bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md"
+            style={{ left: tip.x, top: tip.y - 6 }}
+          >
+            <span className="font-medium">{tip.key}</span>
+            <span className="mx-1.5 opacity-50">·</span>
+            <span>{tip.count} 次</span>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

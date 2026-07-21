@@ -166,9 +166,13 @@ export function OrgsPanel({
               list.map((o) => (
                 <Card key={o.id} className="gap-3 py-4 shadow-none">
                   <CardHeader className="flex flex-row items-start gap-3 px-4">
-                    <Avatar className="size-12">
-                      <AvatarImage src={o.brandLogo || undefined} alt="" />
-                      <AvatarFallback>
+                    <Avatar className="size-12 rounded-lg bg-muted">
+                      <AvatarImage
+                        src={o.brandLogo || undefined}
+                        alt=""
+                        className="object-contain p-1"
+                      />
+                      <AvatarFallback className="rounded-lg">
                         <Building2Icon className="size-5 opacity-60" />
                       </AvatarFallback>
                     </Avatar>
