@@ -898,7 +898,8 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
       "platform": "LuoGu",
       "externalId": "P1001",
       "userStatus": "AC|TRIED|",
-      "sortOrder": 1
+      "sortOrder": 1,
+      "tags": ["动态规划", "字符串"]
     }
   ]
 }

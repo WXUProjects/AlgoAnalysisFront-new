@@ -9,6 +9,16 @@ import {
 } from '@shared/api'
 import { get, post, num, str, bool, type ApiResult } from '@/lib/http'
 
+function normalizeTags(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  const out: string[] = []
+  for (const t of raw) {
+    const s = typeof t === 'string' ? t.trim() : String(t ?? '').trim()
+    if (s) out.push(s)
+  }
+  return out
+}
+
 function normalizeItem(raw: Record<string, unknown>): ProblemsetItemInfo {
   return {
     id: num(raw.id),
@@ -22,6 +32,7 @@ function normalizeItem(raw: Record<string, unknown>): ProblemsetItemInfo {
     difficulty: str(raw.difficulty),
     status: str(raw.status),
     userStatus: str(raw.userStatus),
+    tags: normalizeTags(raw.tags),
   }
 }
 

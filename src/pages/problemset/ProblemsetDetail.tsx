@@ -13,6 +13,7 @@ import {
   LinkIcon,
   LockIcon,
   PlusIcon,
+  TagsIcon,
   Trash2Icon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -74,7 +75,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -94,11 +98,20 @@ import { clipMetaText } from '@/lib/document-meta'
 import { cn } from '@/lib/utils'
 
 const unlockKey = (id: string | number) => `ps_unlock_${id}`
+/** 题单列表是否展示标签（本地偏好，默认开启） */
+const SHOW_TAGS_PREF_KEY = 'ps_show_tags'
 
 const visLabel: Record<string, string> = {
   public: '公开',
   private: '私有',
   password: '需密码',
+}
+
+function readShowTagsPref(): boolean {
+  if (typeof localStorage === 'undefined') return true
+  const v = localStorage.getItem(SHOW_TAGS_PREF_KEY)
+  if (v === null) return true
+  return v !== '0' && v !== 'false'
 }
 
 function moveItem<T>(arr: T[], from: number, to: number): T[] {
@@ -157,15 +170,28 @@ export function ProblemsetDetail() {
   const [editVis, setEditVis] = useState<ProblemsetVisibility>('private')
   const [editPw, setEditPw] = useState('')
   const [saving, setSaving] = useState(false)
-  const [removeTarget, setRemoveTarget] = useState<{
-    problemId: number
-    title: string
-  } | null>(null)
+  /** 待确认移除的题目（单条或批量） */
+  const [removePlan, setRemovePlan] = useState<
+    { problemId: number; title: string }[] | null
+  >(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [busyConfirm, setBusyConfirm] = useState(false)
   const [reordering, setReordering] = useState(false)
   const dragFrom = useRef<number | null>(null)
   const [dragOver, setDragOver] = useState<number | null>(null)
+  /** 所有者多选：按 problemId 勾选，用于批量移除 */
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
+  /** 是否在列表中展示题目标签（有标签时右上角可关） */
+  const [showTags, setShowTags] = useState(readShowTagsPref)
+
+  function handleShowTagsChange(on: boolean) {
+    setShowTags(on)
+    try {
+      localStorage.setItem(SHOW_TAGS_PREF_KEY, on ? '1' : '0')
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }
 
   useEffect(() => {
     return () => {
@@ -214,6 +240,11 @@ export function ProblemsetDetail() {
   useEffect(() => {
     void load()
   }, [load])
+
+  // 题单切换 / 列表刷新后清掉勾选，避免指向已不存在的题
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [id, set?.id, set?.items?.length])
 
   async function handleUnlock() {
     if (!id || !password.trim()) {
@@ -269,20 +300,71 @@ export function ProblemsetDetail() {
   }
 
   function requestRemove(problemId: number, title: string) {
-    setRemoveTarget({ problemId, title })
+    setRemovePlan([{ problemId, title }])
+  }
+
+  function requestBatchRemove() {
+    if (!set?.isOwner || selectedIds.size === 0) return
+    const plan = (set.items || [])
+      .filter((it) => selectedIds.has(it.problemId))
+      .map((it) => ({
+        problemId: it.problemId,
+        title: it.title || String(it.problemId),
+      }))
+    if (plan.length === 0) {
+      toast.message('请先勾选要移除的题目')
+      return
+    }
+    setRemovePlan(plan)
+  }
+
+  function toggleSelected(problemId: number, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (checked) next.add(problemId)
+      else next.delete(problemId)
+      return next
+    })
+  }
+
+  function toggleSelectAll(checked: boolean) {
+    if (!set) return
+    if (!checked) {
+      setSelectedIds(new Set())
+      return
+    }
+    setSelectedIds(
+      new Set((set.items || []).map((it) => it.problemId).filter((pid) => pid > 0)),
+    )
   }
 
   async function confirmRemove() {
-    if (!set || !removeTarget) return
+    if (!set || !removePlan || removePlan.length === 0) return
     setBusyConfirm(true)
-    const res = await removeProblemFromSet(set.id, removeTarget.problemId)
+    const setId = set.id
+    let ok = 0
+    let fail = 0
+    let lastErr = ''
+    for (const item of removePlan) {
+      const res = await removeProblemFromSet(setId, item.problemId)
+      if (res.success) ok++
+      else {
+        fail++
+        lastErr = res.message || '移除失败'
+      }
+    }
     setBusyConfirm(false)
-    if (!res.success) {
-      toast.error(res.message || '移除失败')
+    if (ok === 0) {
+      toast.error(lastErr || '移除失败')
       return
     }
-    toast.success('已移除')
-    setRemoveTarget(null)
+    if (fail > 0) {
+      toast.message(`已移除 ${ok} 题，另有 ${fail} 题未能移除`)
+    } else {
+      toast.success(ok === 1 ? '已移除' : `已移除 ${ok} 题`)
+    }
+    setRemovePlan(null)
+    setSelectedIds(new Set())
     void load()
   }
 
@@ -593,6 +675,12 @@ export function ProblemsetDetail() {
   }
 
   const items = set.items || []
+  const hasAnyTags = items.some((it) => (it.tags?.length ?? 0) > 0)
+  const selectedCount = selectedIds.size
+  const allSelected =
+    items.length > 0 && items.every((it) => selectedIds.has(it.problemId))
+  const someSelected =
+    items.some((it) => selectedIds.has(it.problemId)) && !allSelected
   const subtitle =
     set.description?.trim() ||
     (set.isSystem
@@ -622,7 +710,25 @@ export function ProblemsetDetail() {
             <span>{set.itemCount} 题</span>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {hasAnyTags && (
+            <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5">
+              <TagsIcon className="size-3.5 text-muted-foreground" aria-hidden />
+              <Label
+                htmlFor="ps-show-tags"
+                className="cursor-pointer text-xs font-normal text-muted-foreground"
+              >
+                显示标签
+              </Label>
+              <Switch
+                id="ps-show-tags"
+                size="sm"
+                checked={showTags}
+                onCheckedChange={handleShowTagsChange}
+                aria-label="显示题目标签"
+              />
+            </div>
+          )}
           {!set.isSystem && set.visibility === 'public' && (
             <Button
               type="button"
@@ -685,21 +791,50 @@ export function ProblemsetDetail() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">
-            题目列表
-            {reordering && (
-              <span className="ml-2 text-xs font-normal text-muted-foreground">
-                正在保存顺序…
-              </span>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0 flex flex-col gap-1">
+              <CardTitle className="text-base">
+                题目列表
+                {reordering && (
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    正在保存顺序…
+                  </span>
+                )}
+              </CardTitle>
+              <CardDescription>
+                {items.length === 0
+                  ? '还没有题目，点「加题」从题库或链接添加。'
+                  : set.isOwner
+                    ? '勾选后可批量移除；拖动手柄调整顺序；点题名打开详情。'
+                    : '点击题目可打开详情。'}
+              </CardDescription>
+            </div>
+            {set.isOwner && selectedCount > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  已选 {selectedCount} 题
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  取消选择
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  disabled={busyConfirm || reordering}
+                  onClick={() => requestBatchRemove()}
+                >
+                  <Trash2Icon data-icon="inline-start" />
+                  批量移除（{selectedCount}）
+                </Button>
+              </div>
             )}
-          </CardTitle>
-          <CardDescription>
-            {items.length === 0
-              ? '还没有题目，点「加题」从题库或链接添加。'
-              : set.isOwner
-                ? '拖动左侧手柄调整顺序；点击题目可打开详情。'
-                : '点击题目可打开详情。'}
-          </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
@@ -710,6 +845,21 @@ export function ProblemsetDetail() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {set.isOwner && (
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={
+                          allSelected
+                            ? true
+                            : someSelected
+                              ? 'indeterminate'
+                              : false
+                        }
+                        onCheckedChange={(v) => toggleSelectAll(v === true)}
+                        aria-label="全选题目"
+                      />
+                    </TableHead>
+                  )}
                   {set.isOwner && <TableHead className="w-10" />}
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>题目</TableHead>
@@ -719,12 +869,24 @@ export function ProblemsetDetail() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((it, idx) => (
+                {items.map((it, idx) => {
+                  const selected = selectedIds.has(it.problemId)
+                  return (
                   <TableRow
                     key={it.id || it.problemId}
                     draggable={set.isOwner && !reordering}
                     onDragStart={
-                      set.isOwner ? () => onDragStart(idx) : undefined
+                      set.isOwner
+                        ? (e) => {
+                            // 从勾选框开始拖会误触，仅允许从行其它区域 / 手柄拖
+                            const t = e.target as HTMLElement | null
+                            if (t?.closest('[data-slot="checkbox"]')) {
+                              e.preventDefault()
+                              return
+                            }
+                            onDragStart(idx)
+                          }
+                        : undefined
                     }
                     onDragOver={
                       set.isOwner ? (e) => onDragOver(e, idx) : undefined
@@ -734,11 +896,27 @@ export function ProblemsetDetail() {
                     }
                     onDrop={set.isOwner ? () => onDrop(idx) : undefined}
                     onDragEnd={set.isOwner ? onDragEnd : undefined}
+                    data-state={selected ? 'selected' : undefined}
                     className={cn(
                       dragOver === idx && 'bg-muted/60',
                       reordering && 'opacity-70',
                     )}
                   >
+                    {set.isOwner && (
+                      <TableCell
+                        className="w-10"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Checkbox
+                          checked={selected}
+                          onCheckedChange={(v) =>
+                            toggleSelected(it.problemId, v === true)
+                          }
+                          aria-label={`选择 ${it.title || it.problemId}`}
+                        />
+                      </TableCell>
+                    )}
                     {set.isOwner && (
                       <TableCell className="w-10 px-1">
                         <button
@@ -756,12 +934,27 @@ export function ProblemsetDetail() {
                       {idx + 1}
                     </TableCell>
                     <TableCell>
-                      <Link
-                        to={`/question-bank/detail/${it.problemId}`}
-                        className="font-medium hover:text-primary hover:underline"
-                      >
-                        {it.title || `#${it.problemId}`}
-                      </Link>
+                      <div className="flex min-w-0 flex-col gap-1.5">
+                        <Link
+                          to={`/question-bank/detail/${it.problemId}`}
+                          className="font-medium hover:text-primary hover:underline"
+                        >
+                          {it.title || `#${it.problemId}`}
+                        </Link>
+                        {showTags && (it.tags?.length ?? 0) > 0 && (
+                          <div className="flex flex-wrap items-center gap-1">
+                            {it.tags!.map((t) => (
+                              <Badge
+                                key={t}
+                                variant="outline"
+                                className="border-border/70 bg-muted/50 font-normal text-muted-foreground"
+                              >
+                                {t}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {it.platform || '—'}
@@ -792,7 +985,8 @@ export function ProblemsetDetail() {
                       </TableCell>
                     )}
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           )}
@@ -1062,16 +1256,22 @@ export function ProblemsetDetail() {
       </Dialog>
 
       <AlertDialog
-        open={!!removeTarget}
+        open={!!removePlan && removePlan.length > 0}
         onOpenChange={(open) => {
-          if (!open && !busyConfirm) setRemoveTarget(null)
+          if (!open && !busyConfirm) setRemovePlan(null)
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>从题单移除？</AlertDialogTitle>
+            <AlertDialogTitle>
+              {removePlan && removePlan.length > 1
+                ? `从题单移除 ${removePlan.length} 题？`
+                : '从题单移除？'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              确定从题单中移除「{removeTarget?.title || removeTarget?.problemId}」？
+              {removePlan && removePlan.length > 1
+                ? `确定移除已选的 ${removePlan.length} 道题？移除后仍可重新加回。`
+                : `确定从题单中移除「${removePlan?.[0]?.title || removePlan?.[0]?.problemId}」？`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1083,7 +1283,11 @@ export function ProblemsetDetail() {
                 void confirmRemove()
               }}
             >
-              {busyConfirm ? '处理中…' : '确认移除'}
+              {busyConfirm
+                ? '处理中…'
+                : removePlan && removePlan.length > 1
+                  ? `确认移除 ${removePlan.length} 题`
+                  : '确认移除'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

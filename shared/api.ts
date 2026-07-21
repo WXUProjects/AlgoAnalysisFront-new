@@ -395,6 +395,8 @@ export interface ProblemsetItemInfo {
   difficulty?: string
   status?: string
   userStatus?: string
+  /** 题库标签；无则空数组 / 省略 */
+  tags?: string[]
 }
 
 export interface CreateProblemsetReq {

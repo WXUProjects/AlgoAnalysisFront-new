@@ -119,7 +119,7 @@ export function About() {
                   GitHub
                 </a>
                 <a
-                  href="http://yangcongxueyuan.test.upcdn.net/%E4%BC%9E%E6%81%A9%E6%99%A8%E7%AE%80%E5%8E%86.pdf"
+                  href="http://www.zhiyuansofts.cn/%E4%BC%9E%E6%81%A9%E6%99%A8%E7%AE%80%E5%8E%86.pdf"
                   target="_blank"
                   rel="noreferrer"
                   className="rounded px-2 py-1 text-xs hover:bg-background/20"
