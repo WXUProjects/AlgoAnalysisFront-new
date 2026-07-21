@@ -1,5 +1,4 @@
 import { getProblem } from '@/api/problem'
-import type { ProblemInfo } from '@shared/api'
 
 const PLATFORM_LABEL: Record<string, string> = {
   NowCoder: '牛客',
@@ -9,6 +8,13 @@ const PLATFORM_LABEL: Record<string, string> = {
   LeetCode: '力扣',
   QOJ: 'QOJ',
   Manual: '手动',
+}
+
+export type RecognizedProblem = {
+  id: number
+  platform: string
+  title: string
+  externalId: string
 }
 
 export function platformDisplayName(platform: string): string {
@@ -46,7 +52,7 @@ export function formatRecognizedProblemLine(p: {
 
 /**
  * 加题后在 deadlineMs 内轮询题面/标题是否就绪。
- * 就绪则返回最新题目信息，超时返回 null（调用方走后台提示）。
+ * 就绪则返回识别摘要，超时返回 null（调用方走后台提示）。
  */
 export async function waitForProblemRecognized(
   problemId: number,
@@ -55,7 +61,7 @@ export async function waitForProblemRecognized(
     intervalMs?: number
     seed?: { platform?: string; title?: string; externalId?: string }
   },
-): Promise<ProblemInfo | null> {
+): Promise<RecognizedProblem | null> {
   const deadlineMs = opts?.deadlineMs ?? 5000
   const intervalMs = opts?.intervalMs ?? 400
   const seed = opts?.seed
@@ -66,6 +72,13 @@ export async function waitForProblemRecognized(
     Boolean(seed?.title) &&
     !isPlaceholderTitle(seed!.title!, seed?.externalId)
 
+  const fromSeed = (): RecognizedProblem => ({
+    id: problemId,
+    platform: seed!.platform!,
+    title: seed!.title!,
+    externalId: seed?.externalId || '',
+  })
+
   while (Date.now() - start < deadlineMs) {
     const res = await getProblem(problemId)
     if (res.success && res.data) {
@@ -73,49 +86,31 @@ export async function waitForProblemRecognized(
       const hasRealTitle = !isPlaceholderTitle(p.title, p.externalId)
       const hasContent = Boolean(p.contentMd && p.contentMd.trim())
       if (hasRealTitle || hasContent) {
-        return p
+        return {
+          id: p.id || problemId,
+          platform: p.platform || seed?.platform || '',
+          title: p.title || seed?.title || '',
+          externalId: p.externalId || seed?.externalId || '',
+        }
       }
       // 库内仍是占位标题，但加题时已解析到真名（如牛客 problem-list）
       if (seedReady) {
         return {
-          ...p,
-          title: seed!.title!,
+          id: p.id || problemId,
           platform: seed!.platform || p.platform,
-          externalId: seed!.externalId || p.externalId,
+          title: seed!.title!,
+          externalId: seed!.externalId || p.externalId || '',
         }
       }
     } else if (seedReady) {
-      // 详情暂不可用：用 seed 直接确认
-      return {
-        id: problemId,
-        platform: seed!.platform!,
-        externalId: seed?.externalId || '',
-        title: seed!.title!,
-        url: '',
-        contentMd: '',
-        difficulty: '',
-        tags: [],
-        status: '',
-      } as ProblemInfo
+      return fromSeed()
     }
     const left = deadlineMs - (Date.now() - start)
     if (left <= 0) break
     await sleep(Math.min(intervalMs, left))
   }
   // 超时但 seed 已有真名：仍弹出确认
-  if (seedReady) {
-    return {
-      id: problemId,
-      platform: seed!.platform!,
-      externalId: seed?.externalId || '',
-      title: seed!.title!,
-      url: '',
-      contentMd: '',
-      difficulty: '',
-      tags: [],
-      status: '',
-    } as ProblemInfo
-  }
+  if (seedReady) return fromSeed()
   return null
 }
 
