@@ -211,7 +211,13 @@ export async function unlockProblemset(
 export async function addProblemToSet(
   body: AddProblemsetItemReq,
 ): Promise<
-  ApiResult<{ problemId: number; fetchTriggered: boolean }> & { code?: string }
+  ApiResult<{
+    problemId: number
+    fetchTriggered: boolean
+    platform?: string
+    title?: string
+    externalId?: string
+  }> & { code?: string }
 > {
   const res = await post<Record<string, unknown>>(endpoints.core.problemset.add, body)
   const raw = (res.raw ?? {}) as Record<string, unknown>
@@ -232,6 +238,9 @@ export async function addProblemToSet(
     data: {
       problemId: num(data.problemId),
       fetchTriggered: bool(data.fetchTriggered),
+      platform: str(data.platform) || undefined,
+      title: str(data.title) || undefined,
+      externalId: str(data.externalId) || undefined,
     },
     raw: res.raw,
   }

@@ -5,6 +5,10 @@ import { toast } from 'sonner'
 import { listProblems, listProblemTags, type TagCountItem } from '@/api/problem'
 import { addProblemToSet } from '@/api/problemset'
 import type { ProblemInfo } from '@shared/api'
+import {
+  formatRecognizedProblemLine,
+  waitForProblemRecognized,
+} from '@/lib/add-problem-confirm'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
@@ -105,6 +109,10 @@ export function QuestionBank() {
   const [manualPromptOpen, setManualPromptOpen] = useState(false)
   const [pendingManualUrl, setPendingManualUrl] = useState('')
   const [listVersion, setListVersion] = useState(0)
+  /** 5s 内识别到题面/真标题时确认弹窗 */
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmLine, setConfirmLine] = useState('')
+  const [confirmProblemId, setConfirmProblemId] = useState(0)
 
   useEffect(() => {
     setKeywordInput(keyword)
@@ -253,8 +261,8 @@ export function QuestionBank() {
     }
     setAdding(true)
     const res = await addProblemToSet({ url: u })
-    setAdding(false)
     if (!res.success) {
+      setAdding(false)
       if (res.code === 'URL_PARSE_FAILED') {
         setPendingManualUrl(u)
         setManualPromptOpen(true)
@@ -264,19 +272,53 @@ export function QuestionBank() {
       toast.error(res.message || '无法识别该链接')
       return
     }
+    const pid = res.data?.problemId
+    if (!pid) {
+      setAdding(false)
+      toast.success('已加入题库')
+      setAddUrl('')
+      setAddOpen(false)
+      setListVersion((v) => v + 1)
+      return
+    }
+    // 5 秒内爬完/识别到真标题 → 弹窗确认；否则 toast 后台继续
+    const recognized = await waitForProblemRecognized(pid, {
+      deadlineMs: 5000,
+      seed: {
+        platform: res.data?.platform,
+        title: res.data?.title,
+        externalId: res.data?.externalId,
+      },
+    })
+    setAdding(false)
+    setAddUrl('')
+    setAddOpen(false)
+    if (recognized) {
+      setConfirmLine(
+        formatRecognizedProblemLine({
+          platform: recognized.platform || res.data?.platform,
+          title: recognized.title || res.data?.title,
+          externalId: recognized.externalId || res.data?.externalId,
+        }),
+      )
+      setConfirmProblemId(pid)
+      setConfirmOpen(true)
+      return
+    }
     toast.success(
       res.data?.fetchTriggered
         ? '已加入题库，正在后台拉取题面'
         : '已加入题库',
     )
-    setAddUrl('')
-    setAddOpen(false)
-    const pid = res.data?.problemId
-    if (pid) {
-      navigate(`/question-bank/detail/${pid}`)
-      return
-    }
-    setListVersion((v) => v + 1)
+    navigate(`/question-bank/detail/${pid}`)
+  }
+
+  function acceptRecognizedProblem() {
+    const pid = confirmProblemId
+    setConfirmOpen(false)
+    setConfirmProblemId(0)
+    if (pid) navigate(`/question-bank/detail/${pid}`)
+    else setListVersion((v) => v + 1)
   }
 
   function goManualAdd() {
@@ -738,6 +780,44 @@ export function QuestionBank() {
               }}
             >
               手写加题
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmOpen(false)
+            setConfirmProblemId(0)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认加入这道题？</AlertDialogTitle>
+            <AlertDialogDescription>
+              已识别为：{confirmLine || '题目'}。是否查看详情？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setConfirmOpen(false)
+                setConfirmProblemId(0)
+                setListVersion((v) => v + 1)
+              }}
+            >
+              稍后查看
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                acceptRecognizedProblem()
+              }}
+            >
+              是，去看题
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -513,7 +513,8 @@ function AppLayoutInner() {
               )}
             >
               <GsapPageTransition>
-                <Outlet />
+                {/* 切组织后 JWT 已变但页面常不 remount；用 org key 强制重拉租户数据 */}
+                <Outlet key={user?.orgId || currentOrg?.id || 0} />
               </GsapPageTransition>
               <SiteFooter />
             </div>

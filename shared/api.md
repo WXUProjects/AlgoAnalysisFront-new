@@ -865,7 +865,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problemset/update` | 是 | body: `{ id, title?, description?, visibility?, password?, clearPassword? }`；系统题单仅可改描述 |
 | POST | `/core/problemset/delete` | 是 | body: `{ id }`；系统题单不可删 |
 | POST | `/core/problemset/unlock` | 否 | body: `{ id, password }` → `{ unlockToken, expiresIn }` |
-| POST | `/core/problemset/add` | 是 | body: `{ problemsetId?, problemId? }` 或 `{ problemsetId?, url? }`；**`problemsetId` 可省略**：仅向题库入库（须 `url`）；有 `problemsetId` 时同时加入该题单（须本人题单）。缺题面**强制爬取**；AI 按操作者资格；无法识别链接 → `success=false, code=URL_PARSE_FAILED`（HTTP 200）。支持：`CodeForces`（含 gym/group）、`AtCoder`、`LuoGu`、`NowCoder`、`QOJ`、`LeetCode`（cn/com） |
+| POST | `/core/problemset/add` | 是 | body: `{ problemsetId?, problemId? }` 或 `{ problemsetId?, url? }`；**`problemsetId` 可省略**：仅向题库入库（须 `url`）；有 `problemsetId` 时同时加入该题单（须本人题单）。缺题面**强制爬取**；AI 按操作者资格；无法识别链接 → `success=false, code=URL_PARSE_FAILED`（HTTP 200）。URL 清洗粘贴噪声；成功 data 含 `platform`/`title`/`externalId` 识别摘要。支持：`CodeForces`、`AtCoder`、`LuoGu`、`NowCoder`（含比赛题页）、`QOJ`、`LeetCode` |
 | POST | `/core/problemset/add-manual` | 是 | 链接无法识别时手动建题（**无需审核**）；body: `{ problemsetId?, title, contentMd?, tags?, sourceUrl? }` → `{ problemId }`；`problemsetId` 可省略（仅入库）；`platform=Manual` |
 | POST | `/core/problemset/remove` | 是 | body: `{ problemsetId, problemId }` 手动剔除 |
 | POST | `/core/problemset/like` | 是 | body: `{ id }` toggle 点赞 → `{ liked, likeCount }` |

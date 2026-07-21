@@ -20,6 +20,10 @@ import {
   updateProblemset,
 } from '@/api/problemset'
 import { listProblems } from '@/api/problem'
+import {
+  formatRecognizedProblemLine,
+  waitForProblemRecognized,
+} from '@/lib/add-problem-confirm'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { StatusBadge } from '@/components/status-badge'
@@ -129,6 +133,8 @@ export function ProblemsetDetail() {
   const [busyConfirm, setBusyConfirm] = useState(false)
   const [manualPromptOpen, setManualPromptOpen] = useState(false)
   const [pendingManualUrl, setPendingManualUrl] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmLine, setConfirmLine] = useState('')
 
   const load = useCallback(async () => {
     if (!id) return
@@ -282,8 +288,8 @@ export function ProblemsetDetail() {
       problemsetId: set.id,
       url: url.trim(),
     })
-    setAdding(false)
     if (!res.success) {
+      setAdding(false)
       if (res.code === 'URL_PARSE_FAILED') {
         setPendingManualUrl(url.trim())
         setManualPromptOpen(true)
@@ -293,13 +299,41 @@ export function ProblemsetDetail() {
       toast.error(res.message || '无法识别该链接')
       return
     }
+    const pid = res.data?.problemId
+    if (pid) {
+      const recognized = await waitForProblemRecognized(pid, {
+        deadlineMs: 5000,
+        seed: {
+          platform: res.data?.platform,
+          title: res.data?.title,
+          externalId: res.data?.externalId,
+        },
+      })
+      setAdding(false)
+      setUrl('')
+      setAddOpen(false)
+      if (recognized) {
+        setConfirmLine(
+          formatRecognizedProblemLine({
+            platform: recognized.platform || res.data?.platform,
+            title: recognized.title || res.data?.title,
+            externalId: recognized.externalId || res.data?.externalId,
+          }),
+        )
+        setConfirmOpen(true)
+        void load()
+        return
+      }
+    } else {
+      setAdding(false)
+      setUrl('')
+      setAddOpen(false)
+    }
     toast.success(
       res.data?.fetchTriggered
         ? '已加入，正在后台拉取题面'
         : '已加入题单',
     )
-    setUrl('')
-    setAddOpen(false)
     void load()
   }
 
@@ -840,6 +874,22 @@ export function ProblemsetDetail() {
               }}
             >
               向题库加题
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认加入这道题？</AlertDialogTitle>
+            <AlertDialogDescription>
+              已识别为：{confirmLine || '题目'}。已加入当前题单。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setConfirmOpen(false)}>
+              知道了
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

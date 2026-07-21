@@ -531,7 +531,8 @@ function AdminLayoutInner() {
           {/* 底栏留白在内容盒内，避免页脚被固定底栏遮挡 */}
           <div className="flex min-h-full min-w-0 flex-1 flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
             <GsapPageTransition>
-              <Outlet />
+              {/* 切组织后 JWT 已变但页面常不 remount；用 org key 强制重拉租户数据 */}
+              <Outlet key={user?.orgId || currentOrg?.id || 0} />
             </GsapPageTransition>
             <SiteFooter />
           </div>
