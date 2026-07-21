@@ -41,7 +41,10 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
+import { Pagination } from '@/components/pagination'
 import { orgRoleName } from '@/lib/roles'
+
+const MEMBER_PAGE_SIZE = 20
 
 /** 站点管理员：集中管理所有组织，无需切换当前组织 */
 export function DashboardOrgsManage() {
@@ -51,6 +54,9 @@ export function DashboardOrgsManage() {
   const [selected, setSelected] = useState<OrgInfo | null>(null)
   const [members, setMembers] = useState<OrgMemberInfo[]>([])
   const [memberTotal, setMemberTotal] = useState(0)
+  const [memberPage, setMemberPage] = useState(1)
+  const [memberPageSize, setMemberPageSize] = useState(MEMBER_PAGE_SIZE)
+  const [membersLoading, setMembersLoading] = useState(false)
   const [newName, setNewName] = useState('')
   const [newSeatLimit, setNewSeatLimit] = useState(50)
   const [addKeyword, setAddKeyword] = useState('')
@@ -79,8 +85,32 @@ export function DashboardOrgsManage() {
     if (isAdmin) void load()
   }, [isAdmin, load])
 
+  const loadMembers = useCallback(
+    async (orgId: number, page: number, pageSize: number) => {
+      setMembersLoading(true)
+      const r = await listOrgMembers(orgId, { page, pageSize })
+      setMembersLoading(false)
+      if (!r.success) {
+        toast.error('成员列表加载失败，请稍后重试')
+        return
+      }
+      setMembers(r.list)
+      setMemberTotal(r.total)
+      const maxPage = Math.max(1, Math.ceil(r.total / pageSize) || 1)
+      if (page > maxPage) setMemberPage(maxPage)
+    },
+    [],
+  )
+
+  const selectedId = selected?.id
+
+  // 切换组织：重置到第 1 页并填表单
   useEffect(() => {
-    if (!selected) return
+    if (!selected) {
+      setMembers([])
+      setMemberTotal(0)
+      return
+    }
     setBrandTitle(selected.brandTitle || '')
     setJoinMode(selected.joinMode || 'auto')
     setEnableAiEmail(selected.enableAiEmail !== false)
@@ -91,11 +121,15 @@ export function DashboardOrgsManage() {
     setEmailSchedule(selected.aiEmailSchedule || '30 7 * * *')
     setStatus(selected.status || 'active')
     setSeatLimit(selected.seatLimit && selected.seatLimit > 0 ? selected.seatLimit : 50)
-    void listOrgMembers(selected.id, { page: 1, pageSize: 100 }).then((r) => {
-      setMembers(r.list)
-      setMemberTotal(r.total)
-    })
-  }, [selected])
+    setMemberPage(1)
+    // 仅在切换组织 id 时重置表单与页码
+  }, [selectedId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 成员分页加载（角色顺序由后端：团队管理员 > 教练 > 队长 > 成员）
+  useEffect(() => {
+    if (!selectedId) return
+    void loadMembers(selectedId, memberPage, memberPageSize)
+  }, [selectedId, memberPage, memberPageSize, loadMembers])
 
   if (!isAdmin) {
     return (
@@ -394,12 +428,8 @@ export function DashboardOrgsManage() {
                             if (r.success) {
                               toast.success(r.message || '已加入')
                               setAddKeyword('')
-                              const m = await listOrgMembers(selected.id, {
-                                page: 1,
-                                pageSize: 100,
-                              })
-                              setMembers(m.list)
-                              setMemberTotal(m.total)
+                              setMemberPage(1)
+                              await loadMembers(selected.id, 1, memberPageSize)
                             } else toast.error(r.message)
                           })
                         }
@@ -414,54 +444,75 @@ export function DashboardOrgsManage() {
                       成员与角色
                       {memberTotal > 0 ? (
                         <span className="ml-2 font-normal text-muted-foreground">
-                          共 {memberTotal} 人
-                          {members.length < memberTotal
-                            ? `（此处显示前 ${members.length} 人）`
-                            : ''}
+                          共 {memberTotal} 人 · 按角色排序
                         </span>
                       ) : null}
                     </Label>
-                    {members.map((m) => (
-                      <div
-                        key={m.userId}
-                        className="flex items-center justify-between gap-2 rounded border p-2 text-sm"
-                      >
-                        <span className="min-w-0 truncate">
-                          {m.name || m.username}
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            {orgRoleName(m.role)}
+                    {membersLoading && (
+                      <div className="flex justify-center py-4">
+                        <Spinner />
+                      </div>
+                    )}
+                    {!membersLoading && members.length === 0 && (
+                      <p className="text-sm text-muted-foreground">暂无成员</p>
+                    )}
+                    {!membersLoading &&
+                      members.map((m) => (
+                        <div
+                          key={m.userId}
+                          className="flex items-center justify-between gap-2 rounded border p-2 text-sm"
+                        >
+                          <span className="min-w-0 truncate">
+                            {m.name || m.username}
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {orgRoleName(m.role)}
+                            </span>
                           </span>
-                        </span>
-                        <Select
-                          value={m.role || 'member'}
-                          onValueChange={(role) =>
-                            void setOrgMemberRole(selected.id, m.userId, role).then(
-                              async (r) => {
+                          <Select
+                            value={m.role || 'member'}
+                            onValueChange={(role) =>
+                              void setOrgMemberRole(
+                                selected.id,
+                                m.userId,
+                                role,
+                              ).then(async (r) => {
                                 if (r.success) {
                                   toast.success('已更新')
-                                  const list = await listOrgMembers(selected.id, {
-                                    page: 1,
-                                    pageSize: 100,
-                                  })
-                                  setMembers(list.list)
-                                  setMemberTotal(list.total)
+                                  await loadMembers(
+                                    selected.id,
+                                    memberPage,
+                                    memberPageSize,
+                                  )
                                 } else toast.error(r.message)
-                              },
-                            )
-                          }
-                        >
-                          <SelectTrigger className="w-36 shrink-0">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="member">成员</SelectItem>
-                            <SelectItem value="captain">队长</SelectItem>
-                            <SelectItem value="coach">教练</SelectItem>
-                            <SelectItem value="org_admin">团队管理员</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))}
+                              })
+                            }
+                          >
+                            <SelectTrigger className="w-36 shrink-0">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="org_admin">团队管理员</SelectItem>
+                              <SelectItem value="coach">教练</SelectItem>
+                              <SelectItem value="captain">队长</SelectItem>
+                              <SelectItem value="member">成员</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                    {memberTotal > 0 && (
+                      <Pagination
+                        page={memberPage}
+                        total={memberTotal}
+                        pageSize={memberPageSize}
+                        onChange={setMemberPage}
+                        onPageSizeChange={(size) => {
+                          setMemberPageSize(size)
+                          setMemberPage(1)
+                        }}
+                        pageSizeOptions={[20, 50, 100]}
+                        disabled={membersLoading}
+                      />
+                    )}
                   </div>
                 </>
               )}
