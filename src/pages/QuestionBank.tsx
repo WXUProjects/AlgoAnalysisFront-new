@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronDownIcon, ChevronUpIcon, PlusIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -7,7 +7,9 @@ import { addProblemToSet } from '@/api/problemset'
 import type { ProblemInfo } from '@shared/api'
 import {
   formatRecognizedProblemLine,
+  type RecognizedProblem,
   waitForProblemRecognized,
+  watchProblemInBackground,
 } from '@/lib/add-problem-confirm'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
@@ -15,16 +17,6 @@ import { Pagination } from '@/components/pagination'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/status-badge'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import {
   Card,
   CardContent,
@@ -102,17 +94,39 @@ export function QuestionBank() {
   const [allTags, setAllTags] = useState<TagCountItem[]>([])
   const [tagsExpanded, setTagsExpanded] = useState(false)
 
-  // 加题
+  // 加题（同弹窗：识别中 → 展示标题二次确认 → 确认入库完成）
   const [addOpen, setAddOpen] = useState(false)
   const [addUrl, setAddUrl] = useState('')
   const [adding, setAdding] = useState(false)
-  const [manualPromptOpen, setManualPromptOpen] = useState(false)
-  const [pendingManualUrl, setPendingManualUrl] = useState('')
+  const [addPhase, setAddPhase] = useState<'idle' | 'recognizing' | 'confirm' | 'failed'>(
+    'idle',
+  )
+  const [recognized, setRecognized] = useState<RecognizedProblem | null>(null)
+  const [addFailMsg, setAddFailMsg] = useState('')
   const [listVersion, setListVersion] = useState(0)
-  /** 5s 内识别到题面/真标题时确认弹窗 */
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [confirmLine, setConfirmLine] = useState('')
-  const [confirmProblemId, setConfirmProblemId] = useState(0)
+  const bgWatchStop = useRef<(() => void) | null>(null)
+
+  useEffect(() => {
+    return () => {
+      bgWatchStop.current?.()
+      bgWatchStop.current = null
+    }
+  }, [])
+
+  function resetAddDialog() {
+    setAddUrl('')
+    setAdding(false)
+    setAddPhase('idle')
+    setRecognized(null)
+    setAddFailMsg('')
+  }
+
+  function openManualAdd(url?: string) {
+    const q = url?.trim() ? `?url=${encodeURIComponent(url.trim())}` : ''
+    setAddOpen(false)
+    resetAddDialog()
+    navigate(`/question-bank/add-problem${q}`)
+  }
 
   useEffect(() => {
     setKeywordInput(keyword)
@@ -248,7 +262,7 @@ export function QuestionBank() {
     setSearchParams({}, { replace: true })
   }
 
-  async function handleAddByUrl() {
+  async function handleRecognizeUrl() {
     const u = addUrl.trim()
     if (!u) {
       toast.error('请粘贴题目链接')
@@ -260,73 +274,79 @@ export function QuestionBank() {
       return
     }
     setAdding(true)
+    setAddPhase('recognizing')
+    setRecognized(null)
+    setAddFailMsg('')
     const res = await addProblemToSet({ url: u })
     if (!res.success) {
       setAdding(false)
-      if (res.code === 'URL_PARSE_FAILED') {
-        setPendingManualUrl(u)
-        setManualPromptOpen(true)
-        setAddOpen(false)
-        return
-      }
-      toast.error(res.message || '无法识别该链接')
+      setAddPhase('failed')
+      setAddFailMsg(
+        res.code === 'URL_PARSE_FAILED'
+          ? '无法从该链接识别题目'
+          : res.message || '识别失败',
+      )
       return
     }
     const pid = res.data?.problemId
     if (!pid) {
       setAdding(false)
-      toast.success('已加入题库')
-      setAddUrl('')
-      setAddOpen(false)
-      setListVersion((v) => v + 1)
+      setAddPhase('failed')
+      setAddFailMsg('识别失败，请手写加题')
       return
     }
-    // 5 秒内爬完/识别到真标题 → 弹窗确认；否则 toast 后台继续
-    const recognized = await waitForProblemRecognized(pid, {
-      deadlineMs: 5000,
-      seed: {
-        platform: res.data?.platform,
-        title: res.data?.title,
-        externalId: res.data?.externalId,
+    const seed = {
+      platform: res.data?.platform,
+      title: res.data?.title,
+      externalId: res.data?.externalId,
+    }
+    const hit = await waitForProblemRecognized(pid, { deadlineMs: 5000, seed })
+    setAdding(false)
+    if (hit) {
+      setRecognized(hit)
+      setAddPhase('confirm')
+      return
+    }
+    // 5s 无结果：关窗，后台继续，结果用通知
+    setAddOpen(false)
+    resetAddDialog()
+    toast.message('后台识别中', {
+      description: '题面拉取较慢，识别成功或失败会再通知你',
+    })
+    bgWatchStop.current?.()
+    bgWatchStop.current = watchProblemInBackground(pid, {
+      seed,
+      onSuccess: (p) => {
+        bgWatchStop.current = null
+        toast.success(`已识别：${formatRecognizedProblemLine(p)}`, {
+          action: {
+            label: '查看',
+            onClick: () => navigate(`/question-bank/detail/${p.id}`),
+          },
+        })
+        setListVersion((v) => v + 1)
+      },
+      onFail: (reason) => {
+        bgWatchStop.current = null
+        toast.error(reason || '识别失败', {
+          description: '可手写加题，或放弃',
+          action: {
+            label: '手写加题',
+            onClick: () => openManualAdd(u),
+          },
+        })
       },
     })
-    setAdding(false)
-    setAddUrl('')
+  }
+
+  function confirmRecognizedAdd() {
+    if (!recognized) return
+    const pid = recognized.id
+    toast.success(`已加入：${formatRecognizedProblemLine(recognized)}`)
     setAddOpen(false)
-    if (recognized) {
-      setConfirmLine(
-        formatRecognizedProblemLine({
-          platform: recognized.platform || res.data?.platform,
-          title: recognized.title || res.data?.title,
-          externalId: recognized.externalId || res.data?.externalId,
-        }),
-      )
-      setConfirmProblemId(pid)
-      setConfirmOpen(true)
-      return
-    }
-    toast.success(
-      res.data?.fetchTriggered
-        ? '已加入题库，正在后台拉取题面'
-        : '已加入题库',
-    )
+    resetAddDialog()
+    setListVersion((v) => v + 1)
     navigate(`/question-bank/detail/${pid}`)
-  }
-
-  function acceptRecognizedProblem() {
-    const pid = confirmProblemId
-    setConfirmOpen(false)
-    setConfirmProblemId(0)
-    if (pid) navigate(`/question-bank/detail/${pid}`)
-    else setListVersion((v) => v + 1)
-  }
-
-  function goManualAdd() {
-    const q = pendingManualUrl
-      ? `?url=${encodeURIComponent(pendingManualUrl)}`
-      : ''
-    setManualPromptOpen(false)
-    navigate(`/question-bank/add-problem${q}`)
   }
 
   const hasFilters = useMemo(
@@ -699,14 +719,19 @@ export function QuestionBank() {
         disabled={loading}
       />
 
-      {/* 向题库加题：粘贴链接 */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+      {/* 向题库加题：同弹窗识别 → 确认标题，不另开窗 */}
+      <Dialog
+        open={addOpen}
+        onOpenChange={(open) => {
+          setAddOpen(open)
+          if (!open) resetAddDialog()
+        }}
+      >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>向题库加题</DialogTitle>
             <DialogDescription>
-              粘贴常见 OJ 题目链接。未入库题面会自动拉取；是否做标签分析取决于你的 AI
-              权限。链接无法识别时可手动填写。
+              粘贴常见 OJ 题目链接，点「识别」后在本页确认标题。无法识别时可手写加题。
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>
@@ -715,113 +740,91 @@ export function QuestionBank() {
               <Input
                 id="qb-url"
                 value={addUrl}
-                onChange={(e) => setAddUrl(e.target.value)}
+                disabled={adding || addPhase === 'confirm'}
+                onChange={(e) => {
+                  setAddUrl(e.target.value)
+                  if (addPhase === 'failed' || addPhase === 'confirm') {
+                    setAddPhase('idle')
+                    setRecognized(null)
+                    setAddFailMsg('')
+                  }
+                }}
                 placeholder="https://codeforces.com/contest/… 等"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === 'Enter' && addPhase !== 'confirm') {
                     e.preventDefault()
-                    void handleAddByUrl()
+                    void handleRecognizeUrl()
                   }
                 }}
               />
             </Field>
           </FieldGroup>
+
+          {addPhase === 'recognizing' && (
+            <p className="text-sm text-muted-foreground">正在识别题目…</p>
+          )}
+          {addPhase === 'confirm' && recognized && (
+            <div className="rounded-md border bg-muted/40 px-3 py-3 text-sm">
+              <p className="text-muted-foreground">识别结果</p>
+              <p className="mt-1 font-medium">
+                {formatRecognizedProblemLine(recognized)}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                请确认是否这道题，再加入题库。
+              </p>
+            </div>
+          )}
+          {addPhase === 'failed' && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3 text-sm">
+              <p className="font-medium text-destructive">识别失败</p>
+              <p className="mt-1 text-muted-foreground">
+                {addFailMsg || '无法识别该链接'}。可手写加题，或改链接后重试。
+              </p>
+            </div>
+          )}
+
           <DialogFooter className="gap-2 sm:justify-between">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               className="text-muted-foreground"
-              onClick={() => {
-                setAddOpen(false)
-                navigate('/question-bank/add-problem')
-              }}
+              onClick={() => openManualAdd(addUrl)}
             >
               手写加题
             </Button>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
-                取消
-              </Button>
               <Button
                 type="button"
-                disabled={adding}
-                onClick={() => void handleAddByUrl()}
+                variant="outline"
+                onClick={() => {
+                  setAddOpen(false)
+                  resetAddDialog()
+                }}
               >
-                {adding ? '处理中…' : '加入'}
+                取消
               </Button>
+              {addPhase === 'confirm' ? (
+                <Button type="button" onClick={confirmRecognizedAdd}>
+                  确认加入
+                </Button>
+              ) : addPhase === 'failed' ? (
+                <Button type="button" onClick={() => openManualAdd(addUrl)}>
+                  去手写加题
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  disabled={adding}
+                  onClick={() => void handleRecognizeUrl()}
+                >
+                  {adding ? '识别中…' : '识别'}
+                </Button>
+              )}
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog
-        open={manualPromptOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setManualPromptOpen(false)
-            setPendingManualUrl('')
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>无法识别该链接</AlertDialogTitle>
-            <AlertDialogDescription>
-              系统无法从该链接识别题目。是否手动填写并加入题库？
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                goManualAdd()
-              }}
-            >
-              手写加题
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={confirmOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setConfirmOpen(false)
-            setConfirmProblemId(0)
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认加入这道题？</AlertDialogTitle>
-            <AlertDialogDescription>
-              已识别为：{confirmLine || '题目'}。是否查看详情？
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setConfirmOpen(false)
-                setConfirmProblemId(0)
-                setListVersion((v) => v + 1)
-              }}
-            >
-              稍后查看
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                acceptRecognizedProblem()
-              }}
-            >
-              是，去看题
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </PageShell>
   )
 }
