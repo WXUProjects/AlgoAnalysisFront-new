@@ -410,13 +410,13 @@ function AppLayoutInner() {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            {/* PC：管理作为前台侧栏二级分组；移动端走底栏 +「更多」 */}
+            {/* PC：可折叠二级 Tab（教练管理/组织管理/站点管理 → 展开子项）；移动端走底栏 +「更多」 */}
             {isLogin && isStaff && (
               <AdminSidebarNavGroups
                 isStaff={isStaff}
                 isSiteAdmin={isSiteAdmin}
                 canOrgSettings={isSiteAdmin || isOrgAdmin}
-                orgName={currentOrg?.name}
+                staffLabelPayload={user}
               />
             )}
           </SidebarContent>

@@ -1,7 +1,10 @@
+import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   ActivityIcon,
   BarChart3Icon,
+  Building2Icon,
+  ChevronRightIcon,
   ClipboardCheckIcon,
   FileSpreadsheetIcon,
   LayoutDashboardIcon,
@@ -15,33 +18,38 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import {
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
+import { staffNavLabel } from '@/lib/roles'
+import { cn } from '@/lib/utils'
 
 type AdminNavItem = {
   to: string
   label: string
   icon: LucideIcon
-  tooltip?: string
   isActive: (pathname: string) => boolean
 }
 
 function pathActive(
   pathname: string,
   to: string,
-  opts?: { end?: boolean; excludePrefix?: string },
+  opts?: { excludePrefix?: string },
 ): boolean {
   if (opts?.excludePrefix && pathname.startsWith(opts.excludePrefix)) {
     return false
-  }
-  if (opts?.end) {
-    return pathname === to || pathname === `${to}/`
   }
   return pathname === to || pathname.startsWith(`${to}/`)
 }
@@ -52,7 +60,6 @@ function orgNavItems(canOrgSettings: boolean): AdminNavItem[] {
       to: '/admin/statistics',
       label: '组织数据',
       icon: BarChart3Icon,
-      tooltip: '组织数据统计',
       isActive: (p) => pathActive(p, '/admin/statistics'),
     },
     {
@@ -85,9 +92,8 @@ function orgNavItems(canOrgSettings: boolean): AdminNavItem[] {
   } else {
     items.push({
       to: '/admin/org',
-      label: '组织训练报告',
+      label: '训练报告',
       icon: FileSpreadsheetIcon,
-      tooltip: '训练报告',
       isActive: (p) =>
         pathActive(p, '/admin/org', { excludePrefix: '/admin/orgs' }),
     })
@@ -100,14 +106,12 @@ const SITE_NAV_ITEMS: AdminNavItem[] = [
     to: '/admin/site-statistics',
     label: '站点数据',
     icon: BarChart3Icon,
-    tooltip: '站点数据统计',
     isActive: (p) => pathActive(p, '/admin/site-statistics'),
   },
   {
     to: '/admin/access',
     label: '站点访问',
     icon: ActivityIcon,
-    tooltip: '站点访问统计',
     isActive: (p) => pathActive(p, '/admin/access'),
   },
   {
@@ -120,24 +124,23 @@ const SITE_NAV_ITEMS: AdminNavItem[] = [
     to: '/admin/orgs',
     label: '全站组织',
     icon: UsersIcon,
-    tooltip: '管理全部组织',
     isActive: (p) => pathActive(p, '/admin/orgs'),
   },
   {
     to: '/admin/problem-progress',
-    label: '站点题库识别',
+    label: '题库识别',
     icon: WorkflowIcon,
     isActive: (p) => pathActive(p, '/admin/problem-progress'),
   },
   {
     to: '/admin/problem-edits',
-    label: '站点题库审查',
+    label: '题库审查',
     icon: ClipboardCheckIcon,
     isActive: (p) => pathActive(p, '/admin/problem-edits'),
   },
   {
     to: '/admin/blog',
-    label: '站点博客',
+    label: '博客管理',
     icon: NewspaperIcon,
     isActive: (p) => pathActive(p, '/admin/blog'),
   },
@@ -149,7 +152,7 @@ const SITE_NAV_ITEMS: AdminNavItem[] = [
   },
   {
     to: '/admin/emergency',
-    label: '站点紧急通知',
+    label: '紧急通知',
     icon: SirenIcon,
     isActive: (p) => pathActive(p, '/admin/emergency'),
   },
@@ -157,96 +160,132 @@ const SITE_NAV_ITEMS: AdminNavItem[] = [
     to: '/admin/site',
     label: '站点设置',
     icon: SettingsIcon,
-    // 勿用 startsWith('/admin/site')，会误伤 site-statistics / site-users 等
     isActive: (p) => p === '/admin/site' || p.startsWith('/admin/site/'),
   },
   {
     to: '/admin/ops',
-    label: '站点运维',
+    label: '运维',
     icon: WrenchIcon,
     isActive: (p) => pathActive(p, '/admin/ops'),
   },
 ]
 
+/** 可折叠一级入口 + 二级子 Tab */
+function AdminCollapsibleNav({
+  title,
+  icon: Icon,
+  items,
+}: {
+  title: string
+  icon: LucideIcon
+  items: AdminNavItem[]
+}) {
+  const { pathname } = useLocation()
+  const childActive = items.some((i) => i.isActive(pathname))
+  const [open, setOpen] = useState(childActive)
+
+  // 进入任一子路由时自动展开对应分组
+  useEffect(() => {
+    if (childActive) setOpen(true)
+  }, [childActive, pathname])
+
+  return (
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="group/collapsible"
+    >
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton
+            tooltip={title}
+            isActive={childActive && !open}
+            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+          >
+            <Icon />
+            <span>{title}</span>
+            <ChevronRightIcon
+              className={cn(
+                'ml-auto transition-transform duration-200',
+                'group-data-[state=open]/collapsible:rotate-90',
+              )}
+            />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {items.map((item) => {
+              const ItemIcon = item.icon
+              const active = item.isActive(pathname)
+              return (
+                <SidebarMenuSubItem key={item.to + item.label}>
+                  <SidebarMenuSubButton asChild isActive={active}>
+                    <NavLink to={item.to}>
+                      <ItemIcon />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              )
+            })}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  )
+}
+
 type Props = {
   isStaff: boolean
   isSiteAdmin: boolean
-  /** 站管或 org_admin：组织设置；否则训练报告 */
   canOrgSettings: boolean
-  orgName?: string | null
+  /** 组织侧折叠标题：教练管理 / 队长管理 / 组织管理 / 站点管理场景下的组织侧 */
+  staffLabelPayload?: {
+    isSiteAdmin?: boolean
+    orgRole?: string
+    roleId?: number | null
+  } | null
 }
 
 /**
- * PC 侧栏二级管理导航：嵌在前台 AppLayout 内，
- * 「组织管理」与「站点管理」分两组，不再使用独立 AdminLayout。
+ * PC 侧栏二级 Tab 组：
+ * 一级为「教练管理 / 组织管理 / 站点管理」可折叠入口，
+ * 点击展开二级子 Tab（组织数据、成员… / 站点数据、运维…）。
  */
 export function AdminSidebarNavGroups({
   isStaff,
   isSiteAdmin,
   canOrgSettings,
-  orgName,
+  staffLabelPayload,
 }: Props) {
-  const { pathname } = useLocation()
   if (!isStaff) return null
 
-  const orgTitle = orgName?.trim()
-    ? `组织管理 · ${orgName.trim()}`
-    : '组织管理'
+  // 站管：组织侧固定叫「组织管理」，与「站点管理」并列；其它角色用 staffNavLabel
+  const orgTitle = isSiteAdmin
+    ? '组织管理'
+    : staffNavLabel(staffLabelPayload)
 
   return (
     <>
       <SidebarSeparator className="mx-0" />
       <SidebarGroup>
-        <SidebarGroupLabel>{orgTitle}</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            {orgNavItems(canOrgSettings).map((item) => {
-              const Icon = item.icon
-              return (
-                <SidebarMenuItem key={item.to + item.label}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={item.isActive(pathname)}
-                    tooltip={item.tooltip || item.label}
-                  >
-                    <NavLink to={item.to}>
-                      <Icon />
-                      <span>{item.label}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )
-            })}
+            <AdminCollapsibleNav
+              title={orgTitle}
+              icon={isSiteAdmin ? Building2Icon : LayoutDashboardIcon}
+              items={orgNavItems(canOrgSettings)}
+            />
+            {isSiteAdmin && (
+              <AdminCollapsibleNav
+                title="站点管理"
+                icon={LayoutDashboardIcon}
+                items={SITE_NAV_ITEMS}
+              />
+            )}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
-
-      {isSiteAdmin && (
-        <SidebarGroup>
-          <SidebarGroupLabel>站点管理</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {SITE_NAV_ITEMS.map((item) => {
-                const Icon = item.icon
-                return (
-                  <SidebarMenuItem key={item.to + item.label}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={item.isActive(pathname)}
-                      tooltip={item.tooltip || item.label}
-                    >
-                      <NavLink to={item.to}>
-                        <Icon />
-                        <span>{item.label}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      )}
     </>
   )
 }
