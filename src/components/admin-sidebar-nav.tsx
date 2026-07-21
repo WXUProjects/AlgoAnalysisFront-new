@@ -3,7 +3,6 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   ActivityIcon,
   BarChart3Icon,
-  Building2Icon,
   ChevronRightIcon,
   ClipboardCheckIcon,
   FileSpreadsheetIcon,
@@ -170,68 +169,44 @@ const SITE_NAV_ITEMS: AdminNavItem[] = [
   },
 ]
 
-/** 可折叠一级入口 + 二级子 Tab */
-function AdminCollapsibleNav({
-  title,
-  icon: Icon,
-  items,
-}: {
-  title: string
-  icon: LucideIcon
-  items: AdminNavItem[]
-}) {
+function SubNavItems({ items }: { items: AdminNavItem[] }) {
   const { pathname } = useLocation()
-  const childActive = items.some((i) => i.isActive(pathname))
-  const [open, setOpen] = useState(childActive)
-
-  // 进入任一子路由时自动展开对应分组
-  useEffect(() => {
-    if (childActive) setOpen(true)
-  }, [childActive, pathname])
-
   return (
-    <Collapsible
-      open={open}
-      onOpenChange={setOpen}
-      className="group/collapsible"
+    <>
+      {items.map((item) => {
+        const ItemIcon = item.icon
+        const active = item.isActive(pathname)
+        return (
+          <SidebarMenuSubItem key={item.to + item.label}>
+            <SidebarMenuSubButton asChild isActive={active}>
+              <NavLink to={item.to}>
+                <ItemIcon />
+                <span>{item.label}</span>
+              </NavLink>
+            </SidebarMenuSubButton>
+          </SidebarMenuSubItem>
+        )
+      })}
+    </>
+  )
+}
+
+/** 二级区内的小分组标题（组织管理 / 站点管理） */
+function SubSectionLabel({ children }: { children: string }) {
+  return (
+    <li
+      className={cn(
+        'px-2 pt-2 pb-0.5 first:pt-0.5',
+        'text-[10px] font-medium uppercase tracking-wide',
+        'text-sidebar-foreground/50',
+        'group-data-[collapsible=icon]:hidden',
+        'list-none',
+      )}
+      aria-hidden={false}
+      role="presentation"
     >
-      <SidebarMenuItem>
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton
-            tooltip={title}
-            isActive={childActive && !open}
-            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-          >
-            <Icon />
-            <span>{title}</span>
-            <ChevronRightIcon
-              className={cn(
-                'ml-auto transition-transform duration-200',
-                'group-data-[state=open]/collapsible:rotate-90',
-              )}
-            />
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <SidebarMenuSub>
-            {items.map((item) => {
-              const ItemIcon = item.icon
-              const active = item.isActive(pathname)
-              return (
-                <SidebarMenuSubItem key={item.to + item.label}>
-                  <SidebarMenuSubButton asChild isActive={active}>
-                    <NavLink to={item.to}>
-                      <ItemIcon />
-                      <span>{item.label}</span>
-                    </NavLink>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              )
-            })}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </SidebarMenuItem>
-    </Collapsible>
+      {children}
+    </li>
   )
 }
 
@@ -239,7 +214,6 @@ type Props = {
   isStaff: boolean
   isSiteAdmin: boolean
   canOrgSettings: boolean
-  /** 组织侧折叠标题：教练管理 / 队长管理 / 组织管理 / 站点管理场景下的组织侧 */
   staffLabelPayload?: {
     isSiteAdmin?: boolean
     orgRole?: string
@@ -248,9 +222,8 @@ type Props = {
 }
 
 /**
- * PC 侧栏二级 Tab 组：
- * 一级为「教练管理 / 组织管理 / 站点管理」可折叠入口，
- * 点击展开二级子 Tab（组织数据、成员… / 站点数据、运维…）。
+ * PC 侧栏：旧版风格「一个管理入口」+ 展开后内部用小 label 区分组织/站点。
+ * 一级标题：站点管理 / 团队管理 / 教练管理 / 队长管理（staffNavLabel）。
  */
 export function AdminSidebarNavGroups({
   isStaff,
@@ -258,12 +231,19 @@ export function AdminSidebarNavGroups({
   canOrgSettings,
   staffLabelPayload,
 }: Props) {
-  if (!isStaff) return null
+  const { pathname } = useLocation()
+  const title = staffNavLabel(staffLabelPayload)
+  const orgItems = orgNavItems(canOrgSettings)
+  const siteItems = isSiteAdmin ? SITE_NAV_ITEMS : []
+  const allItems = [...orgItems, ...siteItems]
+  const childActive = allItems.some((i) => i.isActive(pathname))
+  const [open, setOpen] = useState(childActive)
 
-  // 站管：组织侧固定叫「组织管理」，与「站点管理」并列；其它角色用 staffNavLabel
-  const orgTitle = isSiteAdmin
-    ? '组织管理'
-    : staffNavLabel(staffLabelPayload)
+  useEffect(() => {
+    if (childActive) setOpen(true)
+  }, [childActive, pathname])
+
+  if (!isStaff) return null
 
   return (
     <>
@@ -271,18 +251,51 @@ export function AdminSidebarNavGroups({
       <SidebarGroup>
         <SidebarGroupContent>
           <SidebarMenu>
-            <AdminCollapsibleNav
-              title={orgTitle}
-              icon={isSiteAdmin ? Building2Icon : LayoutDashboardIcon}
-              items={orgNavItems(canOrgSettings)}
-            />
-            {isSiteAdmin && (
-              <AdminCollapsibleNav
-                title="站点管理"
-                icon={LayoutDashboardIcon}
-                items={SITE_NAV_ITEMS}
-              />
-            )}
+            <Collapsible
+              open={open}
+              onOpenChange={setOpen}
+              className="group/collapsible"
+            >
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton
+                    tooltip={title}
+                    isActive={childActive && !open}
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  >
+                    <LayoutDashboardIcon />
+                    <span>{title}</span>
+                    <ChevronRightIcon
+                      className={cn(
+                        'ml-auto transition-transform duration-200 ease-out',
+                        'motion-reduce:transition-none',
+                        'group-data-[state=open]/collapsible:rotate-90',
+                      )}
+                    />
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarMenuSub
+                    className={cn(
+                      'origin-top',
+                      'data-[state=open]:animate-in',
+                    )}
+                  >
+                    {/* 组织管理：教练/队长/团队管理员/站管 都有 */}
+                    <SubSectionLabel>组织管理</SubSectionLabel>
+                    <SubNavItems items={orgItems} />
+
+                    {/* 站点管理：仅站管；小 label 与组织侧区分 */}
+                    {isSiteAdmin && siteItems.length > 0 && (
+                      <>
+                        <SubSectionLabel>站点管理</SubSectionLabel>
+                        <SubNavItems items={siteItems} />
+                      </>
+                    )}
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </Collapsible>
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

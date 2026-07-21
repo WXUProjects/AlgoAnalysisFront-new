@@ -42,11 +42,15 @@
 
 .code-hl .hljs {
   display: block;
+  /* 长行撑开宽度，父级 pre 才能横向滚动 */
+  width: max-content;
+  min-width: 100%;
   overflow: visible;
   padding: 0 !important;
   margin: 0 !important;
   background: transparent !important;
   color: inherit;
+  white-space: pre;
 }
 
 /* GitHub light token colors */

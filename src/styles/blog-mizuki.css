@@ -754,7 +754,20 @@
   background: var(--mz-code-bg);
   border-radius: var(--mz-radius-sm);
   padding: 1rem;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+}
+
+.mz-prose pre code {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  white-space: pre;
 }
 
 .mz-prose blockquote {

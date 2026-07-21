@@ -252,7 +252,7 @@ export function RightSidebar() {
                       </p>
                     ) : null}
                     {p.tags?.length ? (
-                      <div className="mt-1 flex min-w-0 flex-nowrap gap-1 overflow-hidden">
+                      <div className="scroll-x-touch mt-1 flex min-w-0 flex-nowrap gap-1">
                         {p.tags.slice(0, 3).map((t) => (
                           <Badge
                             key={t}

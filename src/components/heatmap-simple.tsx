@@ -202,7 +202,7 @@ export function HeatmapSimple({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-2">
         <div
           className={cn(
-            'relative min-w-0 flex-1 overflow-x-auto pb-1 transition-opacity',
+            'scroll-x-touch relative min-w-0 flex-1 pb-1 transition-opacity',
             yearLoading && 'pointer-events-none opacity-50',
           )}
         >

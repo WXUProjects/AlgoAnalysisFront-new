@@ -7,6 +7,9 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* 侧栏 / Collapsible 子 Tab 展开收起 */
+  --animate-collapsible-down: collapsible-down 0.22s ease-out;
+  --animate-collapsible-up: collapsible-up 0.18s ease-out;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -101,7 +104,7 @@
 
   html {
     scroll-behavior: smooth;
-    overflow-x: clip;
+    overflow-x: hidden;
   }
 
   html,
@@ -112,13 +115,13 @@
 
   body {
     @apply bg-background text-foreground m-0;
-    overflow-x: clip;
-    overscroll-behavior-x: none;
+    /* hidden 比 clip 更利于嵌套 overflow-x:auto 的触控横向滚动 */
+    overflow-x: hidden;
     transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   #root {
-    overflow-x: clip;
+    overflow-x: hidden;
     max-width: 100%;
   }
 
@@ -141,6 +144,53 @@
 
   .motion-lift {
     @apply transition-[box-shadow,border-color] duration-200 ease-out hover:shadow-md;
+  }
+}
+
+/* Collapsible 高度动画（依赖 Radix --radix-collapsible-content-height） */
+@keyframes collapsible-down {
+  from {
+    height: 0;
+    opacity: 0.4;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+}
+
+@keyframes collapsible-up {
+  from {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes collapsible-down {
+    from {
+      height: 0;
+      opacity: 1;
+    }
+    to {
+      height: var(--radix-collapsible-content-height);
+      opacity: 1;
+    }
+  }
+
+  @keyframes collapsible-up {
+    from {
+      height: var(--radix-collapsible-content-height);
+      opacity: 1;
+    }
+    to {
+      height: 0;
+      opacity: 1;
+    }
   }
 }
 
@@ -294,8 +344,12 @@
   border-radius: 8px;
   border: 1px solid var(--border);
   max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
   background: color-mix(in srgb, var(--border) 25%, transparent);
 }
 
@@ -306,6 +360,17 @@
   border-radius: 0;
 }
 
+/* 移动端横向滚动区：可在主竖向滚动内独立 pan-x */
+.scroll-x-touch {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+}
+
 /* Carbon 风格围栏代码块：边框 + 行号 + 顶栏 */
 .markdown-body .md-code-block {
   position: relative;
@@ -314,7 +379,9 @@
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
+  /* 圆角裁切用 clip，避免 hidden 在部分 WebKit 上吞掉子级横向滚动 */
+  overflow-x: clip;
+  overflow-y: hidden;
   box-shadow:
     0 1px 2px color-mix(in srgb, var(--foreground) 6%, transparent),
     0 0 0 1px color-mix(in srgb, var(--border) 40%, transparent);
@@ -431,12 +498,20 @@
   border: none;
   border-radius: 0;
   background: transparent;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
 }
 
 .markdown-body .md-code-block pre.code-hl code.hljs {
+  /* 关键块宽随最长行，才能让 pre 出现横向滚动条（勿 min-width:0 压扁） */
   display: block;
+  width: max-content;
+  min-width: 100%;
   padding: 0.65rem 0 0.85rem;
   border: none;
   border-radius: 0;
@@ -449,8 +524,9 @@
 .markdown-body .md-code-row {
   display: flex;
   align-items: flex-start;
-  min-width: 0;
-  width: 100%;
+  /* 行宽跟内容走，禁止被 flex 压成容器宽后裁切（否则 scrollWidth≈clientWidth） */
+  width: max-content;
+  min-width: 100%;
 }
 
 .markdown-body .md-code-ln {
@@ -467,8 +543,8 @@
 }
 
 .markdown-body .md-code-src {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 0 0 auto;
+  min-width: min-content;
   padding-right: 1rem;
   /* 原代码格式：不软换行；长行横向滚动（PC + 移动端一致） */
   white-space: pre;
@@ -479,9 +555,12 @@
 
 /* 移动端同样保持 pre + 横向滚动，不强制折行 */
 @media (max-width: 767px) {
-  .markdown-body .md-code-block pre.code-hl {
+  .markdown-body .md-code-block pre.code-hl,
+  .markdown-body pre:not(.code-hl) {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y;
   }
 
   .markdown-body .md-code-src {
@@ -492,12 +571,13 @@
 
   .markdown-body pre:not(.code-hl) {
     white-space: pre;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
   }
 
   .markdown-body pre:not(.code-hl) code {
     white-space: pre;
+    display: block;
+    width: max-content;
+    min-width: 100%;
   }
 }
 
@@ -509,6 +589,8 @@
   display: block;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
 }
 
 .markdown-body th,
@@ -554,6 +636,8 @@
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
 }
 
 .markdown-body .math-fallback {

@@ -34,19 +34,22 @@ export function CodeHighlight({
   return (
     <pre
       className={cn(
-        'code-hl overflow-x-auto rounded-lg border p-3',
+        'code-hl scroll-x-touch max-w-full rounded-lg border p-3',
         className,
       )}
       style={CODE_TEXT_STYLE}
     >
       {html ? (
         <code
-          className={`hljs language-${lang}`}
+          className={`hljs language-${lang} block w-max min-w-full whitespace-pre`}
           style={CODE_TEXT_STYLE}
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
-        <code style={CODE_TEXT_STYLE} className="whitespace-pre">
+        <code
+          style={CODE_TEXT_STYLE}
+          className="block w-max min-w-full whitespace-pre"
+        >
           {plain}
         </code>
       )}

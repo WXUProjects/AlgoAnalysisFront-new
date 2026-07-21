@@ -34,7 +34,7 @@ export function GsapPageTransition({ children }: { children: ReactNode }) {
   return (
     <div
       ref={ref}
-      className="min-w-0 flex-1 will-change-transform"
+      className="min-w-0 max-w-full flex-1"
       data-page-transition=""
     >
       {children}

@@ -38,7 +38,7 @@ export function PageShell({
     <div
       ref={ref}
       className={cn(
-        'flex min-w-0 flex-1 flex-col gap-4 p-4 sm:p-6',
+        'flex min-w-0 max-w-full flex-1 flex-col gap-4 p-4 sm:p-6',
         className,
       )}
       data-page-shell=""

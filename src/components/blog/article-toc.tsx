@@ -15,6 +15,34 @@ type Props = {
 }
 
 /**
+ * 仅在最近的 overflow 祖先内滚动，绝不带动 window（scrollIntoView 会拖主页面）。
+ */
+function scrollIntoNearestScroller(el: HTMLElement) {
+  let parent: HTMLElement | null = el.parentElement
+  while (parent && parent !== document.body) {
+    const { overflowY } = getComputedStyle(parent)
+    const canScrollY =
+      (overflowY === 'auto' ||
+        overflowY === 'scroll' ||
+        overflowY === 'overlay') &&
+      parent.scrollHeight > parent.clientHeight + 1
+    if (canScrollY) {
+      const parentRect = parent.getBoundingClientRect()
+      const elRect = el.getBoundingClientRect()
+      const pad = 8
+      if (elRect.top < parentRect.top + pad) {
+        parent.scrollTop -= parentRect.top + pad - elRect.top
+      } else if (elRect.bottom > parentRect.bottom - pad) {
+        parent.scrollTop += elRect.bottom - (parentRect.bottom - pad)
+      }
+      return
+    }
+    parent = parent.parentElement
+  }
+  // 无内部滚动容器时什么都不做，避免 window.scrollIntoView 把正文拽回去
+}
+
+/**
  * Article outline with scrollspy: highlights the section currently in view.
  */
 export function ArticleToc({ toc, getBody, variant = 'chirpy' }: Props) {
@@ -63,12 +91,13 @@ export function ArticleToc({ toc, getBody, variant = 'chirpy' }: Props) {
     }
   }, [toc, getBody])
 
-  // Keep active item visible inside the sticky panel
+  // 仅在侧栏目录面板内露出当前项，禁止 scrollIntoView 拖动主文档
   useEffect(() => {
     const link = document.querySelector<HTMLElement>(
       `[data-toc-id="${CSS.escape(activeId)}"]`,
     )
-    link?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    if (!link) return
+    scrollIntoNearestScroller(link)
   }, [activeId])
 
   function scrollTo(item: TocItem) {
