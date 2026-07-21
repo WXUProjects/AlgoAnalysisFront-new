@@ -104,7 +104,13 @@
 
   html {
     scroll-behavior: smooth;
-    overflow-x: hidden;
+    /*
+     * 裁切横向溢出用 clip，不要用 hidden：
+     * overflow-x:hidden 会把 overflow-y 算成 auto，建立 scroll container，
+     * 导致全站 position:sticky（博客「文章内容」大纲、资料页侧栏等）失效。
+     * 嵌套横向滚动区自带 overflow-x:auto + touch-action / overscroll-behavior。
+     */
+    overflow-x: clip;
   }
 
   html,
@@ -115,13 +121,12 @@
 
   body {
     @apply bg-background text-foreground m-0;
-    /* hidden 比 clip 更利于嵌套 overflow-x:auto 的触控横向滚动 */
-    overflow-x: hidden;
+    overflow-x: clip;
     transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   #root {
-    overflow-x: hidden;
+    overflow-x: clip;
     max-width: 100%;
   }
 

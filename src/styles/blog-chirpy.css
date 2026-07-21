@@ -566,6 +566,7 @@
   display: flex;
   flex-grow: 1;
   flex-wrap: wrap;
+  align-items: flex-start;
   width: 100%;
 }
 
@@ -601,10 +602,19 @@
   color: var(--text-muted-color);
 }
 
-/* show right panel earlier so「文章内容」大纲更易见 */
+/* show right panel earlier so「文章内容」大纲更易见；桌面 pin 住大纲 */
 @media (min-width: 992px) {
   .chirpy-panel {
     display: block;
+    position: sticky;
+    /* 贴在 sticky 顶栏下方（顶栏 3rem + 间距） */
+    top: calc(3rem + 0.75rem);
+    align-self: flex-start;
+    max-height: calc(100svh - 3rem - 1.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    z-index: 10;
   }
 }
 
@@ -673,15 +683,8 @@
 }
 
 .chirpy-panel .access {
+  /* sticky 已提到 .chirpy-panel，此处只负责内边距 */
   margin-top: 1.5rem;
-  position: sticky;
-  /* topbar 高 3rem + 一点间距，避免滚动时被顶栏盖住 */
-  top: calc(3rem + 0.75rem);
-  max-height: calc(100vh - 3rem - 1.5rem);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  z-index: 10;
 }
 
 .chirpy-toc {

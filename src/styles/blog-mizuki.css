@@ -328,6 +328,11 @@
     display: flex;
     position: sticky;
     top: calc(var(--mz-nav-h) + 0.75rem);
+    align-self: start;
+    max-height: calc(100svh - var(--mz-nav-h) - 1.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
   }
 }
 
