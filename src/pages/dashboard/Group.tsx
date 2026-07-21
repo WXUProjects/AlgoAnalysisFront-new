@@ -55,6 +55,7 @@ import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 const DEFAULT_PAGE_SIZE = 20
+const MEMBER_PAGE_SIZE = 20
 
 export function DashboardGroup() {
   const { page, pageSize, setPage, setPageSize } = useListQueryState({
@@ -66,6 +67,9 @@ export function DashboardGroup() {
   const [detail, setDetail] = useState<GroupInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [memberPage, setMemberPage] = useState(1)
+  const [memberPageSize, setMemberPageSize] = useState(MEMBER_PAGE_SIZE)
+  const [memberTotal, setMemberTotal] = useState(0)
 
   const [editOpen, setEditOpen] = useState(false)
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create')
@@ -93,25 +97,42 @@ export function DashboardGroup() {
     })
   }, [page, pageSize])
 
-  const loadDetail = useCallback(async (id: number) => {
-    setDetailLoading(true)
-    const res = await getGroup(id)
-    setDetailLoading(false)
-    if (!res.success || !res.data) {
-      toast.error(res.message || '加载成员失败')
-      setDetail(null)
-      return
-    }
-    setDetail(res.data)
-  }, [])
+  const loadDetail = useCallback(
+    async (id: number, mPage: number, mPageSize: number) => {
+      setDetailLoading(true)
+      const res = await getGroup(id, { page: mPage, pageSize: mPageSize })
+      setDetailLoading(false)
+      if (!res.success || !res.data) {
+        toast.error(res.message || '加载成员失败')
+        setDetail(null)
+        setMemberTotal(0)
+        return
+      }
+      setDetail(res.data)
+      setMemberTotal(res.data.total)
+      const maxPage = Math.max(1, Math.ceil(res.data.total / mPageSize) || 1)
+      if (mPage > maxPage) setMemberPage(maxPage)
+    },
+    [],
+  )
 
   useEffect(() => {
     void loadList()
   }, [loadList])
 
+  // 切换分组时回到成员第 1 页
   useEffect(() => {
-    if (selectedId !== null) void loadDetail(selectedId)
-  }, [selectedId, loadDetail])
+    setMemberPage(1)
+  }, [selectedId])
+
+  useEffect(() => {
+    if (selectedId === null) {
+      setDetail(null)
+      setMemberTotal(0)
+      return
+    }
+    void loadDetail(selectedId, memberPage, memberPageSize)
+  }, [selectedId, memberPage, memberPageSize, loadDetail])
 
   useEffect(() => {
     if (!search.trim()) {
@@ -161,7 +182,9 @@ export function DashboardGroup() {
       toast.success(res.message || '已保存')
       setEditOpen(false)
       void loadList()
-      if (selectedId !== null) void loadDetail(selectedId)
+      if (selectedId !== null) {
+        void loadDetail(selectedId, memberPage, memberPageSize)
+      }
     } else toast.error(res.message || '保存失败，请稍后重试')
   }
 
@@ -180,7 +203,7 @@ export function DashboardGroup() {
     if (res.success) {
       toast.success('已加入分组')
       setSearch('')
-      void loadDetail(selectedId)
+      void loadDetail(selectedId, memberPage, memberPageSize)
     } else toast.error(res.message || '添加失败')
   }
 
@@ -189,7 +212,9 @@ export function DashboardGroup() {
     const res = await moveGroup({ userId, groupId: 0 })
     if (res.success) {
       toast.success('已移出')
-      if (selectedId !== null) void loadDetail(selectedId)
+      if (selectedId !== null) {
+        void loadDetail(selectedId, memberPage, memberPageSize)
+      }
     } else toast.error(res.message || '移出失败')
   }
 
@@ -320,74 +345,101 @@ export function DashboardGroup() {
 
         <Card className="gap-0 py-0 overflow-hidden">
           <CardHeader className="px-4 py-3 border-b">
-            <CardTitle className="text-base">成员</CardTitle>
+            <CardTitle className="text-base">
+              成员
+              {memberTotal > 0 ? (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  共 {memberTotal} 人
+                </span>
+              ) : null}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="flex flex-col gap-0 p-0">
             {detailLoading ? (
               <div className="p-4">
                 <Skeleton className="h-24 w-full" />
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="hidden sm:table-cell">ID</TableHead>
-                    <TableHead>组织内名称</TableHead>
-                    <TableHead>最后提交</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members.map((m) => (
-                    <TableRow key={m.userId}>
-                      <TableCell className="hidden sm:table-cell">{m.userId}</TableCell>
-                      <TableCell>{m.name || m.username}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {m.lastSubmit ? formatTime(m.lastSubmit) : '-'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button type="button" size="sm" variant="ghost" asChild>
-                            <Link
-                              to={
-                                m.username
-                                  ? `/profile/${m.username}`
-                                  : `/profile?id=${m.userId}`
-                              }
-                            >
-                              资料
-                            </Link>
-                          </Button>
-                          {selectedId !== 0 && (
-                            <ConfirmDialog
-                              title="移出该成员？"
-                              description={`确定将「${m.name || m.username || m.userId}」移出当前分组？对方会回到默认分组。`}
-                              confirmLabel="移出"
-                              destructive
-                              onConfirm={() => void handleRemove(m.userId)}
-                            >
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                              >
-                                移出
-                              </Button>
-                            </ConfirmDialog>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {!members.length && (
+              <>
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground">
-                        暂时还没有成员
-                      </TableCell>
+                      <TableHead className="hidden sm:table-cell">ID</TableHead>
+                      <TableHead>组织内名称</TableHead>
+                      <TableHead>最后提交</TableHead>
+                      <TableHead className="text-right">操作</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {members.map((m) => (
+                      <TableRow key={m.userId}>
+                        <TableCell className="hidden sm:table-cell">
+                          {m.userId}
+                        </TableCell>
+                        <TableCell>{m.name || m.username}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {m.lastSubmit ? formatTime(m.lastSubmit) : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button type="button" size="sm" variant="ghost" asChild>
+                              <Link
+                                to={
+                                  m.username
+                                    ? `/profile/${m.username}`
+                                    : `/profile?id=${m.userId}`
+                                }
+                              >
+                                资料
+                              </Link>
+                            </Button>
+                            {selectedId !== 0 && (
+                              <ConfirmDialog
+                                title="移出该成员？"
+                                description={`确定将「${m.name || m.username || m.userId}」移出当前分组？对方会回到默认分组。`}
+                                confirmLabel="移出"
+                                destructive
+                                onConfirm={() => void handleRemove(m.userId)}
+                              >
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                >
+                                  移出
+                                </Button>
+                              </ConfirmDialog>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {!members.length && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          className="text-center text-muted-foreground"
+                        >
+                          暂时还没有成员
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+                <div className="border-t px-3 py-2">
+                  <Pagination
+                    page={memberPage}
+                    total={memberTotal}
+                    pageSize={memberPageSize}
+                    onChange={setMemberPage}
+                    onPageSizeChange={(n) => {
+                      setMemberPageSize(n)
+                      setMemberPage(1)
+                    }}
+                    disabled={detailLoading}
+                  />
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

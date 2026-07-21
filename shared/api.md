@@ -611,7 +611,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/user/group/create` | 是 | 创建分组 |
 | POST | `/user/group/delete` | 是 | body: `{ id }` |
 | POST | `/user/group/update` | 是 | 更新分组 |
-| GET | `/user/group/get` | 是 | query: `id` |
+| GET | `/user/group/get` | 是 | query: `id`、`page`（默认 1）、`pageSize`（默认 20，最大 100）；成员分页；返回 `users` + `total`/`page`/`pageSize` |
 | GET | `/user/group/list` | 是 | query: `page`, `size` |
 
 **CreateReq**

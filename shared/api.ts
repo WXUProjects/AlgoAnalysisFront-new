@@ -640,6 +640,10 @@ export interface GroupInfo {
   name: string
   describe: string
   users?: UserListItem[]
+  /** 分组成员总数（get 分页时返回） */
+  total?: number
+  page?: number
+  pageSize?: number
 }
 
 export interface RoleInfo {

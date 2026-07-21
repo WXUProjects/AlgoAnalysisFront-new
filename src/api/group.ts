@@ -81,14 +81,34 @@ export async function listAllGroups(
   }
 }
 
-export async function getGroup(id: number): Promise<ApiResult<GroupInfo>> {
-  const res = await get<Record<string, unknown>>(endpoints.user.group.get, { id })
+export async function getGroup(
+  id: number,
+  opts?: { page?: number; pageSize?: number },
+): Promise<ApiResult<GroupInfo & { total: number; page: number; pageSize: number }>> {
+  const page = opts?.page && opts.page > 0 ? opts.page : 1
+  const pageSize =
+    opts?.pageSize && opts.pageSize > 0 ? Math.min(opts.pageSize, 100) : 20
+  const res = await get<Record<string, unknown>>(endpoints.user.group.get, {
+    id,
+    page,
+    pageSize,
+  })
   if (!res.success && !res.data) return { ...res, data: null }
   const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
   if (raw.id === undefined && raw.name === undefined) {
     return { success: false, message: res.message || '分组加载失败，请稍后重试', data: null }
   }
-  return { success: true, message: res.message || 'ok', data: normalizeGroup(raw) }
+  const data = normalizeGroup(raw)
+  return {
+    success: true,
+    message: res.message || 'ok',
+    data: {
+      ...data,
+      total: num(raw.total, data.users?.length ?? 0),
+      page: num(raw.page, page),
+      pageSize: num(raw.pageSize, pageSize),
+    },
+  }
 }
 
 export async function createGroup(body: {
