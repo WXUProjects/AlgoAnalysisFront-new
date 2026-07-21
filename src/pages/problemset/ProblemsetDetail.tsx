@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent,
+} from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   BookmarkIcon,
+  GripVerticalIcon,
   HeartIcon,
   LinkIcon,
   LockIcon,
@@ -14,6 +21,7 @@ import {
   deleteProblemset,
   getProblemset,
   removeProblemFromSet,
+  reorderProblemsetItems,
   toggleProblemsetFavorite,
   toggleProblemsetLike,
   unlockProblemset,
@@ -75,16 +83,32 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { ProblemInfo, ProblemsetInfo, ProblemsetVisibility } from '@shared/api'
+import type {
+  ProblemInfo,
+  ProblemsetInfo,
+  ProblemsetItemInfo,
+  ProblemsetVisibility,
+} from '@shared/api'
 import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { clipMetaText } from '@/lib/document-meta'
 import { cn } from '@/lib/utils'
+
 const unlockKey = (id: string | number) => `ps_unlock_${id}`
 
 const visLabel: Record<string, string> = {
   public: '公开',
   private: '私有',
   password: '需密码',
+}
+
+function moveItem<T>(arr: T[], from: number, to: number): T[] {
+  if (from === to || from < 0 || to < 0 || from >= arr.length || to >= arr.length) {
+    return arr
+  }
+  const next = arr.slice()
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  return next
 }
 
 export function ProblemsetDetail() {
@@ -139,6 +163,9 @@ export function ProblemsetDetail() {
   } | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [busyConfirm, setBusyConfirm] = useState(false)
+  const [reordering, setReordering] = useState(false)
+  const dragFrom = useRef<number | null>(null)
+  const [dragOver, setDragOver] = useState<number | null>(null)
 
   useEffect(() => {
     return () => {
@@ -257,6 +284,60 @@ export function ProblemsetDetail() {
     toast.success('已移除')
     setRemoveTarget(null)
     void load()
+  }
+
+  async function commitOrder(next: ProblemsetItemInfo[]) {
+    if (!set) return
+    const setId = set.id
+    const prev = set.items || []
+    setSet((cur) => (cur ? { ...cur, items: next } : cur))
+    setReordering(true)
+    const res = await reorderProblemsetItems(
+      setId,
+      next.map((x) => x.id),
+    )
+    setReordering(false)
+    if (!res.success) {
+      setSet((cur) => (cur ? { ...cur, items: prev } : cur))
+      toast.error(res.message || '排序保存失败，请稍后重试')
+      return
+    }
+    setSet((cur) =>
+      cur
+        ? {
+            ...cur,
+            items: next.map((item, i) => ({ ...item, sortOrder: i })),
+          }
+        : cur,
+    )
+  }
+
+  function onDragStart(index: number) {
+    dragFrom.current = index
+  }
+
+  function onDragOver(e: DragEvent, index: number) {
+    e.preventDefault()
+    if (dragOver !== index) setDragOver(index)
+  }
+
+  function onDragLeave(index: number) {
+    if (dragOver === index) setDragOver(null)
+  }
+
+  function onDrop(index: number) {
+    if (!set?.isOwner) return
+    const from = dragFrom.current
+    dragFrom.current = null
+    setDragOver(null)
+    if (from == null || from === index) return
+    const next = moveItem(set.items || [], from, index)
+    void commitOrder(next)
+  }
+
+  function onDragEnd() {
+    dragFrom.current = null
+    setDragOver(null)
   }
 
   async function confirmDeleteSet() {
@@ -604,11 +685,20 @@ export function ProblemsetDetail() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">题目列表</CardTitle>
+          <CardTitle className="text-base">
+            题目列表
+            {reordering && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                正在保存顺序…
+              </span>
+            )}
+          </CardTitle>
           <CardDescription>
             {items.length === 0
               ? '还没有题目，点「加题」从题库或链接添加。'
-              : '点击题目可打开详情。'}
+              : set.isOwner
+                ? '拖动左侧手柄调整顺序；点击题目可打开详情。'
+                : '点击题目可打开详情。'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -620,6 +710,7 @@ export function ProblemsetDetail() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {set.isOwner && <TableHead className="w-10" />}
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>题目</TableHead>
                   <TableHead className="w-28">平台</TableHead>
@@ -629,7 +720,38 @@ export function ProblemsetDetail() {
               </TableHeader>
               <TableBody>
                 {items.map((it, idx) => (
-                  <TableRow key={it.id || it.problemId}>
+                  <TableRow
+                    key={it.id || it.problemId}
+                    draggable={set.isOwner && !reordering}
+                    onDragStart={
+                      set.isOwner ? () => onDragStart(idx) : undefined
+                    }
+                    onDragOver={
+                      set.isOwner ? (e) => onDragOver(e, idx) : undefined
+                    }
+                    onDragLeave={
+                      set.isOwner ? () => onDragLeave(idx) : undefined
+                    }
+                    onDrop={set.isOwner ? () => onDrop(idx) : undefined}
+                    onDragEnd={set.isOwner ? onDragEnd : undefined}
+                    className={cn(
+                      dragOver === idx && 'bg-muted/60',
+                      reordering && 'opacity-70',
+                    )}
+                  >
+                    {set.isOwner && (
+                      <TableCell className="w-10 px-1">
+                        <button
+                          type="button"
+                          className="flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground hover:bg-muted active:cursor-grabbing"
+                          aria-label={`拖动调整「${it.title || it.problemId}」顺序`}
+                          title="拖动调整顺序"
+                          onMouseDown={(e) => e.stopPropagation()}
+                        >
+                          <GripVerticalIcon className="size-4" />
+                        </button>
+                      </TableCell>
+                    )}
                     <TableCell className="text-muted-foreground">
                       {idx + 1}
                     </TableCell>

@@ -207,7 +207,7 @@ export function FeedCard({ item, onPreview }: FeedCardProps) {
               {item.href && isBlogPath(item.href)
                 ? '博客'
                 : isSolutionLike
-                  ? '题解'
+                  ? '博客'
                   : '讨论'}
             </Badge>
             {/* 题解/讨论：标注平台 + 题目，点击进题库 */}

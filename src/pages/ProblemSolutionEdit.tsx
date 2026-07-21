@@ -62,21 +62,21 @@ export function ProblemSolutionEdit() {
       const sRes = await getProblemSolution(editId)
       if (!sRes.success || !sRes.data) {
         setLoading(false)
-        toast.error(sRes.message || '题解加载失败')
+        toast.error(sRes.message || '博客加载失败')
         navigate(backTo, { replace: true })
         return
       }
       const sol = sRes.data
       if (sol.problemId && sol.problemId !== problemId) {
         setLoading(false)
-        toast.error('题解与题目不匹配')
+        toast.error('博客与题目不匹配')
         navigate(backTo, { replace: true })
         return
       }
       const myId = user?.userId ?? 0
       if (myId && sol.userId !== myId && !isSiteAdmin) {
         setLoading(false)
-        toast.error('只能编辑自己的题解')
+        toast.error('只能编辑自己的博客')
         navigate(
           `/question-bank/detail/${problemId}/solution/${editId}`,
           { replace: true },
@@ -109,7 +109,7 @@ export function ProblemSolutionEdit() {
   useEffect(() => {
     if (!ready) return
     if (!isLogin) {
-      toast.error('请先登录后再写题解')
+      toast.error('请先登录后再写博客')
       navigate(backTo, { replace: true })
     }
   }, [ready, isLogin, navigate, backTo])
@@ -137,7 +137,7 @@ export function ProblemSolutionEdit() {
       toast.error(res.message || '保存失败')
       return
     }
-    toast.success(isEdit ? '题解已更新' : '题解已发布')
+    toast.success(isEdit ? '博客已更新' : '博客已发布')
     if (isEdit) {
       navigate(`/question-bank/detail/${problemId}/solution/${editId}`)
     } else if (res.data?.id) {
@@ -201,7 +201,7 @@ export function ProblemSolutionEdit() {
       <Card className="gap-2 py-3">
         <CardHeader className="px-4 py-0">
           <CardTitle className="text-base">
-            {isEdit ? '编辑题解' : '发布题解'}
+            {isEdit ? '编辑博客' : '发布博客'}
           </CardTitle>
           <CardDescription>
             左侧写 Markdown，右侧实时预览（公式与题面规格一致）。可用 @用户名
@@ -215,7 +215,7 @@ export function ProblemSolutionEdit() {
               id="solution-title"
               value={sTitle}
               onChange={(e) => setSTitle(e.target.value)}
-              placeholder="题解标题"
+              placeholder="博客标题"
               maxLength={120}
               disabled={saving}
             />
@@ -230,7 +230,7 @@ export function ProblemSolutionEdit() {
         previewMode="markdown"
         minHeight={640}
         placeholder={
-          '用 Markdown 写题解…\n\n## 思路\n\n支持代码块与 $公式$\n\n可用 @username 提醒他人'
+          '用 Markdown 写博客…\n\n## 思路\n\n支持代码块与 $公式$\n\n可用 @username 提醒他人'
         }
       />
     </PageShell>

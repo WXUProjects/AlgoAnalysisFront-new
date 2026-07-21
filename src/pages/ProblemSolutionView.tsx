@@ -61,7 +61,7 @@ export function ProblemSolutionView() {
 
   const problemTitle = problem?.title || ''
   const authorName = solution?.name || solution?.username || ''
-  const solTitle = solution?.title || '题解'
+  const solTitle = solution?.title || '博客'
   useDocumentMeta(
     solution
       ? {
@@ -70,8 +70,8 @@ export function ProblemSolutionView() {
             solution.contentMd ||
               solution.excerpt ||
               (problemTitle
-                ? `${authorName || '选手'} 分享的「${problemTitle}」题解`
-                : '题解分享'),
+                ? `${authorName || '选手'} 分享的「${problemTitle}」博客`
+                : '博客分享'),
           ),
           image: solution.avatar || undefined,
           url: `/question-bank/detail/${problemId || solution.problemId}/solution/${sid}`,
@@ -97,7 +97,7 @@ export function ProblemSolutionView() {
     ])
     setLoading(false)
     if (!sRes.success || !sRes.data) {
-      toast.error(sRes.message || '题解加载失败')
+      toast.error(sRes.message || '博客加载失败')
       return
     }
     setSolution(sRes.data)
@@ -180,7 +180,7 @@ export function ProblemSolutionView() {
       <PageShell>
         <Card className="py-4">
           <CardContent className="px-4 text-sm text-muted-foreground">
-            题解不存在或已删除。
+            博客不存在或已删除。
             <Link to={backTo} className="ml-2 underline underline-offset-2">
               返回题目
             </Link>
@@ -206,7 +206,7 @@ export function ProblemSolutionView() {
               {problemTitle || `题目 #${pid}`}
             </Link>
             <span className="mx-1.5">·</span>
-            题解
+                博客
           </p>
           <h2 className="mt-1 text-lg font-semibold">{solution.title}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -236,7 +236,7 @@ export function ProblemSolutionView() {
                 题面
               </TabsTrigger>
               <TabsTrigger value="solution" className="px-2.5 text-xs">
-                题解
+            博客
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -301,7 +301,7 @@ export function ProblemSolutionView() {
                 编辑
               </Button>
               <ConfirmDialog
-                title="删除这篇题解？"
+                title="删除这篇博客？"
                 description="删除后无法恢复，相关点赞与评论也会一并消失。"
                 confirmLabel="删除"
                 destructive
@@ -346,7 +346,7 @@ export function ProblemSolutionView() {
                 <MarkdownBody
                   content={solution.contentMd || ''}
                   mode="markdown"
-                  emptyText="暂无题解内容"
+                  emptyText="暂无博客内容"
                 />
               )}
             </CardContent>

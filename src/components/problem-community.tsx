@@ -130,7 +130,7 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
     <Card className={cn('gap-0 overflow-hidden py-0', className)}>
       <CardHeader className="flex flex-row items-center justify-between gap-2 border-b px-4 py-3">
         <div className="min-w-0">
-          <CardTitle className="text-base">题解</CardTitle>
+          <CardTitle className="text-base">博客</CardTitle>
         </div>
         {isLogin && (
           <Button
@@ -142,7 +142,7 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
             }
           >
             <BookOpenIcon data-icon="inline-start" />
-            写题解
+            写博客
           </Button>
         )}
       </CardHeader>
@@ -152,7 +152,7 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
             <Link to="/login" className="underline underline-offset-2">
               登录
             </Link>
-            后可发布题解
+            后可发布博客
           </p>
         )}
         <ul className="divide-y rounded-lg border">
@@ -218,7 +218,7 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
                       编辑
                     </Button>
                     <ConfirmDialog
-                      title="删除这篇题解？"
+                       title="删除这篇博客？"
                       description="删除后无法恢复，相关点赞与评论也会一并消失。"
                       confirmLabel="删除"
                       destructive
@@ -240,7 +240,7 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
           ))}
           {!solutions.length && (
             <li className="px-3 py-8 text-center text-sm text-muted-foreground">
-              暂无题解
+              暂无博客
             </li>
           )}
         </ul>
@@ -417,7 +417,7 @@ export function ProblemComments({
         {canSyncPublic ? (
           <CardDescription>可选再同步到公共域</CardDescription>
         ) : onSolution ? (
-          <CardDescription>针对这篇题解的讨论</CardDescription>
+          <CardDescription>针对这篇博客的讨论</CardDescription>
         ) : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-3 p-4">

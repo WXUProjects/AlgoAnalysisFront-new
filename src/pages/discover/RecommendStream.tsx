@@ -143,8 +143,8 @@ export function RecommendStream() {
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {isPublicOrg
-                ? '全站题解、讨论与精选文章'
-                : '本组织题解、讨论与精选文章'}
+                ? '全站博客、讨论与精选文章'
+                : '本组织博客、讨论与精选文章'}
             </p>
           </div>
           <Button
@@ -175,8 +175,8 @@ export function RecommendStream() {
                 <EmptyTitle>暂无可推荐内容</EmptyTitle>
                 <EmptyDescription>
                   {isPublicOrg
-                    ? '全站有新的题解或讨论后，会出现在这里。也可切换到「提交动态」看时间线。'
-                    : '本组织有新的题解或讨论后，会出现在这里。也可切换到「提交动态」看时间线。'}
+                    ? '全站有新的博客或讨论后，会出现在这里。也可切换到「提交动态」看时间线。'
+                    : '本组织有新的博客或讨论后，会出现在这里。也可切换到「提交动态」看时间线。'}
                 </EmptyDescription>
               </EmptyHeader>
               <Button variant="outline" size="sm" className="mt-2" asChild>

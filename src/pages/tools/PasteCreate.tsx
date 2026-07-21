@@ -150,7 +150,7 @@ export function PasteCreate() {
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="例如：比赛题解草稿"
+                  placeholder="例如：比赛博客草稿"
                   maxLength={200}
                 />
               </Field>

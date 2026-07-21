@@ -135,7 +135,7 @@ export function BlogCategoriesPage() {
       <div>
         <h1 className="text-xl font-semibold">分类管理</h1>
         <p className="text-sm text-muted-foreground">
-          给文章分个类，访客浏览更方便。主站题解会自动进「默认」分类。
+          给文章分个类，访客浏览更方便。主站博客会自动进「默认」分类。
         </p>
       </div>
 

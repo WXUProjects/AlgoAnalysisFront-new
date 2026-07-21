@@ -284,6 +284,8 @@ export const endpoints = {
       /** 链接无法识别时手动建题并入题单（无需审核） */
       addManual: `${API_PREFIX}/core/problemset/add-manual`,
       remove: `${API_PREFIX}/core/problemset/remove`,
+      /** 拖拽排序 body: { problemsetId, ids }（ids=题单项 id，按序重写 sortOrder） */
+      reorder: `${API_PREFIX}/core/problemset/reorder`,
       like: `${API_PREFIX}/core/problemset/like`,
       /** 收藏题单 toggle */
       favorite: `${API_PREFIX}/core/problemset/favorite`,

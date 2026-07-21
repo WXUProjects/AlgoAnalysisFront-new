@@ -333,6 +333,20 @@ export async function removeProblemFromSet(
   }
 }
 
+/** 拖拽排序：ids 为题单项 id，按新顺序重写 sortOrder */
+export async function reorderProblemsetItems(
+  problemsetId: number,
+  ids: number[],
+): Promise<ApiResult<null>> {
+  const res = await post(endpoints.core.problemset.reorder, { problemsetId, ids })
+  return {
+    success: res.success,
+    message: res.message,
+    data: null,
+    status: res.status,
+  }
+}
+
 export async function toggleProblemsetLike(
   id: number,
 ): Promise<ApiResult<{ liked: boolean; likeCount: number }>> {

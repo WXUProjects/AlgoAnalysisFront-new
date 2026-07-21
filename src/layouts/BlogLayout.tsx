@@ -195,7 +195,7 @@ export function BlogLayout() {
           title: formatDocumentTitle(pageTitle, displayName || '博客'),
           description:
             subtitle?.trim() ||
-            `${displayName || username} 的算法博客，分享题解与训练笔记`,
+            `${displayName || username} 的算法博客，分享解题思路与训练笔记`,
           image: author?.avatar || undefined,
           url: location.pathname,
           type: 'profile',

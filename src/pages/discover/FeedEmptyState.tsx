@@ -135,7 +135,7 @@ export function FeedEmptyState({
           <EmptyTitle>暂无动态</EmptyTitle>
           <EmptyDescription>
             {followingOnly
-              ? '关注他人后，这里会显示其提交与题解。'
+              ? '关注他人后，这里会显示其提交与博客。'
               : '暂无组织动态。可关注活跃用户以获取更新。'}
           </EmptyDescription>
         </EmptyHeader>

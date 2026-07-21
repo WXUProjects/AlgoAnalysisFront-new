@@ -891,7 +891,7 @@ export function Profile() {
 
           <Card className="gap-3 py-4">
             <CardHeader className="px-4">
-              <CardTitle className="text-base">近期评论与题解</CardTitle>
+              <CardTitle className="text-base">近期评论与博客</CardTitle>
               <CardDescription>在题目下发表的讨论内容</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4 px-4">
@@ -924,7 +924,7 @@ export function Profile() {
               </div>
               <div>
                 <p className="mb-2 text-xs font-medium text-muted-foreground">
-                  题解
+                  博客
                 </p>
                 {recentSolutions.length ? (
                   <ul className="divide-y rounded-lg border">
@@ -944,7 +944,7 @@ export function Profile() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted-foreground">暂无题解</p>
+                  <p className="text-sm text-muted-foreground">暂无博客</p>
                 )}
               </div>
             </CardContent>

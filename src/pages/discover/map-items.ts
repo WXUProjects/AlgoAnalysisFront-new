@@ -61,7 +61,7 @@ export function mapActivityToStreamItem(
     a.type === 'solution' ? 'solution' : a.type === 'share' ? 'share' : 'comment'
   const title =
     a.type === 'solution' || a.type === 'share'
-      ? a.title || a.problemTitle || '题解'
+      ? a.title || a.problemTitle || '博客'
       : a.problemTitle
         ? `讨论 · ${a.problemTitle}`
         : a.title || '讨论'

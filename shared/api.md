@@ -868,6 +868,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problemset/add` | 是 | body: `{ problemsetId?, problemId? }` 或 `{ problemsetId?, url? }`；**`problemsetId` 可省略**：仅向题库入库（须 `url`）；有 `problemsetId` 时同时加入该题单（须本人题单）。缺题面**强制爬取**；AI 按操作者资格；无法识别链接 → `success=false, code=URL_PARSE_FAILED`（HTTP 200）。URL 清洗粘贴噪声；成功 data 含 `platform`/`title`/`externalId` 识别摘要。支持：`CodeForces`、`AtCoder`、`LuoGu`、`NowCoder`（含比赛题页）、`QOJ`、`LeetCode` |
 | POST | `/core/problemset/add-manual` | 是 | 链接无法识别时手动建题（**无需审核**）；body: `{ problemsetId?, title, contentMd?, tags?, sourceUrl? }` → `{ problemId }`；`problemsetId` 可省略（仅入库）；`platform=Manual` |
 | POST | `/core/problemset/remove` | 是 | body: `{ problemsetId, problemId }` 手动剔除 |
+| POST | `/core/problemset/reorder` | 是 | 拖拽排序；body: `{ problemsetId, ids: [itemId…] }`（`ids` 为题单项 id，须覆盖该题单全部项）；按序重写 `sortOrder` 为 `0,1,2…`；仅 owner |
 | POST | `/core/problemset/like` | 是 | body: `{ id }` toggle 点赞 → `{ liked, likeCount }` |
 | POST | `/core/problemset/favorite` | 是 | body: `{ id }` toggle **收藏**（与点赞分离；仅公开自定义题单）→ `{ favorited }` |
 | GET | `/core/problemset/favorites` | 是 | 我收藏的题单列表；**排除自己的**；query: `page`, `pageSize`；仅仍为 public custom 的 |
@@ -1315,6 +1316,7 @@ POST   /api/core/problemset/unlock
 POST   /api/core/problemset/add
 POST   /api/core/problemset/add-manual
 POST   /api/core/problemset/remove
+POST   /api/core/problemset/reorder
 POST   /api/core/problemset/like
 POST   /api/core/problemset/favorite
 GET    /api/core/problemset/favorites

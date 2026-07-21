@@ -855,7 +855,7 @@ export function ContestDetails() {
                             </TabsTrigger>
                             <TabsTrigger value="solutions" className="flex-1">
                               <BookOpenIcon />
-                              题解
+                               博客
                             </TabsTrigger>
                           </TabsList>
                         </Tabs>
@@ -900,7 +900,7 @@ export function ContestDetails() {
                             )}
                           >
                             <CardContent className="px-4 text-sm text-muted-foreground">
-                              题目尚未入库，暂无题解
+                               题目尚未入库，暂无博客
                             </CardContent>
                           </Card>
                         )}

@@ -386,7 +386,7 @@ export function BlogArticlePage() {
   async function handleDeleteComment(id: number) {
     // 题解评论删除走社区 API（此处仅博客自有评论）
     if (article?.sourceSolutionId) {
-      toast.message('请到主站题解页管理题解评论')
+      toast.message('请到主站博客页管理博客评论')
       return
     }
     const res = await deleteBlogComment(id)
