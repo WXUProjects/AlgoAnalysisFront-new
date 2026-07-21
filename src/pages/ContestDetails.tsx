@@ -550,10 +550,10 @@ export function ContestDetails() {
               <CardDescription>
                 {scoring === 'leetcode'
                   ? hasCellDetail
-                    ? '绿色是赛时通过，蓝色是补题通过，橙色是补题未过，红色是赛时未过。补题不计分'
+                    ? '绿色是赛时通过，红色是赛时未过。补题不计入得分与排名，格子显示为 —'
                     : '本场暂无逐题明细，只显示得分'
                   : hasCellDetail
-                    ? '绿色是赛时通过，蓝色是补题通过，橙色是补题未过，红色是赛时未过。补题不计入 AC/罚时'
+                    ? '绿色是赛时通过，红色是赛时未过。补题不计入 AC/罚时与排名，格子显示为 —'
                     : '本场暂无逐题明细，只显示通过题数'}
                 {followingOnly ? ' · 仅看关注' : ''}
               </CardDescription>
@@ -566,22 +566,16 @@ export function ContestDetails() {
                     赛时通过
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-flex size-5 items-center justify-center rounded bg-sky-500/15 text-[10px] font-semibold text-sky-700 dark:text-sky-400">
-                      ✓
-                    </span>
-                    补题
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-flex size-5 items-center justify-center rounded bg-orange-500/15 text-[10px] font-semibold text-orange-700 dark:text-orange-400">
-                      ×
-                    </span>
-                    补题未过
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
                     <span className="inline-flex size-5 items-center justify-center rounded bg-rose-500/15 text-[10px] font-semibold text-rose-700 dark:text-rose-400">
                       1
                     </span>
                     尝试未过
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex size-5 items-center justify-center rounded text-[10px] font-semibold text-muted-foreground">
+                      —
+                    </span>
+                    补题（不计排名）
                   </span>
                 </div>
               ) : null}
@@ -637,9 +631,12 @@ export function ContestDetails() {
                         return (
                           <TableRow key={row.userId}>
                             <TableCell className="sticky left-0 z-10 bg-background font-medium tabular-nums">
-                              {row.rankOfficial > 0
-                                ? row.rankOfficial
-                                : row.rankLocal}
+                              {/* 仅赛后补题：不计入排名 */}
+                              {row.isContestant === false
+                                ? '—'
+                                : row.rankOfficial > 0
+                                  ? row.rankOfficial
+                                  : row.rankLocal}
                             </TableCell>
                             <TableCell className="sticky left-12 z-10 bg-background">
                               <Link
@@ -1109,35 +1106,8 @@ function BoardCellView({
       </button>
     )
   }
-  // 补题：赛后首次 AC，不计入 AC 数与罚时
-  if (cell.status === 'UPSOLVE') {
-    const fail =
-      cell.attempts > 0 ? (
-        <span className="opacity-80">(-{cell.attempts})</span>
-      ) : null
-    return (
-      <button
-        type="button"
-        disabled={!clickable}
-        onClick={onClick}
-        className={cn(
-          'mx-auto flex min-h-9 min-w-[2.75rem] flex-col items-center justify-center rounded-md px-1 py-0.5',
-          'bg-sky-500/15 text-sky-700 dark:text-sky-400',
-          clickable &&
-            'cursor-pointer transition-colors hover:bg-sky-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-          !clickable && 'cursor-default',
-        )}
-        title={clickable ? '补题通过（不计入榜单）' : '补题通过'}
-      >
-        <span className="font-semibold leading-tight">✓</span>
-        {fail ? (
-          <span className="text-[10px] leading-none tabular-nums">{fail}</span>
-        ) : null}
-      </button>
-    )
-  }
-  // 赛后有提交但尚未通过，不计入赛时榜。
-  if (cell.status === 'UPSOLVE_TRIED') {
+  // 补题：不计入 AC/罚时/排名，榜上显示 —（仍可点开看明细）
+  if (cell.status === 'UPSOLVE' || cell.status === 'UPSOLVE_TRIED') {
     return (
       <button
         type="button"
@@ -1145,14 +1115,22 @@ function BoardCellView({
         onClick={onClick}
         className={cn(
           'mx-auto flex min-h-9 min-w-[2.75rem] items-center justify-center rounded-md px-1 py-0.5',
-          'bg-orange-500/15 text-orange-700 dark:text-orange-400',
+          'text-muted-foreground',
           clickable &&
-            'cursor-pointer transition-colors hover:bg-orange-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'cursor-pointer transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           !clickable && 'cursor-default',
         )}
-        title="补题暂未通过（不计入榜单）"
+        title={
+          cell.status === 'UPSOLVE'
+            ? clickable
+              ? '补题通过，不计入排名（点开查看）'
+              : '补题通过，不计入排名'
+            : clickable
+              ? '补题未过，不计入排名（点开查看）'
+              : '补题未过，不计入排名'
+        }
       >
-        <span className="font-semibold">×</span>
+        <span className="font-medium leading-tight">—</span>
       </button>
     )
   }

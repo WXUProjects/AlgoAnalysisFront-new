@@ -196,6 +196,8 @@ function normalizeBoardRow(r: Record<string, unknown>): ContestBoardRow {
     score: num(r.score),
     acCount: num(r.acCount),
     hasDetail: r.hasDetail === undefined ? undefined : bool(r.hasDetail),
+    isContestant:
+      r.isContestant === undefined ? undefined : bool(r.isContestant),
     cells: cellsRaw.map(normalizeBoardCell),
   }
 }
