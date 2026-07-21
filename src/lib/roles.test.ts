@@ -3,18 +3,18 @@ import { describe, it } from 'node:test'
 import { bottomNavStaffLabel, OrgRole } from '@/lib/roles'
 
 describe('bottomNavStaffLabel', () => {
-  it('returns 后台管理 for site admin (isSiteAdmin)', () => {
-    assert.equal(bottomNavStaffLabel({ isSiteAdmin: true }), '后台管理')
+  it('returns 站点管理 for site admin (isSiteAdmin)', () => {
+    assert.equal(bottomNavStaffLabel({ isSiteAdmin: true }), '站点管理')
   })
 
-  it('returns 后台管理 for site admin (roleId===1)', () => {
-    assert.equal(bottomNavStaffLabel({ roleId: 1 }), '后台管理')
+  it('returns 站点管理 for site admin (roleId===1)', () => {
+    assert.equal(bottomNavStaffLabel({ roleId: 1 }), '站点管理')
   })
 
-  it('returns 后台管理 when isSiteAdmin + orgRole=org_admin (site admin priority)', () => {
+  it('returns 站点管理 when isSiteAdmin + orgRole=org_admin (site admin priority)', () => {
     assert.equal(
       bottomNavStaffLabel({ isSiteAdmin: true, orgRole: OrgRole.OrgAdmin }),
-      '后台管理',
+      '站点管理',
     )
   })
 

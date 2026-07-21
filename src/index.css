@@ -630,9 +630,17 @@
   }
 }
 
-/* Mobile Sheet: hide sidebar items already present in the bottom nav */
+/* Mobile Sheet: hide sidebar items already present in the bottom nav
+   （「更多」已改为底部面板；侧滑侧栏仅桌面/键盘快捷，仍保留此规则） */
 [data-mobile="true"] [data-bottom-nav="true"] {
   display: none;
+}
+
+/* 主滚动区：底栏占位，避免最后一屏内容被 fixed 底栏裁切 */
+@media (max-width: 767px) {
+  [data-app-scroll-container] {
+    scroll-padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* Reduced transparency: solid background fallback for backdrop-blur nav */

@@ -149,7 +149,8 @@ export function bottomNavStaffLabel(p?: {
   orgRole?: string
   roleId?: number | null
 } | null) {
-  if (isSiteAdminFromPayload(p)) return '后台管理'
+  // 与「更多」分区一致：站管 = 站点管理，组织侧 = 组织/教练/队长管理
+  if (isSiteAdminFromPayload(p)) return '站点管理'
   if (p?.orgRole === OrgRole.OrgAdmin) return '组织管理'
   if (p?.orgRole === OrgRole.Coach) return '教练管理'
   if (p?.orgRole === OrgRole.Captain) return '队长管理'

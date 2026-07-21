@@ -42,10 +42,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-const TAG_COLLAPSE_COUNT = 16
+/** 桌面默认露出的标签数；移动端更少，避免占满一屏 */
+const TAG_COLLAPSE_COUNT_DESKTOP = 16
+const TAG_COLLAPSE_COUNT_MOBILE = 7
 
 const DEFAULT_PAGE_SIZE = 20
 const PLATFORMS = ['NowCoder', 'AtCoder', 'CodeForces', 'LuoGu', 'LeetCode', 'QOJ']
@@ -65,6 +68,10 @@ function parseList(v: string | null): string[] {
 export function QuestionBank() {
   const { isLogin, user } = useAuth()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
+  const tagCollapseCount = isMobile
+    ? TAG_COLLAPSE_COUNT_MOBILE
+    : TAG_COLLAPSE_COUNT_DESKTOP
   const [searchParams, setSearchParams] = useSearchParams()
 
   const page = Number(searchParams.get('page') || 1) || 1
@@ -166,11 +173,11 @@ export function QuestionBank() {
 
   const visibleTagOptions = useMemo(() => {
     if (tagsExpanded || tagInput.trim()) return filteredTagOptions
-    return filteredTagOptions.slice(0, TAG_COLLAPSE_COUNT)
-  }, [filteredTagOptions, tagsExpanded, tagInput])
+    return filteredTagOptions.slice(0, tagCollapseCount)
+  }, [filteredTagOptions, tagsExpanded, tagInput, tagCollapseCount])
 
   const canCollapseTags =
-    !tagInput.trim() && filteredTagOptions.length > TAG_COLLAPSE_COUNT
+    !tagInput.trim() && filteredTagOptions.length > tagCollapseCount
 
   const patchParams = useCallback(
     (patch: Record<string, string | null>) => {

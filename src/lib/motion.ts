@@ -302,13 +302,14 @@ function panelFromVars(side: SheetSide): gsap.TweenVars {
   }
 }
 
-/** Side sheet panel slide */
+/** Side sheet panel slide — bottom sheet uses slightly longer settle (iOS-like) */
 export function animatePanelIn(el: Element, side: SheetSide = 'right') {
   killTweens(el)
   if (prefersReducedMotion()) {
     instantSet(el, { x: 0, y: 0, xPercent: 0, yPercent: 0, opacity: 1 })
     return
   }
+  const isBottom = side === 'bottom'
   gsap.fromTo(
     el,
     { ...panelFromVars(side), opacity: 1 },
@@ -318,7 +319,8 @@ export function animatePanelIn(el: Element, side: SheetSide = 'right') {
       x: 0,
       y: 0,
       opacity: 1,
-      duration: MOTION.duration.panelIn,
+      // bottom: ~0.36s power3.out ≈ Apple sheet response without bounce
+      duration: isBottom ? 0.36 : MOTION.duration.panelIn,
       ease: MOTION.ease.sheet,
       overwrite: true,
     },
@@ -331,9 +333,10 @@ export function animatePanelOut(el: Element, side: SheetSide = 'right') {
     instantSet(el, { ...panelFromVars(side), opacity: 1 })
     return
   }
+  const isBottom = side === 'bottom'
   gsap.to(el, {
     ...panelFromVars(side),
-    duration: MOTION.duration.panelOut,
+    duration: isBottom ? 0.26 : MOTION.duration.panelOut,
     ease: MOTION.ease.sheetOut,
     overwrite: true,
   })

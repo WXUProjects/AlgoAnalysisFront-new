@@ -11,6 +11,25 @@ import {
 import { cn } from '@/lib/utils'
 import { bottomNavStaffLabel } from '@/lib/roles'
 
+/**
+ * 固定底栏总高度（内容 h-14 + 底部安全区）。
+ * 用于内容区 / 页脚留白，避免备案号等被挡住。
+ */
+export const MAIN_BOTTOM_NAV_OFFSET =
+  'calc(3.5rem + env(safe-area-inset-bottom, 0px))'
+
+/** 移动端滚动内容底部占位（与固定底栏等高） */
+export function MainBottomNavSpacer({ className }: { className?: string }) {
+  return (
+    <div
+      data-main-bottom-nav-spacer=""
+      className={cn('shrink-0 md:hidden', className)}
+      style={{ height: MAIN_BOTTOM_NAV_OFFSET }}
+      aria-hidden
+    />
+  )
+}
+
 type BottomNavItem = {
   to: string
   icon: typeof HomeIcon
@@ -75,7 +94,7 @@ type RenderItem =
  *
  * 已登录普通成员 5 Tab：首页 / 发现 / 比赛 / 题库 / 更多
  * 已登录 staff 6 Tab：首页 / 发现 / 比赛 / 题库 / 管理 / 更多
- *   管理入口在题库右侧；文案按角色：后台管理 > 组织管理 > 教练管理 > 队长管理
+ *   管理入口在题库右侧；文案按角色：站点管理 > 组织管理 > 教练管理 > 队长管理
  * 未登录 5 Tab：关于 / 发现 / 比赛 / 题库 / 更多
  *
  * Sheet 打开时更多按钮高亮；/about 仅登录态归 More。

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   BookOpenIcon,
@@ -6,7 +6,6 @@ import {
   CalendarIcon,
   HomeIcon,
   InfoIcon,
-  LayoutDashboardIcon,
   ListTodoIcon,
   LogInIcon,
   LogOutIcon,
@@ -25,13 +24,22 @@ import {
   resolvePageTitle,
 } from '@/lib/page-title'
 import { getHomePath } from '@/lib/home-path'
-import { staffNavLabel } from '@/lib/roles'
 import { trackPageVisit } from '@/lib/visit-tracker'
 import { useSiteConfig } from '@/site/SiteConfigContext'
+import { AdminSidebarNavGroups } from '@/components/admin-sidebar-nav'
 import { AnimatedTitle } from '@/components/animated-title'
 import { DomainHintSync } from '@/components/domain-hint-sync'
 import { GsapPageTransition } from '@/components/gsap-page-transition'
-import { MainBottomNav } from '@/components/main-bottom-nav'
+import {
+  MainBottomNav,
+  MainBottomNavSpacer,
+} from '@/components/main-bottom-nav'
+import {
+  buildMobileMoreAccountLinks,
+  buildMobileMoreSectionsFromAuth,
+  MobileMoreAccountFooter,
+  MobileMoreSheet,
+} from '@/components/mobile-more-sheet'
 import { MobileNavBack } from '@/components/mobile-nav-back'
 import { formatOrgSwitchLabel, MobileOrgSwitcher } from '@/components/mobile-org-switcher'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -46,6 +54,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -55,14 +64,12 @@ import {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
-  useSidebar,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { MotionProvider } from '@/motion/MotionContext'
-import { cn } from '@/lib/utils'
 
 export function AppLayout() {
   return (
@@ -81,7 +88,8 @@ function AppLayoutInner() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { config } = useSiteConfig()
-  const { openMobile, setOpenMobile } = useSidebar()
+  /** 移动端「更多」底部面板（不再打开侧滑 Sidebar） */
+  const [moreOpen, setMoreOpen] = useState(false)
   const {
     isLogin,
     isStaff,
@@ -131,7 +139,6 @@ function AppLayoutInner() {
         },
   )
   const homeTo = getHomePath(isLogin)
-  const adminLabel = staffNavLabel(user)
   // 公共域（或未登录默认视图）展示「关于我们」
   const showAbout =
     !isLogin ||
@@ -142,6 +149,43 @@ function AppLayoutInner() {
     pathname === '/register' ||
     pathname === '/forgot-password'
   const showLoginBanner = ready && !isLogin && !isAuthPage
+
+  const moreSections = useMemo(
+    () =>
+      buildMobileMoreSectionsFromAuth({
+        isLogin,
+        isMemberLike,
+        username: user?.username,
+        showAbout,
+        isStaff,
+        isSiteAdmin,
+        isOrgAdmin,
+        orgName: currentOrg?.name,
+        orgRole: user?.orgRole,
+        roleId: user?.roleId,
+      }),
+    [
+      isLogin,
+      isMemberLike,
+      user?.username,
+      user?.orgRole,
+      user?.roleId,
+      showAbout,
+      isStaff,
+      isSiteAdmin,
+      isOrgAdmin,
+      currentOrg?.name,
+    ],
+  )
+  const moreAccountLinks = useMemo(
+    () => buildMobileMoreAccountLinks(isLogin),
+    [isLogin],
+  )
+
+  // 路由变化时收起「更多」
+  useEffect(() => {
+    setMoreOpen(false)
+  }, [pathname])
 
   // 未登录访问首页 → 强制跳到关于我们
   useEffect(() => {
@@ -206,6 +250,9 @@ function AppLayoutInner() {
 
           <SidebarContent>
             <SidebarGroup>
+              <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+                浏览
+              </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {isLogin && (
@@ -330,21 +377,6 @@ function AppLayoutInner() {
                     </SidebarMenuItem>
                   )}
 
-                  {isLogin && isStaff && (
-                    <SidebarMenuItem {...{ 'data-bottom-nav': 'true' }}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={pathname.startsWith('/admin')}
-                        tooltip={adminLabel}
-                      >
-                        <NavLink to="/admin">
-                          <LayoutDashboardIcon />
-                          <span>{adminLabel}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
                   {isLogin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton
@@ -377,6 +409,16 @@ function AppLayoutInner() {
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
+
+            {/* PC：管理作为前台侧栏二级分组；移动端走底栏 +「更多」 */}
+            {isLogin && isStaff && (
+              <AdminSidebarNavGroups
+                isStaff={isStaff}
+                isSiteAdmin={isSiteAdmin}
+                canOrgSettings={isSiteAdmin || isOrgAdmin}
+                orgName={currentOrg?.name}
+              />
+            )}
           </SidebarContent>
 
           <SidebarFooter>
@@ -501,35 +543,42 @@ function AppLayoutInner() {
             data-app-scroll-container=""
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-x-none"
           >
-            {/*
-              底栏留白放在 min-h-full 内容盒内部（而非 main 上），
-              这样 mt-auto 的页脚会落在固定底栏上方，而不是被挡住后还要多滚一段。
-            */}
-            <div
-              className={cn(
-                'flex min-h-full min-w-0 flex-1 flex-col',
-                !isAuthPage &&
-                  'pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0',
-              )}
-            >
+            <div className="flex min-h-full min-w-0 flex-1 flex-col">
               <GsapPageTransition>
                 {/* 切组织后 JWT 已变但页面常不 remount；用 org key 强制重拉租户数据 */}
                 <Outlet key={user?.orgId || currentOrg?.id || 0} />
               </GsapPageTransition>
               <SiteFooter />
+              {/* 与固定底栏等高的占位，保证备案号完整露在底栏上方 */}
+              {!isAuthPage && <MainBottomNavSpacer />}
             </div>
           </main>
           {!isAuthPage && (
-            <MainBottomNav
-              isLogin={isLogin}
-              isStaff={isStaff}
-              isSiteAdmin={isSiteAdmin}
-              isOrgAdmin={isOrgAdmin}
-              isCoach={isCoach}
-              isCaptain={isCaptain}
-              sheetOpen={openMobile}
-              onMoreClick={() => setOpenMobile(true)}
-            />
+            <>
+              <MainBottomNav
+                isLogin={isLogin}
+                isStaff={isStaff}
+                isSiteAdmin={isSiteAdmin}
+                isOrgAdmin={isOrgAdmin}
+                isCoach={isCoach}
+                isCaptain={isCaptain}
+                sheetOpen={moreOpen}
+                onMoreClick={() => setMoreOpen(true)}
+              />
+              <MobileMoreSheet
+                open={moreOpen}
+                onOpenChange={setMoreOpen}
+                sections={moreSections}
+                footer={
+                  <MobileMoreAccountFooter
+                    isLogin={isLogin}
+                    onLogout={handleLogout}
+                    onNavigate={() => setMoreOpen(false)}
+                    extraLinks={moreAccountLinks}
+                  />
+                }
+              />
+            </>
           )}
         </SidebarInset>
         <Toaster richColors position="top-center" />

@@ -5,7 +5,6 @@ import {
   Outlet,
 } from 'react-router-dom'
 import { AppLayout } from '@/layouts/AppLayout'
-import { AdminLayout } from '@/layouts/AdminLayout'
 import { RequireCoach } from '@/auth/RequireCoach'
 import { RequireLogin } from '@/auth/RequireLogin'
 import { RequireMemberLike } from '@/auth/RequireMemberLike'
@@ -692,22 +691,10 @@ const browserRouter = createBrowserRouter([
       { path: 'problem', element: <Navigate to="/question-bank" replace /> },
       { path: 'dashboard', element: <Navigate to="/admin" replace /> },
       { path: 'dashboard/*', element: <Navigate to="/admin" replace /> },
+      // 管理页挂在前台 AppLayout 下（PC 侧栏二级分组；不再使用独立 AdminLayout）
       {
-        path: '*',
-        element: (
-          <Lazy>
-            <NotFound />
-          </Lazy>
-        ),
-      },
-    ],
-  },
-  {
-    path: '/admin',
-    element: <CoachOutlet />,
-    children: [
-      {
-        element: <AdminLayout />,
+        path: 'admin',
+        element: <CoachOutlet />,
         children: [
           { index: true, element: <Navigate to="statistics" replace /> },
           {
@@ -840,9 +827,17 @@ const browserRouter = createBrowserRouter([
           },
         ],
       },
+      {
+        path: '*',
+        element: (
+          <Lazy>
+            <NotFound />
+          </Lazy>
+        ),
+      },
     ],
   },
 ])
 
-// Page enter motion is GSAP via GsapPageTransition in AppLayout / AdminLayout.
+// Page enter motion is GSAP via GsapPageTransition in AppLayout.
 export const router = browserRouter

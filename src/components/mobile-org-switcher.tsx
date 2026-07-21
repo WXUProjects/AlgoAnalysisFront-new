@@ -56,7 +56,7 @@ interface MobileOrgSwitcherProps {
 }
 
 /**
- * 移动端顶部组织切换（AppLayout + AdminLayout）。
+ * 移动端顶部组织切换（AppLayout）。
  * 文案规则与侧边栏「当前组织」完全一致。
  */
 export function MobileOrgSwitcher({
