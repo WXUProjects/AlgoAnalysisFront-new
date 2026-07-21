@@ -728,7 +728,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/core/contest/history` | 否 | query: `userId`, `limit`, `cursor`, `platform?` |
 | GET | `/core/contest/ranking` | 否 | query: `contestId` 或 `contest_id`（**contest_logs 行 id**）, `limit`, `offset`, `groupId?`, `followingOnly?`（与组织/分组求交） |
 | GET | `/core/contest/problems` | 否 | query: `id` 或 `contestId`（**contest_logs 行 id**）→ 比赛题目 Tab 列表；**每场（platform+OJ contest_id）只 ensure 一次**：主动从 OJ 发现题目并入库（`external_id` 与提交解析一致）+ **强制爬题面**；AI 分析仍依赖「有资格用户提交」闸门 |
-| GET | `/core/contest/board` | 否 | query: `id`/`contestId`（**contest_logs 行 id**）, `groupId?`, `followingOnly?` → XCPCIO 风格站内榜：`scoring`（icpc\|leetcode）、`problems[]`、`rows[{isContestant,cells}]`；补题直接由已有全量 `submit_logs` 推导，无需重新爬取。格子 `status`：`AC`（赛时通过，计分）、`UPSOLVE`（补题通过）、`UPSOLVE_TRIED`（补题未过）、`TRIED`（赛时未过）、`NONE`；补题状态均不计分，纯补题用户排在赛时参赛者之后 |
+| GET | `/core/contest/board` | 否 | query: `id`/`contestId`（**contest_logs 行 id**）, `groupId?`, `followingOnly?` → XCPCIO 风格站内榜：`scoring`（icpc\|leetcode）、`problems[]`、`rows[{isContestant,cells}]`；补题直接由已有全量 `submit_logs` 推导，无需重新爬取。格子 `status`：`AC`（赛时通过，计分）、`UPSOLVE`（补题通过）、`UPSOLVE_TRIED`（补题未过）、`TRIED`（赛时未过）、`NONE`；补题状态均不计分。**展示序**：赛时选手按官方/本地榜序；**仅补题用户**在下方按补题 AC 数降序，相同则最后一次补题通过时间升序（更早在前）；纯补题不赋名次 |
 | GET | `/core/contest/cell-submits` | 否 | query: `id`/`contestId`（**contest_logs 行 id**）, `userId`, `label?`, `externalId?`（label 与 externalId 至少一个）→ 该用户本场该题的提交明细。含**赛时**与**赛后补题**（赛后最多约 30 天，与补题推导一致）；项字段 `phase`：`contest`（赛时，可有 `relativeSec`）\| `upsolve`（赛后，用绝对 `time`）；按提交时间逆序 |
 
 ### ContestCalendar（比赛日历 / 公开赛程）
