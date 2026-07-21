@@ -36,9 +36,16 @@ import { extractMarkdownOutline } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 import { formatTime } from '@/lib/format'
 
+/** 主布局顶栏 h-14 + 一点间距；scrollspy / 锚点用视口坐标 */
+const SCROLL_OFFSET_PX = 3.5 * 16 + 12
+
+function getAppScroller(): HTMLElement | null {
+  return document.querySelector<HTMLElement>('[data-app-scroll-container]')
+}
+
 /**
  * 题解阅读页：走主布局（保留左侧 Tab），替代原弹窗阅读。
- * 桌面 7:3 — 左正文+评论 / 右文章提纲；移动端隐藏右侧提纲。
+ * 桌面 7:3 — 左正文+评论 / 右文章提纲（sticky + scrollspy）；移动端隐藏右侧提纲。
  */
 export function ProblemSolutionView() {
   const { id, solutionId } = useParams()
@@ -123,6 +130,59 @@ export function ProblemSolutionView() {
   const outline =
     contentTab === 'problem' ? problemOutline : solutionOutline
 
+  // 切换题面/题解时重置高亮
+  useEffect(() => {
+    setActiveHeadingId(outline[0]?.id || '')
+  }, [contentTab, outline])
+
+  // scrollspy：随主布局滚动容器高亮当前章节（非 window）
+  useEffect(() => {
+    if (outline.length === 0) return
+
+    const resolveActive = () => {
+      let current = outline[0]?.id || ''
+      for (const item of outline) {
+        const el = document.getElementById(item.id)
+        if (!el) continue
+        if (el.getBoundingClientRect().top <= SCROLL_OFFSET_PX) {
+          current = item.id
+        }
+      }
+      const scroller = getAppScroller()
+      if (scroller) {
+        if (
+          scroller.scrollTop + scroller.clientHeight >=
+          scroller.scrollHeight - 48
+        ) {
+          current = outline[outline.length - 1]?.id || current
+        }
+      } else {
+        const doc = document.documentElement
+        if (
+          window.innerHeight + window.scrollY >=
+          doc.scrollHeight - 48
+        ) {
+          current = outline[outline.length - 1]?.id || current
+        }
+      }
+      setActiveHeadingId((prev) => (prev === current ? prev : current))
+    }
+
+    resolveActive()
+    const scroller = getAppScroller()
+    scroller?.addEventListener('scroll', resolveActive, { passive: true })
+    window.addEventListener('resize', resolveActive)
+    // MD 异步渲染后标题 id 才齐
+    const t1 = window.setTimeout(resolveActive, 150)
+    const t2 = window.setTimeout(resolveActive, 500)
+    return () => {
+      scroller?.removeEventListener('scroll', resolveActive)
+      window.removeEventListener('resize', resolveActive)
+      window.clearTimeout(t1)
+      window.clearTimeout(t2)
+    }
+  }, [outline, contentTab, solution?.contentMd, problem?.contentMd])
+
   async function removeSolution() {
     if (!solution) return
     setRemoving(true)
@@ -163,7 +223,20 @@ export function ProblemSolutionView() {
     const el = document.getElementById(headingId)
     if (!el) return
     setActiveHeadingId(headingId)
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const scroller = getAppScroller()
+    if (scroller) {
+      const scrollerTop = scroller.getBoundingClientRect().top
+      const y =
+        scroller.scrollTop +
+        el.getBoundingClientRect().top -
+        scrollerTop -
+        12
+      scroller.scrollTo({ top: Math.max(0, y), behavior: 'smooth' })
+      return
+    }
+    const y =
+      window.scrollY + el.getBoundingClientRect().top - SCROLL_OFFSET_PX + 4
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' })
   }
 
   if (loading) {
@@ -331,7 +404,7 @@ export function ProblemSolutionView() {
         </div>
       </div>
 
-      {/* 桌面 7:3：左正文+评论 / 右文章提纲（随页面滚动，不 sticky）；移动端隐藏右侧 */}
+      {/* 桌面 7:3：左正文+评论 / 右文章提纲（sticky + scrollspy 高亮） */}
       <div className="grid min-w-0 gap-4 md:grid-cols-[7fr_3fr] md:items-start">
         <div className="flex min-w-0 flex-col gap-3">
           <Card className="min-w-0 gap-3 py-5 sm:py-6">
@@ -357,7 +430,13 @@ export function ProblemSolutionView() {
           )}
         </div>
 
-        <Card className="hidden min-w-0 gap-3 py-4 md:flex">
+        <Card
+          className={cn(
+            'hidden min-w-0 gap-3 py-4 md:flex',
+            /* 贴在主滚动区顶部；超长提纲可内滚 */
+            'md:sticky md:top-4 md:max-h-[calc(100svh-6rem)] md:overflow-y-auto',
+          )}
+        >
           <CardHeader className="px-4 pb-0">
             <CardTitle className="text-base">
               {contentTab === 'problem' ? '题面提纲' : '文章内容'}
@@ -371,29 +450,37 @@ export function ProblemSolutionView() {
                   : '正文里还没有标题，写上 # 小标题后会出现在这里'}
               </p>
             ) : (
-              <nav aria-label={contentTab === 'problem' ? '题面提纲' : '文章提纲'}>
+              <nav
+                aria-label={
+                  contentTab === 'problem' ? '题面提纲' : '文章提纲'
+                }
+              >
                 <ul className="flex flex-col gap-0.5">
-                  {outline.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        onClick={() => scrollToHeading(item.id)}
-                        className={cn(
-                          'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                          'hover:bg-muted hover:text-foreground',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                          activeHeadingId === item.id
-                            ? 'bg-muted font-medium text-foreground'
-                            : 'text-muted-foreground',
-                        )}
-                        style={{
-                          paddingLeft: `${0.5 + (item.level - 1) * 0.75}rem`,
-                        }}
-                      >
-                        <span className="line-clamp-2">{item.text}</span>
-                      </button>
-                    </li>
-                  ))}
+                  {outline.map((item) => {
+                    const active = activeHeadingId === item.id
+                    return (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          data-toc-id={item.id}
+                          onClick={() => scrollToHeading(item.id)}
+                          className={cn(
+                            'w-full rounded-md border-l-2 py-1.5 pr-2 text-left text-sm transition-colors',
+                            'hover:bg-muted hover:text-foreground',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                            active
+                              ? 'border-primary bg-muted font-medium text-foreground'
+                              : 'border-transparent text-muted-foreground',
+                          )}
+                          style={{
+                            paddingLeft: `${0.5 + (item.level - 1) * 0.75}rem`,
+                          }}
+                        >
+                          <span className="line-clamp-2">{item.text}</span>
+                        </button>
+                      </li>
+                    )
+                  })}
                 </ul>
               </nav>
             )}

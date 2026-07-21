@@ -533,7 +533,8 @@ export function renderContent(src: string): string {
   if (!src) return ''
   if (looksLikeHtml(src)) {
     if (/\$|\\\(|\\\[/.test(src)) return renderMarkdown(src)
-    return sanitizeHtml(src)
+    // 纯 HTML 也注入 heading id，便于题面/题解提纲锚点与 scrollspy
+    return withHeadingIds(sanitizeHtml(src))
   }
   return renderMarkdown(src)
 }
@@ -542,7 +543,7 @@ export async function renderContentAsync(src: string): Promise<string> {
   if (!src) return ''
   if (looksLikeHtml(src)) {
     if (/\$|\\\(|\\\[/.test(src)) return renderMarkdownAsync(src)
-    return sanitizeHtml(src)
+    return withHeadingIds(sanitizeHtml(src))
   }
   return renderMarkdownAsync(src)
 }
