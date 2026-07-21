@@ -920,7 +920,7 @@ export function ContestDetails() {
           if (!open) setCellDialog(null)
         }}
       >
-        <DialogContent className="max-h-[min(90vh,40rem)] gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogContent className="max-h-[min(90vh,40rem)] gap-0 overflow-hidden p-0 sm:max-w-2xl">
           <DialogHeader className="border-b px-4 py-3 sm:px-5">
             <DialogTitle className="text-base">
               {cellDialogMeta?.userName || cellDialog?.userName || '选手'}
@@ -955,9 +955,9 @@ export function ContestDetails() {
                   <TableRow>
                     <TableHead className="w-16">时段</TableHead>
                     <TableHead className="min-w-[5.5rem]">时间</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead className="w-20">语言</TableHead>
-                    <TableHead className="w-16 text-right">代码</TableHead>
+                    <TableHead className="min-w-[11rem]">状态</TableHead>
+                    <TableHead className="min-w-[4.5rem]">语言</TableHead>
+                    <TableHead className="w-20 text-right">代码</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
