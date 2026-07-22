@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import {
   createBrowserRouter,
   Navigate,
@@ -10,6 +10,7 @@ import { RequireLogin } from '@/auth/RequireLogin'
 import { RequireMemberLike } from '@/auth/RequireMemberLike'
 import { RouteErrorFallback } from '@/components/error-boundary'
 import { Spinner } from '@/components/ui/spinner'
+import { lazyWithRetry as lazy } from '@/lib/lazy-with-retry'
 
 const Login = lazy(() =>
   import('@/pages/Login').then((m) => ({ default: m.Login })),
