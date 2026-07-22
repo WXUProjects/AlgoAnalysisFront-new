@@ -78,6 +78,7 @@ function notifLink(n: NotificationItem): string | null {
     n.type === 'blog_article_like' ||
     n.type === 'blog_comment' ||
     n.type === 'blog_comment_reply' ||
+    n.type === 'blog_comment_like' ||
     n.type === 'blog_moderation'
   ) {
     if (blogUser) return `/blog/${blogUser}`

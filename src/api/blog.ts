@@ -460,6 +460,28 @@ export async function deleteBlogCategory(id: number): Promise<ApiResult<unknown>
   return post(endpoints.user.blog.categoryDelete, { id })
 }
 
+function normBlogComment(raw: Record<string, unknown>): BlogComment {
+  const repliesRaw = (Array.isArray(raw.replies) ? raw.replies : []) as Record<
+    string,
+    unknown
+  >[]
+  return {
+    id: num(raw.id),
+    articleId: num(raw.articleId),
+    parentId: num(raw.parentId) || undefined,
+    content: str(raw.content),
+    userId: num(raw.userId),
+    author: authorOf(raw.author as Record<string, unknown>),
+    createdAt: num(raw.createdAt),
+    likeCount: num(raw.likeCount),
+    liked: Boolean(raw.liked),
+    replyToUserId: num(raw.replyToUserId) || undefined,
+    replyToUsername: str(raw.replyToUsername) || undefined,
+    replyToName: str(raw.replyToName) || undefined,
+    replies: repliesRaw.map(normBlogComment),
+  }
+}
+
 export async function listBlogComments(params: {
   articleId: number
   page?: number
@@ -478,15 +500,7 @@ export async function listBlogComments(params: {
       unknown
     >[]
     return {
-      list: listRaw.map((c) => ({
-        id: num(c.id),
-        articleId: num(c.articleId),
-        parentId: num(c.parentId),
-        content: str(c.content),
-        userId: num(c.userId),
-        author: authorOf(c.author as Record<string, unknown>),
-        createdAt: num(c.createdAt),
-      })),
+      list: listRaw.map(normBlogComment),
       total: num(data.total),
       page: num(data.page, 1),
       pageSize: num(data.pageSize, 20),
@@ -508,16 +522,32 @@ export async function createBlogComment(body: {
     return {
       id: num(data.id),
       articleId: num(data.articleId),
-      parentId: num(data.parentId),
+      parentId: num(data.parentId) || undefined,
       content: str(data.content),
       userId: num(data.userId),
       createdAt: num(data.createdAt),
+      likeCount: 0,
+      liked: false,
+      replies: [],
     }
   })
 }
 
 export async function deleteBlogComment(id: number): Promise<ApiResult<unknown>> {
   return post(endpoints.user.blog.commentDelete, { id })
+}
+
+export async function toggleBlogCommentLike(
+  commentId: number,
+): Promise<ApiResult<{ liked: boolean; likeCount: number; commentId: number }>> {
+  const res = await post<Record<string, unknown>>(endpoints.user.blog.commentLike, {
+    commentId,
+  })
+  return wrapData(res, (data) => ({
+    liked: Boolean(data.liked),
+    likeCount: num(data.likeCount),
+    commentId: num(data.commentId, commentId),
+  }))
 }
 
 export async function toggleBlogLike(

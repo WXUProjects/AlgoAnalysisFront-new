@@ -133,6 +133,7 @@ export const endpoints = {
       commentList: `${API_PREFIX}/user/blog/comment/list`,
       commentCreate: `${API_PREFIX}/user/blog/comment/create`,
       commentDelete: `${API_PREFIX}/user/blog/comment/delete`,
+      commentLike: `${API_PREFIX}/user/blog/comment/like`,
       like: `${API_PREFIX}/user/blog/like`,
       themeStatus: `${API_PREFIX}/user/blog/theme/status`,
       themeConfig: `${API_PREFIX}/user/blog/theme/config`,
@@ -157,6 +158,8 @@ export const endpoints = {
       unreadCount: `${API_PREFIX}/user/notification/unread-count`,
       read: `${API_PREFIX}/user/notification/read`,
       readAll: `${API_PREFIX}/user/notification/read-all`,
+      /** 硬删除当前用户全部站内信 */
+      clearAll: `${API_PREFIX}/user/notification/clear-all`,
     },
   },
   core: {
@@ -1157,6 +1160,7 @@ export type NotificationType =
   | 'blog_article_like'
   | 'blog_comment'
   | 'blog_comment_reply'
+  | 'blog_comment_like'
   | 'solution_like'
   | 'comment_like'
   | 'blog_moderation'
@@ -1444,6 +1448,16 @@ export interface BlogComment {
   userId: number
   author?: BlogAuthor
   createdAt: number
+  /** 点赞数 */
+  likeCount?: number
+  /** 当前用户是否已赞（登录时） */
+  liked?: boolean
+  /** 回复目标（嵌套时） */
+  replyToUserId?: number
+  replyToUsername?: string
+  replyToName?: string
+  /** 子回复（list 仅分页顶层，回复嵌套在此） */
+  replies?: BlogComment[]
 }
 
 export interface BlogAnalytics {

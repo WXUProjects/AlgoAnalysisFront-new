@@ -12,34 +12,24 @@ import {
   LinkIcon,
   LockIcon,
   MessageCircleIcon,
-  Trash2Icon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  createBlogComment,
-  deleteBlogComment,
   getBlogArticle,
   listBlogByUsername,
-  listBlogComments,
   reportBlogArticle,
   toggleBlogLike,
   unlockBlogArticle,
 } from '@/api/blog'
-import {
-  createProblemComment,
-  listProblemComments,
-  toggleCommunityLike,
-} from '@/api/community'
+import { toggleCommunityLike } from '@/api/community'
 import { useAuth } from '@/auth/AuthContext'
-import { ConfirmDialog } from '@/components/confirm-dialog'
 import { MarkdownBody } from '@/components/markdown-body'
 import { MarkdownSummary } from '@/components/markdown-summary'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
-import { Textarea } from '@/components/ui/textarea'
 import { ArticleToc } from '@/components/blog/article-toc'
+import { BlogComments } from '@/components/blog/blog-comments'
 import { cn } from '@/lib/utils'
 import {
   BLOG_NEW_TAB_PROPS,
@@ -50,7 +40,7 @@ import {
 import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { clipMetaText } from '@/lib/document-meta'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
-import type { BlogArticle as BlogArticleType, BlogComment } from '@shared/api'
+import type { BlogArticle as BlogArticleType } from '@shared/api'
 
 const unlockKey = (id: number) => `blog-unlock-${id}`
 
@@ -65,16 +55,13 @@ export function BlogArticlePage() {
     setShowPanel,
     categories,
   } = useOutletContext<BlogOutletContext>()
-  const { isLogin, user } = useAuth()
+  const { isLogin } = useAuth()
   const navigate = useNavigate()
 
   const [article, setArticle] = useState<BlogArticleType | null>(null)
   const [loading, setLoading] = useState(true)
   const [password, setPassword] = useState('')
   const [unlocking, setUnlocking] = useState(false)
-  const [comments, setComments] = useState<BlogComment[]>([])
-  const [commentText, setCommentText] = useState('')
-  const [posting, setPosting] = useState(false)
   const [related, setRelated] = useState<BlogArticleType[]>([])
   const [reporting, setReporting] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -116,7 +103,6 @@ export function BlogArticlePage() {
           setArticle(again.data)
           setLoading(false)
           if (again.data.canSeeBody) {
-            void loadComments(again.data)
             void loadRelated(again.data)
           }
           setBreadcrumb([
@@ -130,46 +116,12 @@ export function BlogArticlePage() {
     setArticle(res.data)
     setLoading(false)
     if (res.data.canSeeBody) {
-      void loadComments(res.data)
       void loadRelated(res.data)
     }
     setBreadcrumb([
       { label: '首页', to: `/blog/${username}` },
       { label: res.data.title },
     ])
-  }
-
-  const loadComments = async (a: BlogArticleType | number) => {
-    // 题解镜像文：评论与主站题解共享
-    if (typeof a === 'object' && a.sourceSolutionId) {
-      const res = await listProblemComments({
-        solutionId: a.sourceSolutionId,
-        problemId: a.sourceProblemId,
-        pageSize: 50,
-      })
-      if (res.success && res.data) {
-        setComments(
-          res.data.list.map((c) => ({
-            id: c.id,
-            articleId: typeof a === 'object' ? a.id : 0,
-            parentId: c.parentId,
-            content: c.content,
-            userId: c.userId,
-            author: {
-              id: c.userId,
-              username: c.username || '',
-              name: c.name || c.username || '',
-              avatar: c.avatar,
-            },
-            createdAt: c.createdAt,
-          })),
-        )
-      }
-      return
-    }
-    const articleId = typeof a === 'number' ? a : a.id
-    const res = await listBlogComments({ articleId, pageSize: 50 })
-    if (res.success && res.data) setComments(res.data.list)
   }
 
   const loadRelated = async (a: BlogArticleType) => {
@@ -292,7 +244,6 @@ export function BlogArticlePage() {
     }
     setArticle(res.data)
     toast.success('已解锁')
-    void loadComments(res.data)
     void loadRelated(res.data)
   }
 
@@ -331,78 +282,6 @@ export function BlogArticlePage() {
       liked: res.data.liked,
       likeCount: res.data.likeCount,
     })
-  }
-
-  async function handleComment(e: React.FormEvent) {
-    e.preventDefault()
-    if (!article) return
-    if (!isLogin) {
-      navigate(
-        `/login?redirect=${encodeURIComponent(`/blog/${username}/${slug}`)}`,
-      )
-      return
-    }
-    if (!commentText.trim()) {
-      toast.error('请写点内容再发送')
-      return
-    }
-    setPosting(true)
-    if (article.sourceSolutionId) {
-      const res = await createProblemComment({
-        problemId: article.sourceProblemId || 0,
-        solutionId: article.sourceSolutionId,
-        content: commentText.trim(),
-      })
-      setPosting(false)
-      if (!res.success) {
-        toast.error(res.message || '发送失败')
-        return
-      }
-      setCommentText('')
-      toast.success('已发送')
-      setArticle({
-        ...article,
-        commentCount: (article.commentCount || 0) + 1,
-      })
-      void loadComments(article)
-      return
-    }
-    const res = await createBlogComment({
-      articleId: article.id,
-      content: commentText.trim(),
-    })
-    setPosting(false)
-    if (!res.success) {
-      toast.error(res.message || '发送失败')
-      return
-    }
-    setCommentText('')
-    toast.success('已发送')
-    setArticle({
-      ...article,
-      commentCount: (article.commentCount || 0) + 1,
-    })
-    void loadComments(article)
-  }
-
-  async function handleDeleteComment(id: number) {
-    // 题解评论删除走社区 API（此处仅博客自有评论）
-    if (article?.sourceSolutionId) {
-      toast.message('请到主站博客页管理博客评论')
-      return
-    }
-    const res = await deleteBlogComment(id)
-    if (!res.success) {
-      toast.error(res.message || '删除失败')
-      return
-    }
-    setComments((prev) => prev.filter((c) => c.id !== id))
-    if (article) {
-      setArticle({
-        ...article,
-        commentCount: Math.max(0, (article.commentCount || 1) - 1),
-      })
-    }
   }
 
   async function handleReport() {
@@ -695,106 +574,30 @@ export function BlogArticlePage() {
     ) : null
 
   const commentsBlock = article.canSeeBody ? (
-    <section
+    <BlogComments
+      articleId={article.id}
+      sourceSolutionId={article.sourceSolutionId}
+      sourceProblemId={article.sourceProblemId}
+      isOwner={isOwner}
+      loginRedirect={`/blog/${username}/${slug}`}
       className={
         isChirpy
-          ? 'mt-10 flex flex-col gap-4 rounded-[10px] bg-[var(--card-bg)] p-6 shadow-[var(--card-shadow)]'
+          ? 'mt-10 rounded-[10px] bg-[var(--card-bg)] p-6 shadow-[var(--card-shadow)]'
           : isMizuki
-            ? 'mz-section-card mt-0 flex flex-col gap-4'
-            : 'flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-sm'
+            ? 'mz-section-card mt-0'
+            : 'rounded-xl border bg-card p-6 shadow-sm'
       }
-    >
-      <h2 className="text-lg font-semibold">
-        评论
-        {(article.commentCount ?? 0) > 0 ? (
-          <span className="ml-2 text-sm font-normal text-muted-foreground">
-            {article.commentCount}
-          </span>
-        ) : null}
-      </h2>
-      <form onSubmit={handleComment} className="flex flex-col gap-2">
-        <Textarea
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          placeholder={isLogin ? '写下你的想法…' : '登录后即可评论'}
-          rows={3}
-          disabled={!isLogin}
-        />
-        <div className="flex justify-end">
-          <Button type="submit" disabled={!isLogin || posting} size="sm">
-            {posting ? '发送中…' : '发送评论'}
-          </Button>
-        </div>
-      </form>
-      <ul className="divide-y">
-        {comments.length === 0 ? (
-          <li className="py-6 text-center text-sm text-muted-foreground">
-            还没有评论，来抢沙发吧
-          </li>
-        ) : (
-          comments.map((c) => {
-            const displayName =
-              c.author?.name || c.author?.username || '用户'
-            const profileTo = c.author?.username
-              ? `/profile/${c.author.username}`
-              : c.userId
-                ? `/profile?id=${c.userId}`
-                : undefined
-            return (
-              <li key={c.id} className="flex gap-3 py-3">
-                <Avatar size="sm" className="size-8 shrink-0">
-                  <AvatarImage
-                    src={c.author?.avatar || '/images/defaultAvatar.png'}
-                    alt=""
-                  />
-                  <AvatarFallback>
-                    {displayName.slice(0, 1)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2 text-sm">
-                    {profileTo ? (
-                      <Link
-                        to={profileTo}
-                        className="font-medium hover:underline"
-                      >
-                        {displayName}
-                      </Link>
-                    ) : (
-                      <span className="font-medium">{displayName}</span>
-                    )}
-                    <time className="text-xs text-muted-foreground">
-                      {new Date(c.createdAt * 1000).toLocaleString('zh-CN')}
-                    </time>
-                  </div>
-                  <p className="mt-1 whitespace-pre-wrap break-words text-sm">
-                    {c.content}
-                  </p>
-                </div>
-                {(user?.userId === c.userId || isOwner) && (
-                  <ConfirmDialog
-                    title="删除这条评论？"
-                    description="删除后无法恢复。"
-                    confirmLabel="删除"
-                    destructive
-                    onConfirm={() => void handleDeleteComment(c.id)}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="shrink-0 text-muted-foreground"
-                      aria-label="删除评论"
-                    >
-                      <Trash2Icon className="size-3.5" />
-                    </Button>
-                  </ConfirmDialog>
-                )}
-              </li>
-            )
-          })
-        )}
-      </ul>
-    </section>
+      onCountDelta={(delta) => {
+        setArticle((prev) =>
+          prev
+            ? {
+                ...prev,
+                commentCount: Math.max(0, (prev.commentCount || 0) + delta),
+              }
+            : prev,
+        )
+      }}
+    />
   ) : null
 
   if (isChirpy) {
