@@ -34,11 +34,13 @@ import { useAuth } from '@/auth/AuthContext'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { MarkdownBody } from '@/components/markdown-body'
 import { MarkdownSummary } from '@/components/markdown-summary'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { ArticleToc } from '@/components/blog/article-toc'
+import { cn } from '@/lib/utils'
 import {
   BLOG_NEW_TAB_PROPS,
   buildArticleOutline,
@@ -572,14 +574,48 @@ export function BlogArticlePage() {
       )
     ) : null
 
+  /** 文末显式点赞：不埋在标题 meta 里，读完再点更自然 */
+  const likeBlock = article.canSeeBody ? (
+    <div
+      className={
+        isChirpy
+          ? 'mt-12 flex flex-col items-center gap-2 border-b border-[var(--main-border-color)] pb-8'
+          : isMizuki
+            ? 'mt-10 flex flex-col items-center gap-2 border-t border-dashed border-[var(--mz-line)] pt-6'
+            : 'flex flex-col items-center gap-2 border-t pt-6'
+      }
+    >
+      <Button
+        type="button"
+        size="lg"
+        variant={article.liked ? 'default' : 'outline'}
+        onClick={() => void handleLike()}
+        className="min-w-40"
+        aria-pressed={article.liked}
+      >
+        <HeartIcon
+          data-icon="inline-start"
+          className={cn(article.liked && 'fill-current')}
+        />
+        {article.liked ? '已点赞' : '点赞'}
+        {(article.likeCount ?? 0) > 0 ? ` · ${article.likeCount}` : ''}
+      </Button>
+      <p className="text-center text-sm text-muted-foreground">
+        {(article.likeCount ?? 0) > 0
+          ? `已有 ${article.likeCount} 人为这篇文章点赞`
+          : '觉得写得好？给作者点个赞吧'}
+      </p>
+    </div>
+  ) : null
+
   const shareBlock = article.canSeeBody ? (
     <div
       className={
         isChirpy
-          ? 'post-tail-wrapper mt-12 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--main-border-color)] pb-6'
+          ? 'post-tail-wrapper mt-6 flex flex-wrap items-center justify-between gap-3 pb-6'
           : isMizuki
-            ? 'mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-[var(--mz-line)] pt-4'
-            : 'flex flex-wrap items-center justify-between gap-3 border-t pt-4'
+            ? 'mt-6 flex flex-wrap items-center justify-between gap-3'
+            : 'flex flex-wrap items-center justify-between gap-3'
       }
     >
       <div className="text-sm text-muted-foreground">
@@ -662,14 +698,21 @@ export function BlogArticlePage() {
     <section
       className={
         isChirpy
-          ? 'mt-10 space-y-4 rounded-[10px] bg-[var(--card-bg)] p-6 shadow-[var(--card-shadow)]'
+          ? 'mt-10 flex flex-col gap-4 rounded-[10px] bg-[var(--card-bg)] p-6 shadow-[var(--card-shadow)]'
           : isMizuki
-            ? 'mz-section-card mt-0 space-y-4'
-            : 'space-y-4 rounded-xl border bg-card p-6 shadow-sm'
+            ? 'mz-section-card mt-0 flex flex-col gap-4'
+            : 'flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-sm'
       }
     >
-      <h2 className="text-lg font-semibold">评论</h2>
-      <form onSubmit={handleComment} className="space-y-2">
+      <h2 className="text-lg font-semibold">
+        评论
+        {(article.commentCount ?? 0) > 0 ? (
+          <span className="ml-2 text-sm font-normal text-muted-foreground">
+            {article.commentCount}
+          </span>
+        ) : null}
+      </h2>
+      <form onSubmit={handleComment} className="flex flex-col gap-2">
         <Textarea
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
@@ -686,42 +729,69 @@ export function BlogArticlePage() {
       <ul className="divide-y">
         {comments.length === 0 ? (
           <li className="py-6 text-center text-sm text-muted-foreground">
-            暂无评论
+            还没有评论，来抢沙发吧
           </li>
         ) : (
-          comments.map((c) => (
-            <li key={c.id} className="flex gap-3 py-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium">
-                    {c.author?.name || c.author?.username || '用户'}
-                  </span>
-                  <time className="text-xs text-muted-foreground">
-                    {new Date(c.createdAt * 1000).toLocaleString('zh-CN')}
-                  </time>
+          comments.map((c) => {
+            const displayName =
+              c.author?.name || c.author?.username || '用户'
+            const profileTo = c.author?.username
+              ? `/profile/${c.author.username}`
+              : c.userId
+                ? `/profile?id=${c.userId}`
+                : undefined
+            return (
+              <li key={c.id} className="flex gap-3 py-3">
+                <Avatar size="sm" className="size-8 shrink-0">
+                  <AvatarImage
+                    src={c.author?.avatar || '/images/defaultAvatar.png'}
+                    alt=""
+                  />
+                  <AvatarFallback>
+                    {displayName.slice(0, 1)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    {profileTo ? (
+                      <Link
+                        to={profileTo}
+                        className="font-medium hover:underline"
+                      >
+                        {displayName}
+                      </Link>
+                    ) : (
+                      <span className="font-medium">{displayName}</span>
+                    )}
+                    <time className="text-xs text-muted-foreground">
+                      {new Date(c.createdAt * 1000).toLocaleString('zh-CN')}
+                    </time>
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-sm">
+                    {c.content}
+                  </p>
                 </div>
-                <p className="mt-1 whitespace-pre-wrap text-sm">{c.content}</p>
-              </div>
-              {(user?.userId === c.userId || isOwner) && (
-                <ConfirmDialog
-                  title="删除这条评论？"
-                  description="删除后无法恢复。"
-                  confirmLabel="删除"
-                  destructive
-                  onConfirm={() => void handleDeleteComment(c.id)}
-                >
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="shrink-0 text-muted-foreground"
-                    aria-label="删除评论"
+                {(user?.userId === c.userId || isOwner) && (
+                  <ConfirmDialog
+                    title="删除这条评论？"
+                    description="删除后无法恢复。"
+                    confirmLabel="删除"
+                    destructive
+                    onConfirm={() => void handleDeleteComment(c.id)}
                   >
-                    <Trash2Icon className="size-3.5" />
-                  </Button>
-                </ConfirmDialog>
-              )}
-            </li>
-          ))
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="shrink-0 text-muted-foreground"
+                      aria-label="删除评论"
+                    >
+                      <Trash2Icon className="size-3.5" />
+                    </Button>
+                  </ConfirmDialog>
+                )}
+              </li>
+            )
+          })
         )}
       </ul>
     </section>
@@ -762,18 +832,10 @@ export function BlogArticlePage() {
               <EyeIcon className="size-3.5" />
               {article.viewCount ?? 0}
             </span>
-            <button
-              type="button"
-              onClick={() => void handleLike()}
-              className={`inline-flex items-center gap-1 ${
-                article.liked ? 'text-[var(--link-color)]' : ''
-              }`}
-            >
-              <HeartIcon
-                className={`size-3.5 ${article.liked ? 'fill-current' : ''}`}
-              />
+            <span className="inline-flex items-center gap-1">
+              <HeartIcon className="size-3.5" />
               {article.likeCount ?? 0}
-            </button>
+            </span>
             <span className="inline-flex items-center gap-1">
               <MessageCircleIcon className="size-3.5" />
               {article.commentCount ?? 0}
@@ -789,6 +851,7 @@ export function BlogArticlePage() {
         </header>
         {unlockBlock}
         {bodyBlock}
+        {likeBlock}
         {shareBlock}
         {relatedBlock}
         {commentsBlock}
@@ -831,18 +894,10 @@ export function BlogArticlePage() {
                 <EyeIcon className="size-3.5" />
                 {article.viewCount ?? 0}
               </span>
-              <button
-                type="button"
-                onClick={() => void handleLike()}
-                className={`inline-flex items-center gap-1 ${
-                  article.liked ? 'text-[var(--mz-primary)]' : ''
-                }`}
-              >
-                <HeartIcon
-                  className={`size-3.5 ${article.liked ? 'fill-current' : ''}`}
-                />
+              <span className="inline-flex items-center gap-1">
+                <HeartIcon className="size-3.5" />
                 {article.likeCount ?? 0}
-              </button>
+              </span>
               <span className="inline-flex items-center gap-1">
                 <MessageCircleIcon className="size-3.5" />
                 {article.commentCount ?? 0}
@@ -858,6 +913,7 @@ export function BlogArticlePage() {
           </header>
           {unlockBlock}
           {bodyBlock}
+          {likeBlock}
           {shareBlock}
         </article>
         {relatedBlock}
@@ -909,18 +965,10 @@ export function BlogArticlePage() {
             <EyeIcon className="size-4" />
             {article.viewCount ?? 0} 阅读
           </span>
-          <button
-            type="button"
-            onClick={() => void handleLike()}
-            className={`inline-flex items-center gap-1 transition hover:text-foreground ${
-              article.liked ? 'text-primary' : ''
-            }`}
-          >
-            <HeartIcon
-              className={`size-4 ${article.liked ? 'fill-current' : ''}`}
-            />
+          <span className="inline-flex items-center gap-1">
+            <HeartIcon className="size-4" />
             {article.likeCount ?? 0} 赞
-          </button>
+          </span>
           <span className="inline-flex items-center gap-1">
             <MessageCircleIcon className="size-4" />
             {article.commentCount ?? 0} 评论
@@ -930,6 +978,7 @@ export function BlogArticlePage() {
 
       {unlockBlock}
       {bodyBlock}
+      {likeBlock}
       {shareBlock}
       {relatedBlock}
       {commentsBlock}
