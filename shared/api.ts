@@ -941,7 +941,7 @@ export interface ContestCalendarSub {
   startTime?: number
 }
 
-/** 订阅提前量白名单（分钟）；新建默认 360（6 小时） */
+/** 订阅提前量白名单（分钟）；新建默认 180（3 小时） */
 export const CONTEST_CALENDAR_ADVANCE_OPTIONS = [
   { value: 30, label: '30 分钟' },
   { value: 60, label: '1 小时' },
@@ -953,8 +953,8 @@ export const CONTEST_CALENDAR_ADVANCE_OPTIONS = [
   { value: 4320, label: '3 天' },
 ] as const
 
-/** 新建订阅默认提前量（6 小时） */
-export const CONTEST_CALENDAR_DEFAULT_ADVANCE = 360
+/** 新建订阅默认提前量（3 小时） */
+export const CONTEST_CALENDAR_DEFAULT_ADVANCE = 180
 
 /** site=站点公告（全员可见）；org=组织公告 */
 export type BulletinScope = 'site' | 'org' | string
