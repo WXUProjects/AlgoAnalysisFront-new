@@ -694,7 +694,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | Codeforces | `api/user.info` | 未参赛无 rating 字段 |
 | AtCoder | `/users/{handle}/history/json` | 取最近 rated 的 NewRating |
 | 牛客 | 竞赛主页 HTML | 显示「暂无」则 hasRating=false |
-| 洛谷 | 用户页 `_feInjection` | 依赖现有登录会话 |
+| 洛谷 | `/api/user/info/{uid}` 的 `eloValue`（旧 `rating` 已弃用） | 依赖现有登录会话 |
 | 力扣 | `graphql/noj-go` contest ranking | 浮点四舍五入为整数 |
 | QOJ | — | Cloudflare 暂不支持 |
 | LOJ | `api.loj.ac` `user/getUserMeta` | 公开 API；rating≤0 视为无 |
