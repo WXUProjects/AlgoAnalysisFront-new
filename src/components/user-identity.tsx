@@ -31,6 +31,7 @@ export function UserIdentity({
   user,
   className,
   nameClassName,
+  nameRowClassName,
   linkToProfile = true,
   showUsername = true,
   size = 'default',
@@ -40,6 +41,8 @@ export function UserIdentity({
   user: UserIdentityData
   className?: string
   nameClassName?: string
+  /** 主名 + 身份/组织徽章那一行（用于居中等） */
+  nameRowClassName?: string
   /** 主名是否链到资料页 */
   linkToProfile?: boolean
   /** 是否显示 @username 副行 */
@@ -87,7 +90,12 @@ export function UserIdentity({
 
   return (
     <div className={cn('min-w-0 flex flex-col gap-0.5', className)}>
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+      <div
+        className={cn(
+          'flex min-w-0 flex-wrap items-center gap-1.5',
+          nameRowClassName,
+        )}
+      >
         {nameEl}
         {roleBadges.map((b) => (
           <Badge

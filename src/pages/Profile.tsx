@@ -525,149 +525,158 @@ export function Profile() {
   return (
     <PageShell className="gap-4">
       {/*
-        移动端顺序：身份（含博客/关注）→ OJ Badge → 刷题数据/主内容
-        桌面：左栏 sticky 身份+OJ Badge+操作，右栏数据
+        移动端顺序：身份 Card（含 OJ）→ 刷题数据/主内容
+        桌面：左栏 sticky 身份 Card（含 OJ）+ 操作，右栏数据
       */}
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 lg:grid lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start lg:gap-10">
-        {/* 身份区：移动端横排紧凑，桌面端左栏竖排 */}
+        {/* 身份区：移动端横排紧凑，桌面端左栏竖排；OJ 收进同一张 Card */}
         <aside className="order-1 flex flex-col gap-3 lg:sticky lg:top-4 lg:order-none lg:gap-4">
-          <Card className="gap-0 py-3 lg:gap-4 lg:py-5">
-            <CardContent className="flex flex-row items-center gap-3 px-3 lg:flex-col lg:items-center lg:gap-3 lg:px-4">
-              <Avatar className="size-14 shrink-0 border-2 border-background shadow-md sm:size-16 lg:size-36 lg:border-4">
-                <AvatarImage src={avatarSrc} alt="" />
-                <AvatarFallback className="text-lg lg:text-2xl">
-                  {displayName.slice(0, 1)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1 lg:text-center">
-                <UserIdentity
-                  user={identityView}
-                  linkToProfile={false}
-                  size="lg"
-                  nameClassName="font-semibold tracking-tight"
-                  className="lg:items-center"
-                  showRoleBadges={
-                    Boolean(currentOrg?.isSystem) ||
-                    currentOrg?.slug === 'public' ||
-                    !isLogin
-                  }
-                />
-                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs sm:text-sm lg:justify-center">
-                  <Link
-                    to={`/social/${profile.username}?tab=following`}
-                    className="hover:underline"
-                  >
-                    <span className="font-semibold tabular-nums">
-                      {followingCount}
-                    </span>{' '}
-                    <span className="text-muted-foreground">关注</span>
-                  </Link>
-                  <Link
-                    to={`/social/${profile.username}?tab=followers`}
-                    className="hover:underline"
-                  >
-                    <span className="font-semibold tabular-nums">
-                      {followerCount}
-                    </span>{' '}
-                    <span className="text-muted-foreground">粉丝</span>
-                  </Link>
-                </div>
-                <p
-                  className="mt-1.5 text-[11px] text-muted-foreground tabular-nums sm:text-xs"
-                  title="系统最近一次从各平台拉取提交与比赛记录的时间"
-                >
-                  上次同步：
-                  {profile.lastSyncAt
-                    ? formatTime(profile.lastSyncAt)
-                    : '尚未同步'}
-                </p>
-                {/* 移动端：博客 / 关注 / 编辑 贴在身份旁，避免滚到页底才看到 */}
-                <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
-                  {blogActivated && profile?.username ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-2 text-xs"
-                      asChild
+          <Card className="gap-0 py-3 lg:gap-0 lg:py-5">
+            <CardContent className="flex flex-col gap-3 px-3 lg:gap-4 lg:px-4">
+              <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-3">
+                <Avatar className="size-14 shrink-0 border-2 border-background shadow-md sm:size-16 lg:size-36 lg:border-4">
+                  <AvatarImage src={avatarSrc} alt="" />
+                  <AvatarFallback className="text-lg lg:text-2xl">
+                    {displayName.slice(0, 1)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1 lg:w-full lg:text-center">
+                  <UserIdentity
+                    user={identityView}
+                    linkToProfile={false}
+                    size="lg"
+                    nameClassName="font-semibold tracking-tight"
+                    className="lg:w-full lg:items-center"
+                    nameRowClassName="lg:w-full lg:justify-center"
+                    showRoleBadges={
+                      Boolean(currentOrg?.isSystem) ||
+                      currentOrg?.slug === 'public' ||
+                      !isLogin
+                    }
+                  />
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs sm:text-sm lg:justify-center">
+                    <Link
+                      to={`/social/${profile.username}?tab=following`}
+                      className="hover:underline"
                     >
-                      <Link
-                        to={`/blog/${profile.username}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        访问博客
-                      </Link>
-                    </Button>
-                  ) : null}
-                  {isSelf ? (
-                    <>
+                      <span className="font-semibold tabular-nums">
+                        {followingCount}
+                      </span>{' '}
+                      <span className="text-muted-foreground">关注</span>
+                    </Link>
+                    <Link
+                      to={`/social/${profile.username}?tab=followers`}
+                      className="hover:underline"
+                    >
+                      <span className="font-semibold tabular-nums">
+                        {followerCount}
+                      </span>{' '}
+                      <span className="text-muted-foreground">粉丝</span>
+                    </Link>
+                  </div>
+                  <p
+                    className="mt-1.5 text-[11px] text-muted-foreground tabular-nums sm:text-xs lg:text-center"
+                    title="系统最近一次从各平台拉取提交与比赛记录的时间"
+                  >
+                    上次同步：
+                    {profile.lastSyncAt
+                      ? formatTime(profile.lastSyncAt)
+                      : '尚未同步'}
+                  </p>
+                  {/* 移动端：博客 / 关注 / 编辑 贴在身份旁，避免滚到页底才看到 */}
+                  <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
+                    {blogActivated && profile?.username ? (
                       <Button
                         type="button"
                         size="sm"
+                        variant="outline"
                         className="h-7 px-2 text-xs"
                         asChild
                       >
-                        <Link to="/change-profile">编辑资料</Link>
+                        <Link
+                          to={`/blog/${profile.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          访问博客
+                        </Link>
                       </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2 text-xs"
-                          >
-                            退出
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>确认退出？</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              退出后需要重新登录才能访问个人相关功能。
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>取消</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleLogout}>
+                    ) : null}
+                    {isSelf ? (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          asChild
+                        >
+                          <Link to="/change-profile">编辑资料</Link>
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs"
+                            >
                               退出
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </>
-                  ) : (
-                    isLogin && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        variant={isFollowing ? 'outline' : 'default'}
-                        disabled={followBusy}
-                        onClick={() => void handleToggleFollow()}
-                      >
-                        {isFollowing ? (
-                          <>
-                            <UserMinusIcon className="size-3.5" />
-                            已关注
-                          </>
-                        ) : (
-                          <>
-                            <UserPlusIcon className="size-3.5" />
-                            关注
-                          </>
-                        )}
-                      </Button>
-                    )
-                  )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>确认退出？</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                退出后需要重新登录才能访问个人相关功能。
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>取消</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleLogout}>
+                                退出
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </>
+                    ) : (
+                      isLogin && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          variant={isFollowing ? 'outline' : 'default'}
+                          disabled={followBusy}
+                          onClick={() => void handleToggleFollow()}
+                        >
+                          {isFollowing ? (
+                            <>
+                              <UserMinusIcon className="size-3.5" />
+                              已关注
+                            </>
+                          ) : (
+                            <>
+                              <UserPlusIcon className="size-3.5" />
+                              关注
+                            </>
+                          )}
+                        </Button>
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* OJ Badge：收进身份 Card 内（无绑定时对访客不展示） */}
+              {(() => {
+                const oj = renderOjBindings()
+                if (!oj) return null
+                return (
+                  <div className="border-t border-border/60 pt-3">{oj}</div>
+                )
+              })()}
             </CardContent>
           </Card>
-
-          {/* OJ Badge：PC / 移动端共用，仅展示已绑定 */}
-          {renderOjBindings()}
 
           {/* 桌面：操作留在左栏 */}
           <div className="hidden flex-col gap-3 lg:flex lg:gap-4">
