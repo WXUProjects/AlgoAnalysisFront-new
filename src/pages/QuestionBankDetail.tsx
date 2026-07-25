@@ -132,7 +132,7 @@ export function QuestionBankDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { isLogin, isSiteAdmin } = useAuth()
+  const { isLogin, isContentModerator } = useAuth()
   const [problem, setProblem] = useState<ProblemInfo | null>(null)
   /** 移动端：题面 / 题解切换；深链 tab=solutions 时默认题解 */
   const mobilePane =
@@ -222,14 +222,14 @@ export function QuestionBankDetail() {
       setRelatedContests([])
     }
 
-    if (isLogin && !isSiteAdmin) {
+    if (isLogin && !isContentModerator) {
       const pend = await getMyPendingProblemEdit(id)
       setHasPending(Boolean(pend.success && pend.data?.hasPending))
     } else {
       setHasPending(false)
     }
     if (isNewProblem) setLoading(false)
-  }, [id, isLogin, isSiteAdmin])
+  }, [id, isLogin, isContentModerator])
 
   /** 提交历史：筛选/分页只刷新表格区域，保持滚动位置 */
   const loadSubs = useCallback(async () => {
@@ -369,7 +369,7 @@ export function QuestionBankDetail() {
     if (!problem) return
     const tags = selectedTags.map((t) => t.trim()).filter(Boolean)
     setSaving(true)
-    if (isSiteAdmin) {
+    if (isContentModerator) {
       const res = await adminUpdateProblem({
         id: problem.id,
         updateTags: true,
@@ -532,7 +532,7 @@ export function QuestionBankDetail() {
                 onClick={openTagsEdit}
               >
                 <TagsIcon data-icon="inline-start" />
-                {isSiteAdmin ? '改标签' : '建议标签'}
+                {isContentModerator ? '改标签' : '建议标签'}
               </Button>
             )}
           </div>
@@ -704,7 +704,7 @@ export function QuestionBankDetail() {
                     onClick={openContentEdit}
                   >
                     <PencilIcon data-icon="inline-start" />
-                    {isSiteAdmin
+                    {isContentModerator
                       ? contentEmpty
                         ? '填写题目'
                         : '编辑'
@@ -1151,11 +1151,11 @@ export function QuestionBankDetail() {
       <Dialog open={tagsOpen} onOpenChange={setTagsOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{isSiteAdmin ? '修改标签' : '建议修改标签'}</DialogTitle>
+            <DialogTitle>{isContentModerator ? '修改标签' : '建议修改标签'}</DialogTitle>
             <DialogDescription>
-              {isSiteAdmin
-                ? '点选已有标签，或输入后回车新建。保存后立即生效；有标签后不再自动分析该题。'
-                : '点选已有标签，或输入后回车新建。提交后由站点管理员审核才会更新。'}
+              {isContentModerator
+                ? '点选已有标签，或输入后回车新建。保存后立即生效，并记入「已通过」审核记录；有标签后不再自动分析该题。'
+                : '点选已有标签，或输入后回车新建。提交后由管理员或资源审核员审核才会更新。'}
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>
@@ -1169,7 +1169,7 @@ export function QuestionBankDetail() {
                 disabled={saving}
               />
             </Field>
-            {!isSiteAdmin && (
+            {!isContentModerator && (
               <Field>
                 <FieldLabel htmlFor="edit-tags-note">说明（可选）</FieldLabel>
                 <Textarea
@@ -1192,7 +1192,7 @@ export function QuestionBankDetail() {
               取消
             </Button>
             <Button type="button" onClick={() => void submitTags()} disabled={saving}>
-              {saving ? '提交中…' : isSiteAdmin ? '保存' : '提交审核'}
+              {saving ? '提交中…' : isContentModerator ? '保存' : '提交审核'}
             </Button>
           </DialogFooter>
         </DialogContent>

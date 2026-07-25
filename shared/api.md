@@ -533,6 +533,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/user/org/join-requests` | 组织管理员 | 待审批列表 |
 | POST | `/user/org/join-requests/review` | 组织管理员 | `{ id, approve }` |
 | POST | `/user/platform/set-site-admin` | 站点管理员 | `{ userId, isSiteAdmin }` |
+| POST | `/user/platform/set-resource-reviewer` | 站点管理员 | `{ userId, isResourceReviewer }`；任命/撤销后站内信 + 邮件通知被任命人 |
 
 默认组织（`users.current_org_id`）：注册时为 **公共域** `slug=public`（全员自动加入，不可退出）。  
 **管理员拉入**某组织后，该组织成为用户默认组织（下次打开自动进入）。用户之后只需 **switch 切换**，切换即记忆，无需刻意「修改默认组织」。
@@ -921,10 +922,10 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problem/clear-nowcoder-content` | 是(管理员) | **只清** NowCoder `content_md`（保留 tags/solutions）；`{ requeue?: true }` 清空后强制重爬题面 |
 | POST | `/core/problem/toggle-analyze` | 是(管理员) | 暂停/恢复分析（不清队列）；`{ pause?, pauseSet? }` |
 | POST | `/core/problem/toggle-fetch` | 是(管理员) | 暂停/恢复爬取（不清队列）；`{ pause?, pauseSet? }` |
-| POST | `/core/problem/admin-update` | 是(**站点管理员**) | 直接改标签/题面（无需审核）；`{ id, updateTags?, tags?, updateContent?, contentMd?, title? }` |
-| POST | `/core/problem/propose-edit` | 是(登录) | 提交标签/题面修改申请（可同次改题面+标签）；站管调用时直接保存；`{ problemId, updateTags?, tags?, updateContent?, contentMd?, title?, note? }` |
-| GET | `/core/problem/edit-requests` | 是(**站点管理员**) | 审核列表 `?page&pageSize&status=pending\|approved\|rejected` |
-| POST | `/core/problem/review-edit` | 是(**站点管理员**) | 通过/驳回；`{ id, approve, reviewNote? }` |
+| POST | `/core/problem/admin-update` | 是(**站管/资源审核员**) | 改标签/题面；写审核记录并 auto-approve（「已通过」可见）；`{ id, updateTags?, tags?, updateContent?, contentMd?, title? }` |
+| POST | `/core/problem/propose-edit` | 是(登录) | 提交标签/题面修改申请；站管/资源审核员调用时写记录并自动通过；`{ problemId, updateTags?, tags?, updateContent?, contentMd?, title?, note? }` |
+| GET | `/core/problem/edit-requests` | 是(**站管/资源审核员**) | 审核列表 `?page&pageSize&status=pending\|approved\|rejected` |
+| POST | `/core/problem/review-edit` | 是(**站管/资源审核员**) | 通过/驳回；`{ id, approve, reviewNote? }` |
 | GET | `/core/problem/my-pending-edit` | 是(登录) | 当前用户对该题的待审申请 `?problemId=` |
 
 **人工修改与 AI 规则**

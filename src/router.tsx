@@ -5,6 +5,7 @@ import {
   Outlet,
 } from 'react-router-dom'
 import { AppLayout } from '@/layouts/AppLayout'
+import { useAuth } from '@/auth/AuthContext'
 import { RequireCoach } from '@/auth/RequireCoach'
 import { RequireLogin } from '@/auth/RequireLogin'
 import { RequireMemberLike } from '@/auth/RequireMemberLike'
@@ -271,6 +272,16 @@ function CoachOutlet() {
       <Outlet />
     </RequireCoach>
   )
+}
+
+/** 管理首页：纯资源审核员进题库审查，其余进组织数据 */
+function AdminIndexRedirect() {
+  const { isStaff, isContentModerator, ready } = useAuth()
+  if (!ready) return null
+  if (!isStaff && isContentModerator) {
+    return <Navigate to="problem-edits" replace />
+  }
+  return <Navigate to="statistics" replace />
 }
 
 const browserRouter = createBrowserRouter([
@@ -697,7 +708,10 @@ const browserRouter = createBrowserRouter([
         path: 'admin',
         element: <CoachOutlet />,
         children: [
-          { index: true, element: <Navigate to="statistics" replace /> },
+          {
+            index: true,
+            element: <AdminIndexRedirect />,
+          },
           {
             path: 'statistics',
             element: (

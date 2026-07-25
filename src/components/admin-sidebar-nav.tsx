@@ -100,6 +100,22 @@ function orgNavItems(canOrgSettings: boolean): AdminNavItem[] {
   return items
 }
 
+/** 内容审核入口（站管 + 资源审核员） */
+const CONTENT_MOD_NAV_ITEMS: AdminNavItem[] = [
+  {
+    to: '/admin/problem-edits',
+    label: '题库审查',
+    icon: ClipboardCheckIcon,
+    isActive: (p) => pathActive(p, '/admin/problem-edits'),
+  },
+  {
+    to: '/admin/blog',
+    label: '博客管理',
+    icon: NewspaperIcon,
+    isActive: (p) => pathActive(p, '/admin/blog'),
+  },
+]
+
 const SITE_NAV_ITEMS: AdminNavItem[] = [
   {
     to: '/admin/site-statistics',
@@ -131,18 +147,7 @@ const SITE_NAV_ITEMS: AdminNavItem[] = [
     icon: WorkflowIcon,
     isActive: (p) => pathActive(p, '/admin/problem-progress'),
   },
-  {
-    to: '/admin/problem-edits',
-    label: '题库审查',
-    icon: ClipboardCheckIcon,
-    isActive: (p) => pathActive(p, '/admin/problem-edits'),
-  },
-  {
-    to: '/admin/blog',
-    label: '博客管理',
-    icon: NewspaperIcon,
-    isActive: (p) => pathActive(p, '/admin/blog'),
-  },
+  ...CONTENT_MOD_NAV_ITEMS,
   {
     to: '/admin/site-bulletin',
     label: '站点公告',
@@ -213,9 +218,12 @@ function SubSectionLabel({ children }: { children: string }) {
 type Props = {
   isStaff: boolean
   isSiteAdmin: boolean
+  /** 资源审核员（可无组织 staff） */
+  isContentModerator?: boolean
   canOrgSettings: boolean
   staffLabelPayload?: {
     isSiteAdmin?: boolean
+    isResourceReviewer?: boolean
     orgRole?: string
     roleId?: number | null
   } | null
@@ -223,18 +231,24 @@ type Props = {
 
 /**
  * PC 侧栏：旧版风格「一个管理入口」+ 展开后内部用小 label 区分组织/站点。
- * 一级标题：站点管理 / 团队管理 / 教练管理 / 队长管理（staffNavLabel）。
+ * 一级标题：站点管理 / 团队管理 / 教练管理 / 队长管理 / 资源审核（staffNavLabel）。
  */
 export function AdminSidebarNavGroups({
   isStaff,
   isSiteAdmin,
+  isContentModerator = false,
   canOrgSettings,
   staffLabelPayload,
 }: Props) {
   const { pathname } = useLocation()
   const title = staffNavLabel(staffLabelPayload)
-  const orgItems = orgNavItems(canOrgSettings)
-  const siteItems = isSiteAdmin ? SITE_NAV_ITEMS : []
+  // 纯资源审核员（非组织 staff、非站管）：只看内容审核入口
+  const orgItems = isStaff ? orgNavItems(canOrgSettings) : []
+  const siteItems = isSiteAdmin
+    ? SITE_NAV_ITEMS
+    : isContentModerator
+      ? CONTENT_MOD_NAV_ITEMS
+      : []
   const allItems = [...orgItems, ...siteItems]
   const childActive = allItems.some((i) => i.isActive(pathname))
   const [open, setOpen] = useState(childActive)
@@ -243,7 +257,8 @@ export function AdminSidebarNavGroups({
     if (childActive) setOpen(true)
   }, [childActive, pathname])
 
-  if (!isStaff) return null
+  if (!isStaff && !isContentModerator) return null
+  if (allItems.length === 0) return null
 
   return (
     <>
@@ -282,13 +297,23 @@ export function AdminSidebarNavGroups({
                     )}
                   >
                     {/* 组织管理：教练/队长/团队管理员/站管 都有 */}
-                    <SubSectionLabel>组织管理</SubSectionLabel>
-                    <SubNavItems items={orgItems} />
+                    {orgItems.length > 0 && (
+                      <>
+                        <SubSectionLabel>组织管理</SubSectionLabel>
+                        <SubNavItems items={orgItems} />
+                      </>
+                    )}
 
-                    {/* 站点管理：仅站管；小 label 与组织侧区分 */}
+                    {/* 站点管理：仅站管；资源审核：审核员子集 */}
                     {isSiteAdmin && siteItems.length > 0 && (
                       <>
                         <SubSectionLabel>站点管理</SubSectionLabel>
+                        <SubNavItems items={siteItems} />
+                      </>
+                    )}
+                    {!isSiteAdmin && isContentModerator && siteItems.length > 0 && (
+                      <>
+                        <SubSectionLabel>内容审核</SubSectionLabel>
                         <SubNavItems items={siteItems} />
                       </>
                     )}

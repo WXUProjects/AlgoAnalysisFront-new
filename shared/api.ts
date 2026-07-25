@@ -106,6 +106,7 @@ export const endpoints = {
     profileIdsByOrg: `${API_PREFIX}/user/profile/ids-by-org`,
     platform: {
       setSiteAdmin: `${API_PREFIX}/user/platform/set-site-admin`,
+      setResourceReviewer: `${API_PREFIX}/user/platform/set-resource-reviewer`,
     },
     paste: {
       create: `${API_PREFIX}/user/paste/create`,
@@ -560,6 +561,9 @@ export interface SocialUser {
    * 切换到校队后也会返回「公共域 · 昵称」及其他共属校队。
    */
   sharedOrgs?: SharedOrgAlias[]
+  /** 全站特殊身份（公共域 badge） */
+  isSiteAdmin?: boolean
+  isResourceReviewer?: boolean
 }
 
 export interface SocialListRes {
@@ -600,6 +604,8 @@ export interface UserListItem {
   lastSubmit: string
   roleId?: number
   isSiteAdmin?: boolean
+  /** 资源审核员 */
+  isResourceReviewer?: boolean
   orgs?: UserOrgBrief[]
   /** 个人日报邮件偏好 */
   emailEnabled?: boolean
@@ -1170,6 +1176,8 @@ export type NotificationType =
   | 'user_frozen'
   | 'user_unfrozen'
   | 'review_pending'
+  | 'resource_reviewer_appointed'
+  | 'resource_reviewer_revoked'
   | string
 
 export interface NotificationItem {

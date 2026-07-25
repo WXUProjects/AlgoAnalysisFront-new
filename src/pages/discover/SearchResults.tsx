@@ -8,6 +8,7 @@ import {
   unfollowUser,
 } from '@/api/social'
 import type { SocialUser } from '@shared/api'
+import { useAuth } from '@/auth/AuthContext'
 import { Pagination } from '@/components/pagination'
 import {
   UserIdentity,
@@ -47,6 +48,11 @@ export function DiscoverSearchResults({
   userId?: number
   onClear: () => void
 }) {
+  const { isLogin: authLogin, currentOrg } = useAuth()
+  const showRoleBadges =
+    Boolean(currentOrg?.isSystem) ||
+    currentOrg?.slug === 'public' ||
+    !authLogin
   const { page, pageSize, setPage, setPageSize } = useListQueryState({
     pageKey: 'upage',
     pageSizeKey: 'upageSize',
@@ -179,7 +185,11 @@ export function DiscoverSearchResults({
                     />
                     <AvatarFallback>{display.slice(0, 1)}</AvatarFallback>
                   </Avatar>
-                  <UserIdentity user={u} className="flex-1" />
+                  <UserIdentity
+                    user={u}
+                    className="flex-1"
+                    showRoleBadges={showRoleBadges}
+                  />
                   {isLogin && !selfRow && (
                     <Button
                       type="button"

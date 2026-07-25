@@ -41,7 +41,11 @@ type TabKey = 'following' | 'followers' | 'search'
 export function Social() {
   const { username } = useParams<{ username?: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { isLogin, user } = useAuth()
+  const { isLogin, user, currentOrg } = useAuth()
+  const showRoleBadges =
+    Boolean(currentOrg?.isSystem) ||
+    currentOrg?.slug === 'public' ||
+    !isLogin
 
   const tab = (searchParams.get('tab') as TabKey) || (username ? 'following' : 'search')
   const page = Number(searchParams.get('page') || 1) || 1
@@ -340,7 +344,11 @@ export function Social() {
                     />
                     <AvatarFallback>{display.slice(0, 1)}</AvatarFallback>
                   </Avatar>
-                  <UserIdentity user={u} className="flex-1" />
+                  <UserIdentity
+                    user={u}
+                    className="flex-1"
+                    showRoleBadges={showRoleBadges}
+                  />
                   {isLogin && !selfRow && (
                     <Button
                       type="button"

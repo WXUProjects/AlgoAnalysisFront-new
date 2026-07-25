@@ -11,6 +11,7 @@ import {
   setEmailEnabled,
   setProblemPipeline,
   setSiteAdmin,
+  setResourceReviewer,
   setSyncExempt,
   setSyncIntervals,
   setUserDisabled,
@@ -233,6 +234,31 @@ function UserListPage({ scope }: { scope: UserScope }) {
       )
       setDetailUser((cur) =>
         cur && cur.userId === u.userId ? { ...cur, isSiteAdmin: next } : cur,
+      )
+      void load()
+    } else toast.error(res.message || '操作未完成，请稍后重试')
+  }
+
+  async function handleToggleResourceReviewer(u: UserListItem) {
+    const next = !u.isResourceReviewer
+    const res = await setResourceReviewer(u.userId, next)
+    if (res.success) {
+      toast.success(
+        next
+          ? '已设为资源审核员，对方将收到站内信与邮件'
+          : '已取消资源审核员，对方将收到站内信与邮件',
+      )
+      setList((prev) =>
+        prev.map((row) =>
+          row.userId === u.userId
+            ? { ...row, isResourceReviewer: next }
+            : row,
+        ),
+      )
+      setDetailUser((cur) =>
+        cur && cur.userId === u.userId
+          ? { ...cur, isResourceReviewer: next }
+          : cur,
       )
       void load()
     } else toast.error(res.message || '操作未完成，请稍后重试')
@@ -911,6 +937,11 @@ function UserListPage({ scope }: { scope: UserScope }) {
                               站点管理员
                             </Badge>
                           )}
+                          {u.isResourceReviewer && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              资源审核员
+                            </Badge>
+                          )}
                           {u.disabled ? (
                             <Badge
                               variant="destructive"
@@ -1180,6 +1211,11 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     {detailUser.isSiteAdmin && (
                       <Badge variant="default" className="text-[10px]">
                         站点管理员
+                      </Badge>
+                    )}
+                    {detailUser.isResourceReviewer && (
+                      <Badge variant="secondary" className="text-[10px]">
+                        资源审核员
                       </Badge>
                     )}
                     {detailUser.disabled ? (
@@ -1528,6 +1564,29 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     {detailUser.isSiteAdmin
                       ? '取消站点管理员'
                       : '设为站点管理员'}
+                  </Button>
+                </ConfirmDialog>
+                <ConfirmDialog
+                  title={
+                    detailUser.isResourceReviewer
+                      ? '取消资源审核员？'
+                      : '设为资源审核员？'
+                  }
+                  description={
+                    detailUser.isResourceReviewer
+                      ? `确定取消「${detailUser.name || detailUser.username}」的资源审核员权限？对方将收到站内信与邮件通知，并无法再审核题面修改与举报。`
+                      : `确定将「${detailUser.name || detailUser.username}」设为资源审核员？对方可审核题面修改与举报，本人修改自动通过并记入审核记录；将收到站内信与邮件通知。`
+                  }
+                  confirmLabel={
+                    detailUser.isResourceReviewer ? '取消权限' : '确认任命'
+                  }
+                  destructive={detailUser.isResourceReviewer}
+                  onConfirm={() => void handleToggleResourceReviewer(detailUser)}
+                >
+                  <Button type="button" size="sm" variant="outline">
+                    {detailUser.isResourceReviewer
+                      ? '取消资源审核员'
+                      : '设为资源审核员'}
                   </Button>
                 </ConfirmDialog>
                 <Button type="button" size="sm" variant="ghost" asChild>

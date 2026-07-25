@@ -40,7 +40,7 @@ function tagsEqual(a: string[], b: string[]): boolean {
 export function ProblemContentEdit() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { isLogin, isSiteAdmin, ready } = useAuth()
+  const { isLogin, isContentModerator, ready } = useAuth()
   const [problem, setProblem] = useState<ProblemInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [contentInput, setContentInput] = useState('')
@@ -106,7 +106,7 @@ export function ProblemContentEdit() {
       Boolean(titleTrim) && titleTrim !== (problem.title || '').trim()
 
     setSaving(true)
-    if (isSiteAdmin) {
+    if (isContentModerator) {
       const res = await adminUpdateProblem({
         id: problem.id,
         updateContent: true,
@@ -196,19 +196,19 @@ export function ProblemContentEdit() {
           onClick={() => void submitEdit()}
           disabled={saving}
         >
-          {saving ? '提交中…' : isSiteAdmin ? '保存' : '提交审核'}
+          {saving ? '提交中…' : isContentModerator ? '保存' : '提交审核'}
         </Button>
       </div>
 
       <Card className="gap-2 py-3">
         <CardHeader className="px-4 py-0">
           <CardTitle className="text-base">
-            {isSiteAdmin ? '编辑题目' : '建议修改题目'}
+            {isContentModerator ? '编辑题目' : '建议修改题目'}
           </CardTitle>
           <CardDescription>
-            {isSiteAdmin
-              ? '可同时改题面与标签。保存后立即生效；若仍无标签，系统会继续尝试自动分析。'
-              : '可同时改题面与标签。提交后由站点管理员审核通过才会展示。'}
+            {isContentModerator
+              ? '可同时改题面与标签。保存后立即生效，并记入「已通过」审核记录；若仍无标签，系统会继续尝试自动分析。'
+              : '可同时改题面与标签。提交后由管理员或资源审核员审核通过才会展示。'}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 px-4 pt-1">
@@ -225,7 +225,7 @@ export function ProblemContentEdit() {
               点选已有标签，或输入后回车新建。也可在详情页单独改标签。
             </p>
           </Field>
-          {!isSiteAdmin && (
+          {!isContentModerator && (
             <Field>
               <FieldLabel htmlFor="edit-content-note">说明（可选）</FieldLabel>
               <Textarea

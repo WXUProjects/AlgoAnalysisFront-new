@@ -403,6 +403,8 @@ export type BuildMobileMoreOptions = {
   /** 站管或组织教练/队长/团队管理员 */
   isStaff: boolean
   isSiteAdmin: boolean
+  /** 资源审核员（非站管时展示内容审核入口） */
+  isContentModerator?: boolean
   /**
    * 可改组织设置（品牌/识别码/任命）：站管或 org_admin。
    * 教练/队长为 false，只看训练报告。
@@ -413,6 +415,7 @@ export type BuildMobileMoreOptions = {
   /** 传给 staffNavLabel：isSiteAdmin / orgRole / roleId */
   staffLabelPayload?: {
     isSiteAdmin?: boolean
+    isResourceReviewer?: boolean
     orgRole?: string
     roleId?: number | null
   } | null
@@ -572,6 +575,20 @@ export function buildMobileMoreSections(
         { to: '/admin/ops', label: '站点运维', icon: WrenchIcon },
       ],
     })
+  } else if (opts.isContentModerator) {
+    // —— 资源审核员（非站管）：仅内容审核入口 ——
+    sections.push({
+      title: '内容审核',
+      layout: 'list',
+      items: [
+        {
+          to: '/admin/problem-edits',
+          label: '题库审查',
+          icon: ClipboardCheckIcon,
+        },
+        { to: '/admin/blog', label: '博客管理', icon: NewspaperIcon },
+      ],
+    })
   }
 
   return sections
@@ -589,18 +606,25 @@ export function buildMobileMoreSectionsFromAuth(opts: {
   isStaff: boolean
   isSiteAdmin: boolean
   isOrgAdmin: boolean
+  isContentModerator?: boolean
+  isResourceReviewer?: boolean
   orgName?: string | null
   orgRole?: string | null
   roleId?: number | null
 }): MobileMoreSection[] {
   const payload = {
     isSiteAdmin: opts.isSiteAdmin,
+    isResourceReviewer: opts.isResourceReviewer,
     orgRole: opts.orgRole ?? undefined,
     roleId: opts.roleId,
   }
   // 双重校验，避免布局误传 isStaff
   const staff = opts.isStaff || isStaffFromPayload(payload)
   const siteAdmin = opts.isSiteAdmin || isSiteAdminFromPayload(payload)
+  const contentMod =
+    opts.isContentModerator ||
+    siteAdmin ||
+    Boolean(opts.isResourceReviewer)
   // 组织设置：站管 / 团队管理员（Auth.isOrgAdmin 对站管也为 true）
   // 教练、队长 isOrgAdmin=false → 训练报告
   const canOrgSettings = siteAdmin || opts.isOrgAdmin
@@ -612,6 +636,7 @@ export function buildMobileMoreSectionsFromAuth(opts: {
     showAbout: opts.showAbout,
     isStaff: staff,
     isSiteAdmin: siteAdmin,
+    isContentModerator: contentMod,
     canOrgSettings,
     orgName: opts.orgName,
     staffLabelPayload: payload,

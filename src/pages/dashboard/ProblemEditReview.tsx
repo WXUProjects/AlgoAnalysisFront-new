@@ -66,7 +66,7 @@ function statusVariant(s: string): 'default' | 'secondary' | 'outline' | 'destru
 }
 
 export function DashboardProblemEditReview() {
-  const { isSiteAdmin, ready } = useAuth()
+  const { isContentModerator, ready } = useAuth()
   const { page, pageSize, setPage, setPageSize } = useListQueryState({
     defaultPageSize: DEFAULT_PAGE_SIZE,
   })
@@ -96,9 +96,9 @@ export function DashboardProblemEditReview() {
   }, [page, pageSize, status])
 
   useEffect(() => {
-    if (!ready || !isSiteAdmin) return
+    if (!ready || !isContentModerator) return
     void load()
-  }, [load, ready, isSiteAdmin])
+  }, [load, ready, isContentModerator])
 
   async function handleReview(approve: boolean) {
     if (!detail) return
@@ -119,8 +119,8 @@ export function DashboardProblemEditReview() {
     void load()
   }
 
-  if (ready && !isSiteAdmin) {
-    return <Navigate to="/admin/statistics" replace />
+  if (ready && !isContentModerator) {
+    return <Navigate to="/" replace />
   }
 
   return (

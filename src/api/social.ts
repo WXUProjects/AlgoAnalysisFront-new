@@ -29,6 +29,12 @@ function normalizeUser(raw: Record<string, unknown>): SocialUser {
     avatar: normalizeStaticUrl(str(raw.avatar)),
     inCurrentOrg: raw.inCurrentOrg === undefined ? undefined : bool(raw.inCurrentOrg),
     sharedOrgs: normalizeSharedOrgs(raw.sharedOrgs),
+    isSiteAdmin:
+      raw.isSiteAdmin === undefined ? undefined : bool(raw.isSiteAdmin),
+    isResourceReviewer:
+      raw.isResourceReviewer === undefined
+        ? undefined
+        : bool(raw.isResourceReviewer),
   }
 }
 

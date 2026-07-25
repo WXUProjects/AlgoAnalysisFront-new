@@ -13,9 +13,9 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import { getHomePath } from '@/lib/home-path'
 
-/** 管理端守卫：管理员 / 教练 / 队长 */
+/** 管理端守卫：组织 staff / 站管 / 资源审核员 */
 export function RequireCoach({ children }: { children: React.ReactNode }) {
-  const { isLogin, isStaff, ready } = useAuth()
+  const { isLogin, canAccessAdmin, ready } = useAuth()
   const location = useLocation()
 
   if (!ready) {
@@ -37,8 +37,8 @@ export function RequireCoach({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // 已登录但非 staff：持久中文说明 + 返回入口（不得静默 Navigate）
-  if (!isStaff) {
+  // 已登录但无管理/审核权限：持久中文说明 + 返回入口（不得静默 Navigate）
+  if (!canAccessAdmin) {
     const homeTo = getHomePath(true)
     return (
       <PageShell className="items-center justify-center" stagger={false}>
@@ -46,7 +46,7 @@ export function RequireCoach({ children }: { children: React.ReactNode }) {
           <CardHeader>
             <CardTitle>暂无管理权限</CardTitle>
             <CardDescription>
-              当前账号无法进入管理后台。如需使用，请联系组织管理员开通教练、队长或团队管理员权限。
+              当前账号无法进入管理后台。如需使用，请联系组织管理员开通教练、队长或团队管理员权限，或由站点管理员任命资源审核员。
             </CardDescription>
           </CardHeader>
           <CardContent>

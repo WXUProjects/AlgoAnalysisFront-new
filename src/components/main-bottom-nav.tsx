@@ -79,6 +79,9 @@ type Props = {
   isOrgAdmin: boolean
   isCoach: boolean
   isCaptain: boolean
+  /** 资源审核员（可无组织 staff） */
+  isContentModerator?: boolean
+  isResourceReviewer?: boolean
   sheetOpen: boolean
   onMoreClick: () => void
 }
@@ -106,6 +109,8 @@ export function MainBottomNav({
   isOrgAdmin,
   isCoach,
   isCaptain,
+  isContentModerator = false,
+  isResourceReviewer = false,
   sheetOpen,
   onMoreClick,
 }: Props) {
@@ -114,6 +119,7 @@ export function MainBottomNav({
 
   const adminLabel = bottomNavStaffLabel({
     isSiteAdmin,
+    isResourceReviewer,
     orgRole: isOrgAdmin
       ? 'org_admin'
       : isCoach
@@ -131,8 +137,8 @@ export function MainBottomNav({
     }
     items.push({ kind: 'link', item })
   }
-  // staff：在题库右侧、更多左侧插入管理入口（比赛始终居中保留）
-  if (isStaff) {
+  // staff / 资源审核员：在题库右侧、更多左侧插入管理入口
+  if (isStaff || isContentModerator) {
     items.push({ kind: 'admin', label: adminLabel })
   }
   items.push({ kind: 'more' })

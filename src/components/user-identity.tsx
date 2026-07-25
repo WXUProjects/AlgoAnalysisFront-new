@@ -8,6 +8,9 @@ export type UserIdentityData = {
   /** 主展示名（当前域称呼 / 公共域昵称） */
   name?: string | null
   sharedOrgs?: SharedOrgAlias[] | null
+  /** 全站特殊身份（仅公共域视图展示 badge） */
+  isSiteAdmin?: boolean | null
+  isResourceReviewer?: boolean | null
 }
 
 /** 解析主展示文案：name 优先，否则 @username */
@@ -31,6 +34,8 @@ export function UserIdentity({
   linkToProfile = true,
   showUsername = true,
   size = 'default',
+  /** 公共域下展示全站特殊身份 badge */
+  showRoleBadges = false,
 }: {
   user: UserIdentityData
   className?: string
@@ -40,10 +45,20 @@ export function UserIdentity({
   /** 是否显示 @username 副行 */
   showUsername?: boolean
   size?: 'default' | 'lg' | 'sm'
+  showRoleBadges?: boolean
 }) {
   const display = resolveDisplayName(user)
   // 主名已是队内名时仍可展示「组织名」；displayName 与主名相同则只标组织
   const badges = (user.sharedOrgs || []).filter((a) => a.orgName || a.displayName)
+  const roleBadges: { key: string; label: string }[] = []
+  if (showRoleBadges) {
+    if (user.isSiteAdmin) {
+      roleBadges.push({ key: 'site_admin', label: '站点管理员' })
+    }
+    if (user.isResourceReviewer) {
+      roleBadges.push({ key: 'resource_reviewer', label: '资源审核员' })
+    }
+  }
 
   const nameEl = linkToProfile && user.username ? (
     <Link
@@ -74,6 +89,15 @@ export function UserIdentity({
     <div className={cn('min-w-0 flex flex-col gap-0.5', className)}>
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         {nameEl}
+        {roleBadges.map((b) => (
+          <Badge
+            key={b.key}
+            variant={b.key === 'site_admin' ? 'default' : 'secondary'}
+            className="max-w-[8rem] truncate font-normal"
+          >
+            {b.label}
+          </Badge>
+        ))}
         {badges.length > 0 &&
           badges.slice(0, 3).map((a) => (
             <SharedOrgBadge key={a.orgId || a.orgName} alias={a} primary={display} />

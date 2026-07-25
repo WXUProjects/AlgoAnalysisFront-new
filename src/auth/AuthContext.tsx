@@ -26,9 +26,12 @@ import {
 import { setAuthExpiredHandler } from '@/lib/http'
 import { jwt, jwtPayloadEquals, type JwtPayload } from '@/lib/jwt'
 import {
+  canAccessAdminFromPayload,
   isCaptainFromPayload,
   isCoachFromPayload,
+  isContentModeratorFromPayload,
   isOrgAdminFromPayload,
+  isResourceReviewerFromPayload,
   isSiteAdminFromPayload,
   isStaffFromPayload,
 } from '@/lib/roles'
@@ -38,6 +41,10 @@ interface AuthState {
   /** 站点管理员 */
   isAdmin: boolean
   isSiteAdmin: boolean
+  /** 资源审核员 */
+  isResourceReviewer: boolean
+  /** 站管或资源审核员（题库审查 / 博客管理） */
+  isContentModerator: boolean
   /** 当前组织管理员 */
   isOrgAdmin: boolean
   /** 兼容：旧纯教练 */
@@ -45,6 +52,8 @@ interface AuthState {
   isCaptain: boolean
   /** 管理端入口：站点管理员或组织管理员 */
   isStaff: boolean
+  /** 可进管理壳：staff 或资源审核员 */
+  canAccessAdmin: boolean
   isMemberLike: boolean
   user: JwtPayload | null
   profile: UserProfile | null
@@ -91,10 +100,13 @@ function deriveFlags(payload: JwtPayload | null) {
     isLogin: Boolean(payload),
     isAdmin: isSiteAdminFromPayload(payload),
     isSiteAdmin: isSiteAdminFromPayload(payload),
+    isResourceReviewer: isResourceReviewerFromPayload(payload),
+    isContentModerator: isContentModeratorFromPayload(payload),
     isOrgAdmin: isOrgAdminFromPayload(payload),
     isCoach: isCoachFromPayload(payload),
     isCaptain: isCaptainFromPayload(payload),
     isStaff: isStaffFromPayload(payload),
+    canAccessAdmin: canAccessAdminFromPayload(payload),
     // 任意登录用户均可走队员侧（资料/交题等）
     isMemberLike: Boolean(payload),
   }

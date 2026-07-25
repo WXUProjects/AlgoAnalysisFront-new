@@ -94,6 +94,8 @@ function AppLayoutInner() {
     isLogin,
     isStaff,
     isSiteAdmin,
+    isContentModerator,
+    canAccessAdmin,
     isOrgAdmin,
     isCoach,
     isCaptain,
@@ -160,6 +162,8 @@ function AppLayoutInner() {
         isStaff,
         isSiteAdmin,
         isOrgAdmin,
+        isContentModerator,
+        isResourceReviewer: user?.isResourceReviewer,
         orgName: currentOrg?.name,
         orgRole: user?.orgRole,
         roleId: user?.roleId,
@@ -170,10 +174,12 @@ function AppLayoutInner() {
       user?.username,
       user?.orgRole,
       user?.roleId,
+      user?.isResourceReviewer,
       showAbout,
       isStaff,
       isSiteAdmin,
       isOrgAdmin,
+      isContentModerator,
       currentOrg?.name,
     ],
   )
@@ -410,11 +416,12 @@ function AppLayoutInner() {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            {/* PC：可折叠二级 Tab（教练管理/组织管理/站点管理 → 展开子项）；移动端走底栏 +「更多」 */}
-            {isLogin && isStaff && (
+            {/* PC：可折叠二级 Tab（教练管理/组织管理/站点管理/资源审核 → 展开子项）；移动端走底栏 +「更多」 */}
+            {isLogin && canAccessAdmin && (
               <AdminSidebarNavGroups
                 isStaff={isStaff}
                 isSiteAdmin={isSiteAdmin}
+                isContentModerator={isContentModerator}
                 canOrgSettings={isSiteAdmin || isOrgAdmin}
                 staffLabelPayload={user}
               />
@@ -562,6 +569,8 @@ function AppLayoutInner() {
                 isOrgAdmin={isOrgAdmin}
                 isCoach={isCoach}
                 isCaptain={isCaptain}
+                isContentModerator={isContentModerator}
+                isResourceReviewer={Boolean(user?.isResourceReviewer)}
                 sheetOpen={moreOpen}
                 onMoreClick={() => setMoreOpen(true)}
               />

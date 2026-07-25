@@ -91,7 +91,7 @@ import {
 } from '@/lib/contest-nav'
 
 export function Profile() {
-  const { user, isLogin, logout } = useAuth()
+  const { user, isLogin, logout, currentOrg } = useAuth()
   const { username: routeUsername } = useParams<{ username?: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -635,6 +635,11 @@ export function Profile() {
                   size="lg"
                   nameClassName="font-semibold tracking-tight"
                   className="lg:items-center"
+                  showRoleBadges={
+                    Boolean(currentOrg?.isSystem) ||
+                    currentOrg?.slug === 'public' ||
+                    !isLogin
+                  }
                 />
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-xs sm:text-sm lg:justify-center">
                   <Link

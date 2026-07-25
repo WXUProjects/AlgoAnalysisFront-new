@@ -65,7 +65,7 @@ const visibilityLabel: Record<string, string> = {
 }
 
 export function DashboardBlogAdmin() {
-  const { isAdmin, ready } = useAuth()
+  const { isContentModerator, ready } = useAuth()
   const [overview, setOverview] = useState<BlogAdminOverview | null>(null)
   const [authors, setAuthors] = useState<BlogAdminAuthor[]>([])
   const [authorTotal, setAuthorTotal] = useState(0)
@@ -112,14 +112,14 @@ export function DashboardBlogAdmin() {
   }, [])
 
   useEffect(() => {
-    if (!ready || !isAdmin) return
+    if (!ready || !isContentModerator) return
     setLoading(true)
     void Promise.all([
       loadOverview(),
       loadAuthors(),
       loadArticles(undefined, 'all'),
     ]).finally(() => setLoading(false))
-  }, [ready, isAdmin, loadOverview, loadAuthors, loadArticles])
+  }, [ready, isContentModerator, loadOverview, loadAuthors, loadArticles])
 
   async function moderate(
     id: number,
@@ -143,10 +143,10 @@ export function DashboardBlogAdmin() {
     void loadArticles(articleKw, status)
   }
 
-  if (ready && !isAdmin) {
+  if (ready && !isContentModerator) {
     return (
       <p className="p-6 text-sm text-muted-foreground">
-        仅站点管理员可管理博客。
+        仅站点管理员或资源审核员可管理博客。
       </p>
     )
   }
