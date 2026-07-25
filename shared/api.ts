@@ -357,6 +357,8 @@ export type Platform =
   | 'LuoGu'
   | 'LeetCode'
   | 'QOJ'
+  | 'LOJ'
+  | 'UOJ'
 
 /** 题单系统类型 */
 export type ProblemsetKind = 'favorites' | 'todo' | 'custom' | string

@@ -185,7 +185,7 @@ Auth 标志：`isAdmin`/`isSiteAdmin` · `isOrgAdmin` · `isCoach` · `isCaptain
 | **Login** | 用户名+密码；客户端 SHA256；JWT；跳转 `redirect` 或 `/` |
 | **Register** | 账号/密码/确认/姓名/邮箱；`groupId` 默认 0；成功去登录 |
 | **Profile** | `?id=` 看他人；头像/OJ 绑定与外链；本人：编辑资料、退出；**Admin**：同步该用户 OJ；AC/提交对比；热力图；近期动态；算法画像；最近比赛 |
-| **ChangeProfile** | 改姓名/邮箱；邮件通知开关；绑定 OJ（AtCoder/洛谷/牛客/CF/QOJ/力扣）；`?oj=` 预选平台 |
+| **ChangeProfile** | 改姓名/邮箱；邮件通知开关；绑定 OJ（AtCoder/洛谷/牛客/CF/QOJ/力扣/LOJ/UOJ）；`?oj=` 预选平台 |
 | **AllActivities** | 全站或单用户提交流；cursor 无限滚动；链到资料/题库 |
 | **Bulletin** | 分页列表；展开 HTML；置顶；`?expand=` 自动展开 |
 | **Contest** | 分页列表；全站或 `?id=` 用户；跳 OJ / 站内详情 |

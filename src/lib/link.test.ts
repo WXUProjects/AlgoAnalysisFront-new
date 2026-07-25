@@ -12,6 +12,10 @@ describe('normalizeSubmitId', () => {
   it('keeps leetcode synthetic ids', () => {
     assert.equal(normalizeSubmitId('LeetCode', 'lc-prob-1'), 'lc-prob-1')
   })
+  it('keeps loj and uoj prefixed ids', () => {
+    assert.equal(normalizeSubmitId('LOJ', 'loj-1041663'), 'loj-1041663')
+    assert.equal(normalizeSubmitId('UOJ', 'uoj-ac-1-42'), 'uoj-ac-1-42')
+  })
 })
 
 describe('getSubmitLink', () => {
@@ -25,6 +29,15 @@ describe('getSubmitLink', () => {
     assert.equal(
       getSubmitLink('LuoGu', '', '286690434'),
       'https://www.luogu.com.cn/record/286690434',
+    )
+  })
+  it('builds loj submission link', () => {
+    assert.equal(getSubmitLink('LOJ', '', 'loj-1041663'), 'https://loj.ac/s/1041663')
+  })
+  it('builds uoj problem link from synthetic ac id', () => {
+    assert.equal(
+      getSubmitLink('UOJ', '', 'uoj-ac-42-1'),
+      'https://uoj.ac/problem/1',
     )
   })
 })

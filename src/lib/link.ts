@@ -16,6 +16,10 @@ export function getPlatformHomeLink(platform: string, username: string): string 
       return `https://codeforces.com/profile/${username}`
     case 'QOJ':
       return `https://qoj.ac/user/profile/${username}`
+    case 'LOJ':
+      return `https://loj.ac/u/${username}`
+    case 'UOJ':
+      return `https://uoj.ac/user/profile/${username}`
     default:
       return ''
   }
@@ -32,13 +36,16 @@ export function normalizeSubmitId(
   const id = (submitId || '').trim()
   if (!id) return id
   if (platform === 'LeetCode' && id.startsWith('lc-')) return id
+  // LOJ / UOJ 自带前缀的 submit_id 保持原样（链接侧再剥）
+  if (platform === 'LOJ' && id.startsWith('loj-')) return id
+  if (platform === 'UOJ' && id.startsWith('uoj-ac-')) return id
   const plat = (platform || '').trim()
   if (plat) {
     const pref = `${plat}:`
     if (id.startsWith(pref)) return id.slice(pref.length).trim()
   }
   const m = id.match(
-    /^(LuoGu|Luogu|CodeForces|Codeforces|CF|AtCoder|Atcoder|NowCoder|Nowcoder|LeetCode|Leetcode|QOJ|Qoj):(.+)$/i,
+    /^(LuoGu|Luogu|CodeForces|Codeforces|CF|AtCoder|Atcoder|NowCoder|Nowcoder|LeetCode|Leetcode|QOJ|Qoj|LOJ|Loj|UOJ|Uoj):(.+)$/i,
   )
   if (m) return m[2].trim()
   return id
@@ -65,6 +72,17 @@ export function getSubmitLink(
       return `https://codeforces.com/contest/${contest}/submission/${sid}`
     case 'QOJ':
       return `https://qoj.ac/submission/${sid}`
+    case 'LOJ': {
+      const num = sid.startsWith('loj-') ? sid.slice(4) : sid
+      return num ? `https://loj.ac/s/${num}` : ''
+    }
+    case 'UOJ': {
+      // 合成 AC：uoj-ac-{userId}-{problemId} → 题目页（无源码）
+      const m = sid.match(/^uoj-ac-\d+-(\d+)$/)
+      if (m) return `https://uoj.ac/problem/${m[1]}`
+      if (/^\d+$/.test(sid)) return `https://uoj.ac/submission/${sid}`
+      return ''
+    }
     case 'LeetCode':
       // 力扣公开「最近通过」无提交代码页，不提供查看源码链接
       return ''
@@ -81,6 +99,8 @@ export const OJ_PLATFORMS: { value: OjPlatform; label: string }[] = [
   { value: 'LuoGu', label: '洛谷' },
   { value: 'LeetCode', label: '力扣' },
   { value: 'QOJ', label: 'QOJ' },
+  { value: 'LOJ', label: 'LOJ' },
+  { value: 'UOJ', label: 'UOJ' },
 ]
 
 /** 绑定 OJ 时的填写引导（按平台） */
@@ -117,6 +137,18 @@ export const OJ_BIND_GUIDES: Record<
     placeholder: '例如 sanenchen',
     tip: '填写 QOJ 用户名（主页 URL 最后一段）。',
     example: 'https://qoj.ac/user/profile/sanenchen → sanenchen',
+  },
+  LOJ: {
+    fieldLabel: '用户名',
+    placeholder: '例如 supy',
+    tip: '填写 LibreOJ（loj.ac）用户名，与提交记录页 submitter 一致。',
+    example: 'https://loj.ac/u/supy 或 https://loj.ac/s?submitter=supy → supy',
+  },
+  UOJ: {
+    fieldLabel: '用户名',
+    placeholder: '例如 lgvc',
+    tip: '填写 UOJ 用户名（主页 URL 最后一段）。因站点限制，目前只同步「已 AC 题目」与 Rating，不含完整提交时间线。',
+    example: 'https://uoj.ac/user/profile/lgvc → lgvc',
   },
   LeetCode: {
     fieldLabel: '用户名',

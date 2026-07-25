@@ -7,7 +7,6 @@ import {
 } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  ExternalLinkIcon,
   FlameIcon,
   TrendingDownIcon,
   TrendingUpIcon,
@@ -378,99 +377,11 @@ export function Profile() {
     toast.success(isFollowing ? '已取消关注' : '已关注')
   }
 
-  /** 桌面：完整列表（绑定 / 主页 / Rating） */
-  function renderOjBindingsDesktop() {
-    return (
-      <Card className="gap-0 overflow-hidden py-0">
-        <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
-          <p className="text-sm font-medium">OJ 绑定</p>
-          {isSelf ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-6 px-1.5 text-xs"
-              asChild
-            >
-              <Link to="/change-profile">管理</Link>
-            </Button>
-          ) : null}
-        </div>
-        <CardContent className="flex flex-col divide-y px-0 py-0">
-          {OJ_PLATFORMS.map((p) => {
-            const bind = spiderMap.get(p.value)
-            if (!bind) {
-              if (!isSelf) return null
-              return (
-                <div
-                  key={p.value}
-                  className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm"
-                >
-                  <span className="text-muted-foreground">{p.label}</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-6 px-2 text-xs"
-                    asChild
-                  >
-                    <Link to={`/change-profile?oj=${p.value}`}>绑定</Link>
-                  </Button>
-                </div>
-              )
-            }
-            return (
-              <div
-                key={p.value}
-                className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="shrink-0 font-medium">{p.label}</span>
-                  {bind.hasRating ? (
-                    <Badge
-                      variant="secondary"
-                      className="h-5 font-mono tabular-nums"
-                      title={`${p.label} Rating`}
-                    >
-                      {bind.rating}
-                    </Badge>
-                  ) : (
-                    <span className="text-[11px] text-muted-foreground">
-                      暂无 Rating
-                    </span>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 gap-1 px-1.5 text-xs"
-                  asChild
-                >
-                  <a
-                    href={getPlatformHomeLink(p.value, bind.username)}
-                    target="_blank"
-                    rel="noreferrer"
-                    title={bind.username}
-                  >
-                    主页
-                    <ExternalLinkIcon className="size-3 opacity-70" />
-                  </a>
-                </Button>
-              </div>
-            )
-          })}
-          {!isSelf && OJ_PLATFORMS.every((p) => !spiderMap.get(p.value)) ? (
-            <p className="px-3 py-2 text-xs text-muted-foreground">暂无绑定</p>
-          ) : null}
-        </CardContent>
-      </Card>
-    )
-  }
-
   /**
-   * 移动端：取消列表块，已绑定的 OJ 做成可点 Badge
-   * 形如 AtCoder(720)，rating 用强调色；点击进对应 OJ 主页
+   * 已绑定的 OJ 做成可点小 Badge（PC / 移动端共用）
+   * 形如 AtCoder(720)，rating 用强调色；未绑定的平台不展示
    */
-  function renderOjBindingsMobile() {
+  function renderOjBindings() {
     const bound = OJ_PLATFORMS.flatMap((p) => {
       const bind = spiderMap.get(p.value)
       if (!bind) return []
@@ -615,7 +526,7 @@ export function Profile() {
     <PageShell className="gap-4">
       {/*
         移动端顺序：身份（含博客/关注）→ OJ Badge → 刷题数据/主内容
-        桌面：左栏 sticky 身份+OJ+操作，右栏数据
+        桌面：左栏 sticky 身份+OJ Badge+操作，右栏数据
       */}
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 lg:grid lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start lg:gap-10">
         {/* 身份区：移动端横排紧凑，桌面端左栏竖排 */}
@@ -755,12 +666,11 @@ export function Profile() {
             </CardContent>
           </Card>
 
-          {/* 移动端：OJ Badge 紧跟身份区 */}
-          <div className="lg:hidden">{renderOjBindingsMobile()}</div>
+          {/* OJ Badge：PC / 移动端共用，仅展示已绑定 */}
+          {renderOjBindings()}
 
-          {/* 桌面：OJ / 操作留在左栏 */}
+          {/* 桌面：操作留在左栏 */}
           <div className="hidden flex-col gap-3 lg:flex lg:gap-4">
-            {renderOjBindingsDesktop()}
             {renderProfileActions({ desktopOnlySelfActions: true })}
           </div>
         </aside>

@@ -51,7 +51,7 @@ const TAG_COLLAPSE_COUNT_DESKTOP = 16
 const TAG_COLLAPSE_COUNT_MOBILE = 7
 
 const DEFAULT_PAGE_SIZE = 20
-const PLATFORMS = ['NowCoder', 'AtCoder', 'CodeForces', 'LuoGu', 'LeetCode', 'QOJ']
+const PLATFORMS = ['NowCoder', 'AtCoder', 'CodeForces', 'LuoGu', 'LeetCode', 'QOJ', 'LOJ', 'UOJ']
 const DIFFS = ['简单', '中等', '困难']
 const STATUSES = [
   { value: '', label: '全部状态' },
@@ -377,6 +377,8 @@ export function QuestionBank() {
         LuoGu: '洛谷',
         LeetCode: '力扣',
         QOJ: 'QOJ',
+        LOJ: 'LOJ',
+        UOJ: 'UOJ',
       } as Record<string, string>
     )[p] || p
 

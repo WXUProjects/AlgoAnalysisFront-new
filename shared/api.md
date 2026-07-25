@@ -576,7 +576,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 }
 ```
 - `lastSyncAt`：最近一次 OJ 数据同步成功时间（unix 秒；`0` 表示尚无成功同步记录，部署本字段前的历史用户会在下次定时/手动同步后出现）
-- `spiders[].rating` / `hasRating`：各平台当前 Rating；绑定后爬虫会一并抓取。`hasRating=false` 表示未参赛/平台无 Rating/尚未同步。支持：AtCoder、牛客、Codeforces、洛谷、力扣；QOJ 暂无
+- `spiders[].rating` / `hasRating`：各平台当前 Rating；绑定后爬虫会一并抓取。`hasRating=false` 表示未参赛/平台无 Rating/尚未同步。支持：AtCoder、牛客、Codeforces、洛谷、力扣、LOJ、UOJ；QOJ 暂无
 
 **UpdateReq**
 ```json
@@ -681,7 +681,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 **SetSpiderReq**
 ```json
-{ "platform": "NowCoder|AtCoder|CodeForces|LuoGu|LeetCode|QOJ", "userId": 1, "username": "string" }
+{ "platform": "NowCoder|AtCoder|CodeForces|LuoGu|LeetCode|QOJ|LOJ|UOJ", "userId": 1, "username": "string" }
 ```
 绑定成功后后台只抓取该 `platform` 的全量提交/比赛，并尽量同步该平台 **Rating**，不会重扫用户其它已绑定 OJ。
 
@@ -697,6 +697,8 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | 洛谷 | 用户页 `_feInjection` | 依赖现有登录会话 |
 | 力扣 | `graphql/noj-go` contest ranking | 浮点四舍五入为整数 |
 | QOJ | — | Cloudflare 暂不支持 |
+| LOJ | `api.loj.ac` `user/getUserMeta` | 公开 API；rating≤0 视为无 |
+| UOJ | 用户主页 HTML | 公开；**仅同步 AC 题目集 + Rating**（提交列表需登录，不做） |
 
 **UpdateReq**
 ```json
@@ -868,7 +870,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problemset/update` | 是 | body: `{ id, title?, description?, visibility?, password?, clearPassword? }`；系统题单仅可改描述 |
 | POST | `/core/problemset/delete` | 是 | body: `{ id }`；系统题单不可删 |
 | POST | `/core/problemset/unlock` | 否 | body: `{ id, password }` → `{ unlockToken, expiresIn }` |
-| POST | `/core/problemset/add` | 是 | body: `{ problemsetId?, problemId? }` 或 `{ problemsetId?, url? }`；**`problemsetId` 可省略**：仅向题库入库（须 `url`）；有 `problemsetId` 时同时加入该题单（须本人题单）。**先入库再后台补**：无真标题也可用 external_id 占位入库；缺题面/仅占位标题时**最高优先级**后台爬取（直爬 + MQ 兜底，HTTP 不阻塞）；AI 按操作者资格；无法识别链接 → `success=false, code=URL_PARSE_FAILED`（HTTP 200）。URL 会清洗粘贴噪声（query/fragment、前后说明文字、Markdown 链接）。成功 data：`{ problemId, fetchTriggered, platform?, title?, externalId? }`（识别摘要供前端确认弹窗）。支持：`CodeForces`（含 gym/group）、`AtCoder`、`LuoGu`、`NowCoder`（题库 `/acm/problem/{id}`、主站 `/practice/{uuid}`、**比赛题页** `/acm/contest/{contestId}/{A}` → problem-list 解析数字 problemId）、`QOJ`、`LeetCode`（cn/com） |
+| POST | `/core/problemset/add` | 是 | body: `{ problemsetId?, problemId? }` 或 `{ problemsetId?, url? }`；**`problemsetId` 可省略**：仅向题库入库（须 `url`）；有 `problemsetId` 时同时加入该题单（须本人题单）。**先入库再后台补**：无真标题也可用 external_id 占位入库；缺题面/仅占位标题时**最高优先级**后台爬取（直爬 + MQ 兜底，HTTP 不阻塞）；AI 按操作者资格；无法识别链接 → `success=false, code=URL_PARSE_FAILED`（HTTP 200）。URL 会清洗粘贴噪声（query/fragment、前后说明文字、Markdown 链接）。成功 data：`{ problemId, fetchTriggered, platform?, title?, externalId? }`（识别摘要供前端确认弹窗）。支持：`CodeForces`（含 gym/group）、`AtCoder`、`LuoGu`、`NowCoder`（题库 `/acm/problem/{id}`、主站 `/practice/{uuid}`、**比赛题页** `/acm/contest/{contestId}/{A}` → problem-list 解析数字 problemId）、`QOJ`、`LeetCode`（cn/com）、`LOJ`（`/p/{id}`）、`UOJ`（`/problem/{id}`） |
 | POST | `/core/problemset/add-manual` | 是 | 链接无法识别时手动建题（**无需审核**）；body: `{ problemsetId?, title, contentMd?, tags?, sourceUrl? }` → `{ problemId }`；`problemsetId` 可省略（仅入库）；`platform=Manual` |
 | POST | `/core/problemset/remove` | 是 | body: `{ problemsetId, problemId }` 手动剔除 |
 | POST | `/core/problemset/reorder` | 是 | 拖拽排序；body: `{ problemsetId, ids: [itemId…] }`（`ids` 为题单项 id，须覆盖该题单全部项）；按序重写 `sortOrder` 为 `0,1,2…`；仅 owner |

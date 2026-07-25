@@ -35,6 +35,8 @@ const PLATFORM_LABEL: Record<string, string> = {
   LuoGu: '洛谷',
   LeetCode: '力扣',
   QOJ: 'QOJ',
+  LOJ: 'LOJ',
+  UOJ: 'UOJ',
 }
 
 function platformLabel(p: string): string {
