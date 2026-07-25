@@ -21,25 +21,50 @@ export function getPlatformHomeLink(platform: string, username: string): string 
   }
 }
 
+/**
+ * 去掉误入库的「平台:」前缀（如 LuoGu:286690434 → 286690434）。
+ * 力扣合成 id（lc-*）保持不变。
+ */
+export function normalizeSubmitId(
+  platform: string,
+  submitId: string,
+): string {
+  const id = (submitId || '').trim()
+  if (!id) return id
+  if (platform === 'LeetCode' && id.startsWith('lc-')) return id
+  const plat = (platform || '').trim()
+  if (plat) {
+    const pref = `${plat}:`
+    if (id.startsWith(pref)) return id.slice(pref.length).trim()
+  }
+  const m = id.match(
+    /^(LuoGu|Luogu|CodeForces|Codeforces|CF|AtCoder|Atcoder|NowCoder|Nowcoder|LeetCode|Leetcode|QOJ|Qoj):(.+)$/i,
+  )
+  if (m) return m[2].trim()
+  return id
+}
+
 export function getSubmitLink(
   platform: string,
   contest: string,
   submitId: string,
 ): string {
+  const sid = normalizeSubmitId(platform, submitId)
+  if (!sid) return ''
   switch (platform) {
     case 'AtCoder':
-      return `https://atcoder.jp/contests/${contest}/submissions/${submitId}`
+      return `https://atcoder.jp/contests/${contest}/submissions/${sid}`
     case 'NowCoder':
       if (contest.startsWith('main|')) {
-        return `https://www.nowcoder.com/profile/${contest.split('|')[1]}/codeBookDetail?submissionId=${submitId}`
+        return `https://www.nowcoder.com/profile/${contest.split('|')[1]}/codeBookDetail?submissionId=${sid}`
       }
-      return `https://ac.nowcoder.com/acm/contest/view-submission?submissionId=${submitId}`
+      return `https://ac.nowcoder.com/acm/contest/view-submission?submissionId=${sid}`
     case 'LuoGu':
-      return `https://www.luogu.com.cn/record/${submitId}`
+      return `https://www.luogu.com.cn/record/${sid}`
     case 'CodeForces':
-      return `https://codeforces.com/contest/${contest}/submission/${submitId}`
+      return `https://codeforces.com/contest/${contest}/submission/${sid}`
     case 'QOJ':
-      return `https://qoj.ac/submission/${submitId}`
+      return `https://qoj.ac/submission/${sid}`
     case 'LeetCode':
       // 力扣公开「最近通过」无提交代码页，不提供查看源码链接
       return ''
