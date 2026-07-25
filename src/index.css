@@ -469,32 +469,10 @@
   color: var(--destructive, #dc2626);
 }
 
-/* 题面样例（无语言围栏）：右上角浮层复制，无行号 */
-.markdown-body .md-code-sample > .md-code-copy {
-  position: absolute;
-  top: 0.45rem;
-  right: 0.45rem;
-  z-index: 2;
-  margin-left: 0;
-  opacity: 0.92;
-}
-
-.markdown-body .md-code-sample:hover > .md-code-copy,
-.markdown-body .md-code-sample:focus-within > .md-code-copy {
-  opacity: 1;
-}
-
-.markdown-body .md-code-sample pre.code-hl {
-  /* 右侧/顶侧留白，避免文字压到「复制」 */
-  padding-top: 0.15rem;
-}
-
-.markdown-body .md-code-sample pre.code-hl code.hljs {
-  padding: 0.75rem 3.4rem 0.85rem 1rem;
-}
-
+/* 题面样例 / 纯文本围栏：与代码块同顶栏边框，无行号，左右内边距补齐 */
 .markdown-body .md-code-sample .md-code-src {
-  padding-right: 0.25rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 .markdown-body .md-code-block pre.code-hl {

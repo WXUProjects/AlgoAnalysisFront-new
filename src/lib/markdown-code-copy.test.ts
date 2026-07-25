@@ -47,12 +47,22 @@ describe('markdown code block copy', () => {
     assert.match(html, /md-code-ln/) // 带语言：有行号
   })
 
-  it('plain sample fences get floating copy without line numbers', () => {
-    const html = renderMarkdown('### 输入\n\n```\n3 4 4\n```\n')
+  it('plain sample fences get header border labeled plain text, no line numbers', () => {
+    const html = renderMarkdown('### 输入\n\n```\n7 1\n.G...GG\n```\n')
     assert.match(html, /md-code-sample/)
+    assert.match(html, /md-code-header/)
+    assert.match(html, /md-code-lang[^>]*>plain text</)
     assert.match(html, /class="md-code-copy"/)
     assert.doesNotMatch(html, /md-code-ln/)
-    assert.doesNotMatch(html, /md-code-header/)
+  })
+
+  it('text / plaintext / plain fences also label as plain text', () => {
+    for (const fence of ['text', 'plaintext', 'plain'] as const) {
+      const html = renderMarkdown('```' + fence + '\n1\n```\n')
+      assert.match(html, /md-code-lang[^>]*>plain text</)
+      assert.match(html, /md-code-header/)
+      assert.doesNotMatch(html, /md-code-ln/)
+    }
   })
 
   it('sanitize keeps only md-code-copy buttons', () => {
