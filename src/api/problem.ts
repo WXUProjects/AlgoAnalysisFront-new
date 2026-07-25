@@ -421,11 +421,13 @@ function normalizeEditInfo(raw: Record<string, unknown>): ProblemEditInfo {
     userName: str(raw.userName),
     hasTags: bool(raw.hasTags),
     hasContent: bool(raw.hasContent),
+    hasDifficulty: bool(raw.hasDifficulty),
     proposedTags: Array.isArray(raw.proposedTags)
       ? (raw.proposedTags as unknown[]).map((t) => str(t))
       : [],
     proposedContentMd: str(raw.proposedContentMd),
     proposedTitle: str(raw.proposedTitle),
+    proposedDifficulty: str(raw.proposedDifficulty),
     note: str(raw.note),
     status: str(raw.status),
     reviewerId: num(raw.reviewerId),
@@ -437,6 +439,7 @@ function normalizeEditInfo(raw: Record<string, unknown>): ProblemEditInfo {
       : [],
     currentContentMd: str(raw.currentContentMd),
     currentTitle: str(raw.currentTitle),
+    currentDifficulty: str(raw.currentDifficulty),
   }
 }
 

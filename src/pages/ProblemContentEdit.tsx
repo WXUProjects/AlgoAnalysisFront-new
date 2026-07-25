@@ -22,9 +22,20 @@ import {
 } from '@/components/ui/card'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { toMarkdownSource } from '@/lib/markdown'
+
+const DIFFICULTY_OPTIONS = ['简单', '中等', '困难'] as const
+/** Select 用：未选难度 */
+const DIFFICULTY_NONE = '__none__'
 
 function tagsEqual(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false
@@ -46,6 +57,7 @@ export function ProblemContentEdit() {
   const [contentInput, setContentInput] = useState('')
   const [titleInput, setTitleInput] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [difficultyInput, setDifficultyInput] = useState('')
   const [allTags, setAllTags] = useState<TagSuggestion[]>([])
   const [noteInput, setNoteInput] = useState('')
   const [saving, setSaving] = useState(false)
@@ -65,6 +77,7 @@ export function ProblemContentEdit() {
     setContentInput(toMarkdownSource(res.data.contentMd || ''))
     setTitleInput(res.data.title || '')
     setSelectedTags([...(res.data.tags || [])])
+    setDifficultyInput((res.data.difficulty || '').trim())
     setNoteInput('')
   }, [id])
 
@@ -104,6 +117,9 @@ export function ProblemContentEdit() {
     const titleTrim = titleInput.trim()
     const titleChanged =
       Boolean(titleTrim) && titleTrim !== (problem.title || '').trim()
+    const difficultyTrim = difficultyInput.trim()
+    const difficultyChanged =
+      difficultyTrim !== (problem.difficulty || '').trim()
 
     setSaving(true)
     if (isContentModerator) {
@@ -114,6 +130,8 @@ export function ProblemContentEdit() {
         title: titleChanged ? titleTrim : undefined,
         updateTags: tagsChanged,
         tags: tagsChanged ? tags : undefined,
+        updateDifficulty: difficultyChanged,
+        difficulty: difficultyChanged ? difficultyTrim : undefined,
       })
       setSaving(false)
       if (!res.success) {
@@ -131,6 +149,8 @@ export function ProblemContentEdit() {
       title: titleChanged ? titleTrim : undefined,
       updateTags: tagsChanged,
       tags: tagsChanged ? tags : undefined,
+      updateDifficulty: difficultyChanged,
+      difficulty: difficultyChanged ? difficultyTrim : undefined,
       note: noteInput.trim() || undefined,
     })
     setSaving(false)
@@ -207,11 +227,33 @@ export function ProblemContentEdit() {
           </CardTitle>
           <CardDescription>
             {isContentModerator
-              ? '可同时改题面与标签。保存后立即生效，并记入「已通过」审核记录；若仍无标签，系统会继续尝试自动分析。'
-              : '可同时改题面与标签。提交后由管理员或资源审核员审核通过才会展示。'}
+              ? '可同时改题面、标签与难度。保存后立即生效，并记入「已通过」审核记录；若仍无标签，系统会继续尝试自动分析。'
+              : '可同时改题面、标签与难度。提交后由管理员或资源审核员审核通过才会展示。'}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 px-4 pt-1">
+          <Field>
+            <FieldLabel htmlFor="edit-content-difficulty">难度</FieldLabel>
+            <Select
+              value={difficultyInput || DIFFICULTY_NONE}
+              onValueChange={(v) =>
+                setDifficultyInput(v === DIFFICULTY_NONE ? '' : v)
+              }
+              disabled={saving}
+            >
+              <SelectTrigger id="edit-content-difficulty" className="max-w-xs">
+                <SelectValue placeholder="选择难度" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={DIFFICULTY_NONE}>未设置</SelectItem>
+                {DIFFICULTY_OPTIONS.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
           <Field>
             <FieldLabel htmlFor="edit-content-tags">标签</FieldLabel>
             <TagInput

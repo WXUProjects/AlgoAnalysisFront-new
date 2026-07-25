@@ -1051,9 +1051,11 @@ export interface ProblemEditInfo {
   userName: string
   hasTags: boolean
   hasContent: boolean
+  hasDifficulty?: boolean
   proposedTags: string[]
   proposedContentMd: string
   proposedTitle: string
+  proposedDifficulty?: string
   note: string
   status: ProblemEditStatus
   reviewerId: number
@@ -1063,6 +1065,7 @@ export interface ProblemEditInfo {
   currentTags: string[]
   currentContentMd: string
   currentTitle: string
+  currentDifficulty?: string
 }
 
 export interface AdminUpdateProblemReq {
@@ -1072,6 +1075,9 @@ export interface AdminUpdateProblemReq {
   updateContent?: boolean
   contentMd?: string
   title?: string
+  updateDifficulty?: boolean
+  /** 简单 | 中等 | 困难；updateDifficulty 时写入，空串清空 */
+  difficulty?: string
 }
 
 export interface ProposeProblemEditReq {
@@ -1082,6 +1088,8 @@ export interface ProposeProblemEditReq {
   contentMd?: string
   title?: string
   note?: string
+  updateDifficulty?: boolean
+  difficulty?: string
 }
 
 export interface ReviewProblemEditReq {

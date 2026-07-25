@@ -208,6 +208,12 @@ export function DashboardProblemEditReview() {
                       <div className="flex flex-wrap gap-1">
                         {item.hasTags && <Badge variant="outline">标签</Badge>}
                         {item.hasContent && <Badge variant="outline">题面</Badge>}
+                        {item.hasDifficulty && (
+                          <Badge variant="outline">难度</Badge>
+                        )}
+                        {item.proposedTitle ? (
+                          <Badge variant="outline">标题</Badge>
+                        ) : null}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -317,6 +323,30 @@ export function DashboardProblemEditReview() {
                               <span className="text-muted-foreground">清空标签</span>
                             )}
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {detail.hasDifficulty && (
+                  <div className="flex flex-col gap-2">
+                    <p className="font-medium">难度</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="rounded-lg border p-3">
+                        <p className="mb-1 text-xs text-muted-foreground">当前</p>
+                        <p>
+                          {detail.currentDifficulty?.trim() || (
+                            <span className="text-muted-foreground">未设置</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="mb-1 text-xs text-muted-foreground">建议</p>
+                        <p>
+                          {detail.proposedDifficulty?.trim() || (
+                            <span className="text-muted-foreground">清空难度</span>
+                          )}
+                        </p>
                       </div>
                     </div>
                   </div>

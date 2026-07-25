@@ -922,8 +922,8 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problem/clear-nowcoder-content` | 是(管理员) | **只清** NowCoder `content_md`（保留 tags/solutions）；`{ requeue?: true }` 清空后强制重爬题面 |
 | POST | `/core/problem/toggle-analyze` | 是(管理员) | 暂停/恢复分析（不清队列）；`{ pause?, pauseSet? }` |
 | POST | `/core/problem/toggle-fetch` | 是(管理员) | 暂停/恢复爬取（不清队列）；`{ pause?, pauseSet? }` |
-| POST | `/core/problem/admin-update` | 是(**站管/资源审核员**) | 改标签/题面；写审核记录并 auto-approve（「已通过」可见）；`{ id, updateTags?, tags?, updateContent?, contentMd?, title? }` |
-| POST | `/core/problem/propose-edit` | 是(登录) | 提交标签/题面修改申请；站管/资源审核员调用时写记录并自动通过；`{ problemId, updateTags?, tags?, updateContent?, contentMd?, title?, note? }` |
+| POST | `/core/problem/admin-update` | 是(**站管/资源审核员**) | 改标签/题面/难度；写审核记录并 auto-approve（「已通过」可见）；`{ id, updateTags?, tags?, updateContent?, contentMd?, title?, updateDifficulty?, difficulty? }` |
+| POST | `/core/problem/propose-edit` | 是(登录) | 提交标签/题面/难度修改申请；站管/资源审核员调用时写记录并自动通过；`{ problemId, updateTags?, tags?, updateContent?, contentMd?, title?, note?, updateDifficulty?, difficulty? }` |
 | GET | `/core/problem/edit-requests` | 是(**站管/资源审核员**) | 审核列表 `?page&pageSize&status=pending\|approved\|rejected` |
 | POST | `/core/problem/review-edit` | 是(**站管/资源审核员**) | 通过/驳回；`{ id, approve, reviewNote? }` |
 | GET | `/core/problem/my-pending-edit` | 是(登录) | 当前用户对该题的待审申请 `?problemId=` |
