@@ -6,6 +6,7 @@ import {
   EyeIcon,
   HeartIcon,
   MessageCircleIcon,
+  StarIcon,
   UsersIcon,
   XIcon,
 } from 'lucide-react'
@@ -123,7 +124,7 @@ export function DashboardBlogAdmin() {
 
   async function moderate(
     id: number,
-    action: 'approve' | 'reject' | 'pending',
+    action: 'approve' | 'reject' | 'pending' | 'feature' | 'unfeature',
   ) {
     setBusyId(id)
     const res = await moderateBlogArticle({ id, action })
@@ -132,13 +133,17 @@ export function DashboardBlogAdmin() {
       toast.error(res.message || '操作失败')
       return
     }
-    toast.success(
+    const msg =
       action === 'approve'
         ? '已通过'
         : action === 'reject'
           ? '已驳回'
-          : '已标为待审',
-    )
+          : action === 'pending'
+            ? '已标为待审'
+            : action === 'feature'
+              ? '已设为精选'
+              : '已取消精选'
+    toast.success(msg)
     void loadOverview()
     void loadArticles(articleKw, status)
   }
@@ -165,7 +170,7 @@ export function DashboardBlogAdmin() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">博客管理</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          查看博客开通情况与全部文章（含不公开 / 加密），便于审查。
+          查看开通情况与文章审核；公开文可通过后设为「精选」出现在博客广场。
         </p>
       </div>
 
@@ -369,9 +374,17 @@ export function DashboardBlogAdmin() {
                           >
                             {a.title}
                           </Link>
-                          <div className="text-xs text-muted-foreground">
-                            {visibilityLabel[a.visibility] || a.visibility}
-                            {a.visibility === 'password' ? ' · 密码' : ''}
+                          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                            <span>
+                              {visibilityLabel[a.visibility] || a.visibility}
+                              {a.visibility === 'password' ? ' · 密码' : ''}
+                            </span>
+                            {a.recommend ? (
+                              <Badge className="gap-0.5 font-normal">
+                                <StarIcon className="size-3" />
+                                精选
+                              </Badge>
+                            ) : null}
                           </div>
                         </TableCell>
                         <TableCell className="text-sm">
@@ -411,7 +424,7 @@ export function DashboardBlogAdmin() {
                           {formatTime(a.createdAt)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="inline-flex gap-1">
+                          <div className="inline-flex flex-wrap justify-end gap-1">
                             <Button
                               size="sm"
                               variant="outline"
@@ -438,6 +451,23 @@ export function DashboardBlogAdmin() {
                                 驳回
                               </Button>
                             </ConfirmDialog>
+                            {a.visibility === 'public' &&
+                            a.moderationStatus === 'approved' ? (
+                              <Button
+                                size="sm"
+                                variant={a.recommend ? 'secondary' : 'outline'}
+                                disabled={busyId === a.id}
+                                onClick={() =>
+                                  void moderate(
+                                    a.id,
+                                    a.recommend ? 'unfeature' : 'feature',
+                                  )
+                                }
+                              >
+                                <StarIcon className="size-3.5" />
+                                {a.recommend ? '取消精选' : '设为精选'}
+                              </Button>
+                            ) : null}
                           </div>
                         </TableCell>
                       </TableRow>

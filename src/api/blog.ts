@@ -787,6 +787,7 @@ export async function listBlogAdminArticles(params?: {
         title: str(r.title),
         summary: str(r.summary) || undefined,
         visibility: str(r.visibility),
+        recommend: Boolean(r.recommend),
         viewCount: num(r.viewCount),
         likeCount: num(r.likeCount),
         commentCount: num(r.commentCount),
@@ -808,10 +809,21 @@ export async function listBlogAdminArticles(params?: {
 
 export async function moderateBlogArticle(body: {
   id: number
-  action: 'approve' | 'reject' | 'pending' | string
+  action:
+    | 'approve'
+    | 'reject'
+    | 'pending'
+    | 'feature'
+    | 'unfeature'
+    | string
   note?: string
 }): Promise<
-  ApiResult<{ id: number; moderationStatus: string; moderationNote?: string }>
+  ApiResult<{
+    id: number
+    moderationStatus?: string
+    moderationNote?: string
+    recommend?: boolean
+  }>
 > {
   const res = await post<Record<string, unknown>>(
     endpoints.user.blog.adminModerate,
@@ -819,7 +831,9 @@ export async function moderateBlogArticle(body: {
   )
   return wrapData(res, (data) => ({
     id: num(data.id),
-    moderationStatus: str(data.moderationStatus),
+    moderationStatus: str(data.moderationStatus) || undefined,
     moderationNote: str(data.moderationNote) || undefined,
+    recommend:
+      data.recommend === undefined ? undefined : Boolean(data.recommend),
   }))
 }

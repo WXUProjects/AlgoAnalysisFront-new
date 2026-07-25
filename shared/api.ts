@@ -1374,6 +1374,8 @@ export interface BlogAdminArticle {
   title: string
   summary?: string
   visibility: string
+  /** 广场「精选」：仅站管/资源审核员可设 */
+  recommend?: boolean
   viewCount: number
   likeCount: number
   commentCount: number
@@ -1518,7 +1520,7 @@ export interface BlogArticleWriteReq {
   visibility?: BlogVisibility | string
   password?: string
   clearPassword?: boolean
-  /** @deprecated 服务端自动：公开文 recommend=true */
+  /** 广场精选：站管/资源审核员标记，非作者可写 */
   recommend?: boolean
   /** @deprecated 服务端自动：公开文同步资料动态 */
   syncToMainProfile?: boolean

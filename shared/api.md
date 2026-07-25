@@ -375,8 +375,8 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | POST | `/user/blog/article/update` | 是 | body: 含 `id` 的 `BlogArticleWriteReq` |
 | POST | `/user/blog/article/delete` | 是 | body: `{ id }` |
 | GET | `/user/blog/article/mine` | 是 | 作者全部文章（含 private） |
-| GET | `/user/blog/recommend` | 否 | 主站/发现推荐：全部 `visibility=public` 已通过审核文；query: `page`/`pageSize`/`orgId?`（私有域=仅该组织成员文章；公共域/缺省=全站）/`excludeSolutions=1`（排除题解镜像，发现流去重） |
-| GET | `/user/blog/plaza` | 否 | **博客广场**公开文流；query: `page`/`pageSize`/`keyword`/`sort=latest\|hot\|recommend`；仅 `visibility=public`；列表**不含 content**（含题解镜像，点进博客页） |
+| GET | `/user/blog/recommend` | 否 | 主站/发现**精选**：仅 `recommend=true` 的公开已审文；query: `page`/`pageSize`/`orgId?`（私有域=仅该组织成员；公共域/缺省=全站）/`excludeSolutions=1`（排除题解镜像） |
+| GET | `/user/blog/plaza` | 否 | **博客广场**公开文流；query: `page`/`pageSize`/`keyword`/`sort=latest\|hot\|recommend`；`recommend` 仅精选；列表**不含 content** |
 | GET | `/user/blog/authors` | 否 | 广场侧栏：最近有公开文的作者；query: `page`/`pageSize`/`keyword`；按最近发布时间排序 |
 | GET | `/user/blog/analytics` | 是 | 作者统计：阅读/点赞/评论汇总 + top 文章 |
 | GET | `/user/blog/categories` | 否 | query: `username`；公开分类列表（项含 `isDefault`） |
@@ -388,7 +388,7 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 **默认分类与题解同步**
 
 - 每用户至多一个 `isDefault=true` 的分类，名称初始为「默认」，可改名不可删除。
-- 主站发布/更新题解时，core 经 user 库写入 `blog_articles`：分类=默认、`visibility=public`、`sourceSolutionId=题解id`、`sourceProblemId`、`slug=solution-{题解id}`、自动 recommend + 作者所属组织发现。
+- 主站发布/更新题解时，core 经 user 库写入 `blog_articles`：分类=默认、`visibility=public`、`sourceSolutionId=题解id`、`sourceProblemId`、`slug=solution-{题解id}`、同步资料与组织发现；**不**自动精选。
 - **默认摘要**：未填时服务端从正文生成简述（去代码块、约 280 字）；作者手填则保留。编辑时若当前为系统默认摘要，前端不回填输入框，保存空摘要则按正文重新生成。
 - **自动曝光**：`visibility=public` 自动进入广场与作者所属组织发现推荐；`private`/`password` 不曝光。编辑器不再提供「开放推荐 / 同步组织」勾选。
 - **题解镜像去重**：发现推荐只展示题解活动卡（打开主站题面题解页）；博客广场展示镜像文（打开博客页）。
@@ -411,7 +411,7 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | GET | `/user/blog/admin/overview` | 站管 | 开通人数、文章/阅读/点赞/评论汇总、待审/驳回数 |
 | GET | `/user/blog/admin/authors` | 站管 | 已开通作者列表；query: `page`/`pageSize`/`keyword`（模糊） |
 | GET | `/user/blog/admin/articles` | 站管 | 文章审查列表（**含 private/password**）；query: `page`/`pageSize`/`keyword`/`status`/`visibility` |
-| POST | `/user/blog/admin/moderate` | 站管 | body: `{ id, action: approve\|reject\|pending, note? }` |
+| POST | `/user/blog/admin/moderate` | 站管/资源审核员 | body: `{ id, action: approve\|reject\|pending\|feature\|unfeature, note? }`；`feature`/`unfeature` 设/取消广场精选（仅公开且已通过） |
 
 **开通协议**：初次使用/发文/改外观前须签署；存量已有文章或主题配置用户启动时自动回填为已开通。
 
@@ -486,7 +486,7 @@ nginx：**首版策略**——上述公开页 **一律** 反代 SEO HTML（不�
 ```
 
 - 头图仅支持 **http(s) 外链**，不提供上传。
-- `recommend` / `syncToMainProfile` / `orgIds` 已废弃（客户端可忽略）；服务端对 `public` 自动设置。
+- `recommend` 作者端不可写；仅站管/资源审核员 `POST /user/blog/admin/moderate` `action=feature|unfeature` 设精选。`syncToMainProfile` / 组织发现对公开文仍自动。
 - `summary` 可选；空则按正文生成默认简述。
 
 前端路由：
@@ -500,7 +500,7 @@ nginx：**首版策略**——上述公开页 **一律** 反代 SEO HTML（不�
 |----|------|
 | `latest` | 默认；按发布时间倒序，全部公开文 |
 | `hot` | 阅读(UV) → 点赞 → 时间 |
-| `recommend` | 与 latest 相同（公开文均自动曝光） |
+| `recommend` | 仅 `recommend=true` 精选文（站管/审核员标记） |
 
 ### Org（GoAlgo 多租户）
 

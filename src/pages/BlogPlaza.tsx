@@ -248,7 +248,7 @@ export function BlogPlaza() {
 
           {sort === 'recommend' ? (
             <p className="text-xs text-muted-foreground">
-              仅显示作者设为「推荐到主站」的公开文章
+              由站点管理员或资源审核员挑选的公开文章
             </p>
           ) : null}
 
@@ -268,17 +268,19 @@ export function BlogPlaza() {
                   {keyword
                     ? '没有找到相关文章'
                     : sort === 'recommend'
-                      ? '暂无推荐文章'
+                      ? '暂无精选文章'
                       : '暂无公开文章'}
                 </EmptyTitle>
                 <EmptyDescription>
                   {keyword
                     ? '换个关键词试试，或清空搜索看全部'
-                    : isLogin && blogActivated
-                      ? '写一篇公开文章，就会出现在这里'
-                      : isLogin
-                        ? '开通个人博客后，公开文章会出现在这里'
-                        : '有人发布公开文章后，会出现在这里'}
+                    : sort === 'recommend'
+                      ? '管理员挑选后，优质公开文会出现在这里'
+                      : isLogin && blogActivated
+                        ? '写一篇公开文章，就会出现在这里'
+                        : isLogin
+                          ? '开通个人博客后，公开文章会出现在这里'
+                          : '有人发布公开文章后，会出现在这里'}
                 </EmptyDescription>
               </EmptyHeader>
               {isLogin && blogActivated && writeHref ? (
@@ -299,7 +301,7 @@ export function BlogPlaza() {
             </ul>
           )}
 
-          {!loading && total > PAGE_SIZE ? (
+          {!loading && total > 0 ? (
             <Pagination
               page={page}
               total={total}
