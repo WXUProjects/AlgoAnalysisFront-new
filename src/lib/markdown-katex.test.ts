@@ -62,3 +62,36 @@ describe('renderSummaryMarkdown should render katex for cards', () => {
     assert.match(html, /数位/)
   })
 })
+
+describe('plain sample input-format LaTeX', () => {
+  it('detects A_1 / \\ldots format lines', () => {
+    assert.equal(md.lineLooksLikeLatexFormat('A_1 A_2 \\ldots A_N'), true)
+    assert.equal(md.lineLooksLikeLatexFormat('P_1 P_2 \\ldots P_N'), true)
+    assert.equal(md.lineLooksLikeLatexFormat('N'), false)
+    assert.equal(md.lineLooksLikeLatexFormat('3 1 4 1 5 2'), false)
+    assert.equal(md.lineLooksLikeLatexFormat('oxo'), false)
+  })
+
+  it('renders input-format fence with KaTeX, keeps sample numbers plain', () => {
+    const html = md.renderMarkdown(
+      '### 输入\n\n```\nN\nA_1 A_2 \\ldots A_N\n```\n\n```\n6\n3 1 4 1 5 2\n```\n',
+    )
+    assert.match(html, /md-code-math/)
+    assert.match(html, /class="katex"/)
+    // 可见区是 …，\ldots 仅保留在 data-copy-text 供复制
+    assert.match(html, /data-copy-text="A_1 A_2 \\ldots A_N"/)
+    assert.match(html, />…</)
+    // 数字样例仍是纯文本行
+    assert.match(html, /md-code-src">6</)
+    assert.match(html, /3 1 4 1 5 2/)
+  })
+
+  it('copy text keeps original format string via data-copy-text', () => {
+    const html = md.renderMarkdown('```\nN\nA_1 A_2 \\ldots A_N\n```\n')
+    document.body.innerHTML = html
+    const block = document.querySelector('.md-code-block')!
+    const text = md.extractMarkdownCodeText(block)
+    assert.equal(text, 'N\nA_1 A_2 \\ldots A_N')
+    document.body.innerHTML = ''
+  })
+})

@@ -475,6 +475,21 @@
   padding-right: 1rem;
 }
 
+/* 输入格式行内 LaTeX（A_1、\ldots）在样例块中用 KaTeX 展示 */
+.markdown-body .md-code-sample .md-code-math {
+  font-family: inherit;
+}
+
+.markdown-body .md-code-sample .md-code-math .katex {
+  font-size: 1.02em;
+  color: inherit;
+  white-space: pre;
+}
+
+.markdown-body .md-code-sample .md-code-math .katex-html {
+  white-space: pre;
+}
+
 .markdown-body .md-code-block pre.code-hl {
   margin: 0;
   padding: 0;

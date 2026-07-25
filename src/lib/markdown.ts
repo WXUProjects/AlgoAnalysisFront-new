@@ -143,12 +143,20 @@ export function sanitizeHtml(html: string): string {
         name === 'class' ||
         name === 'aria-hidden' ||
         name === 'aria-label' ||
+        // 样例块 KaTeX 行：复制时用原文（含 \ldots）
+        (name === 'data-copy-text' &&
+          tag === 'span' &&
+          /\bmd-code-src\b/.test(el.getAttribute('class') || '')) ||
         (tag === 'button' && name === 'type') ||
         (tag === 'a' && ['href', 'target', 'rel'].includes(name)) ||
         (tag === 'img' && ['src', 'alt', 'width', 'height', 'loading'].includes(name)) ||
         (['td', 'th'].includes(tag) && ['colspan', 'rowspan', 'align'].includes(name)) ||
         (name === 'style' && Boolean(el.closest('.katex')))
-      if (!allowed || name.startsWith('on') || name.startsWith('data-')) {
+      if (
+        !allowed ||
+        name.startsWith('on') ||
+        (name.startsWith('data-') && name !== 'data-copy-text')
+      ) {
         el.removeAttribute(attr.name)
       }
     }
@@ -234,30 +242,39 @@ function codeBlockLangLabel(language: string): string {
   return language
 }
 
-/** Carbon 风格代码块：统一顶栏边框；语言代码带行号；纯文本样例无行号、标注 plain text */
-function formatFencedCodeBlock(
-  highlighted: string,
-  langClass: string,
-  language: string,
-): string {
-  const plainSample = isPlainSampleFence(language)
-  const lines = linesWithBalancedSpans(highlighted)
-  const rows = lines
-    .map((line, i) => {
-      const src = line.length ? line : ' '
-      if (plainSample) {
-        // 样例：不显示行号，便于对照 OJ 与复制
-        return `<span class="md-code-row"><span class="md-code-src">${src}</span></span>`
-      }
-      return (
-        `<span class="md-code-row">` +
-        `<span class="md-code-ln" aria-hidden="true">${i + 1}</span>` +
-        `<span class="md-code-src">${src}</span>` +
-        `</span>`
-      )
-    })
-    .join('')
+/**
+ * 题面「输入格式」行：常见 LaTeX 记号（A_1、\ldots、\le）应走 KaTeX，
+ * 真实样例数据（纯数字 / 字符串）保持等宽原文。
+ */
+export function lineLooksLikeLatexFormat(line: string): boolean {
+  const t = line.trim()
+  if (!t) return false
+  // \ldots \leq \times \mathrm 等宏
+  if (/\\[a-zA-Z]+/.test(t)) return true
+  // 下标：A_1、P_i、A_{i+1}、S_k
+  if (/[A-Za-z][A-Za-z0-9]*_(?:\{[^}]+\}|[A-Za-z0-9]+)/.test(t)) return true
+  // 常见比较/集合记号（无 $ 定界时）
+  if (/\\le|\\ge|\\neq|\\times|\\cdot|\\ldots|\\dots/.test(t)) return true
+  return false
+}
 
+/** 纯文本样例行：LaTeX 格式行渲染为 KaTeX，其余 escape */
+function renderPlainSampleLine(line: string): string {
+  if (!line) return ' '
+  if (lineLooksLikeLatexFormat(line)) {
+    // 复制时保留原始格式串（含 \ldots），展示用 KaTeX
+    const rawAttr = ` data-copy-text="${escapeHtml(line)}"`
+    return `<span class="md-code-src md-code-math"${rawAttr}>${renderKatex(line, false)}</span>`
+  }
+  return `<span class="md-code-src">${escapeHtml(line)}</span>`
+}
+
+function codeBlockShell(
+  rows: string,
+  language: string,
+  langClass: string,
+  plainSample: boolean,
+): string {
   const label = codeBlockLangLabel(language)
   const lang = `<span class="md-code-lang">${escapeHtml(label)}</span>`
   const header =
@@ -276,13 +293,50 @@ function formatFencedCodeBlock(
 }
 
 /**
+ * 题面纯文本围栏：顶栏 plain text；格式行 KaTeX；无行号。
+ * 使用原始 text（非 hljs HTML），避免 LaTeX 被 escape 后无法解析。
+ */
+function formatPlainSampleCodeBlock(text: string, language: string): string {
+  const lines = text.replace(/\n$/, '').split('\n')
+  const rows = lines
+    .map((line) => `<span class="md-code-row">${renderPlainSampleLine(line)}</span>`)
+    .join('')
+  return codeBlockShell(rows, language, '', true)
+}
+
+/** Carbon 风格代码块：统一顶栏边框；语言代码带行号 */
+function formatFencedCodeBlock(
+  highlighted: string,
+  langClass: string,
+  language: string,
+): string {
+  const lines = linesWithBalancedSpans(highlighted)
+  const rows = lines
+    .map((line, i) => {
+      const src = line.length ? line : ' '
+      return (
+        `<span class="md-code-row">` +
+        `<span class="md-code-ln" aria-hidden="true">${i + 1}</span>` +
+        `<span class="md-code-src">${src}</span>` +
+        `</span>`
+      )
+    })
+    .join('')
+  return codeBlockShell(rows, language, langClass, false)
+}
+
+/**
  * 从渲染后的 `.md-code-block` 取出纯代码（不含行号）。
- * 供 MarkdownBody 复制按钮使用。
+ * 供 MarkdownBody 复制按钮使用；KaTeX 格式行优先 data-copy-text 原文。
  */
 export function extractMarkdownCodeText(block: Element): string {
   const srcs = block.querySelectorAll('.md-code-src')
   if (srcs.length > 0) {
-    return Array.from(srcs, (el) => el.textContent ?? '').join('\n')
+    return Array.from(srcs, (el) => {
+      const raw = el.getAttribute('data-copy-text')
+      if (raw != null && raw !== '') return raw
+      return el.textContent ?? ''
+    }).join('\n')
   }
   const pre = block.querySelector('pre')
   if (pre) {
@@ -301,6 +355,9 @@ function ensureRenderer() {
 
   renderer.code = function ({ text, lang }: Tokens.Code): string {
     const language = (lang || '').trim().split(/\s+/)[0] || ''
+    if (isPlainSampleFence(language)) {
+      return formatPlainSampleCodeBlock(text, language || 'text')
+    }
     const mapped = mapHljsLang(language || 'text')
     let body = escapeHtml(text)
     if (hljsReady) {
