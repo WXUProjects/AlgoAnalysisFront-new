@@ -156,6 +156,9 @@ export const endpoints = {
       adminArticles: `${API_PREFIX}/user/blog/admin/articles`,
       adminModerate: `${API_PREFIX}/user/blog/admin/moderate`,
       report: `${API_PREFIX}/user/blog/report`,
+      /** 举报处理台（content.report.handle）：博客举报列表 / 处理 */
+      reportList: `${API_PREFIX}/user/blog/report/list`,
+      reportHandle: `${API_PREFIX}/user/blog/report/handle`,
     },
     seo: {
       html: `${API_PREFIX}/user/seo/html`,
@@ -269,6 +272,9 @@ export const endpoints = {
       like: `${API_PREFIX}/core/problem/like`,
       /** 评论/题解举报 */
       report: `${API_PREFIX}/core/problem/report`,
+      /** 举报处理台（content.report.handle）：题解/评论举报列表 / 处理 */
+      reportList: `${API_PREFIX}/core/problem/report/list`,
+      reportHandle: `${API_PREFIX}/core/problem/report/handle`,
     },
     activity: {
       /** 发现页动态：公共域全站聚合；私有域按组织隔离 */
@@ -1333,6 +1339,61 @@ export interface CommunityLikeResult {
 export interface CommunityReportResult {
   id: number
   alreadyReported?: boolean
+}
+
+/** 举报处理状态（博客 / 题解 / 评论通用） */
+export type ReportStatus = 'pending' | 'resolved' | 'dismissed'
+
+/** 举报处理动作 */
+export type ReportHandleAction = 'resolve' | 'dismiss'
+
+export interface ReportReporter {
+  userId: number
+  username: string
+}
+
+/** 举报处理台：题解/评论举报条目（GET /core/problem/report/list） */
+export interface CommunityReportAdminItem {
+  id: number
+  /** RFC3339 */
+  createdAt: string
+  status: ReportStatus | string
+  reason: string
+  targetType: CommunityTargetType | string
+  targetId: number
+  reporter: ReportReporter
+  /** 被举报内容预览；目标已删除时 exists=false 且其余字段缺省 */
+  target: {
+    exists: boolean
+    problemId?: number
+    /** 评论所属题解；0=题目讨论 */
+    solutionId?: number
+    /** 题解标题 */
+    title?: string
+    /** 评论摘录（≤120 字） */
+    excerpt?: string
+    authorUserId?: number
+    authorUsername?: string
+  }
+}
+
+/** 举报处理台：博客举报条目（GET /user/blog/report/list） */
+export interface BlogReportAdminItem {
+  id: number
+  /** Unix 秒 */
+  createdAt: number
+  status: ReportStatus | string
+  reason: string
+  articleId: number
+  reporter: ReportReporter
+  /** 被举报文章预览；文章已删除时 exists=false 且其余字段缺省 */
+  target: {
+    exists: boolean
+    slug?: string
+    title?: string
+    authorUserId?: number
+    authorUsername?: string
+  }
 }
 
 /** 发现页动态类型（公共域全站聚合；私有域按组织隔离） */

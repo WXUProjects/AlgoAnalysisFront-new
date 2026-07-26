@@ -111,24 +111,14 @@ const DashboardOrgStatistics = lazy(() =>
     default: m.DashboardOrgStatistics,
   })),
 )
-const DashboardSiteStatistics = lazy(() =>
-  import('@/pages/dashboard/Statistics').then((m) => ({
-    default: m.DashboardSiteStatistics,
+const DashboardSiteData = lazy(() =>
+  import('@/pages/dashboard/SiteData').then((m) => ({
+    default: m.DashboardSiteData,
   })),
 )
-const DashboardAccessAnalytics = lazy(() =>
-  import('@/pages/dashboard/AccessAnalytics').then((m) => ({
-    default: m.DashboardAccessAnalytics,
-  })),
-)
-const DashboardGroup = lazy(() =>
-  import('@/pages/dashboard/Group').then((m) => ({
-    default: m.DashboardGroup,
-  })),
-)
-const DashboardOrgUser = lazy(() =>
-  import('@/pages/dashboard/User').then((m) => ({
-    default: m.DashboardOrgUser,
+const DashboardOrgPeople = lazy(() =>
+  import('@/pages/dashboard/OrgPeople').then((m) => ({
+    default: m.DashboardOrgPeople,
   })),
 )
 const DashboardSiteUser = lazy(() =>
@@ -141,14 +131,9 @@ const DashboardOrgBulletinManage = lazy(() =>
     default: m.DashboardOrgBulletinManage,
   })),
 )
-const DashboardSiteBulletinManage = lazy(() =>
-  import('@/pages/dashboard/BulletinManage').then((m) => ({
-    default: m.DashboardSiteBulletinManage,
-  })),
-)
-const DashboardEmergencyManage = lazy(() =>
-  import('@/pages/dashboard/EmergencyManage').then((m) => ({
-    default: m.DashboardEmergencyManage,
+const DashboardSiteNotices = lazy(() =>
+  import('@/pages/dashboard/SiteNotices').then((m) => ({
+    default: m.DashboardSiteNotices,
   })),
 )
 const DashboardProblemProgress = lazy(() =>
@@ -179,6 +164,11 @@ const DashboardOrgSettings = lazy(() =>
 const DashboardOrgsManage = lazy(() =>
   import('@/pages/dashboard/OrgsManage').then((m) => ({
     default: m.DashboardOrgsManage,
+  })),
+)
+const DashboardReportsManage = lazy(() =>
+  import('@/pages/dashboard/ReportsManage').then((m) => ({
+    default: m.DashboardReportsManage,
   })),
 )
 const DashboardBlogAdmin = lazy(() =>
@@ -284,12 +274,14 @@ function CoachOutlet() {
 const ADMIN_INDEX_CANDIDATES: { path: string; anyOf: string[] }[] = [
   { path: 'statistics', anyOf: [Perm.OrgReportView] },
   { path: 'org', anyOf: [Perm.OrgInfoWrite, Perm.OrgPolicyToggle, Perm.OrgRoleManage] },
-  { path: 'group', anyOf: [Perm.OrgGroupManage] },
+  { path: 'user', anyOf: [Perm.OrgGroupManage, Perm.OrgMemberRole] },
   { path: 'bulletin', anyOf: [Perm.OrgBulletinManage] },
   { path: 'problem-edits', anyOf: [Perm.ContentProblemReview] },
   { path: 'blog', anyOf: [Perm.ContentBlogModerate, Perm.SiteBlogBoard] },
+  { path: 'reports', anyOf: [Perm.ContentReportHandle] },
   { path: 'site-statistics', anyOf: [Perm.SiteStatsRead] },
   { path: 'site-users', anyOf: [Perm.SiteUserList] },
+  { path: 'site-bulletin', anyOf: [Perm.SiteBulletin, Perm.SiteEmergency] },
   { path: 'site', anyOf: [Perm.SiteConfigRead, Perm.SiteConfigWrite] },
 ]
 
@@ -757,41 +749,31 @@ const browserRouter = createBrowserRouter([
             ),
           },
           {
+            // 融合页：数据概览 + 访问分析（原 /admin/access）
             path: 'site-statistics',
             element: (
               <RequirePerm anyOf={[Perm.SiteStatsRead]}>
                 <Lazy>
-                  <DashboardSiteStatistics />
+                  <DashboardSiteData />
                 </Lazy>
               </RequirePerm>
             ),
           },
           {
             path: 'access',
-            element: (
-              <RequirePerm anyOf={[Perm.SiteStatsRead]}>
-                <Lazy>
-                  <DashboardAccessAnalytics />
-                </Lazy>
-              </RequirePerm>
-            ),
+            element: <Navigate to="/admin/site-statistics?tab=access" replace />,
           },
           {
             path: 'group',
-            element: (
-              <RequirePerm anyOf={[Perm.OrgGroupManage]}>
-                <Lazy>
-                  <DashboardGroup />
-                </Lazy>
-              </RequirePerm>
-            ),
+            element: <Navigate to="/admin/user?tab=group" replace />,
           },
           {
+            // 融合页：组织成员 + 组织分组（原 /admin/group）
             path: 'user',
             element: (
               <RequirePerm anyOf={[Perm.OrgReportView, Perm.OrgGroupManage, Perm.OrgMemberRole]}>
                 <Lazy>
-                  <DashboardOrgUser />
+                  <DashboardOrgPeople />
                 </Lazy>
               </RequirePerm>
             ),
@@ -817,11 +799,12 @@ const browserRouter = createBrowserRouter([
             ),
           },
           {
+            // 融合页：站点公告 + 紧急通知（原 /admin/emergency）
             path: 'site-bulletin',
             element: (
-              <RequirePerm anyOf={[Perm.SiteBulletin]}>
+              <RequirePerm anyOf={[Perm.SiteBulletin, Perm.SiteEmergency]}>
                 <Lazy>
-                  <DashboardSiteBulletinManage />
+                  <DashboardSiteNotices />
                 </Lazy>
               </RequirePerm>
             ),
@@ -829,11 +812,7 @@ const browserRouter = createBrowserRouter([
           {
             path: 'emergency',
             element: (
-              <RequirePerm anyOf={[Perm.SiteEmergency]}>
-                <Lazy>
-                  <DashboardEmergencyManage />
-                </Lazy>
-              </RequirePerm>
+              <Navigate to="/admin/site-bulletin?tab=emergency" replace />
             ),
           },
           {
@@ -912,6 +891,16 @@ const browserRouter = createBrowserRouter([
               <RequirePerm anyOf={[Perm.ContentBlogModerate, Perm.SiteBlogBoard]}>
                 <Lazy>
                   <DashboardBlogAdmin />
+                </Lazy>
+              </RequirePerm>
+            ),
+          },
+          {
+            path: 'reports',
+            element: (
+              <RequirePerm anyOf={[Perm.ContentReportHandle]}>
+                <Lazy>
+                  <DashboardReportsManage />
                 </Lazy>
               </RequirePerm>
             ),

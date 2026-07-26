@@ -52,22 +52,14 @@ function notifLink(n: NotificationItem): string | null {
     if (n.refType === 'blog_article') return '/admin/blog'
     return '/admin/problem-edits'
   }
+  // 举报通知统一落到举报处理台（后台 · 内容审核 · 用户举报），原文链接在处理台内提供
   if (n.type === 'blog_report') {
-    if (blogUser && blogSlug) return `/blog/${blogUser}/${blogSlug}`
-    return '/admin/blog'
+    return '/admin/reports'
   }
   if (n.type === 'community_report') {
-    const pid =
-      n.problemId > 0
-        ? n.problemId
-        : Number(p.problemId || 0)
-    if (pid > 0) {
-      if (n.refType === 'solution' && n.refId > 0) {
-        return `/question-bank/detail/${pid}/solution/${n.refId}`
-      }
-      return `/question-bank/detail/${pid}?tab=comments`
-    }
-    return '/admin/problem-edits'
+    return n.refType === 'solution'
+      ? '/admin/reports?type=solution'
+      : '/admin/reports?type=comment'
   }
 
   if (blogUser && blogSlug) {

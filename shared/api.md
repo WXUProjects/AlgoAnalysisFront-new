@@ -401,6 +401,8 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | POST | `/user/blog/comment/like` | 是 | body: `{ commentId }`；toggle；返回 `{ liked, likeCount, commentId }`；题解镜像文前端改走题解评论点赞 |
 | POST | `/user/blog/like` | 是 | body: `{ articleId }`；toggle；返回 `{ liked, likeCount }`；题解镜像前端改走题解点赞 |
 | POST | `/user/blog/report` | 是 | body: `{ articleId, reason }`；写 `blog_reports` + 站管站内信 + 邮件 |
+| GET | `/user/blog/report/list` | 是（`content.report.handle`） | query: `status?`=`pending`（默认）`\|resolved\|dismissed\|all`、`page`/`pageSize` → `BlogReportAdminItem` 列表（含举报人、文章预览；文章已删 `target.exists=false`） |
+| POST | `/user/blog/report/handle` | 是（`content.report.handle`） | body: `{ id, action: "resolve"\|"dismiss" }` → 标记已处理 / 驳回 |
 | GET | `/user/blog/theme/status` | 否 | query: `username?`；返回 `enabled`（遗留）、`themeId`（`mizuki` 默认 / `chirpy` / `simple`）、`subtitle`、`socialLinks` |
 | POST | `/user/blog/theme/config` | 是（作者） | body: `{ themeId, subtitle?, socialLinks? }`；保存博客壳主题与侧栏社交链接；**须已开通** |
 | POST | `/user/blog/theme/enable` | 站管 | body: `{ mode: user\|batch\|all, userId?, userIds?, enabled }`（遗留能力开关） |
@@ -629,9 +631,9 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 ### RBAC 角色与权限（细粒度）
 
-权限模型：**权限点目录以后端代码为唯一权威**（`cwxu-algo/app/common/rbac/perm.go`，37 个权限点、9 个分组，作用域 `site` 站点级 / `org` 组织级）。角色 = 权限点集合：
+权限模型：**权限点目录以后端代码为唯一权威**（`cwxu-algo/app/common/rbac/perm.go`，38 个权限点、9 个分组，作用域 `site` 站点级 / `org` 组织级）。角色 = 权限点集合：
 
-- **内置角色**（`isSystem`，权限集代码锁定，不可编辑/删除）：站点管理员 `site_admin`（旁路全部校验）、资源审核员 `resource_reviewer`（content.\* 三项）、团队管理员 `org_admin`（全部 org.\*）、教练 `coach` / 队长 `captain`（分组/组织公告/训练报告/代管日报，暂相同）、成员 `member`（无管理权限）。内置角色的任命仍走既有入口（`org/members/set-role`、`platform/set-*`），后端双写 `user_roles` 镜像。
+- **内置角色**（`isSystem`，权限集代码锁定，不可编辑/删除）：站点管理员 `site_admin`（旁路全部校验）、资源审核员 `resource_reviewer`（content.\* 四项：题库审查/博客审核/社区治理/举报处理）、团队管理员 `org_admin`（全部 org.\*）、教练 `coach` / 队长 `captain`（分组/组织公告/训练报告/代管日报，暂相同）、成员 `member`（无管理权限）。内置角色的任命仍走既有入口（`org/members/set-role`、`platform/set-*`），后端双写 `user_roles` 镜像。
 - **自定义角色**：站点级需 `site.role.manage`；组织级需该组织 `org.role.manage`（org_admin 默认持有）。自定义角色只赋权限、不改 `orgRole`，一个用户可叠加多个。
 
 **JWT**：新增 `pm` claim = 权限位图（base64url，站点权限 ∪ 当前组织权限）。旧 token（无 `pm`）按 `isSiteAdmin`/`isResourceReviewer`/`orgRole` 模板推导，行为不变。权限/角色变更后 `POST /user/auth/refresh` 或重登生效。原文档中「是(站点管理员)」的端点现按对应权限点校验（站点管理员天然旁路，行为向后兼容；持有对应权限的自定义角色成员亦可访问）。
@@ -864,6 +866,8 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problem/solution/delete` | 是 | body: `{ id }` 本人或站管；清理点赞/举报/发现流，**并级联删除该题解下评论**与**对应博客文章** |
 | POST | `/core/problem/like` | 是 | body: `{ targetType: "comment"\|"solution", targetId }` **toggle** 点赞 → `{ liked, likeCount }` |
 | POST | `/core/problem/report` | 是 | body: `{ targetType: "comment"\|"solution", targetId, reason }`；同用户同目标去重 |
+| GET | `/core/problem/report/list` | 是（`content.report.handle`） | query: `status?`=`pending`（默认）`\|resolved\|dismissed\|all`、`targetType?`=`comment\|solution`、`page`/`pageSize` → `CommunityReportAdminItem` 列表（题解带标题、评论带 ≤120 字摘录；目标已删 `target.exists=false`） |
+| POST | `/core/problem/report/handle` | 是（`content.report.handle`） | body: `{ id, action: "resolve"\|"dismiss" }` → 标记已处理 / 驳回 |
 | GET | `/core/activity/feed` | 否（建议登录） | query: `page`, `pageSize`, `type?`=`comment\|solution` → 发现动态：**公共域/未登录=全站聚合**（评论+题解，按 type+refId 去重）；**私有域=仅本组织成员产生的内容**（看不到非成员的公共域内容） |
 
 ### 题单（Problemset）

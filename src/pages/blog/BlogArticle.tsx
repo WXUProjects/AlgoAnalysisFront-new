@@ -25,6 +25,7 @@ import { toggleCommunityLike } from '@/api/community'
 import { useAuth } from '@/auth/AuthContext'
 import { MarkdownBody } from '@/components/markdown-body'
 import { MarkdownSummary } from '@/components/markdown-summary'
+import { ReportDialog } from '@/components/report-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
@@ -283,7 +284,7 @@ export function BlogArticlePage() {
     })
   }
 
-  async function handleReport() {
+  function handleReport() {
     if (!article) return
     if (!isLogin) {
       navigate(
@@ -291,23 +292,7 @@ export function BlogArticlePage() {
       )
       return
     }
-    const reason = window.prompt('请简述举报原因（将通知站点管理员）')
-    if (reason == null) return
-    if (!reason.trim()) {
-      toast.error('请填写举报原因')
-      return
-    }
     setReporting(true)
-    const res = await reportBlogArticle({
-      articleId: article.id,
-      reason: reason.trim(),
-    })
-    setReporting(false)
-    if (!res.success) {
-      toast.error(res.message || '提交失败')
-      return
-    }
-    toast.success(res.message || '已收到举报')
   }
 
   async function handleCopyLink() {
@@ -511,11 +496,10 @@ export function BlogArticlePage() {
         {!isOwner ? (
           <button
             type="button"
-            disabled={reporting}
-            onClick={() => void handleReport()}
+            onClick={handleReport}
             className="text-sm text-muted-foreground hover:text-destructive hover:underline"
           >
-            {reporting ? '提交中…' : '举报'}
+            举报
           </button>
         ) : null}
       </div>
@@ -784,6 +768,17 @@ export function BlogArticlePage() {
       {shareBlock}
       {relatedBlock}
       {commentsBlock}
+
+      {article ? (
+        <ReportDialog
+          open={reporting}
+          onOpenChange={setReporting}
+          targetLabel="博客"
+          onSubmit={(reason) =>
+            reportBlogArticle({ articleId: article.id, reason })
+          }
+        />
+      ) : null}
     </article>
   )
 }

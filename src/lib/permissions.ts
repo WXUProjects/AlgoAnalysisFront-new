@@ -36,6 +36,7 @@ export const Perm = {
   ContentProblemReview: 'content.problem.review',
   ContentBlogModerate: 'content.blog.moderate',
   ContentCommunityMod: 'content.community.moderate',
+  ContentReportHandle: 'content.report.handle',
   // 组织 · 设置
   OrgInfoWrite: 'org.info.write',
   OrgPolicyToggle: 'org.policy.toggle',
@@ -96,6 +97,8 @@ const PERM_ORDER: PermCode[] = [
   Perm.OrgBulletinManage,
   Perm.OrgReportView,
   Perm.OrgMemberEmail,
+  // bit 只追加：content 组新增位排在末尾（与后端注册表一致）
+  Perm.ContentReportHandle,
 ]
 
 export const ALL_PERMS: readonly PermCode[] = PERM_ORDER
@@ -105,6 +108,7 @@ export const REVIEWER_PERMS: readonly PermCode[] = [
   Perm.ContentProblemReview,
   Perm.ContentBlogModerate,
   Perm.ContentCommunityMod,
+  Perm.ContentReportHandle,
 ]
 
 /** 教练/队长模板（现状两者相同） */

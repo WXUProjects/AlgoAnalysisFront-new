@@ -1,12 +1,8 @@
 import type { ComponentType, ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  ActivityIcon,
-  BarChart3Icon,
   Building2Icon,
   ChevronRightIcon,
-  ClipboardCheckIcon,
-  FileSpreadsheetIcon,
   InfoIcon,
   KeyRoundIcon,
   LayoutDashboardIcon,
@@ -16,15 +12,10 @@ import {
   MegaphoneIcon,
   MoonIcon,
   NewspaperIcon,
-  SettingsIcon,
-  ShieldCheckIcon,
-  SirenIcon,
   SunIcon,
   UserIcon,
   UserPlusIcon,
-  UsersIcon,
   WrenchIcon,
-  WorkflowIcon,
   type LucideProps,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
@@ -36,7 +27,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { Perm } from '@/lib/permissions'
+import {
+  ADMIN_SECTION_TITLES,
+  adminNavEntries,
+  type AdminNavEntry,
+  type AdminNavSection,
+} from '@/lib/admin-nav'
 import {
   orgRoleName,
   staffKindFromPayload,
@@ -403,142 +399,10 @@ export type BuildMobileMoreOptions = {
   user?: StaffLabelPayload | null
 }
 
-/** 管理分区条目（内容审核条目单独标记，用于分区标题回退） */
-type ManageLink = MobileMoreLink & { contentReview?: boolean }
-
-/** 组织管理条目（当前组织范围；不含工作台入口） */
-function orgManageLinks(canOrgSettings: boolean): ManageLink[] {
-  return [
-    {
-      to: '/admin/statistics',
-      label: '组织数据',
-      icon: BarChart3Icon,
-      anyOf: [Perm.OrgReportView],
-      match: (p) =>
-        p === '/admin/statistics' || p.startsWith('/admin/statistics/'),
-    },
-    {
-      to: '/admin/bulletin',
-      label: '组织公告',
-      icon: MegaphoneIcon,
-      anyOf: [Perm.OrgBulletinManage],
-      match: (p) =>
-        p === '/admin/bulletin' || p.startsWith('/admin/bulletin/'),
-    },
-    {
-      to: '/admin/group',
-      label: '组织分组',
-      icon: UsersIcon,
-      anyOf: [Perm.OrgGroupManage],
-    },
-    {
-      to: '/admin/user',
-      label: '组织成员',
-      icon: LayoutDashboardIcon,
-      anyOf: [Perm.OrgReportView, Perm.OrgGroupManage, Perm.OrgMemberRole],
-      match: (p) => p === '/admin/user' || p.startsWith('/admin/user/'),
-    },
-    // 组织设置：可改品牌/识别码/任命；否则仅看训练报告
-    {
-      to: '/admin/org',
-      label: canOrgSettings ? '组织设置' : '组织训练报告',
-      icon: canOrgSettings ? SettingsIcon : FileSpreadsheetIcon,
-      anyOf: [
-        Perm.OrgInfoWrite,
-        Perm.OrgPolicyToggle,
-        Perm.OrgRoleManage,
-        Perm.OrgReportView,
-      ],
-      match: (p) => p.startsWith('/admin/org') && !p.startsWith('/admin/orgs'),
-    },
-  ]
-}
-
-/** 站点管理 / 内容审核条目（全站范围） */
-const SITE_MANAGE_LINKS: ManageLink[] = [
-  {
-    to: '/admin/site-statistics',
-    label: '站点数据',
-    icon: BarChart3Icon,
-    anyOf: [Perm.SiteStatsRead],
-  },
-  {
-    to: '/admin/access',
-    label: '站点访问',
-    icon: ActivityIcon,
-    anyOf: [Perm.SiteStatsRead],
-  },
-  {
-    to: '/admin/site-users',
-    label: '全站用户',
-    icon: LayoutDashboardIcon,
-    anyOf: [Perm.SiteUserList],
-  },
-  {
-    to: '/admin/orgs',
-    label: '全站组织',
-    icon: UsersIcon,
-    anyOf: [Perm.SiteOrgList],
-  },
-  {
-    to: '/admin/problem-progress',
-    label: '题库识别',
-    icon: WorkflowIcon,
-    anyOf: [Perm.OrgReportView, Perm.SiteProblemOps],
-  },
-  {
-    to: '/admin/problem-edits',
-    label: '题库审查',
-    icon: ClipboardCheckIcon,
-    anyOf: [Perm.ContentProblemReview],
-    contentReview: true,
-  },
-  {
-    to: '/admin/blog',
-    label: '博客管理',
-    icon: NewspaperIcon,
-    anyOf: [Perm.ContentBlogModerate, Perm.SiteBlogBoard],
-    contentReview: true,
-  },
-  {
-    to: '/admin/site-bulletin',
-    label: '站点公告',
-    icon: MegaphoneIcon,
-    anyOf: [Perm.SiteBulletin],
-    match: (p) =>
-      p === '/admin/site-bulletin' || p.startsWith('/admin/site-bulletin/'),
-  },
-  {
-    to: '/admin/emergency',
-    label: '站点紧急通知',
-    icon: SirenIcon,
-    anyOf: [Perm.SiteEmergency],
-  },
-  {
-    to: '/admin/roles',
-    label: '角色权限',
-    icon: ShieldCheckIcon,
-    anyOf: [Perm.SiteRoleManage],
-  },
-  {
-    to: '/admin/site',
-    label: '站点设置',
-    icon: SettingsIcon,
-    anyOf: [Perm.SiteConfigRead, Perm.SiteConfigWrite],
-    match: (p) => p === '/admin/site' || p.startsWith('/admin/site/'),
-  },
-  {
-    to: '/admin/ops',
-    label: '站点运维',
-    icon: WrenchIcon,
-    anyOf: [Perm.SiteSpiderOps, Perm.SiteProblemOps, Perm.SiteBackup, Perm.SiteConfigWrite],
-  },
-]
-
 /**
- * 统一「更多」分区：浏览 + 我的 +（canAccessAdmin 时）组织管理 / 站点管理。
- * 管理条目显隐由权限驱动（anyOf 与路由守卫一致）；
- * 分区标题与条目文案明确区分「当前组织」与「全站」，避免站管场景混淆。
+ * 统一「更多」分区：浏览 + 我的 +（canAccessAdmin 时）组织管理 / 内容审核 / 站点管理。
+ * 管理条目来自 src/lib/admin-nav.ts 唯一注册表（与 PC 侧栏共用），
+ * 显隐由权限驱动；分区标题明确区分「当前组织」与「全站」，避免站管场景混淆。
  */
 export function buildMobileMoreSections(
   opts: BuildMobileMoreOptions,
@@ -577,15 +441,18 @@ export function buildMobileMoreSections(
   }
 
   if (opts.canAccessAdmin) {
-    const visible = (items: ManageLink[]) =>
-      items.filter((i) => !i.anyOf || i.anyOf.some(opts.can))
+    const entries = adminNavEntries(opts.can)
+    const toLink = (e: AdminNavEntry): MobileMoreLink => ({
+      to: e.to,
+      label: e.label,
+      icon: e.icon,
+      match: e.isActive,
+    })
+    const bySection = (s: AdminNavSection) =>
+      entries.filter((e) => e.section === s).map(toLink)
 
     // —— 组织管理：当前组织范围（有任一组织条目权限才展示，含工作台入口）——
-    const canOrgSettings =
-      opts.can(Perm.OrgInfoWrite) ||
-      opts.can(Perm.OrgPolicyToggle) ||
-      opts.can(Perm.OrgRoleManage)
-    const orgVisible = visible(orgManageLinks(canOrgSettings))
+    const orgVisible = bySection('org')
     if (orgVisible.length > 0) {
       sections.push({
         title: orgManageSectionTitle(opts.orgName, opts.user),
@@ -603,16 +470,16 @@ export function buildMobileMoreSections(
       })
     }
 
-    // —— 站点管理：全站范围；仅剩内容审核条目（如资源审核员）时标题改「内容审核」——
-    const siteVisible = visible(SITE_MANAGE_LINKS)
-    if (siteVisible.length > 0) {
-      sections.push({
-        title: siteVisible.every((i) => i.contentReview)
-          ? '内容审核'
-          : '站点管理',
-        layout: 'list',
-        items: siteVisible,
-      })
+    // —— 内容审核 / 站点管理：全站范围 ——
+    for (const section of ['content', 'site'] as const) {
+      const items = bySection(section)
+      if (items.length > 0) {
+        sections.push({
+          title: ADMIN_SECTION_TITLES[section],
+          layout: 'list',
+          items,
+        })
+      }
     }
   }
 

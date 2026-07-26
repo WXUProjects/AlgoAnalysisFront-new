@@ -780,7 +780,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             )}
             {can(Perm.OrgGroupManage) && (
               <Button asChild size="sm" variant="outline">
-                <Link to="/admin/group">分组管理</Link>
+                <Link to="/admin/user?tab=group">分组管理</Link>
               </Button>
             )}
             {can(Perm.OrgReportView) && (

@@ -402,7 +402,7 @@ function AppLayoutInner() {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            {/* PC：可折叠二级 Tab（教练管理/团队管理/站点管理/资源审核/管理中心 → 展开子项）；移动端走底栏 +「更多」；条目按权限过滤 */}
+            {/* PC：可折叠管理入口，展开后按 组织管理/内容审核/站点管理 三分区（条目表 src/lib/admin-nav.ts）；移动端走底栏 +「更多」；条目按权限过滤 */}
             {isLogin && canAccessAdmin && <AdminSidebarNavGroups />}
           </SidebarContent>
 
