@@ -1,0 +1,77 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>GoAlgo logo 方案预览</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 48px; font: 15px/1.6 -apple-system, "PingFang SC", system-ui, sans-serif;
+         background: #f6f7fb; color: #14161c; }
+  @media (prefers-color-scheme: dark) { body { background: #0d0f16; color: #e8eaf2; } }
+  h1 { font-size: 20px; margin: 0 0 32px; font-weight: 600; }
+  .row { display: flex; gap: 40px; flex-wrap: wrap; margin-bottom: 44px; align-items: flex-end; }
+  .cell { text-align: center; }
+  .cell img { display: block; border-radius: 22%; }
+  .cell small { display: block; margin-top: 10px; opacity: .6; font-size: 12px; }
+  .name { font-weight: 600; margin: 0 0 14px; }
+  .sizes { display: flex; gap: 20px; align-items: flex-end; }
+  .onlight, .ondark { padding: 20px 28px; border-radius: 16px; display: flex; gap: 20px; align-items: center; }
+  .onlight { background: #fff; }
+  .ondark { background: #0b0e17; }
+  /* currentColor 不会穿透 <img>，单色标记用 mask 上色 */
+  .mark { display: inline-block; background: currentColor;
+          -webkit-mask: url(goalgo-mark.svg) center / contain no-repeat;
+          mask: url(goalgo-mark.svg) center / contain no-repeat; }
+</style>
+
+<h1>GoAlgo 图标方案 — 尖括号（代码）+ 节点路径（算法）</h1>
+
+<div class="row">
+  <div>
+    <p class="name">液态玻璃 Liquid Glass</p>
+    <div class="sizes">
+      <div class="cell"><img src="goalgo-glass.svg" width="200" height="200"><small>200</small></div>
+      <div class="cell"><img src="goalgo-glass.svg" width="88" height="88"><small>88</small></div>
+      <div class="cell"><img src="goalgo-glass.svg" width="48" height="48"><small>48</small></div>
+      <div class="cell"><img src="goalgo-glass.svg" width="24" height="24"><small>24</small></div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div>
+    <p class="name">Material 3</p>
+    <div class="sizes">
+      <div class="cell"><img src="goalgo-m3.svg" width="200" height="200"><small>200</small></div>
+      <div class="cell"><img src="goalgo-m3.svg" width="88" height="88"><small>88</small></div>
+      <div class="cell"><img src="goalgo-m3.svg" width="48" height="48"><small>48</small></div>
+      <div class="cell"><img src="goalgo-m3.svg" width="24" height="24"><small>24</small></div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div>
+    <p class="name">扁平化 Flat</p>
+    <div class="sizes">
+      <div class="cell"><img src="goalgo-flat.svg" width="200" height="200"><small>200</small></div>
+      <div class="cell"><img src="goalgo-flat.svg" width="88" height="88"><small>88</small></div>
+      <div class="cell"><img src="goalgo-flat.svg" width="48" height="48"><small>48</small></div>
+      <div class="cell"><img src="goalgo-flat.svg" width="24" height="24"><small>24</small></div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div>
+    <p class="name">单色标记 goalgo-mark.svg（跟随 currentColor）</p>
+    <div class="sizes">
+      <div class="onlight" style="color:#2F3AE0">
+        <i class="mark" style="width:72px;height:72px"></i>
+        <i class="mark" style="width:36px;height:36px"></i>
+      </div>
+      <div class="ondark" style="color:#2BE3C4">
+        <i class="mark" style="width:72px;height:72px"></i>
+        <i class="mark" style="width:36px;height:36px"></i>
+      </div>
+    </div>
+  </div>
+</div>
