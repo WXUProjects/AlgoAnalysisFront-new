@@ -58,3 +58,11 @@ export async function markAllNotificationsRead(): Promise<ApiResult<null>> {
   const res = await post<null>(endpoints.user.notification.readAll, {})
   return { ...res, data: null }
 }
+
+/** 硬删除当前用户全部站内信，返回删除条数 */
+export async function clearAllNotifications(): Promise<ApiResult<number>> {
+  const res = await post<unknown>(endpoints.user.notification.clearAll, {})
+  if (!res.success) return { ...res, data: 0 }
+  const raw = (res.raw ?? {}) as Record<string, unknown>
+  return { ...res, data: num(raw.deleted) }
+}
