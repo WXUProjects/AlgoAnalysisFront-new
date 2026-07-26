@@ -354,9 +354,6 @@ export function ContestDetails() {
   )
   const pageRows = visibleRows.slice((page - 1) * pageSize, page * pageSize)
 
-  useEffect(() => {
-    setPage(1)
-  }, [contestOnly, setPage])
   const colProblems = !hasCellDetail
     ? []
     : boardProblems.length > 0
@@ -439,7 +436,7 @@ export function ContestDetails() {
     }
   }, [activeItem?.problemId, activeItem?.hasContent, loadProblems])
 
-  const filterKey = `${id ?? ''}\0${groupId ?? ''}\0${followingOnly ? 1 : 0}`
+  const filterKey = `${id ?? ''}\0${groupId ?? ''}\0${followingOnly ? 1 : 0}\0${contestOnly ? 1 : 0}`
   const prevFilterKey = useRef(filterKey)
   useEffect(() => {
     if (prevFilterKey.current !== filterKey) {
