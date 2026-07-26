@@ -12,6 +12,8 @@ export interface JwtPayload {
   isResourceReviewer?: boolean
   orgId?: number
   orgRole?: string
+  /** 细粒度权限位图（base64url；见 src/lib/permissions.ts） */
+  pm?: string
 }
 
 let memoryToken = ''
@@ -95,6 +97,8 @@ export function jwtPayloadEquals(
     Boolean(a.isSiteAdmin) === Boolean(b.isSiteAdmin) &&
     Boolean(a.isResourceReviewer) === Boolean(b.isResourceReviewer) &&
     (a.orgId ?? 0) === (b.orgId ?? 0) &&
-    (a.orgRole ?? '') === (b.orgRole ?? '')
+    (a.orgRole ?? '') === (b.orgRole ?? '') &&
+    // 权限位图变化必须触发 UI 更新（角色/权限调整后 refresh 重签）
+    (a.pm ?? '') === (b.pm ?? '')
   )
 }

@@ -37,6 +37,7 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Switch } from '@/components/ui/switch'
+import { Perm } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import { formatTime } from '@/lib/format'
 
@@ -57,7 +58,9 @@ type CommentsProps = {
 
 /** 用户题解侧栏：挂在题面右侧（桌面）或「题解」Tab（移动端） */
 export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
-  const { isLogin, user, isSiteAdmin } = useAuth()
+  const { isLogin, user, can } = useAuth()
+  // 社区内容管理权限：可删除/编辑他人博客
+  const canModerate = can(Perm.ContentCommunityMod)
   const navigate = useNavigate()
   const [params] = useSearchParams()
 
@@ -202,7 +205,7 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
                     举报
                   </Button>
                 )}
-                {(myId === s.userId || isSiteAdmin) && (
+                {(myId === s.userId || canModerate) && (
                   <>
                     <Button
                       type="button"
@@ -275,7 +278,9 @@ export function ProblemComments({
   className,
   title,
 }: CommentsProps) {
-  const { isLogin, user, isSiteAdmin, currentOrg } = useAuth()
+  const { isLogin, user, can, currentOrg } = useAuth()
+  // 社区内容管理权限：可删除他人评论
+  const canModerate = can(Perm.ContentCommunityMod)
   const isPublicOrg =
     Boolean(currentOrg?.isSystem) || currentOrg?.slug === 'public'
   const onSolution = Boolean(solutionId && solutionId > 0)
@@ -512,7 +517,7 @@ export function ProblemComments({
               depth={0}
               myId={myId}
               isLogin={isLogin}
-              isSiteAdmin={isSiteAdmin}
+              canModerate={canModerate}
               likingId={likingId}
               onLike={onLikeComment}
               onReply={(item) => {
@@ -561,7 +566,8 @@ type CommentNodeProps = {
   depth: number
   myId: number
   isLogin: boolean
-  isSiteAdmin: boolean
+  /** 持有社区内容管理权限：可删除他人评论 */
+  canModerate: boolean
   likingId: number
   onLike: (c: ProblemCommentItem) => void
   onReply: (c: ProblemCommentItem) => void
@@ -574,7 +580,7 @@ function CommentNode({
   depth,
   myId,
   isLogin,
-  isSiteAdmin,
+  canModerate,
   likingId,
   onLike,
   onReply,
@@ -616,7 +622,7 @@ function CommentNode({
               {formatTime(c.createdAt)}
             </span>
           </div>
-          {(myId === c.userId || isSiteAdmin) && (
+          {(myId === c.userId || canModerate) && (
             <ConfirmDialog
               title="删除这条评论？"
               description="删除后无法恢复。"
@@ -685,7 +691,7 @@ function CommentNode({
               depth={depth + 1}
               myId={myId}
               isLogin={isLogin}
-              isSiteAdmin={isSiteAdmin}
+              canModerate={canModerate}
               likingId={likingId}
               onLike={onLike}
               onReply={onReply}

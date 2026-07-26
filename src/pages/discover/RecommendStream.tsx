@@ -39,9 +39,13 @@ export function RecommendStream() {
   const [preview, setPreview] = useState<PreviewTarget | null>(null)
   const pageRef = useRef(1)
   const loadingRef = useRef(false)
+  /** 请求序号：reset（切组织）立即发新请求，旧响应按序号丢弃 */
+  const requestSeq = useRef(0)
 
   const loadMore = useCallback(async (reset = false) => {
-    if (loadingRef.current) return
+    // 仅「加载更多」用布尔锁防重复触发；reset 不被在途请求拦住
+    if (!reset && loadingRef.current) return
+    const seq = ++requestSeq.current
     loadingRef.current = true
     setLoading(true)
     if (reset) {
@@ -57,6 +61,8 @@ export function RecommendStream() {
         pageSize: 20,
         type,
       })
+      // 已有更新的请求在途：丢弃旧响应
+      if (seq !== requestSeq.current) return
       if (!res.success || !res.data) {
         if (reset) {
           // Fallback: surface rank as pseudo-cards? keep empty honest
@@ -71,6 +77,7 @@ export function RecommendStream() {
       let batch = mapped
       if (reset && !batch.length) {
         const all = await listActivityFeed({ page: 1, pageSize: 20 })
+        if (seq !== requestSeq.current) return
         if (all.success && all.data) {
           batch = all.data.list.map(mapActivityToStreamItem)
           pageRef.current = 2
@@ -93,6 +100,7 @@ export function RecommendStream() {
           excludeSolutions: true,
           orgId: currentOrg?.id,
         })
+        if (seq !== requestSeq.current) return
         if (blogRes.success && blogRes.data?.list?.length) {
           // client-side guard: never show solution-mirrored blogs in recommend
           const pure = blogRes.data.list.filter((a) => !a.sourceSolutionId)
@@ -105,9 +113,12 @@ export function RecommendStream() {
         mergeCursorPage(reset ? [] : prev, batch, (x) => x.uid),
       )
     } finally {
-      loadingRef.current = false
-      setLoading(false)
-      setInitialLoading(false)
+      // 状态归位只归属最新一次请求，避免旧请求关掉新请求的加载态
+      if (seq === requestSeq.current) {
+        loadingRef.current = false
+        setLoading(false)
+        setInitialLoading(false)
+      }
     }
   }, [currentOrg?.id])
 

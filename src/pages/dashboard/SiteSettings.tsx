@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Navigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   downloadBackupJob,
@@ -38,6 +37,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
+import { Perm } from '@/lib/permissions'
 
 function formatBytes(n: number): string {
   if (!n || n < 0) return '—'
@@ -65,7 +65,10 @@ function jobStatusLabel(s: string): string {
 const SECRET_PLACEHOLDER = '••••••••'
 
 export function DashboardSiteSettings() {
-  const { isAdmin } = useAuth()
+  const { can } = useAuth()
+  const canWrite = can(Perm.SiteConfigWrite)
+  const canRead = can(Perm.SiteConfigRead) || canWrite
+  const canBackup = can(Perm.SiteBackup)
   const { refresh } = useSiteConfig()
 
   const [title, setTitle] = useState('')
@@ -108,9 +111,19 @@ export function DashboardSiteSettings() {
   const [importFile, setImportFile] = useState<File | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  /** 卸载守卫：轮询/在途请求返回后不再 setState */
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   const refreshJobs = useCallback(async (): Promise<BackupJob | null> => {
     const res = await listBackupJobs()
+    if (!mountedRef.current) return null
     if (!res.success || !res.data) return null
     setRecentJobs(res.data.slice(0, 5))
     const running = res.data.find(
@@ -140,6 +153,7 @@ export function DashboardSiteSettings() {
       stopPoll()
       pollRef.current = setInterval(async () => {
         const res = await getBackupJob(jobId)
+        if (!mountedRef.current) return
         if (!res.success || !res.data) return
         setActiveJob(res.data)
         if (res.data.status === 'done' || res.data.status === 'failed') {
@@ -163,13 +177,18 @@ export function DashboardSiteSettings() {
   )
 
   useEffect(() => {
-    if (!isAdmin) return
+    if (!canRead) return
     let cancelled = false
     ;(async () => {
       setLoading(true)
-      const res = await getSiteAdminConfig()
+      // 站点配置与备份任务互不依赖，并行加载；备份任务需备份权限
+      const [res, running] = await Promise.all([
+        getSiteAdminConfig(),
+        canBackup ? refreshJobs() : Promise.resolve(null),
+      ])
       if (cancelled) return
       setLoading(false)
+      if (running) startPoll(running.id)
       if (!res.success || !res.data) {
         toast.error(res.message || '站点配置加载失败，请稍后重试')
         return
@@ -195,19 +214,21 @@ export function DashboardSiteSettings() {
       setAiSecretSet(d.aiAnalyzeSecretSet)
       setInactiveDays(String(d.inactiveDays || 14))
       setAdminNotifyEmails(d.adminNotifyEmails || '')
-      const running = await refreshJobs()
-      if (!cancelled && running) {
-        startPoll(running.id)
-      }
     })()
     return () => {
       cancelled = true
       stopPoll()
     }
-  }, [isAdmin, refreshJobs, startPoll, stopPoll])
+  }, [canRead, canBackup, refreshJobs, startPoll, stopPoll])
 
-  if (!isAdmin) {
-    return <Navigate to="/admin/statistics" replace />
+  if (!canRead) {
+    return (
+      <PageShell>
+        <p className="text-sm text-muted-foreground">
+          你还没有查看站点设置的权限。如有需要，请联系站点管理员开通。
+        </p>
+      </PageShell>
+    )
   }
 
   async function onUpload(kind: 'logo' | 'favicon', file: File | null) {
@@ -236,6 +257,7 @@ export function DashboardSiteSettings() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+    if (!canWrite) return
     if (!title.trim()) {
       toast.error('站点标题不能为空')
       return
@@ -374,10 +396,17 @@ export function DashboardSiteSettings() {
   return (
     <PageShell stagger={false}>
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
+      {!canWrite && (
+        <p className="text-sm text-muted-foreground">
+          你当前只能查看站点配置，无法修改。如需调整，请联系站点管理员。
+        </p>
+      )}
       <form
         onSubmit={handleSave}
         className="flex w-full flex-col gap-3"
       >
+        {/* 只读权限：整表单只读展示 */}
+        <fieldset disabled={!canWrite} className="contents">
         <Card className="gap-3 py-4">
           <CardHeader className="px-4 pb-0">
             <CardTitle>站点品牌</CardTitle>
@@ -660,14 +689,16 @@ export function DashboardSiteSettings() {
             </FieldGroup>
           </CardContent>
           <CardFooter className="justify-end gap-2 px-4 pt-0">
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || !canWrite}>
               {saving ? <Spinner data-icon="inline-start" /> : null}
               保存全部
             </Button>
           </CardFooter>
         </Card>
+        </fieldset>
       </form>
 
+        {canBackup && (
         <Card className="gap-3 py-4">
           <CardHeader className="px-4 pb-0">
             <CardTitle>数据备份与恢复</CardTitle>
@@ -804,6 +835,7 @@ export function DashboardSiteSettings() {
             ) : null}
           </CardContent>
         </Card>
+        )}
       </div>
 
       <AlertDialog open={importOpen} onOpenChange={setImportOpen}>

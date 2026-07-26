@@ -154,6 +154,9 @@ export function ContestDetails() {
   const [ensureStatus, setEnsureStatus] = useState('')
   const [problemsLoading, setProblemsLoading] = useState(true)
   const problemsPollCount = useRef(0)
+  /** 竞态守卫：丢弃过期的榜单/题目响应 */
+  const boardRequestId = useRef(0)
+  const problemsRequestId = useRef(0)
   const [activeLabel, setActiveLabel] = useState(
     () => searchParams.get('label')?.trim() || '',
   )
@@ -260,12 +263,15 @@ export function ContestDetails() {
 
   const loadBoard = useCallback(async () => {
     if (!id) return
+    const rid = ++boardRequestId.current
     setLoading(true)
     const res = await getContestBoard({
       contestId: id,
       groupId,
       followingOnly: followingOnly || undefined,
     })
+    // 快速切换分组/筛选时丢弃旧响应
+    if (rid !== boardRequestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '榜单加载失败，请稍后重试')
@@ -293,8 +299,10 @@ export function ContestDetails() {
 
   const loadProblems = useCallback(async (opts?: { quiet?: boolean }) => {
     if (!id) return
+    const rid = ++problemsRequestId.current
     if (!opts?.quiet) setProblemsLoading(true)
     const res = await getContestProblems(id)
+    if (rid !== problemsRequestId.current) return
     if (!opts?.quiet) setProblemsLoading(false)
     if (!res.success || !res.data) {
       // 题目失败不阻断榜单

@@ -48,6 +48,8 @@ import {
   computeWeekdayDistribution,
   WEEKDAY_LABELS,
 } from '@/lib/dashboard-metrics'
+import { Perm } from '@/lib/permissions'
+import { OrgRole, orgRoleName } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import {
   daysAgoYmd,
@@ -96,7 +98,7 @@ export function DashboardStatistics() {
 }
 
 function StatisticsPage({ scope }: { scope: StatsScope }) {
-  const { isAdmin, isOrgAdmin, isCoach, isCaptain, currentOrg } = useAuth()
+  const { isSiteAdmin, can, perms, currentOrg } = useAuth()
   const isSite = scope === 'site'
 
   const [timeRange, setTimeRange] = useState<TimeRangeValue>('30')
@@ -114,14 +116,15 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   const [errors, setErrors] = useState<string[]>([])
   const hasLoadedOnce = useRef(false)
 
-  const isStaff = isOrgAdmin || isCoach || isCaptain || isAdmin
+  const canSiteStats = can(Perm.SiteStatsRead)
+  const canJoinReview = can(Perm.OrgJoinReview)
   const periodUserId = isSite ? -2 : -1
   const heatmapUserId = isSite ? -2 : 0
   const days = rangeDays(timeRange)
 
   const abortRef = useRef(0)
   useEffect(() => {
-    if (isSite && !isAdmin) {
+    if (isSite && !canSiteStats) {
       setLoading(false)
       return
     }
@@ -149,8 +152,8 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
           getHeatmap({ startDate: start, endDate: end, isAc: false, userId: heatmapUserId }),
           getHeatmap({ startDate: start, endDate: end, isAc: true, userId: heatmapUserId }),
           getRank({ startDate: start, endDate: end, scoreType: 'ac', pageSize: 50 }),
-          // 仅团队管理员 / 站管拉待审批；教练、队长可能无权限
-          !isSite && (isOrgAdmin || isAdmin) && currentOrg?.id
+          // 仅持有入队审批权限的角色拉待审批，其余成员不请求
+          !isSite && canJoinReview && currentOrg?.id
             ? listJoinRequests(currentOrg.id).catch(() => ({
                 success: false,
                 list: [] as unknown[],
@@ -240,7 +243,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     return () => {
       cancelled = true
     }
-  }, [isSite, isAdmin, isOrgAdmin, currentOrg?.id, periodUserId, heatmapUserId, days])
+  }, [isSite, canSiteStats, canJoinReview, currentOrg?.id, periodUserId, heatmapUserId, days])
 
   const metrics = useMemo(() => {
     const rangeSubmit = sumHeatmap(submitHeat)
@@ -270,10 +273,12 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     }
   }, [period, userCount, frozenCount, rankTotal, submitHeat, acHeat, days, isSite])
 
-  if (isSite && !isAdmin) {
+  if (isSite && !canSiteStats) {
     return (
       <PageShell>
-        <p className="text-sm text-muted-foreground">仅站点管理员可查看全站统计。</p>
+        <p className="text-sm text-muted-foreground">
+          你还没有查看全站统计的权限。如有需要，请联系站点管理员开通。
+        </p>
       </PageShell>
     )
   }
@@ -287,24 +292,43 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   }
 
   const orgName = currentOrg?.name || '当前组织'
+  // 文案按身份分支：站点管理员按团队管理员展示；自定义角色（不改 orgRole，仅赋权限）落到通用「管理中心」
+  const roleForCopy = isSiteAdmin ? OrgRole.OrgAdmin : currentOrg?.myRole
+  const hasOrgManagePerm = Array.from(perms).some((c) => c.startsWith('org.'))
   let title: string
   let desc: string
+  let selfNote = ''
   if (isSite) {
     title = '站点数据统计'
     desc = '查看全站用户的提交与通过情况。已冻结用户不会再自动同步做题数据。'
-  } else if (isOrgAdmin) {
+  } else if (roleForCopy === OrgRole.OrgAdmin) {
     title = `${orgName} · 组织管理`
     desc = '一眼掌握成员活跃、训练参与和待办审批，方便日常运营。'
-  } else if (isCoach) {
+    selfNote = `你是${orgRoleName(OrgRole.OrgAdmin)}：可查看运营数据、处理申请，并生成训练报告。`
+  } else if (roleForCopy === OrgRole.Coach) {
     title = `${orgName} · 教练工作台`
     desc = '按时间范围查看训练参与与成员排行，及时了解队伍状态。'
-  } else if (isCaptain) {
+    selfNote = `你是${orgRoleName(OrgRole.Coach)}：可查看训练参与与排行，并管理分组与成员。`
+  } else if (roleForCopy === OrgRole.Captain) {
     title = `${orgName} · 队长工作台`
     desc = '按时间范围查看训练参与与成员排行。'
+    selfNote = `你是${orgRoleName(OrgRole.Captain)}：可查看训练参与与排行，并协助管理分组。`
+  } else if (hasOrgManagePerm) {
+    title = `${orgName} · 管理中心`
+    desc = '常用管理入口按你的权限显示，也可查看组织训练数据。'
+    selfNote = '你拥有本组织的部分管理权限，可用入口已按权限显示。'
   } else {
     title = `${orgName} · 数据统计`
     desc = '按当前组织成员汇总提交与通过情况；切换组织后数据会随之更新。'
   }
+
+  const hasQuickAction =
+    canJoinReview ||
+    can(Perm.OrgMemberRole) ||
+    can(Perm.OrgGroupManage) ||
+    can(Perm.OrgReportView) ||
+    can(Perm.OrgInfoWrite) ||
+    can(Perm.OrgBulletinManage)
 
   const kpiCards: KpiCard[] = isSite
     ? [
@@ -417,13 +441,13 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             ))}
           </ToggleGroup>
 
-          {!isSite && isOrgAdmin && pendingJoinCount !== null && pendingJoinCount > 0 && (
+          {!isSite && canJoinReview && pendingJoinCount !== null && pendingJoinCount > 0 && (
             <Button asChild size="sm" variant="destructive">
               <Link to="/admin/user">待审批 {pendingJoinCount}</Link>
             </Button>
           )}
 
-          {isSite && isAdmin && (
+          {isSite && can(Perm.SiteSpiderOps) && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button type="button" size="sm" disabled={updating}>
@@ -689,7 +713,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
         </Card>
       )}
 
-      {!isSite && isOrgAdmin && currentOrg && (
+      {!isSite && can(Perm.OrgInfoWrite) && currentOrg && (
         <Card className="gap-3 py-4 shadow-none">
           <CardHeader className="px-4">
             <CardTitle className="text-base">组织运营</CardTitle>
@@ -732,14 +756,14 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
         </Card>
       )}
 
-      {!isSite && isStaff && (
+      {!isSite && hasQuickAction && (
         <Card className="gap-3 py-4 shadow-none">
           <CardHeader className="px-4">
             <CardTitle className="text-base">快捷操作</CardTitle>
             <CardDescription>常用管理入口，按你的权限显示</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2 px-4">
-            {isOrgAdmin && (
+            {canJoinReview && (
               <Button asChild size="sm" variant="outline">
                 <Link to="/admin/user">
                   成员与审批
@@ -749,27 +773,27 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
                 </Link>
               </Button>
             )}
-            {!isOrgAdmin && (isCoach || isCaptain) && (
+            {!canJoinReview && can(Perm.OrgMemberRole) && (
               <Button asChild size="sm" variant="outline">
                 <Link to="/admin/user">成员管理</Link>
               </Button>
             )}
-            {(isOrgAdmin || isCoach || isCaptain) && (
+            {can(Perm.OrgGroupManage) && (
               <Button asChild size="sm" variant="outline">
                 <Link to="/admin/group">分组管理</Link>
               </Button>
             )}
-            {(isOrgAdmin || isCoach || isCaptain) && (
+            {can(Perm.OrgReportView) && (
               <Button asChild size="sm" variant="outline">
                 <Link to="/admin/org">生成训练报告</Link>
               </Button>
             )}
-            {isOrgAdmin && (
+            {can(Perm.OrgInfoWrite) && (
               <Button asChild size="sm" variant="outline">
                 <Link to="/admin/org">组织设置</Link>
               </Button>
             )}
-            {(isOrgAdmin || isCoach || isCaptain) && (
+            {can(Perm.OrgBulletinManage) && (
               <Button asChild size="sm" variant="outline">
                 <Link to="/admin/bulletin">公告管理</Link>
               </Button>
@@ -778,14 +802,8 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
         </Card>
       )}
 
-      {!isSite && isStaff && (
-        <p className="text-xs text-muted-foreground">
-          {isOrgAdmin
-            ? '你是团队管理员：可查看运营数据、处理申请，并生成训练报告。'
-            : isCoach
-              ? '你是教练：可查看训练参与与排行，并管理分组与成员。'
-              : '你是队长：可查看训练参与与排行，并协助管理分组。'}
-        </p>
+      {!isSite && selfNote && (
+        <p className="text-xs text-muted-foreground">{selfNote}</p>
       )}
     </PageShell>
   )

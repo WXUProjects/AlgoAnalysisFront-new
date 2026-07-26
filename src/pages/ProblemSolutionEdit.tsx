@@ -21,6 +21,7 @@ import {
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Perm } from '@/lib/permissions'
 
 /**
  * 写 / 编辑题解页：走主布局（保留左侧 Tab），非弹窗。
@@ -30,7 +31,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 export function ProblemSolutionEdit() {
   const { id, solutionId } = useParams()
   const navigate = useNavigate()
-  const { isLogin, ready, user, isSiteAdmin } = useAuth()
+  const { isLogin, ready, user, can } = useAuth()
+  // 社区内容管理权限：可编辑他人博客
+  const canModerate = can(Perm.ContentCommunityMod)
   const editId = Number(solutionId || 0)
   const isEdit = editId > 0
 
@@ -74,7 +77,7 @@ export function ProblemSolutionEdit() {
         return
       }
       const myId = user?.userId ?? 0
-      if (myId && sol.userId !== myId && !isSiteAdmin) {
+      if (myId && sol.userId !== myId && !canModerate) {
         setLoading(false)
         toast.error('只能编辑自己的博客')
         navigate(
@@ -99,7 +102,7 @@ export function ProblemSolutionEdit() {
     backTo,
     navigate,
     user?.userId,
-    isSiteAdmin,
+    canModerate,
   ])
 
   useEffect(() => {

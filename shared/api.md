@@ -504,7 +504,7 @@ nginx：**首版策略**——上述公开页 **一律** 反代 SEO HTML（不�
 
 ### Org（GoAlgo 多租户）
 
-HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`（`member|coach|captain|org_admin`）。
+HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`（`member|coach|captain|org_admin`）/ `pm`（细粒度权限位图，见「RBAC 角色与权限」一节）。以下「组织/站点管理员」权限均已细化为对应权限点（org.member.\* / org.invite.\* / org.join.review / site.org.\* 等），管理员为默认持有者。
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
@@ -627,26 +627,37 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 { "id": 1, "name": "string", "describe": "string" }
 ```
 
-### Role
+### RBAC 角色与权限（细粒度）
+
+权限模型：**权限点目录以后端代码为唯一权威**（`cwxu-algo/app/common/rbac/perm.go`，37 个权限点、9 个分组，作用域 `site` 站点级 / `org` 组织级）。角色 = 权限点集合：
+
+- **内置角色**（`isSystem`，权限集代码锁定，不可编辑/删除）：站点管理员 `site_admin`（旁路全部校验）、资源审核员 `resource_reviewer`（content.\* 三项）、团队管理员 `org_admin`（全部 org.\*）、教练 `coach` / 队长 `captain`（分组/组织公告/训练报告/代管日报，暂相同）、成员 `member`（无管理权限）。内置角色的任命仍走既有入口（`org/members/set-role`、`platform/set-*`），后端双写 `user_roles` 镜像。
+- **自定义角色**：站点级需 `site.role.manage`；组织级需该组织 `org.role.manage`（org_admin 默认持有）。自定义角色只赋权限、不改 `orgRole`，一个用户可叠加多个。
+
+**JWT**：新增 `pm` claim = 权限位图（base64url，站点权限 ∪ 当前组织权限）。旧 token（无 `pm`）按 `isSiteAdmin`/`isResourceReviewer`/`orgRole` 模板推导，行为不变。权限/角色变更后 `POST /user/auth/refresh` 或重登生效。原文档中「是(站点管理员)」的端点现按对应权限点校验（站点管理员天然旁路，行为向后兼容；持有对应权限的自定义角色成员亦可访问）。
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| GET | `/user/role/list` | 否 | 角色列表 |
-| POST | `/user/role/set-user-role` | 是(管理员) | 设置用户角色 |
+| GET | `/user/rbac/permissions` | 是 | 权限目录：`{groups:[{key,label,scope,perms:[{code,label,desc,scope}]}]}` |
+| GET | `/user/rbac/roles` | 是(见说明) | `scope=site`（需 `site.role.manage`）或 `scope=org&orgId=`（需该组织 `org.role.manage` 或 `org.member.role`）；项含 `roleId,code,name,description,scope,orgId,isSystem,permissions[],memberCount` |
+| POST | `/user/rbac/roles/create` | 是 | `{scope,orgId?,name,description?,permissions[]}`；权限点须与 scope 匹配 |
+| POST | `/user/rbac/roles/update` | 是 | `{roleId,name?,description?,permissions?}`；内置角色 403 |
+| POST | `/user/rbac/roles/delete` | 是 | `{roleId}`；内置角色 403；级联移除成员指派 |
+| GET | `/user/rbac/roles/members` | 是 | `roleId`（+系统组织角色需 `orgId`）`page/pageSize/keyword` 分页模糊搜索 |
+| POST | `/user/rbac/roles/assign` | 是 | `{roleId,userIds[]}` 仅自定义角色；组织角色要求目标已是该组织成员；返回 `added/skipped` |
+| POST | `/user/rbac/roles/unassign` | 是 | `{roleId,userIds[]}` |
+| GET | `/user/rbac/my-permissions` | 是 | 当前用户实时有效权限（查库）：`{perms[],roles[],isSiteAdmin,orgId,orgRole}` |
 
-**角色 ID**
+**存量迁移**：user 服务启动时自动执行（`schema_patches` key `rbac_bootstrap_v1`，幂等一次性）：`is_site_admin`/`is_resource_reviewer` 布尔位与 `org_members.role` 全部镜像进 `user_roles`；旧列保留并持续双写，可随时回滚。
 
-| roleId | 名称 | 说明 |
-|--------|------|------|
-| 0 | 队员 | 交题、个人资料、绑 OJ |
-| 1 | 管理员 | 全部功能 |
-| 2 | 教练 | 仅管理端；登录直达教练管理，无队员资料流程 |
-| 3 | 队长 | 教练管理权限 + 队员交题/资料 |
+### Role（遗留，已废弃）
 
-**SetUserRoleReq**
-```json
-{ "userId": 1, "roleId": 3 }
-```
+> ⚠️ 旧全局 roleId 体系（0 队员 / 1 管理员 / 2 教练 / 3 队长）。roleId 2/3 已被迁移清零，仅剩 0/1 兼容旧 token。前端已不再调用；接口保留一个版本后移除，请改用上方 RBAC 接口。
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| GET | `/user/role/list` | 否 | 角色列表（遗留） |
+| POST | `/user/role/set-user-role` | 是(管理员) | 设置用户角色（遗留；请改用 `platform/set-site-admin`） |
 
 ---
 
@@ -1280,6 +1291,16 @@ POST   /api/user/org/invite/rotate
 GET    /api/user/org/join-requests
 POST   /api/user/org/join-requests/review
 POST   /api/user/platform/set-site-admin
+POST   /api/user/platform/set-resource-reviewer
+GET    /api/user/rbac/permissions
+GET    /api/user/rbac/roles
+POST   /api/user/rbac/roles/create
+POST   /api/user/rbac/roles/update
+POST   /api/user/rbac/roles/delete
+GET    /api/user/rbac/roles/members
+POST   /api/user/rbac/roles/assign
+POST   /api/user/rbac/roles/unassign
+GET    /api/user/rbac/my-permissions
 GET    /api/core/submit-log/get-by-id
 POST   /api/core/spider/set
 POST   /api/core/spider/update

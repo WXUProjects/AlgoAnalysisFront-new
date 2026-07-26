@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   BookmarkIcon,
@@ -182,6 +182,10 @@ export function ProblemsetHome() {
   const [keyword, setKeyword] = useState('')
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(true)
+  /** 竞态守卫：三块列表各自丢弃过期响应 */
+  const mineRequestId = useRef(0)
+  const squareRequestId = useRef(0)
+  const favRequestId = useRef(0)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [title, setTitle] = useState('')
@@ -195,7 +199,9 @@ export function ProblemsetHome() {
       setMine([])
       return
     }
+    const rid = ++mineRequestId.current
     const res = await listMyProblemsets()
+    if (rid !== mineRequestId.current) return
     if (res.success && res.data) setMine(res.data)
     else {
       setMine([])
@@ -205,11 +211,13 @@ export function ProblemsetHome() {
 
   const loadSquare = useCallback(
     async (page = squarePage, kw = keyword) => {
+      const rid = ++squareRequestId.current
       const res = await listSquareProblemsets({
         page,
         pageSize: 12,
         keyword: kw || undefined,
       })
+      if (rid !== squareRequestId.current) return
       if (res.success && res.data) {
         setSquare(res.data.list)
         setSquareTotal(res.data.total)
@@ -229,7 +237,9 @@ export function ProblemsetHome() {
         setFavTotal(0)
         return
       }
+      const rid = ++favRequestId.current
       const res = await listFavoriteProblemsets({ page, pageSize: 12 })
+      if (rid !== favRequestId.current) return
       if (res.success && res.data) {
         setFavorites(res.data.list)
         setFavTotal(res.data.total)
@@ -244,13 +254,17 @@ export function ProblemsetHome() {
 
   useEffect(() => {
     if (!ready) return
+    let cancelled = false
     setLoading(true)
     void (async () => {
       if (tab === 'mine') await loadMine()
       else if (tab === 'favorites') await loadFavorites(1)
       else await loadSquare(1, keyword)
-      setLoading(false)
+      if (!cancelled) setLoading(false)
     })()
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, tab, isLogin])
 

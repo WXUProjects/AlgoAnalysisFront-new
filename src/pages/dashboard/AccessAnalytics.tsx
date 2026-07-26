@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -34,6 +34,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatCompactNumber } from '@/lib/format'
+import { Perm } from '@/lib/permissions'
 
 function delta(cur?: number, prev?: number) {
   if (cur === undefined || prev === undefined) return null
@@ -126,23 +127,28 @@ function MetricGrid({
   )
 }
 
-/** 站点访问与用量（仅站点管理员）— 审核截图用专业看板 */
+/** 站点访问与用量（需要全站统计权限）— 审核截图用专业看板 */
 export function DashboardAccessAnalytics() {
-  const { isAdmin } = useAuth()
+  const { can } = useAuth()
+  const canStats = can(Perm.SiteStatsRead)
   const [data, setData] = useState<AccessStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [days, setDays] = useState(30)
+  /** 竞态守卫：切换天数时丢弃旧响应 */
+  const requestId = useRef(0)
 
   const load = useCallback(
     async (silent = false) => {
-      if (!isAdmin) {
+      if (!canStats) {
         setLoading(false)
         return
       }
+      const rid = ++requestId.current
       if (!silent) setLoading(true)
       else setRefreshing(true)
       const res = await getAccessStats(days)
+      if (rid !== requestId.current) return
       if (res.success && res.data) setData(res.data)
       else {
         setData(null)
@@ -151,7 +157,7 @@ export function DashboardAccessAnalytics() {
       setLoading(false)
       setRefreshing(false)
     },
-    [isAdmin, days],
+    [canStats, days],
   )
 
   useEffect(() => {
@@ -196,10 +202,12 @@ export function DashboardAccessAnalytics() {
     [data],
   )
 
-  if (!isAdmin) {
+  if (!canStats) {
     return (
       <PageShell>
-        <p className="text-sm text-muted-foreground">仅站点管理员可查看访问统计。</p>
+        <p className="text-sm text-muted-foreground">
+          你还没有查看访问统计的权限。如有需要，请联系站点管理员开通。
+        </p>
       </PageShell>
     )
   }

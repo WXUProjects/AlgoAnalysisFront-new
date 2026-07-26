@@ -490,6 +490,29 @@ function withHeadingIds(html: string): string {
   return doc.body.innerHTML
 }
 
+/** 渲染结果小 LRU：同内容不重复解析（key 含 hljs 就绪态，避免缓存无高亮版本） */
+const RENDER_CACHE_MAX = 50
+const renderCache = new Map<string, string>()
+
+function renderCacheGet(key: string): string | undefined {
+  const hit = renderCache.get(key)
+  if (hit !== undefined) {
+    // 刷新 LRU 顺序
+    renderCache.delete(key)
+    renderCache.set(key, hit)
+  }
+  return hit
+}
+
+function renderCachePut(key: string, value: string) {
+  renderCache.delete(key)
+  renderCache.set(key, value)
+  if (renderCache.size > RENDER_CACHE_MAX) {
+    const oldest = renderCache.keys().next().value
+    if (oldest !== undefined) renderCache.delete(oldest)
+  }
+}
+
 /**
  * 将 Markdown 渲染为安全 HTML（GFM + KaTeX + 代码高亮）。
  * 代码高亮依赖 hljs 是否已加载；未加载时仍输出正确结构，可先 await prepareMarkdownHighlight()。
@@ -497,19 +520,25 @@ function withHeadingIds(html: string): string {
  */
 export function renderMarkdown(md: string): string {
   if (!md) return ''
+  const cacheKey = `md:${hljsReady ? 1 : 0}:${md}`
+  const cached = renderCacheGet(cacheKey)
+  if (cached !== undefined) return cached
   ensureRenderer()
+  let out: string
   try {
     const raw = md.replace(/\$\$\$/g, '$')
     const { text, pieces } = extractMath(raw)
     const html = marked.parse(text, { async: false }) as string
-    return withHeadingIds(sanitizeHtml(restoreMath(html, pieces)))
+    out = withHeadingIds(sanitizeHtml(restoreMath(html, pieces)))
   } catch {
-    return withHeadingIds(
+    out = withHeadingIds(
       sanitizeHtml(
         md.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'),
       ),
     )
   }
+  renderCachePut(cacheKey, out)
+  return out
 }
 
 /** 异步渲染：确保代码高亮可用 */

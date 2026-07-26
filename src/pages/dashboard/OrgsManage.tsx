@@ -41,14 +41,21 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Pagination } from '@/components/pagination'
+import { OrgRoleSelect } from '@/components/rbac/org-role-select'
+import { Perm } from '@/lib/permissions'
 import { orgRoleName } from '@/lib/roles'
 
 const MEMBER_PAGE_SIZE = 20
 
-/** 站点管理员：集中管理所有组织，无需切换当前组织 */
+/** 站点侧：集中管理所有组织，无需切换当前组织 */
 export function DashboardOrgsManage() {
-  const { isAdmin, user, refreshOrgs } = useAuth()
+  const { can, user, refreshOrgs } = useAuth()
+  const canListOrgs = can(Perm.SiteOrgList)
+  const canOrgPolicy = can(Perm.SiteOrgPolicy)
+  const canCreateOrg = can(Perm.SiteOrgCreate)
+  const canDeleteOrg = can(Perm.SiteOrgDelete)
   const [orgs, setOrgs] = useState<OrgInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<OrgInfo | null>(null)
@@ -72,6 +79,14 @@ export function DashboardOrgsManage() {
   const [emailSchedule, setEmailSchedule] = useState('30 7 * * *')
   const [status, setStatus] = useState('active')
   const [seatLimit, setSeatLimit] = useState(50)
+  /** 修改成员角色前二次确认（与组织设置页一致） */
+  const [roleConfirm, setRoleConfirm] = useState<{
+    orgId: number
+    userId: number
+    name: string
+    from: string
+    to: string
+  } | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -82,8 +97,8 @@ export function DashboardOrgsManage() {
   }, [])
 
   useEffect(() => {
-    if (isAdmin) void load()
-  }, [isAdmin, load])
+    if (canListOrgs) void load()
+  }, [canListOrgs, load])
 
   const loadMembers = useCallback(
     async (orgId: number, page: number, pageSize: number) => {
@@ -131,9 +146,11 @@ export function DashboardOrgsManage() {
     void loadMembers(selectedId, memberPage, memberPageSize)
   }, [selectedId, memberPage, memberPageSize, loadMembers])
 
-  if (!isAdmin) {
+  if (!canListOrgs) {
     return (
-      <div className="p-6 text-sm text-muted-foreground">仅站点管理员可使用此功能。</div>
+      <div className="p-6 text-sm text-muted-foreground">
+        需要站点管理员或获得相应授权后才能集中管理组织。
+      </div>
     )
   }
 
@@ -180,6 +197,7 @@ export function DashboardOrgsManage() {
 
   return (
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
+        {canCreateOrg ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">创建组织</CardTitle>
@@ -221,6 +239,7 @@ export function DashboardOrgsManage() {
             </Button>
           </CardContent>
         </Card>
+        ) : null}
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
@@ -280,7 +299,7 @@ export function DashboardOrgsManage() {
                   <CardDescription>改完设置后点保存；需要删除时用右侧按钮。</CardDescription>
                 ) : null}
               </div>
-              {selected && !selected.isSystem && (
+              {selected && !selected.isSystem && canDeleteOrg && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button type="button" variant="destructive" size="sm" disabled={saving}>
@@ -319,27 +338,34 @@ export function DashboardOrgsManage() {
                 <>
                   <div className="space-y-2">
                     <Label>品牌标题</Label>
-                    <Input value={brandTitle} onChange={(e) => setBrandTitle(e.target.value)} />
+                    <Input
+                      value={brandTitle}
+                      disabled={!canOrgPolicy}
+                      onChange={(e) => setBrandTitle(e.target.value)}
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <Label>状态</Label>
-                    <Select
-                      value={status}
-                      onValueChange={setStatus}
-                      disabled={selected.isSystem}
-                    >
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">正常</SelectItem>
-                        <SelectItem value="suspended">停用</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {canOrgPolicy && (
+                    <div className="space-y-2">
+                      <Label>状态</Label>
+                      <Select
+                        value={status}
+                        onValueChange={setStatus}
+                        disabled={selected.isSystem}
+                      >
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">正常</SelectItem>
+                          <SelectItem value="suspended">停用</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>加入方式</Label>
                     <Select
                       value={joinMode}
                       onValueChange={setJoinMode}
+                      disabled={!canOrgPolicy}
                     >
                       <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -348,67 +374,82 @@ export function DashboardOrgsManage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>用户数上限</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={seatLimit}
-                      onChange={(e) => setSeatLimit(Number(e.target.value) || 50)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      当前占用 {selected.memberCount ?? '—'} /{' '}
-                      {seatLimit && seatLimit > 0 ? seatLimit : 50}
-                      {selected.isSystem
-                        ? '。公共域只统计「未加入其它组织」的用户。'
-                        : '。达上限后无法再加入成员。'}
-                    </p>
-                  </div>
+                  {canOrgPolicy && (
+                    <div className="space-y-2">
+                      <Label>用户数上限</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={seatLimit}
+                        onChange={(e) => setSeatLimit(Number(e.target.value) || 50)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        当前占用 {selected.memberCount ?? '—'} /{' '}
+                        {seatLimit && seatLimit > 0 ? seatLimit : 50}
+                        {selected.isSystem
+                          ? '。公共域只统计「未加入其它组织」的用户。'
+                          : '。达上限后无法再加入成员。'}
+                      </p>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <Label>日报邮件（由组织开通）</Label>
-                    <Switch checked={enableAiEmail} onCheckedChange={setEnableAiEmail} />
+                    <Switch
+                      checked={enableAiEmail}
+                      disabled={!canOrgPolicy}
+                      onCheckedChange={setEnableAiEmail}
+                    />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>周报邮件（教练 / 队长 / 管理员）</Label>
                     <Switch
                       checked={enableAiWeeklyEmail}
+                      disabled={!canOrgPolicy}
                       onCheckedChange={setEnableAiWeeklyEmail}
                     />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>定时同步</Label>
-                    <Switch checked={enableSpider} onCheckedChange={setEnableSpider} />
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 flex-col gap-0.5">
-                      <Label>强制同步（不因长期未登录而暂停）</Label>
-                      <span className="text-xs text-muted-foreground">
-                        集训/比赛期：本组织成员不因不活跃暂停后台同步
-                      </span>
-                    </div>
-                    <Switch checked={forceSync} onCheckedChange={setForceSync} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>数据同步间隔（分钟）</Label>
-                    <Input
-                      type="number"
-                      value={spiderInterval}
-                      onChange={(e) => setSpiderInterval(Number(e.target.value))}
+                    <Switch
+                      checked={enableSpider}
+                      disabled={!canOrgPolicy}
+                      onCheckedChange={setEnableSpider}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>日报发送时间</Label>
-                    <Input
-                      value={emailSchedule}
-                      onChange={(e) => setEmailSchedule(e.target.value)}
-                      placeholder="例如 30 7 * * *，表示每天 7:30"
-                    />
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button disabled={saving} onClick={() => void saveSelected()}>
-                      {saving ? '保存中…' : '保存参数'}
-                    </Button>
-                  </div>
+                  {canOrgPolicy && (
+                    <>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                          <Label>强制同步（不因长期未登录而暂停）</Label>
+                          <span className="text-xs text-muted-foreground">
+                            集训/比赛期：本组织成员不因不活跃暂停后台同步
+                          </span>
+                        </div>
+                        <Switch checked={forceSync} onCheckedChange={setForceSync} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>数据同步间隔（分钟）</Label>
+                        <Input
+                          type="number"
+                          value={spiderInterval}
+                          onChange={(e) => setSpiderInterval(Number(e.target.value))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>日报发送时间</Label>
+                        <Input
+                          value={emailSchedule}
+                          onChange={(e) => setEmailSchedule(e.target.value)}
+                          placeholder="例如 30 7 * * *，表示每天 7:30"
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button disabled={saving} onClick={() => void saveSelected()}>
+                          {saving ? '保存中…' : '保存参数'}
+                        </Button>
+                      </div>
+                    </>
+                  )}
 
                   <div className="border-t pt-4">
                     <Label className="mb-2 block">搜索用户加入本组织</Label>
@@ -468,35 +509,20 @@ export function DashboardOrgsManage() {
                               {orgRoleName(m.role)}
                             </span>
                           </span>
-                          <Select
+                          <OrgRoleSelect
                             value={m.role || 'member'}
-                            onValueChange={(role) =>
-                              void setOrgMemberRole(
-                                selected.id,
-                                m.userId,
-                                role,
-                              ).then(async (r) => {
-                                if (r.success) {
-                                  toast.success('已更新')
-                                  await loadMembers(
-                                    selected.id,
-                                    memberPage,
-                                    memberPageSize,
-                                  )
-                                } else toast.error(r.message)
+                            triggerClassName="w-36 shrink-0"
+                            ariaLabel={`设置「${m.name || m.username}」的角色`}
+                            onRoleChange={(role) =>
+                              setRoleConfirm({
+                                orgId: selected.id,
+                                userId: m.userId,
+                                name: m.name || m.username,
+                                from: m.role || 'member',
+                                to: role,
                               })
                             }
-                          >
-                            <SelectTrigger className="w-36 shrink-0">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="org_admin">团队管理员</SelectItem>
-                              <SelectItem value="coach">教练</SelectItem>
-                              <SelectItem value="captain">队长</SelectItem>
-                              <SelectItem value="member">成员</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
                       ))}
                     {memberTotal > 0 && (
@@ -519,6 +545,33 @@ export function DashboardOrgsManage() {
             </CardContent>
           </Card>
         </div>
+
+        <ConfirmDialog
+          open={roleConfirm != null}
+          onOpenChange={(o) => {
+            if (!o) setRoleConfirm(null)
+          }}
+          title="修改成员角色？"
+          description={
+            roleConfirm
+              ? `确定将「${roleConfirm.name}」从「${orgRoleName(roleConfirm.from)}」改为「${orgRoleName(roleConfirm.to)}」？对方的后台权限会立即变化。`
+              : ''
+          }
+          confirmLabel="确认修改"
+          onConfirm={() => {
+            if (!roleConfirm) return
+            const target = roleConfirm
+            setRoleConfirm(null)
+            void setOrgMemberRole(target.orgId, target.userId, target.to).then(
+              async (r) => {
+                if (r.success) {
+                  toast.success('已更新角色')
+                  await loadMembers(target.orgId, memberPage, memberPageSize)
+                } else toast.error(r.message)
+              },
+            )
+          }}
+        />
       </div>
   )
 }

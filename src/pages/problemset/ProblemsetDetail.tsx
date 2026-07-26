@@ -95,6 +95,7 @@ import type {
 } from '@shared/api'
 import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { clipMetaText } from '@/lib/document-meta'
+import { safeLocalStorage, safeSessionStorage } from '@/lib/safe-storage'
 import { cn } from '@/lib/utils'
 
 const unlockKey = (id: string | number) => `ps_unlock_${id}`
@@ -108,8 +109,7 @@ const visLabel: Record<string, string> = {
 }
 
 function readShowTagsPref(): boolean {
-  if (typeof localStorage === 'undefined') return true
-  const v = localStorage.getItem(SHOW_TAGS_PREF_KEY)
+  const v = safeLocalStorage.get(SHOW_TAGS_PREF_KEY)
   if (v === null) return true
   return v !== '0' && v !== 'false'
 }
@@ -133,6 +133,8 @@ export function ProblemsetDetail() {
   const [locked, setLocked] = useState(false)
   const [password, setPassword] = useState('')
   const [unlocking, setUnlocking] = useState(false)
+  /** 竞态守卫：丢弃过期的题单详情响应 */
+  const loadRequestId = useRef(0)
 
   useDocumentMeta(
     set
@@ -186,11 +188,7 @@ export function ProblemsetDetail() {
 
   function handleShowTagsChange(on: boolean) {
     setShowTags(on)
-    try {
-      localStorage.setItem(SHOW_TAGS_PREF_KEY, on ? '1' : '0')
-    } catch {
-      /* ignore quota / private mode */
-    }
+    safeLocalStorage.set(SHOW_TAGS_PREF_KEY, on ? '1' : '0')
   }
 
   useEffect(() => {
@@ -218,12 +216,12 @@ export function ProblemsetDetail() {
 
   const load = useCallback(async () => {
     if (!id) return
+    const rid = ++loadRequestId.current
     setLoading(true)
-    const token =
-      typeof sessionStorage !== 'undefined'
-        ? sessionStorage.getItem(unlockKey(id)) || undefined
-        : undefined
+    const token = safeSessionStorage.get(unlockKey(id)) || undefined
     const res = await getProblemset(id, token)
+    // 快速切换题单时丢弃旧响应，避免旧数据覆盖新题单
+    if (rid !== loadRequestId.current) return
     if (res.success && res.data) {
       setSet(res.data)
       setLocked(false)
@@ -258,7 +256,7 @@ export function ProblemsetDetail() {
       toast.error(res.message || '密码错误')
       return
     }
-    sessionStorage.setItem(unlockKey(id), res.data.unlockToken)
+    safeSessionStorage.set(unlockKey(id), res.data.unlockToken)
     setPassword('')
     toast.success('已解锁')
     void load()
@@ -345,12 +343,16 @@ export function ProblemsetDetail() {
     let ok = 0
     let fail = 0
     let lastErr = ''
-    for (const item of removePlan) {
-      const res = await removeProblemFromSet(setId, item.problemId)
-      if (res.success) ok++
+    // 并发移除；单条失败不影响其他条目
+    const results = await Promise.allSettled(
+      removePlan.map((item) => removeProblemFromSet(setId, item.problemId)),
+    )
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value.success) ok++
       else {
         fail++
-        lastErr = res.message || '移除失败'
+        lastErr =
+          (r.status === 'fulfilled' ? r.value.message : '') || '移除失败'
       }
     }
     setBusyConfirm(false)

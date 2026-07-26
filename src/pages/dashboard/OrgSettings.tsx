@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link2Icon, Share2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
@@ -19,6 +19,8 @@ import type { OrgMemberInfo, UserProfile } from '@shared/api'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ImageUploadTile } from '@/components/image-upload-tile'
 import { Pagination } from '@/components/pagination'
+import { OrgRoleSelect } from '@/components/rbac/org-role-select'
+import { RoleManager } from '@/components/rbac/role-manager'
 import { useListQueryState } from '@/hooks/use-list-query-state'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -42,14 +44,30 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { buildDomainShareUrl } from '@/lib/domain-hint'
 import { buildOrgInviteUrl } from '@/lib/org-invite'
+import { Perm } from '@/lib/permissions'
 import { orgRoleName } from '@/lib/roles'
 import { OrgTrainingReportCard } from '@/pages/dashboard/OrgTrainingReportCard'
 
 const DEFAULT_MEMBER_PAGE_SIZE = 10
 
 export function DashboardOrgSettings() {
-  const { isAdmin, isOrgAdmin, isStaff, currentOrg, user, refreshOrgs } = useAuth()
+  const { currentOrg, user, refreshOrgs, can } = useAuth()
   const orgId = currentOrg?.id || user?.orgId || 0
+
+  // 细粒度权限判定（站管 / 团队管理员 / 自定义角色统一走 can()）
+  const canEditInfo = can(Perm.OrgInfoWrite)
+  const canTogglePolicy = can(Perm.OrgPolicyToggle)
+  const canEditOrg = canEditInfo || canTogglePolicy
+  const canSitePolicy = can(Perm.SiteOrgPolicy)
+  const canViewReport = can(Perm.OrgReportView)
+  const canManageRoles = can(Perm.OrgRoleManage)
+  const canAddMember = can(Perm.OrgMemberAdd)
+  const canSetMemberRole = can(Perm.OrgMemberRole)
+  const canRemoveMember = can(Perm.OrgMemberRemove)
+  const canReviewJoin = can(Perm.OrgJoinReview)
+  const canViewInvite = can(Perm.OrgInviteView)
+  const canRotateInvite = can(Perm.OrgInviteRotate)
+  const canViewMembers = canSetMemberRole || canRemoveMember
 
   const {
     page: memberPage,
@@ -77,6 +95,8 @@ export function DashboardOrgSettings() {
   const [memberKeyword, setMemberKeyword] = useState('')
   const [memberKeywordDraft, setMemberKeywordDraft] = useState('')
   const [membersLoading, setMembersLoading] = useState(false)
+  /** 竞态守卫：丢弃过期的成员列表响应 */
+  const membersRequestId = useRef(0)
   const [requests, setRequests] = useState<
     { id: number; name: string; username: string; orgDisplayName?: string }[]
   >([])
@@ -125,22 +145,26 @@ export function DashboardOrgSettings() {
   }
 
   const loadMembers = useCallback(async () => {
-    if (!orgId) return
+    if (!orgId || !canViewMembers) return
+    const rid = ++membersRequestId.current
     setMembersLoading(true)
     const r = await listOrgMembers(orgId, {
       page: memberPage,
       pageSize: memberPageSize,
       keyword: memberKeyword,
     })
+    // 快速翻页/搜索时丢弃旧响应
+    if (rid !== membersRequestId.current) return
     setMembersLoading(false)
     if (r.success) {
       setMembers(r.list)
       setMemberTotal(r.total)
     }
-  }, [orgId, memberPage, memberPageSize, memberKeyword])
+  }, [orgId, canViewMembers, memberPage, memberPageSize, memberKeyword])
 
   useEffect(() => {
     if (!orgId) return
+    let cancelled = false
     setBrandTitle(currentOrg?.brandTitle || '')
     setBrandLogo(currentOrg?.brandLogo || '')
     setJoinMode(currentOrg?.joinMode || 'auto')
@@ -149,11 +173,24 @@ export function DashboardOrgSettings() {
     setEnableSpider(currentOrg?.enableSpider !== false)
     setSpiderInterval(currentOrg?.spiderIntervalMin || 60)
     setEmailSchedule(currentOrg?.aiEmailSchedule || '30 7 * * *')
-    void getInvite(orgId).then((r) => {
-      if (r.inviteCode) setInviteCode(r.inviteCode)
-    })
-    void listJoinRequests(orgId).then((r) => setRequests(r.list as typeof requests))
-  }, [orgId, currentOrg])
+    if (canViewInvite) {
+      void getInvite(orgId).then((r) => {
+        if (cancelled) return
+        if (r.inviteCode) setInviteCode(r.inviteCode)
+      })
+    }
+    if (canReviewJoin) {
+      void listJoinRequests(orgId).then((r) => {
+        if (cancelled) return
+        setRequests(r.list as typeof requests)
+      })
+    }
+    return () => {
+      cancelled = true
+    }
+    // 仅在切换组织时重置草稿；依赖整个 currentOrg 会因对象引用变化反复重跑
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId, currentOrg?.id, canViewInvite, canReviewJoin])
 
   useEffect(() => {
     void loadMembers()
@@ -164,13 +201,18 @@ export function DashboardOrgSettings() {
       setAddCandidates([])
       return
     }
+    let cancelled = false
     const t = window.setTimeout(async () => {
       setAddSearching(true)
       const res = await getProfileByName(addSearch.trim())
+      if (cancelled) return
       setAddSearching(false)
       if (res.success) setAddCandidates(res.data || [])
     }, 350)
-    return () => window.clearTimeout(t)
+    return () => {
+      cancelled = true
+      window.clearTimeout(t)
+    }
   }, [addSearch])
 
   async function onLogoUpload(file: File | null) {
@@ -198,7 +240,7 @@ export function DashboardOrgSettings() {
       enableAiWeeklyEmail,
       enableSpider,
     }
-    if (isAdmin) {
+    if (canSitePolicy) {
       payload.spiderIntervalMin = spiderInterval
       payload.aiEmailSchedule = emailSchedule
     }
@@ -209,69 +251,82 @@ export function DashboardOrgSettings() {
     } else toast.error(res.message || '保存失败，请稍后重试')
   }
 
-  // 教练/队长：仅训练报告；团队管理员/站管：完整组织设置
-  if (!isAdmin && !isOrgAdmin && !isStaff) {
+  // 按持有的权限决定可见区块；一个都没有则拒绝访问
+  const hasOrgAdminAccess =
+    canViewReport ||
+    canEditOrg ||
+    canManageRoles ||
+    canAddMember ||
+    canViewMembers ||
+    canReviewJoin ||
+    canViewInvite
+  if (!hasOrgAdminAccess) {
     return (
       <div className="p-6 text-sm text-muted-foreground">
-        需要教练、队长、团队管理员或站点管理员才能访问。
+        你还没有本组织的管理权限；需要教练、队长、团队管理员或获得相应授权后才能访问。
       </div>
     )
   }
 
-  const canEditOrg = isAdmin || isOrgAdmin
-
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-      {(isStaff || isAdmin) && orgId > 0 ? <OrgTrainingReportCard orgId={orgId} /> : null}
+      {canViewReport && orgId > 0 ? <OrgTrainingReportCard orgId={orgId} /> : null}
 
       {canEditOrg ? (
-      <>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">组织品牌与加入方式</CardTitle>
           <CardDescription>{currentOrg?.name || '当前组织'}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>组织名称（显示在侧栏）</Label>
-            <Input value={brandTitle} onChange={(e) => setBrandTitle(e.target.value)} />
-          </div>
-          <ImageUploadTile
-            label="组织 Logo"
-            value={brandLogo}
-            uploading={logoUploading}
-            sizeClass="size-28"
-            onFile={(file) => void onLogoUpload(file)}
-          />
-          <div className="space-y-2">
-            <Label>加入方式</Label>
-            <Select
-              value={joinMode}
-              onValueChange={setJoinMode}
-            >
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="auto">识别码自动通过</SelectItem>
-                <SelectItem value="review">需管理员审批</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>日报邮件（由组织开通）</Label>
-            <Switch checked={enableAiEmail} onCheckedChange={setEnableAiEmail} />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>周报邮件（教练 / 队长 / 管理员）</Label>
-            <Switch
-              checked={enableAiWeeklyEmail}
-              onCheckedChange={setEnableAiWeeklyEmail}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>定时同步</Label>
-            <Switch checked={enableSpider} onCheckedChange={setEnableSpider} />
-          </div>
-          {isAdmin && (
+          {canEditInfo && (
+            <>
+              <div className="space-y-2">
+                <Label>组织名称（显示在侧栏）</Label>
+                <Input value={brandTitle} onChange={(e) => setBrandTitle(e.target.value)} />
+              </div>
+              <ImageUploadTile
+                label="组织 Logo"
+                value={brandLogo}
+                uploading={logoUploading}
+                sizeClass="size-28"
+                onFile={(file) => void onLogoUpload(file)}
+              />
+              <div className="space-y-2">
+                <Label>加入方式</Label>
+                <Select
+                  value={joinMode}
+                  onValueChange={setJoinMode}
+                >
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">识别码自动通过</SelectItem>
+                    <SelectItem value="review">需管理员审批</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+          {canTogglePolicy && (
+            <>
+              <div className="flex items-center justify-between">
+                <Label>日报邮件（由组织开通）</Label>
+                <Switch checked={enableAiEmail} onCheckedChange={setEnableAiEmail} />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>周报邮件（教练 / 队长 / 管理员）</Label>
+                <Switch
+                  checked={enableAiWeeklyEmail}
+                  onCheckedChange={setEnableAiWeeklyEmail}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>定时同步</Label>
+                <Switch checked={enableSpider} onCheckedChange={setEnableSpider} />
+              </div>
+            </>
+          )}
+          {canSitePolicy && (
             <>
               <div className="space-y-2">
                 <Label>数据同步间隔（分钟，仅站点管理员可改）</Label>
@@ -294,7 +349,7 @@ export function DashboardOrgSettings() {
               </div>
             </>
           )}
-          {!isAdmin && (
+          {!canSitePolicy && (
             <p className="text-xs text-muted-foreground">
               由站点管理员配置：数据同步每 {spiderInterval} 分钟 · 日报发送：
               {emailSchedule || '—'}
@@ -303,7 +358,9 @@ export function DashboardOrgSettings() {
           <Button onClick={() => void save()}>保存设置</Button>
         </CardContent>
       </Card>
+      ) : null}
 
+      {canViewInvite ? (
       <Card>
         <CardHeader>
           <CardTitle className="text-base">邀请加入</CardTitle>
@@ -329,23 +386,25 @@ export function DashboardOrgSettings() {
             >
               复制识别码
             </Button>
-            <ConfirmDialog
-              title="更换团队识别码？"
-              description="更换后旧识别码与旧邀请链接立即失效。确定继续？"
-              confirmLabel="更换"
-              onConfirm={() =>
-                void rotateInvite(orgId).then((r) => {
-                  if (r.success) {
-                    setInviteCode(r.inviteCode || '')
-                    toast.success('已更换识别码')
-                  } else toast.error(r.message)
-                })
-              }
-            >
-              <Button variant="outline" size="sm">
-                更换识别码
-              </Button>
-            </ConfirmDialog>
+            {canRotateInvite ? (
+              <ConfirmDialog
+                title="更换团队识别码？"
+                description="更换后旧识别码与旧邀请链接立即失效。确定继续？"
+                confirmLabel="更换"
+                onConfirm={() =>
+                  void rotateInvite(orgId).then((r) => {
+                    if (r.success) {
+                      setInviteCode(r.inviteCode || '')
+                      toast.success('已更换识别码')
+                    } else toast.error(r.message)
+                  })
+                }
+              >
+                <Button variant="outline" size="sm">
+                  更换识别码
+                </Button>
+              </ConfirmDialog>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-muted-foreground">邀请链接</span>
@@ -368,7 +427,10 @@ export function DashboardOrgSettings() {
           </div>
         </CardContent>
       </Card>
+      ) : null}
 
+      {canEditOrg ? (
+      <>
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
           <div className="flex min-w-0 flex-col gap-1.5">
@@ -440,8 +502,10 @@ export function DashboardOrgSettings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </>
+      ) : null}
 
-      {requests.length > 0 && (
+      {canReviewJoin && requests.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">待审批加入</CardTitle>
@@ -490,6 +554,7 @@ export function DashboardOrgSettings() {
         </Card>
       )}
 
+      {canAddMember ? (
       <Card>
         <CardHeader>
           <CardTitle className="text-base">搜索用户加入本组织</CardTitle>
@@ -534,7 +599,9 @@ export function DashboardOrgSettings() {
           ))}
         </CardContent>
       </Card>
+      ) : null}
 
+      {canViewMembers ? (
       <Card>
         <CardHeader>
           <CardTitle className="text-base">成员与角色</CardTitle>
@@ -582,7 +649,8 @@ export function DashboardOrgSettings() {
           ) : (
             members.map((m) => {
               const label = m.name || m.orgDisplayName || m.username || String(m.userId)
-              const canRemove = !isSystemOrg && m.userId !== myUserId
+              const canRemove =
+                canRemoveMember && !isSystemOrg && m.userId !== myUserId
               return (
                 <div
                   key={m.userId}
@@ -595,28 +663,20 @@ export function DashboardOrgSettings() {
                     </span>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    <Select
-                      value={m.role || 'member'}
-                      onValueChange={(role) => {
-                        if (role === (m.role || 'member')) return
-                        setRoleConfirm({
-                          userId: m.userId,
-                          name: label,
-                          from: m.role || 'member',
-                          to: role,
-                        })
-                      }}
-                    >
-                      <SelectTrigger className="w-36">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="member">成员</SelectItem>
-                        <SelectItem value="captain">队长</SelectItem>
-                        <SelectItem value="coach">教练</SelectItem>
-                        <SelectItem value="org_admin">团队管理员</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {canSetMemberRole ? (
+                      <OrgRoleSelect
+                        value={m.role || 'member'}
+                        ariaLabel={`设置「${label}」的角色`}
+                        onRoleChange={(role) =>
+                          setRoleConfirm({
+                            userId: m.userId,
+                            name: label,
+                            from: m.role || 'member',
+                            to: role,
+                          })
+                        }
+                      />
+                    ) : null}
                     {canRemove ? (
                       <Button
                         variant="outline"
@@ -646,7 +706,20 @@ export function DashboardOrgSettings() {
           />
         </CardContent>
       </Card>
-      </>
+      ) : null}
+
+      {canManageRoles && orgId > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">角色与权限</CardTitle>
+            <CardDescription>
+              内置角色（成员 / 队长 / 教练 / 团队管理员）的权限固定；也可以新建角色、自由勾选权限，并把组织成员加进来。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RoleManager scope="org" orgId={orgId} />
+          </CardContent>
+        </Card>
       ) : null}
 
       <ConfirmDialog

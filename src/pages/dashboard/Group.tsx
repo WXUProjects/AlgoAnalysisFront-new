@@ -10,6 +10,7 @@ import {
 } from '@/api/group'
 import { getProfileByName, moveGroup } from '@/api/profile'
 import type { GroupInfo, UserListItem, UserProfile } from '@shared/api'
+import { useAuth } from '@/auth/AuthContext'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
@@ -52,12 +53,15 @@ import {
 } from '@/components/ui/table'
 import { useListQueryState } from '@/hooks/use-list-query-state'
 import { formatTime } from '@/lib/format'
+import { Perm } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 
 const DEFAULT_PAGE_SIZE = 20
 const MEMBER_PAGE_SIZE = 20
 
 export function DashboardGroup() {
+  const { can } = useAuth()
+  const canManage = can(Perm.OrgGroupManage)
   const { page, pageSize, setPage, setPageSize } = useListQueryState({
     defaultPageSize: DEFAULT_PAGE_SIZE,
   })
@@ -117,8 +121,13 @@ export function DashboardGroup() {
   )
 
   useEffect(() => {
+    // 无分组管理权限时不发请求
+    if (!canManage) {
+      setLoading(false)
+      return
+    }
     void loadList()
-  }, [loadList])
+  }, [canManage, loadList])
 
   // 切换分组时回到成员第 1 页
   useEffect(() => {
@@ -219,6 +228,16 @@ export function DashboardGroup() {
   }
 
   const members: UserListItem[] = detail?.users || []
+
+  if (!canManage) {
+    return (
+      <PageShell>
+        <p className="text-sm text-muted-foreground">
+          你还没有管理分组的权限。如有需要，请联系团队管理员开通。
+        </p>
+      </PageShell>
+    )
+  }
 
   return (
     <PageShell className="grid gap-4 grid-cols-1 lg:grid-cols-[280px_1fr]">

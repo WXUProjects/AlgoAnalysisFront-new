@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { SearchIcon, UserPlusIcon, UserMinusIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -36,6 +36,9 @@ import { cn } from '@/lib/utils'
 
 const DEFAULT_PAGE_SIZE = 20
 
+/** userId → 是否已关注；同一用户不重复请求（关注/取关时同步更新） */
+const relationCache = new Map<number, boolean>()
+
 type TabKey = 'following' | 'followers' | 'search'
 
 export function Social() {
@@ -64,6 +67,8 @@ export function Social() {
   const [qInput, setQInput] = useState(qParam)
   const [relationMap, setRelationMap] = useState<Record<number, boolean>>({})
   const [busyId, setBusyId] = useState(0)
+  /** 竞态守卫：丢弃过期的列表响应 */
+  const loadRequestId = useRef(0)
 
   const isSelf =
     Boolean(isLogin && user && username && user.username === username) ||
@@ -72,6 +77,11 @@ export function Social() {
   useEffect(() => {
     setQInput(qParam)
   }, [qParam])
+
+  // 账号切换时关系缓存作废，避免串号
+  useEffect(() => {
+    relationCache.clear()
+  }, [user?.userId])
 
   // 解析目标用户（主展示名走域感知 identity）
   useEffect(() => {
@@ -117,9 +127,12 @@ export function Social() {
   }, [username, user])
 
   const load = useCallback(async () => {
+    const rid = ++loadRequestId.current
     setLoading(true)
     if (tab === 'search') {
       const res = await searchUsers(qParam, page, pageSize)
+      // 快速切 tab / 翻页时丢弃旧响应
+      if (rid !== loadRequestId.current) return
       setLoading(false)
       if (!res.success || !res.data) {
         toast.error(res.message || '搜索失败，请稍后重试')
@@ -141,6 +154,7 @@ export function Social() {
       tab === 'followers'
         ? await listFollowers(targetUserId, page, pageSize)
         : await listFollowing(targetUserId, page, pageSize)
+    if (rid !== loadRequestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '用户列表加载失败，请稍后重试')
@@ -168,8 +182,17 @@ export function Social() {
       await Promise.all(
         list.map(async (u) => {
           if (user && u.userId === user.userId) return
+          // 命中缓存：同一用户不重复请求
+          const cached = relationCache.get(u.userId)
+          if (cached !== undefined) {
+            next[u.userId] = cached
+            return
+          }
           const r = await getSocialRelation(u.userId)
-          if (r.success && r.data) next[u.userId] = r.data.isFollowing
+          if (r.success && r.data) {
+            next[u.userId] = r.data.isFollowing
+            relationCache.set(u.userId, r.data.isFollowing)
+          }
         }),
       )
       if (!cancelled) setRelationMap(next)
@@ -245,6 +268,7 @@ export function Social() {
       toast.error(res.message || '操作未完成，请稍后重试')
       return
     }
+    relationCache.set(u.userId, !following)
     setRelationMap((m) => ({ ...m, [u.userId]: !following }))
     toast.success(following ? '已取消关注' : '已关注')
   }

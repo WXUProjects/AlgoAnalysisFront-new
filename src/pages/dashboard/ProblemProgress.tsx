@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
@@ -50,6 +50,8 @@ import {
 } from '@/components/ui/tooltip'
 import { cleanProblemTitle, formatPipelineStage, formatTime } from '@/lib/format'
 import { num, str } from '@/lib/http'
+import { Perm } from '@/lib/permissions'
+import { safeLocalStorage } from '@/lib/safe-storage'
 
 /** 本地隐藏的失败列表题目 ID，不改后端状态 */
 const HIDDEN_PERM_KEY = 'goalgo.problem.hiddenFailedPerm'
@@ -57,7 +59,7 @@ const HIDDEN_FAILED_KEY = 'goalgo.problem.hiddenRecentFailed'
 
 function readHiddenIds(key: string): Set<number> {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = safeLocalStorage.get(key)
     if (!raw) return new Set()
     const arr = JSON.parse(raw) as unknown
     if (!Array.isArray(arr)) return new Set()
@@ -70,7 +72,7 @@ function readHiddenIds(key: string): Set<number> {
 }
 
 function writeHiddenIds(key: string, ids: Set<number>) {
-  localStorage.setItem(key, JSON.stringify([...ids]))
+  safeLocalStorage.set(key, JSON.stringify([...ids]))
 }
 
 function ActionTip({
@@ -113,7 +115,8 @@ const STATUS_HINT: Record<string, string> = {
 }
 
 export function DashboardProblemProgress() {
-  const { isAdmin } = useAuth()
+  const { can } = useAuth()
+  const canProblemOps = can(Perm.SiteProblemOps)
   const [data, setData] = useState<ProblemProgressData | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -123,10 +126,15 @@ export function DashboardProblemProgress() {
   const [hiddenFailedIds, setHiddenFailedIds] = useState<Set<number>>(() =>
     readHiddenIds(HIDDEN_FAILED_KEY),
   )
+  /** 竞态守卫：轮询/手动刷新只采纳最新响应 */
+  const requestId = useRef(0)
 
   const load = useCallback(async (silent = false) => {
+    const rid = ++requestId.current
     if (!silent) setLoading(true)
     const res = await getProblemProgress()
+    // 轮询与手动刷新并发时只采纳最新响应；卸载后不再 setState
+    if (rid !== requestId.current) return
     if (!silent) setLoading(false)
     if (!res.success || !res.data) {
       if (!silent) toast.error(res.message || '进度加载失败，请稍后重试')
@@ -146,9 +154,12 @@ export function DashboardProblemProgress() {
       if (document.visibilityState === 'visible') void load(true)
     }
     document.addEventListener('visibilitychange', onVis)
+    const rid = requestId
     return () => {
       window.clearInterval(t)
       document.removeEventListener('visibilitychange', onVis)
+      // 使在途请求失效，卸载后不再 setState
+      rid.current++
     }
   }, [load])
 
@@ -255,7 +266,7 @@ export function DashboardProblemProgress() {
             暂停不会丢失待处理任务
           </p>
         </div>
-        {isAdmin && (
+        {canProblemOps && (
           <div className="flex flex-wrap gap-2">
             <ActionTip tip="立即刷新当前进度（页面也会每 5 秒自动更新）">
               <Button
@@ -497,7 +508,7 @@ export function DashboardProblemProgress() {
           <CardDescription className="text-xs">
             可恢复的失败；「清空并停重试」会停止自动退避重试（标为永久失败，可再手动重试）
           </CardDescription>
-          {isAdmin && (
+          {canProblemOps && (
             <CardAction>
               <div className="flex flex-wrap items-center gap-2">
                 <ActionTip tip="只重试近 6 个月内可恢复的失败题目；永久失败的不会重试">
@@ -579,7 +590,7 @@ export function DashboardProblemProgress() {
               硬错误（付费题等）不再自动重试；WAF/暂无权限/未找到题面会先退避，满 24
               小时才进此列。可点「重试永久失败」再排队
             </CardDescription>
-            {isAdmin && (
+            {canProblemOps && (
               <CardAction>
                 <div className="flex flex-wrap items-center gap-2">
                   <ActionTip tip="把近 6 个月内可恢复的永久失败重新排队（DOM/WAF/暂无权限等）；付费题、QOJ 无权限等硬错误不会纳入">

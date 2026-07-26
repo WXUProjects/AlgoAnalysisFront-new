@@ -9,7 +9,7 @@ import {
   MoreHorizontalIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { bottomNavStaffLabel } from '@/lib/roles'
+import { bottomNavStaffLabel, type StaffLabelPayload } from '@/lib/roles'
 
 /**
  * 固定底栏总高度（内容 h-14 + 底部安全区）。
@@ -74,14 +74,10 @@ function isMoreActive(
 
 type Props = {
   isLogin: boolean
-  isStaff: boolean
-  isSiteAdmin: boolean
-  isOrgAdmin: boolean
-  isCoach: boolean
-  isCaptain: boolean
-  /** 资源审核员（可无组织 staff） */
-  isContentModerator?: boolean
-  isResourceReviewer?: boolean
+  /** 可进管理后台：内置角色 / 资源审核员 / 持有任意管理权限（自定义角色） */
+  canAccessAdmin: boolean
+  /** 当前登录用户 JWT payload：管理入口文案按身份推导 */
+  user?: StaffLabelPayload | null
   sheetOpen: boolean
   onMoreClick: () => void
 }
@@ -96,38 +92,24 @@ type RenderItem =
  * 移动端全局底部导航栏（仅 md:hidden）。
  *
  * 已登录普通成员 5 Tab：首页 / 发现 / 比赛 / 题库 / 更多
- * 已登录 staff 6 Tab：首页 / 发现 / 比赛 / 题库 / 管理 / 更多
- *   管理入口在题库右侧；文案按角色：站点管理 > 组织管理 > 教练管理 > 队长管理
+ * 已登录管理身份 6 Tab：首页 / 发现 / 比赛 / 题库 / 管理 / 更多
+ *   管理入口在题库右侧；文案按身份：站点管理 > 资源审核 > 组织管理 > 教练管理 > 队长管理，
+ *   无内置角色但持自定义权限时显示「管理中心」
  * 未登录 5 Tab：关于 / 发现 / 比赛 / 题库 / 更多
  *
  * Sheet 打开时更多按钮高亮；/about 仅登录态归 More。
  */
 export function MainBottomNav({
   isLogin,
-  isStaff,
-  isSiteAdmin,
-  isOrgAdmin,
-  isCoach,
-  isCaptain,
-  isContentModerator = false,
-  isResourceReviewer = false,
+  canAccessAdmin,
+  user,
   sheetOpen,
   onMoreClick,
 }: Props) {
   const { pathname } = useLocation()
   const moreActive = isMoreActive(pathname, sheetOpen, isLogin)
 
-  const adminLabel = bottomNavStaffLabel({
-    isSiteAdmin,
-    isResourceReviewer,
-    orgRole: isOrgAdmin
-      ? 'org_admin'
-      : isCoach
-        ? 'coach'
-        : isCaptain
-          ? 'captain'
-          : undefined,
-  })
+  const adminLabel = bottomNavStaffLabel(user)
 
   const items: RenderItem[] = []
   for (const item of BOTTOM_ITEMS) {
@@ -137,8 +119,8 @@ export function MainBottomNav({
     }
     items.push({ kind: 'link', item })
   }
-  // staff / 资源审核员：在题库右侧、更多左侧插入管理入口
-  if (isStaff || isContentModerator) {
+  // 有管理权限（内置角色 / 审核员 / 自定义角色）：在题库右侧、更多左侧插入管理入口
+  if (canAccessAdmin) {
     items.push({ kind: 'admin', label: adminLabel })
   }
   items.push({ kind: 'more' })

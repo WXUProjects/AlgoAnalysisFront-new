@@ -259,8 +259,19 @@ export async function fetchProfileById(
   return getProfileById(userId)
 }
 
+/** 模块级 single-flight：并发调用复用同一个在途 refresh 请求 */
+let refreshInFlight: Promise<ApiResult<LoginRes>> | null = null
+
 /** 用当前登录态换新令牌（角色变更后刷新，权限才能同步到界面） */
-export async function refreshToken(): Promise<ApiResult<LoginRes>> {
+export function refreshToken(): Promise<ApiResult<LoginRes>> {
+  if (refreshInFlight) return refreshInFlight
+  refreshInFlight = doRefreshToken().finally(() => {
+    refreshInFlight = null
+  })
+  return refreshInFlight
+}
+
+async function doRefreshToken(): Promise<ApiResult<LoginRes>> {
   try {
     // skipAuthExpired：refresh 401 不触发全局登出风暴，由 AuthContext 决定
     const res = await http.post<LoginRes>(

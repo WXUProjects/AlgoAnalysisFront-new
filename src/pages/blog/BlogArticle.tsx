@@ -39,6 +39,7 @@ import {
 } from '@/lib/blog-nav'
 import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { clipMetaText } from '@/lib/document-meta'
+import { safeSessionStorage } from '@/lib/safe-storage'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogArticle as BlogArticleType } from '@shared/api'
 
@@ -65,45 +66,42 @@ export function BlogArticlePage() {
   const [related, setRelated] = useState<BlogArticleType[]>([])
   const [reporting, setReporting] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
+  /** 竞态守卫：快速切换文章时丢弃旧响应 */
+  const loadRequestId = useRef(0)
 
   const load = async (unlockToken?: string) => {
+    const rid = ++loadRequestId.current
     setLoading(true)
-    const stored =
-      unlockToken ||
-      (typeof sessionStorage !== 'undefined'
-        ? sessionStorage.getItem(unlockKey(0))
-        : null)
+    const stored = unlockToken || safeSessionStorage.get(unlockKey(0))
     void stored
-    const tokenFromStore =
-      typeof sessionStorage !== 'undefined' && article?.id
-        ? sessionStorage.getItem(unlockKey(article.id)) || undefined
-        : undefined
+    const tokenFromStore = article?.id
+      ? safeSessionStorage.get(unlockKey(article.id)) || undefined
+      : undefined
     const res = await getBlogArticle({
       username,
       slug,
       unlockToken: unlockToken || tokenFromStore,
     })
+    if (rid !== loadRequestId.current) return
     if (!res.success || !res.data) {
       setArticle(null)
       setLoading(false)
       return
     }
     if (res.data.requiresPassword && !res.data.canSeeBody) {
-      const t =
-        typeof sessionStorage !== 'undefined'
-          ? sessionStorage.getItem(unlockKey(res.data.id))
-          : null
+      const t = safeSessionStorage.get(unlockKey(res.data.id))
       if (t && !unlockToken) {
         const again = await getBlogArticle({
           username,
           slug,
           unlockToken: t,
         })
+        if (rid !== loadRequestId.current) return
         if (again.success && again.data) {
           setArticle(again.data)
           setLoading(false)
           if (again.data.canSeeBody) {
-            void loadRelated(again.data)
+            void loadRelated(again.data, rid)
           }
           setBreadcrumb([
             { label: '首页', to: `/blog/${username}` },
@@ -116,7 +114,7 @@ export function BlogArticlePage() {
     setArticle(res.data)
     setLoading(false)
     if (res.data.canSeeBody) {
-      void loadRelated(res.data)
+      void loadRelated(res.data, rid)
     }
     setBreadcrumb([
       { label: '首页', to: `/blog/${username}` },
@@ -124,13 +122,14 @@ export function BlogArticlePage() {
     ])
   }
 
-  const loadRelated = async (a: BlogArticleType) => {
+  const loadRelated = async (a: BlogArticleType, rid?: number) => {
     const res = await listBlogByUsername({
       username,
       page: 1,
       pageSize: 8,
       categoryId: a.categoryId || undefined,
     })
+    if (rid !== undefined && rid !== loadRequestId.current) return
     if (!res.success || !res.data) {
       setRelated([])
       return
@@ -240,11 +239,11 @@ export function BlogArticlePage() {
       return
     }
     if (res.data.unlockToken) {
-      sessionStorage.setItem(unlockKey(article.id), res.data.unlockToken)
+      safeSessionStorage.set(unlockKey(article.id), res.data.unlockToken)
     }
     setArticle(res.data)
     toast.success('已解锁')
-    void loadRelated(res.data)
+    void loadRelated(res.data, loadRequestId.current)
   }
 
   async function handleLike() {

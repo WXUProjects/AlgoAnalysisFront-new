@@ -257,9 +257,14 @@ export function ContestRecords() {
       setTitleName('')
       return
     }
+    let cancelled = false
     void getProfileById(targetUserId).then((res) => {
+      if (cancelled) return
       if (res.success && res.data) setTitleName(res.data.name || res.data.username)
     })
+    return () => {
+      cancelled = true
+    }
   }, [userMode, targetUserId])
 
   function showAll() {

@@ -48,6 +48,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatTime } from '@/lib/format'
+import { Perm } from '@/lib/permissions'
 
 const DEFAULT_PAGE_SIZE = 15
 
@@ -66,7 +67,8 @@ function statusVariant(s: string): 'default' | 'secondary' | 'outline' | 'destru
 }
 
 export function DashboardProblemEditReview() {
-  const { isContentModerator, ready } = useAuth()
+  const { can, ready } = useAuth()
+  const canReview = can(Perm.ContentProblemReview)
   const { page, pageSize, setPage, setPageSize } = useListQueryState({
     defaultPageSize: DEFAULT_PAGE_SIZE,
   })
@@ -96,9 +98,9 @@ export function DashboardProblemEditReview() {
   }, [page, pageSize, status])
 
   useEffect(() => {
-    if (!ready || !isContentModerator) return
+    if (!ready || !canReview) return
     void load()
-  }, [load, ready, isContentModerator])
+  }, [load, ready, canReview])
 
   async function handleReview(approve: boolean) {
     if (!detail) return
@@ -119,7 +121,7 @@ export function DashboardProblemEditReview() {
     void load()
   }
 
-  if (ready && !isContentModerator) {
+  if (ready && !canReview) {
     return <Navigate to="/" replace />
   }
 

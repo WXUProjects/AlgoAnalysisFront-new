@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { listAllGroups } from '@/api/group'
@@ -16,8 +16,9 @@ import {
   setSyncIntervals,
   setUserDisabled,
 } from '@/api/profile'
+import { assignRole, listRoles, listRoleMembers, unassignRole } from '@/api/rbac'
 import { updateSpider } from '@/api/spider'
-import type { GroupInfo, UserListItem } from '@shared/api'
+import type { GroupInfo, RbacRole, UserListItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageShell } from '@/components/page-shell'
@@ -77,6 +78,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Perm } from '@/lib/permissions'
 import { orgRoleName } from '@/lib/roles'
 
 const DEFAULT_PAGE_SIZE = 10
@@ -99,8 +101,16 @@ export function DashboardUser() {
 }
 
 function UserListPage({ scope }: { scope: UserScope }) {
-  const { isAdmin, isStaff, currentOrg } = useAuth()
+  const { isAdmin, isStaff, currentOrg, can } = useAuth()
   const isSite = scope === 'site'
+  // 细粒度权限（站管默认全有；自定义站点角色按勾选生效）
+  const canSiteList = can(Perm.SiteUserList)
+  const canSiteSync = can(Perm.SiteUserSync)
+  const canSiteDisable = can(Perm.SiteUserDisable)
+  const canSiteDelete = can(Perm.SiteUserDelete)
+  const canAppointAdmin = can(Perm.SiteAppointAdmin)
+  const canAppointReviewer = can(Perm.SiteAppointReviewer)
+  const canSiteRoles = can(Perm.SiteRoleManage)
   const { page, pageSize, setPage, setPageSize, patch, searchParams } =
     useListQueryState({
       defaultPageSize: DEFAULT_PAGE_SIZE,
@@ -123,6 +133,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [list, setList] = useState<UserListItem[]>([])
   const [groups, setGroups] = useState<GroupInfo[]>([])
   const [loading, setLoading] = useState(true)
+  /** 竞态守卫：丢弃过期的用户列表响应 */
+  const requestId = useRef(0)
 
   useEffect(() => {
     setKeywordDraft(keyword)
@@ -152,6 +164,22 @@ function UserListPage({ scope }: { scope: UserScope }) {
   /** 「始终同步」开关二次确认目标 */
   const [syncExemptConfirmUser, setSyncExemptConfirmUser] =
     useState<UserListItem | null>(null)
+  /** 详情内「站点角色」：自建站点角色列表与该用户持有集合 */
+  const [siteRoles, setSiteRoles] = useState<RbacRole[]>([])
+  const [heldRoleIds, setHeldRoleIds] = useState<Set<number>>(() => new Set())
+  const [siteRolesLoading, setSiteRolesLoading] = useState(false)
+  /** 竞态守卫：丢弃过期的站点角色持有查询 */
+  const siteRolesRequestId = useRef(0)
+  /** 站点角色列表缓存（同一会话内不重复拉取） */
+  const siteRolesCacheRef = useRef<RbacRole[] | null>(null)
+  /** 已加载持有角色的用户，避免详情对象更新时反复拉取 */
+  const siteRolesLoadedForRef = useRef<number | null>(null)
+  /** 添加 / 移除站点角色前二次确认 */
+  const [roleToggleTarget, setRoleToggleTarget] = useState<{
+    role: RbacRole
+    assign: boolean
+  } | null>(null)
+  const [roleToggling, setRoleToggling] = useState(false)
 
   const groupName = useCallback(
     (u: UserListItem) => {
@@ -164,11 +192,14 @@ function UserListPage({ scope }: { scope: UserScope }) {
   )
 
   const load = useCallback(async () => {
+    const rid = ++requestId.current
     setLoading(true)
     const res = await listProfiles(page, pageSize, scope, keyword || undefined, {
       dormantOnly: inactiveDaysParam > 0 ? false : dormantOnly,
       inactiveDays: inactiveDaysParam > 0 ? inactiveDaysParam : undefined,
     })
+    // 快速切换筛选/翻页时丢弃旧响应
+    if (rid !== requestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '用户列表加载失败，请稍后重试')
@@ -189,15 +220,70 @@ function UserListPage({ scope }: { scope: UserScope }) {
 
   useEffect(() => {
     if (isSite) return
+    let cancelled = false
     void listAllGroups().then((r) => {
+      if (cancelled) return
       if (r.success && r.data) setGroups(r.data.list)
     })
+    return () => {
+      cancelled = true
+    }
   }, [isSite, currentOrg?.id])
 
-  if (isSite && !isAdmin) {
+  // 打开详情时加载自建站点角色，并逐个查询该用户是否持有
+  useEffect(() => {
+    if (!isSite || !canSiteRoles) return
+    if (!detailUser) {
+      siteRolesLoadedForRef.current = null
+      return
+    }
+    if (siteRolesLoadedForRef.current === detailUser.userId) return
+    siteRolesLoadedForRef.current = detailUser.userId
+    const rid = ++siteRolesRequestId.current
+    const { userId, username } = detailUser
+    setSiteRolesLoading(true)
+    setHeldRoleIds(new Set())
+    void (async () => {
+      let all = siteRolesCacheRef.current
+      if (!all) {
+        const r = await listRoles('site')
+        if (rid !== siteRolesRequestId.current) return
+        if (!r.success) {
+          setSiteRolesLoading(false)
+          return
+        }
+        all = r.list
+        siteRolesCacheRef.current = r.list
+      }
+      const custom = all.filter((x) => !x.isSystem)
+      setSiteRoles(custom)
+      const held = new Set<number>()
+      await Promise.all(
+        custom.map(async (role) => {
+          const res = await listRoleMembers({
+            roleId: role.roleId,
+            keyword: username,
+            page: 1,
+            pageSize: 10,
+          })
+          if (res.success && res.list.some((m) => m.userId === userId)) {
+            held.add(role.roleId)
+          }
+        }),
+      )
+      // 快速切换详情时丢弃旧响应
+      if (rid !== siteRolesRequestId.current) return
+      setHeldRoleIds(held)
+      setSiteRolesLoading(false)
+    })()
+  }, [detailUser, isSite, canSiteRoles])
+
+  if (isSite && !canSiteList) {
     return (
       <PageShell>
-        <p className="text-sm text-muted-foreground">仅站点管理员可查看全站用户。</p>
+        <p className="text-sm text-muted-foreground">
+          需要站点管理员或获得相应授权后才能查看全站用户。
+        </p>
       </PageShell>
     )
   }
@@ -264,8 +350,49 @@ function UserListPage({ scope }: { scope: UserScope }) {
     } else toast.error(res.message || '操作未完成，请稍后重试')
   }
 
+  /** 为详情用户添加 / 移除自建站点角色（内置身份走下方任命按钮） */
+  async function handleToggleSiteRole() {
+    if (!roleToggleTarget || !detailUser || !canSiteRoles) return
+    const { role, assign } = roleToggleTarget
+    const userId = detailUser.userId
+    setRoleToggling(true)
+    if (assign) {
+      const res = await assignRole(role.roleId, [userId])
+      setRoleToggling(false)
+      setRoleToggleTarget(null)
+      if (!res.success) {
+        toast.error(res.message || '操作未完成，请稍后重试')
+        return
+      }
+      if (res.added === 0 && res.skipped.includes(userId)) {
+        toast.error(res.message || '该用户已拥有此角色，或暂时无法添加')
+        return
+      }
+      toast.success(res.message || '已添加角色，对方重新进入后生效')
+      setHeldRoleIds((prev) => {
+        const next = new Set(prev)
+        next.add(role.roleId)
+        return next
+      })
+    } else {
+      const res = await unassignRole(role.roleId, [userId])
+      setRoleToggling(false)
+      setRoleToggleTarget(null)
+      if (!res.success) {
+        toast.error(res.message || '操作未完成，请稍后重试')
+        return
+      }
+      toast.success(res.message || '已移除角色，对方重新进入后生效')
+      setHeldRoleIds((prev) => {
+        const next = new Set(prev)
+        next.delete(role.roleId)
+        return next
+      })
+    }
+  }
+
   async function handleToggleSyncExempt(u: UserListItem) {
-    if (!isAdmin) return
+    if (!canSiteSync) return
     const next = !u.syncExempt
     const key = `${u.userId}:sync-exempt`
     setTogglingKey(key)
@@ -309,7 +436,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
   }
 
   async function handleClearDormant(userIds: number[]) {
-    if (!isAdmin) return
+    if (!canSiteSync) return
     const ids = Array.from(new Set(userIds.filter((id) => id > 0)))
     if (!ids.length) {
       toast.error('请先勾选要解除的用户')
@@ -360,7 +487,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     userIds?: number[]
     inactiveDays?: number
   }) {
-    if (!isAdmin) return
+    if (!canSiteSync) return
     const ids = Array.from(
       new Set((opts.userIds || []).filter((id) => id > 0)),
     )
@@ -411,6 +538,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     list.some((u) => selectedIds.has(u.userId)) && !pageAllSelected
 
   async function handleDelete(userId: number) {
+    if (!canSiteDelete) return
     if (userId === 2) {
       toast.error('该账号为系统保留，无法删除')
       return
@@ -423,7 +551,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
   }
 
   async function handleSetDisabled(u: UserListItem, disabled: boolean) {
-    if (!isAdmin) return
+    if (!canSiteDisable) return
     if (u.isSiteAdmin) {
       toast.error('不能禁用站点管理员账号')
       return
@@ -477,7 +605,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
   }
 
   async function saveSyncIntervals(mode: 'save' | 'clearSpider') {
-    if (!detailUser || !isAdmin) return
+    if (!detailUser || !canSiteSync) return
     let spiderIntervalMin = Number(spiderIntervalDraft)
     if (mode === 'save') {
       if (
@@ -626,7 +754,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     }
   }
 
-  const canToggleEmail = isStaff || isAdmin
+  const canToggleEmail = can(Perm.OrgMemberEmail)
   const title = isSite
     ? '站点用户'
     : currentOrg?.name
@@ -745,7 +873,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                   清空
                 </Button>
               )}
-              {isAdmin && isSite && (
+              {canSiteSync && isSite && (
                 <Button
                   type="button"
                   size="sm"
@@ -771,7 +899,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                   一键冻结不活跃
                 </Button>
               )}
-              {isAdmin && selectedIds.size > 0 && (
+              {canSiteSync && selectedIds.size > 0 && (
                 <>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -873,7 +1001,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {isAdmin && (
+                  {canSiteSync && (
                     <TableHead className="w-10">
                       <Checkbox
                         checked={
@@ -910,7 +1038,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                   const selected = selectedIds.has(u.userId)
                   return (
                     <TableRow key={u.userId} data-state={selected ? 'selected' : undefined}>
-                      {isAdmin && (
+                      {canSiteSync && (
                         <TableCell>
                           <Checkbox
                             checked={selected}
@@ -1067,7 +1195,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          {isSite && isAdmin && (
+                          {isSite && (
                             <Button
                               type="button"
                               size="sm"
@@ -1098,7 +1226,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                               资料
                             </Link>
                           </Button>
-                          {isAdmin && !isSite && (
+                          {canSiteSync && !isSite && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -1310,10 +1438,12 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 )}
               </div>
 
+              {(canSiteSync || canSiteDisable || isAdmin) && (
+              <>
               <Separator />
 
               <FieldGroup className="gap-4">
-                {isAdmin && (
+                {canSiteSync && (
                   <Field orientation="horizontal">
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <FieldLabel htmlFor="sync-exempt">始终同步</FieldLabel>
@@ -1333,7 +1463,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     />
                   </Field>
                 )}
-                {isAdmin && (detailUser.dormant || !detailUser.lastLoginAt) && (
+                {canSiteSync && (detailUser.dormant || !detailUser.lastLoginAt) && (
                   <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
                     <div className="flex flex-col gap-1">
                       <p className="text-sm font-medium">解除不活跃</p>
@@ -1363,7 +1493,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     </div>
                   </div>
                 )}
-                {isAdmin && !detailUser.dormant && (
+                {canSiteSync && !detailUser.dormant && (
                   <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
                     <div className="flex flex-col gap-1">
                       <p className="text-sm font-medium">冻结自动同步</p>
@@ -1395,7 +1525,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     </div>
                   </div>
                 )}
-                {isAdmin && !detailUser.isSiteAdmin && (
+                {canSiteDisable && !detailUser.isSiteAdmin && (
                   <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
                     <div className="flex flex-col gap-1">
                       <p className="text-sm font-medium">
@@ -1449,44 +1579,52 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     </div>
                   </div>
                 )}
-                <Field orientation="horizontal">
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <FieldLabel htmlFor="pipeline-fetch">抓取题面</FieldLabel>
-                    <FieldDescription>
-                      开启后，该用户近窗提交可触发抓取题面
-                    </FieldDescription>
-                  </div>
-                  <Switch
-                    id="pipeline-fetch"
-                    checked={!!detailUser.problemFetchEnabled}
-                    disabled={
-                      togglingKey === `${detailUser.userId}:pipeline:fetch`
-                    }
-                    onCheckedChange={(v) =>
-                      void handlePipelineToggle(detailUser, 'fetch', v)
-                    }
-                  />
-                </Field>
-                <Field orientation="horizontal">
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <FieldLabel htmlFor="pipeline-ai">AI 分析题面</FieldLabel>
-                    <FieldDescription>
-                      开启后，该用户近窗提交可触发题面 AI（与爬取独立）
-                    </FieldDescription>
-                  </div>
-                  <Switch
-                    id="pipeline-ai"
-                    checked={!!detailUser.problemAiEnabled}
-                    disabled={
-                      togglingKey === `${detailUser.userId}:pipeline:ai`
-                    }
-                    onCheckedChange={(v) =>
-                      void handlePipelineToggle(detailUser, 'ai', v)
-                    }
-                  />
-                </Field>
+                {isAdmin && (
+                  <>
+                    <Field orientation="horizontal">
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <FieldLabel htmlFor="pipeline-fetch">抓取题面</FieldLabel>
+                        <FieldDescription>
+                          开启后，该用户近窗提交可触发抓取题面
+                        </FieldDescription>
+                      </div>
+                      <Switch
+                        id="pipeline-fetch"
+                        checked={!!detailUser.problemFetchEnabled}
+                        disabled={
+                          togglingKey === `${detailUser.userId}:pipeline:fetch`
+                        }
+                        onCheckedChange={(v) =>
+                          void handlePipelineToggle(detailUser, 'fetch', v)
+                        }
+                      />
+                    </Field>
+                    <Field orientation="horizontal">
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <FieldLabel htmlFor="pipeline-ai">AI 分析题面</FieldLabel>
+                        <FieldDescription>
+                          开启后，该用户近窗提交可触发题面 AI（与爬取独立）
+                        </FieldDescription>
+                      </div>
+                      <Switch
+                        id="pipeline-ai"
+                        checked={!!detailUser.problemAiEnabled}
+                        disabled={
+                          togglingKey === `${detailUser.userId}:pipeline:ai`
+                        }
+                        onCheckedChange={(v) =>
+                          void handlePipelineToggle(detailUser, 'ai', v)
+                        }
+                      />
+                    </Field>
+                  </>
+                )}
               </FieldGroup>
+              </>
+              )}
 
+              {canSiteSync && (
+              <>
               <Separator />
 
               <FieldGroup className="gap-3">
@@ -1539,10 +1677,57 @@ function UserListPage({ scope }: { scope: UserScope }) {
                   </Button>
                 </div>
               </FieldGroup>
+              </>
+              )}
+
+              {canSiteRoles && (
+                <>
+                  <Separator />
+                  <div className="flex flex-col gap-2">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">站点角色</p>
+                      <p className="text-xs text-muted-foreground">
+                        点选可为该用户添加或移除自建的站点角色，对方重新进入后生效；站点管理员与资源审核员请用下方按钮任命。
+                      </p>
+                    </div>
+                    {siteRolesLoading ? (
+                      <p className="text-xs text-muted-foreground">加载中…</p>
+                    ) : siteRoles.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        还没有自建的站点角色，可到「角色与权限」页新建。
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {siteRoles.map((role) => {
+                          const held = heldRoleIds.has(role.roleId)
+                          return (
+                            <button
+                              key={role.roleId}
+                              type="button"
+                              disabled={roleToggling}
+                              aria-pressed={held}
+                              title={role.description || role.name}
+                              className="rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                              onClick={() =>
+                                setRoleToggleTarget({ role, assign: !held })
+                              }
+                            >
+                              <Badge variant={held ? 'default' : 'outline'}>
+                                {role.name}
+                              </Badge>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
               <Separator />
 
               <div className="flex flex-wrap gap-2">
+                {canAppointAdmin && (
                 <ConfirmDialog
                   title={
                     detailUser.isSiteAdmin
@@ -1566,6 +1751,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       : '设为站点管理员'}
                   </Button>
                 </ConfirmDialog>
+                )}
+                {canAppointReviewer && (
                 <ConfirmDialog
                   title={
                     detailUser.isResourceReviewer
@@ -1589,6 +1776,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       : '设为资源审核员'}
                   </Button>
                 </ConfirmDialog>
+                )}
                 <Button type="button" size="sm" variant="ghost" asChild>
                   <Link
                     to={
@@ -1600,6 +1788,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     打开资料
                   </Link>
                 </Button>
+                {canSiteSync && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -1630,6 +1819,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+                )}
+                {canSiteDelete && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button type="button" size="sm" variant="destructive">
@@ -1657,6 +1848,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+                )}
               </div>
             </div>
           ) : null}
@@ -1697,6 +1889,29 @@ function UserListPage({ scope }: { scope: UserScope }) {
           setSyncExemptConfirmUser(null)
           void handleToggleSyncExempt(target)
         }}
+      />
+
+      <ConfirmDialog
+        open={roleToggleTarget != null}
+        onOpenChange={(o) => {
+          if (!o) setRoleToggleTarget(null)
+        }}
+        title={
+          roleToggleTarget?.assign
+            ? `添加站点角色「${roleToggleTarget?.role.name || ''}」？`
+            : `移除站点角色「${roleToggleTarget?.role.name || ''}」？`
+        }
+        description={
+          roleToggleTarget && detailUser
+            ? roleToggleTarget.assign
+              ? `确定为「${detailUser.name || detailUser.username}」添加角色「${roleToggleTarget.role.name}」？对方将获得该角色勾选的权限，重新进入后生效。`
+              : `确定移除「${detailUser.name || detailUser.username}」的角色「${roleToggleTarget.role.name}」？对方将失去该角色带来的权限，重新进入后生效。`
+            : ''
+        }
+        confirmLabel={roleToggleTarget?.assign ? '确认添加' : '确认移除'}
+        destructive={roleToggleTarget ? !roleToggleTarget.assign : false}
+        loading={roleToggling}
+        onConfirm={() => void handleToggleSiteRole()}
       />
 
       <Dialog open={freezeDialogOpen} onOpenChange={setFreezeDialogOpen}>

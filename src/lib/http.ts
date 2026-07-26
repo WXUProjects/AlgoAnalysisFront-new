@@ -64,9 +64,12 @@ declare module 'axios' {
 }
 
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  // 先快照 token：isValid() 内部会在过期时清 token，直接读 jwt.token 会漏掉
+  // 「存在但已过期」分支，导致本地过期时 fireAuthExpired 永远不触发
+  const token = jwt.token
   if (jwt.isValid()) {
-    config.headers.Authorization = `Bearer ${jwt.token}`
-  } else if (jwt.token && !config.skipAuthExpired) {
+    config.headers.Authorization = `Bearer ${token}`
+  } else if (token && !config.skipAuthExpired) {
     // token 存在但已过期：清会话（refresh 请求除外）
     fireAuthExpired()
   }

@@ -32,6 +32,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { toMarkdownSource } from '@/lib/markdown'
+import { Perm } from '@/lib/permissions'
 
 const DIFFICULTY_OPTIONS = ['简单', '中等', '困难'] as const
 /** Select 用：未选难度 */
@@ -51,7 +52,9 @@ function tagsEqual(a: string[], b: string[]): boolean {
 export function ProblemContentEdit() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { isLogin, isContentModerator, ready } = useAuth()
+  const { isLogin, can, ready } = useAuth()
+  // 题库审查权限：直接保存生效；否则提交审核
+  const canReview = can(Perm.ContentProblemReview)
   const [problem, setProblem] = useState<ProblemInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [contentInput, setContentInput] = useState('')
@@ -122,7 +125,7 @@ export function ProblemContentEdit() {
       difficultyTrim !== (problem.difficulty || '').trim()
 
     setSaving(true)
-    if (isContentModerator) {
+    if (canReview) {
       const res = await adminUpdateProblem({
         id: problem.id,
         updateContent: true,
@@ -216,17 +219,17 @@ export function ProblemContentEdit() {
           onClick={() => void submitEdit()}
           disabled={saving}
         >
-          {saving ? '提交中…' : isContentModerator ? '保存' : '提交审核'}
+          {saving ? '提交中…' : canReview ? '保存' : '提交审核'}
         </Button>
       </div>
 
       <Card className="gap-2 py-3">
         <CardHeader className="px-4 py-0">
           <CardTitle className="text-base">
-            {isContentModerator ? '编辑题目' : '建议修改题目'}
+            {canReview ? '编辑题目' : '建议修改题目'}
           </CardTitle>
           <CardDescription>
-            {isContentModerator
+            {canReview
               ? '可同时改题面、标签与难度。保存后立即生效，并记入「已通过」审核记录；若仍无标签，系统会继续尝试自动分析。'
               : '可同时改题面、标签与难度。提交后由管理员或资源审核员审核通过才会展示。'}
           </CardDescription>
@@ -267,7 +270,7 @@ export function ProblemContentEdit() {
               点选已有标签，或输入后回车新建。也可在详情页单独改标签。
             </p>
           </Field>
-          {!isContentModerator && (
+          {!canReview && (
             <Field>
               <FieldLabel htmlFor="edit-content-note">说明（可选）</FieldLabel>
               <Textarea

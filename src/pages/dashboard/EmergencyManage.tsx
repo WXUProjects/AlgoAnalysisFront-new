@@ -15,6 +15,7 @@ import {
   updateEmergency,
 } from '@/api/emergency'
 import type { EmergencyInfo } from '@shared/api'
+import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { toMarkdownSource } from '@/lib/markdown'
@@ -49,6 +50,7 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime } from '@/lib/format'
+import { Perm } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 
 /** 管理端一次拉全量，便于拖拽排序 */
@@ -65,6 +67,8 @@ function moveItem<T>(arr: T[], from: number, to: number): T[] {
 }
 
 export function DashboardEmergencyManage() {
+  const { can } = useAuth()
+  const canManage = can(Perm.SiteEmergency)
   const [list, setList] = useState<EmergencyInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [reordering, setReordering] = useState(false)
@@ -91,8 +95,13 @@ export function DashboardEmergencyManage() {
   }, [])
 
   useEffect(() => {
+    // 无权限时不发请求
+    if (!canManage) {
+      setLoading(false)
+      return
+    }
     void load()
-  }, [load])
+  }, [canManage, load])
 
   function openCreate() {
     setEditing(null)
@@ -187,6 +196,16 @@ export function DashboardEmergencyManage() {
   function onDragEnd() {
     dragFrom.current = null
     setDragOver(null)
+  }
+
+  if (!canManage) {
+    return (
+      <PageShell>
+        <p className="text-sm text-muted-foreground">
+          你还没有管理紧急通知的权限。如有需要，请联系站点管理员开通。
+        </p>
+      </PageShell>
+    )
   }
 
   return (

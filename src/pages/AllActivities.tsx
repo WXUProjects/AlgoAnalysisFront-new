@@ -52,6 +52,8 @@ export function AllActivities() {
   const [titleName, setTitleName] = useState('')
   const loadingRef = useRef(false)
   const cursorRef = useRef<number | string>(-1)
+  /** 请求序号：reset（切范围）立即发新请求，旧响应按序号丢弃 */
+  const requestSeq = useRef(0)
 
   const feedScope = userMode
     ? 'mine'
@@ -61,11 +63,13 @@ export function AllActivities() {
 
   const loadMore = useCallback(
     async (reset = false) => {
-      if (loadingRef.current) return
+      // 仅「加载更多」用布尔锁防重复点击；reset 不被在途请求拦住
+      if (!reset && loadingRef.current) return
       if (followingOnly && !isLogin) {
         toast.error('登录后可查看关注动态')
         return
       }
+      const seq = ++requestSeq.current
       loadingRef.current = true
       setLoading(true)
       const nextCursor = reset ? -1 : cursorRef.current
@@ -75,6 +79,8 @@ export function AllActivities() {
         limit: FEED_LIMIT,
         followingOnly: !userMode && followingOnly,
       })
+      // 已有更新的请求（如切范围）在途/完成：丢弃本次旧响应
+      if (seq !== requestSeq.current) return
       loadingRef.current = false
       setLoading(false)
       if (!res.success || !res.data) {

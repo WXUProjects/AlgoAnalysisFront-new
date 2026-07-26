@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { changePassword } from '@/api/auth'
-import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,7 +17,6 @@ import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 
 export function ChangePassword() {
-  const { isMemberLike } = useAuth()
   const navigate = useNavigate()
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -39,7 +37,7 @@ export function ChangePassword() {
       setOldPassword('')
       setNewPassword('')
       setNewPasswordConfirm('')
-      navigate(isMemberLike ? '/change-profile' : '/admin', { replace: true })
+      navigate('/change-profile', { replace: true })
     } else {
       toast.error(res.message || '密码修改失败，请稍后重试')
     }
@@ -98,7 +96,7 @@ export function ChangePassword() {
               确认修改
             </Button>
             <Button type="button" variant="ghost" className="w-full" asChild>
-              <Link to={isMemberLike ? '/change-profile' : '/admin'}>返回</Link>
+              <Link to="/change-profile">返回</Link>
             </Button>
           </CardFooter>
         </form>

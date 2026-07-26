@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
@@ -14,6 +15,7 @@ import {
   animateHoverTransformIn,
   animateHoverTransformOut,
   canHover,
+  killTweens,
   MOTION,
 } from '@/lib/motion'
 
@@ -86,6 +88,14 @@ const HeatCell = memo(function HeatCell({
   onHideTip: () => void
 }) {
   const bg = blockColor(count)
+  const cellRef = useRef<HTMLDivElement>(null)
+  // 卸载时清掉悬停 tween，避免切年后残留动画持有已卸载节点
+  useEffect(() => {
+    const el = cellRef.current
+    return () => {
+      if (el) killTweens(el)
+    }
+  }, [])
   const handleEnter = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (canHover()) {
@@ -112,6 +122,7 @@ const HeatCell = memo(function HeatCell({
   )
   return (
     <div
+      ref={cellRef}
       className="size-[10px] cursor-pointer rounded-[2px] bg-border/60 will-change-transform hover:z-10"
       style={count > 0 ? { backgroundColor: bg } : undefined}
       onPointerEnter={handleEnter}

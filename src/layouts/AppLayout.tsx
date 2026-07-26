@@ -36,7 +36,7 @@ import {
 } from '@/components/main-bottom-nav'
 import {
   buildMobileMoreAccountLinks,
-  buildMobileMoreSectionsFromAuth,
+  buildMobileMoreSections,
   MobileMoreAccountFooter,
   MobileMoreSheet,
 } from '@/components/mobile-more-sheet'
@@ -92,13 +92,8 @@ function AppLayoutInner() {
   const [moreOpen, setMoreOpen] = useState(false)
   const {
     isLogin,
-    isStaff,
-    isSiteAdmin,
-    isContentModerator,
     canAccessAdmin,
-    isOrgAdmin,
-    isCoach,
-    isCaptain,
+    can,
     isMemberLike,
     user,
     orgs,
@@ -154,32 +149,23 @@ function AppLayoutInner() {
 
   const moreSections = useMemo(
     () =>
-      buildMobileMoreSectionsFromAuth({
+      buildMobileMoreSections({
         isLogin,
         isMemberLike,
         username: user?.username,
         showAbout,
-        isStaff,
-        isSiteAdmin,
-        isOrgAdmin,
-        isContentModerator,
-        isResourceReviewer: user?.isResourceReviewer,
+        canAccessAdmin,
+        can,
         orgName: currentOrg?.name,
-        orgRole: user?.orgRole,
-        roleId: user?.roleId,
+        user,
       }),
     [
       isLogin,
       isMemberLike,
-      user?.username,
-      user?.orgRole,
-      user?.roleId,
-      user?.isResourceReviewer,
+      user,
       showAbout,
-      isStaff,
-      isSiteAdmin,
-      isOrgAdmin,
-      isContentModerator,
+      canAccessAdmin,
+      can,
       currentOrg?.name,
     ],
   )
@@ -416,16 +402,8 @@ function AppLayoutInner() {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            {/* PC：可折叠二级 Tab（教练管理/组织管理/站点管理/资源审核 → 展开子项）；移动端走底栏 +「更多」 */}
-            {isLogin && canAccessAdmin && (
-              <AdminSidebarNavGroups
-                isStaff={isStaff}
-                isSiteAdmin={isSiteAdmin}
-                isContentModerator={isContentModerator}
-                canOrgSettings={isSiteAdmin || isOrgAdmin}
-                staffLabelPayload={user}
-              />
-            )}
+            {/* PC：可折叠二级 Tab（教练管理/团队管理/站点管理/资源审核/管理中心 → 展开子项）；移动端走底栏 +「更多」；条目按权限过滤 */}
+            {isLogin && canAccessAdmin && <AdminSidebarNavGroups />}
           </SidebarContent>
 
           <SidebarFooter>
@@ -520,7 +498,6 @@ function AppLayoutInner() {
               <MobileOrgSwitcher
                 orgs={orgs}
                 currentOrgId={user?.orgId || currentOrg?.id}
-                isSiteAdmin={isSiteAdmin}
                 onSwitch={(id) => void handleSwitchOrg(id)}
               />
             )}
@@ -564,13 +541,8 @@ function AppLayoutInner() {
             <>
               <MainBottomNav
                 isLogin={isLogin}
-                isStaff={isStaff}
-                isSiteAdmin={isSiteAdmin}
-                isOrgAdmin={isOrgAdmin}
-                isCoach={isCoach}
-                isCaptain={isCaptain}
-                isContentModerator={isContentModerator}
-                isResourceReviewer={Boolean(user?.isResourceReviewer)}
+                canAccessAdmin={canAccessAdmin}
+                user={user}
                 sheetOpen={moreOpen}
                 onMoreClick={() => setMoreOpen(true)}
               />

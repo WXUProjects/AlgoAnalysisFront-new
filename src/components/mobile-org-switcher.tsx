@@ -7,50 +7,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { OrgRole } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 
 /**
  * 组织切换统一文案（侧边栏与移动端顶部一致）。
  * - 团队管理员：`{name} · 管理`
  * - 其他角色：仅组织名
+ * 角色全称请用 roles.ts 的 orgRoleName / OrgRoleLabel。
  */
 export function formatOrgSwitchLabel(name: string, myRole?: string | null): string {
-  if (myRole === 'org_admin') return `${name} · 管理`
+  if (myRole === OrgRole.OrgAdmin) return `${name} · 管理`
   return name
 }
 
-/** @deprecated 与 formatOrgSwitchLabel 同义，保留给旧测试/调用 */
-export function buildOrgTriggerText(
-  orgName: string,
-  myRole?: string | null,
-  _isSiteAdmin?: boolean,
-): string {
-  return formatOrgSwitchLabel(orgName, myRole)
-}
-
-/** 侧边栏/下拉项角色短后缀（仅 org_admin） */
+/** 侧边栏/下拉项角色短后缀（仅团队管理员） */
 export function orgRoleShortLabel(orgRole?: string | null): string {
-  if (orgRole === 'org_admin') return '管理'
-  return ''
-}
-
-export function orgRoleFullName(orgRole?: string | null): string {
-  if (!orgRole || orgRole === 'member') return '成员'
-  if (orgRole === 'org_admin') return '团队管理员'
-  if (orgRole === 'coach') return '教练'
-  if (orgRole === 'captain') return '队长'
-  return orgRole
-}
-
-export function siteAdminRoleName(): string {
-  return '站点管理员'
+  return orgRole === OrgRole.OrgAdmin ? '管理' : ''
 }
 
 interface MobileOrgSwitcherProps {
   orgs: OrgInfo[]
   currentOrgId?: number | null
-  /** 保留入参兼容布局调用；展示文案与侧边栏一致，不因站管改变标签 */
-  isSiteAdmin?: boolean
   onSwitch: (orgId: number) => void
   className?: string
 }

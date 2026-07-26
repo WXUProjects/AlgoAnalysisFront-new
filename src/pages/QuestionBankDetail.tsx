@@ -37,6 +37,7 @@ import type {
   ProblemsetInfo,
 } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+import { Perm } from '@/lib/permissions'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MarkdownBody } from '@/components/markdown-body'
@@ -132,7 +133,9 @@ export function QuestionBankDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { isLogin, isContentModerator } = useAuth()
+  const { isLogin, can } = useAuth()
+  // 题库审查权限：直接保存生效；否则提交审核
+  const canReview = can(Perm.ContentProblemReview)
   const [problem, setProblem] = useState<ProblemInfo | null>(null)
   /** 移动端：题面 / 题解切换；深链 tab=solutions 时默认题解 */
   const mobilePane =
@@ -147,6 +150,9 @@ export function QuestionBankDetail() {
   const [subsLoading, setSubsLoading] = useState(false)
   /** 已成功展示过的题目 id；鉴权变化时静默刷新，不卸整页 */
   const loadedProblemIdRef = useRef<string | null>(null)
+  /** 竞态守卫：丢弃过期的题目/提交列表响应 */
+  const problemRequestId = useRef(0)
+  const subsRequestId = useRef(0)
   const [hasPending, setHasPending] = useState(false)
   const [followingOnly, setFollowingOnly] = useState(false)
   const [acOnly, setAcOnly] = useState(false)
@@ -192,6 +198,7 @@ export function QuestionBankDetail() {
   /** 题目主体 + 关联题单；不依赖筛选/分页，避免误卸整页 */
   const loadProblem = useCallback(async () => {
     if (!id) return
+    const rid = ++problemRequestId.current
     const isNewProblem = loadedProblemIdRef.current !== String(id)
     if (isNewProblem) setLoading(true)
     const [pRes, setRes, cRes] = await Promise.all([
@@ -199,6 +206,8 @@ export function QuestionBankDetail() {
       listProblemsetsByProblem(id),
       listProblemRelatedContests(id),
     ])
+    // 快速切题时丢弃旧响应，避免旧题数据覆盖新题
+    if (rid !== problemRequestId.current) return
     if (!pRes.success || !pRes.data) {
       if (isNewProblem) {
         setLoading(false)
@@ -222,18 +231,20 @@ export function QuestionBankDetail() {
       setRelatedContests([])
     }
 
-    if (isLogin && !isContentModerator) {
+    if (isLogin && !canReview) {
       const pend = await getMyPendingProblemEdit(id)
+      if (rid !== problemRequestId.current) return
       setHasPending(Boolean(pend.success && pend.data?.hasPending))
     } else {
       setHasPending(false)
     }
     if (isNewProblem) setLoading(false)
-  }, [id, isLogin, isContentModerator])
+  }, [id, isLogin, canReview])
 
   /** 提交历史：筛选/分页只刷新表格区域，保持滚动位置 */
   const loadSubs = useCallback(async () => {
     if (!id) return
+    const rid = ++subsRequestId.current
     setSubsLoading(true)
     const sRes = await getProblemSubmissions({
       problemId: id,
@@ -242,6 +253,7 @@ export function QuestionBankDetail() {
       followingOnly: followingOnly || undefined,
       status: acOnly ? 'AC' : undefined,
     })
+    if (rid !== subsRequestId.current) return
     setSubsLoading(false)
     if (sRes.success && sRes.data) {
       setSubs(sRes.data.list || [])
@@ -369,7 +381,7 @@ export function QuestionBankDetail() {
     if (!problem) return
     const tags = selectedTags.map((t) => t.trim()).filter(Boolean)
     setSaving(true)
-    if (isContentModerator) {
+    if (canReview) {
       const res = await adminUpdateProblem({
         id: problem.id,
         updateTags: true,
@@ -532,7 +544,7 @@ export function QuestionBankDetail() {
                 onClick={openTagsEdit}
               >
                 <TagsIcon data-icon="inline-start" />
-                {isContentModerator ? '改标签' : '建议标签'}
+                {canReview ? '改标签' : '建议标签'}
               </Button>
             )}
           </div>
@@ -704,7 +716,7 @@ export function QuestionBankDetail() {
                     onClick={openContentEdit}
                   >
                     <PencilIcon data-icon="inline-start" />
-                    {isContentModerator
+                    {canReview
                       ? contentEmpty
                         ? '填写题目'
                         : '编辑'
@@ -1151,9 +1163,9 @@ export function QuestionBankDetail() {
       <Dialog open={tagsOpen} onOpenChange={setTagsOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{isContentModerator ? '修改标签' : '建议修改标签'}</DialogTitle>
+            <DialogTitle>{canReview ? '修改标签' : '建议修改标签'}</DialogTitle>
             <DialogDescription>
-              {isContentModerator
+              {canReview
                 ? '点选已有标签，或输入后回车新建。保存后立即生效，并记入「已通过」审核记录；有标签后不再自动分析该题。'
                 : '点选已有标签，或输入后回车新建。提交后由管理员或资源审核员审核才会更新。'}
             </DialogDescription>
@@ -1169,7 +1181,7 @@ export function QuestionBankDetail() {
                 disabled={saving}
               />
             </Field>
-            {!isContentModerator && (
+            {!canReview && (
               <Field>
                 <FieldLabel htmlFor="edit-tags-note">说明（可选）</FieldLabel>
                 <Textarea
@@ -1192,7 +1204,7 @@ export function QuestionBankDetail() {
               取消
             </Button>
             <Button type="button" onClick={() => void submitTags()} disabled={saving}>
-              {saving ? '提交中…' : isContentModerator ? '保存' : '提交审核'}
+              {saving ? '提交中…' : canReview ? '保存' : '提交审核'}
             </Button>
           </DialogFooter>
         </DialogContent>

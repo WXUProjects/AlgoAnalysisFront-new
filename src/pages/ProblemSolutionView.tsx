@@ -33,6 +33,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { clipMetaText } from '@/lib/document-meta'
 import { extractMarkdownOutline } from '@/lib/markdown'
+import { Perm } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import { formatTime } from '@/lib/format'
 
@@ -50,7 +51,9 @@ function getAppScroller(): HTMLElement | null {
 export function ProblemSolutionView() {
   const { id, solutionId } = useParams()
   const navigate = useNavigate()
-  const { user, isSiteAdmin, isLogin } = useAuth()
+  const { user, can, isLogin } = useAuth()
+  // 社区内容管理权限：可编辑/删除他人博客
+  const canModerate = can(Perm.ContentCommunityMod)
   const [solution, setSolution] = useState<ProblemUserSolutionItem | null>(null)
   const [problem, setProblem] = useState<ProblemInfo | null>(null)
   const [loading, setLoading] = useState(true)
@@ -264,7 +267,7 @@ export function ProblemSolutionView() {
   }
 
   const myId = user?.userId ?? 0
-  const canEdit = myId === solution.userId || isSiteAdmin
+  const canEdit = myId === solution.userId || canModerate
   const pid = problemId || solution.problemId
 
   return (

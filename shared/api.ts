@@ -60,9 +60,17 @@ export const endpoints = {
       get: `${API_PREFIX}/user/group/get`,
       list: `${API_PREFIX}/user/group/list`,
     },
-    role: {
-      list: `${API_PREFIX}/user/role/list`,
-      setUserRole: `${API_PREFIX}/user/role/set-user-role`,
+    /** 细粒度 RBAC：权限目录 / 角色 CRUD / 成员指派（内置角色任命仍走 org.setRole / platform.*） */
+    rbac: {
+      permissions: `${API_PREFIX}/user/rbac/permissions`,
+      roles: `${API_PREFIX}/user/rbac/roles`,
+      roleCreate: `${API_PREFIX}/user/rbac/roles/create`,
+      roleUpdate: `${API_PREFIX}/user/rbac/roles/update`,
+      roleDelete: `${API_PREFIX}/user/rbac/roles/delete`,
+      roleMembers: `${API_PREFIX}/user/rbac/roles/members`,
+      roleAssign: `${API_PREFIX}/user/rbac/roles/assign`,
+      roleUnassign: `${API_PREFIX}/user/rbac/roles/unassign`,
+      myPermissions: `${API_PREFIX}/user/rbac/my-permissions`,
     },
     upload: `${API_PREFIX}/user/upload`,
     site: {
@@ -593,7 +601,7 @@ export interface PrivacySettings {
 export interface UserOrgBrief {
   orgId: number
   name: string
-  role: string
+  role: OrgRoleValue | string
 }
 
 export interface UserListItem {
@@ -659,9 +667,56 @@ export interface GroupInfo {
   pageSize?: number
 }
 
-export interface RoleInfo {
+/** 组织内系统角色取值（自定义角色见 RbacRole） */
+export type OrgRoleValue = 'member' | 'coach' | 'captain' | 'org_admin'
+
+/** 权限作用域：site=站点级 org=组织级 */
+export type PermScope = 'site' | 'org'
+
+/** 权限点（目录由后端 /user/rbac/permissions 下发，代码即权威） */
+export interface PermInfo {
+  code: string
+  label: string
+  desc: string
+  scope: PermScope
+}
+
+/** 权限分组（供勾选矩阵渲染） */
+export interface PermGroup {
+  key: string
+  label: string
+  scope: PermScope
+  perms: PermInfo[]
+}
+
+/** RBAC 角色（内置 isSystem 权限集锁定；自定义可编辑/删除/指派） */
+export interface RbacRole {
   roleId: number
+  code: string
   name: string
+  description: string
+  scope: PermScope
+  /** 组织自定义角色的组织 ID；站点级/全局模板为 0 */
+  orgId: number
+  isSystem: boolean
+  permissions: string[]
+  memberCount: number
+}
+
+export interface RbacRoleMember {
+  userId: number
+  username: string
+  name: string
+  avatar?: string
+}
+
+/** GET /user/rbac/my-permissions（查库实时值） */
+export interface MyPermissionsRes {
+  perms: string[]
+  roles: { name: string; scope: PermScope; code: string }[]
+  isSiteAdmin: boolean
+  orgId: number
+  orgRole?: OrgRoleValue | string
 }
 
 /** 组织（GoAlgo 多租户） */
@@ -690,7 +745,7 @@ export interface OrgInfo {
   aiEmailSchedule?: string
   /** 站管：强制同步（跳过成员休眠） */
   forceSync?: boolean
-  myRole?: 'member' | 'coach' | 'captain' | 'org_admin' | string
+  myRole?: OrgRoleValue | string
   /** 我在该组织内的对外称呼（org_members.org_display_name） */
   orgDisplayName?: string
   isCurrent?: boolean
@@ -704,7 +759,7 @@ export interface OrgMemberInfo {
   /** 组织内名称 org_members.org_display_name */
   orgDisplayName?: string
   avatar?: string
-  role: string
+  role: OrgRoleValue | string
   groupId?: number | null
   joinedAt?: number
 }

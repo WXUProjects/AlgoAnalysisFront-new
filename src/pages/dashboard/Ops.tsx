@@ -31,6 +31,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCompactNumber, formatTime } from '@/lib/format'
+import { Perm } from '@/lib/permissions'
 
 const CONFIRM_TOKEN = 'PURGE_SUBMITS'
 
@@ -40,7 +41,14 @@ function fmtNum(n: number | undefined) {
 }
 
 export function DashboardOps() {
-  const { isAdmin } = useAuth()
+  const { can } = useAuth()
+  // 任一运维类权限即可进入本页；具体分区再按权限显隐
+  const canOps =
+    can(Perm.SiteSpiderOps) ||
+    can(Perm.SiteBackup) ||
+    can(Perm.SiteConfigWrite) ||
+    can(Perm.SiteProblemOps)
+  const canPurge = can(Perm.SiteSpiderOps)
   const [inv, setInv] = useState<SubmitInventory | null>(null)
   const [loading, setLoading] = useState(true)
   const [confirm, setConfirm] = useState('')
@@ -58,13 +66,15 @@ export function DashboardOps() {
   }, [])
 
   useEffect(() => {
-    if (isAdmin) void load()
-  }, [isAdmin, load])
+    if (canOps) void load()
+  }, [canOps, load])
 
-  if (!isAdmin) {
+  if (!canOps) {
     return (
       <PageShell>
-        <p className="text-sm text-muted-foreground">仅站点管理员可使用运维工具。</p>
+        <p className="text-sm text-muted-foreground">
+          你还没有使用运维工具的权限。如有需要，请联系站点管理员开通。
+        </p>
       </PageShell>
     )
   }
@@ -95,7 +105,7 @@ export function DashboardOps() {
       <div className="mb-4 space-y-1">
         <h3 className="text-lg font-semibold tracking-tight">运维</h3>
         <p className="text-sm text-muted-foreground">
-          监测真实入库提交量，以及危险的数据维护操作（仅站点管理员）。
+          监测真实入库提交量，以及危险的数据维护操作；可见内容按你的权限显示。
         </p>
       </div>
 
@@ -151,6 +161,7 @@ export function DashboardOps() {
           </CardContent>
         </Card>
 
+        {canPurge && (
         <Card className="border-destructive/40">
           <CardHeader>
             <div className="flex flex-wrap items-center gap-2">
@@ -221,6 +232,7 @@ export function DashboardOps() {
             </AlertDialog>
           </CardContent>
         </Card>
+        )}
       </div>
     </PageShell>
   )

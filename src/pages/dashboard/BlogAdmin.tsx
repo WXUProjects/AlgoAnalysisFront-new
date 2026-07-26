@@ -47,6 +47,7 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatTime } from '@/lib/format'
+import { Perm } from '@/lib/permissions'
 import type {
   BlogAdminArticle,
   BlogAdminAuthor,
@@ -66,7 +67,9 @@ const visibilityLabel: Record<string, string> = {
 }
 
 export function DashboardBlogAdmin() {
-  const { isContentModerator, ready } = useAuth()
+  const { can, ready } = useAuth()
+  const canBlogAdmin =
+    can(Perm.ContentBlogModerate) || can(Perm.SiteBlogBoard)
   const [overview, setOverview] = useState<BlogAdminOverview | null>(null)
   const [authors, setAuthors] = useState<BlogAdminAuthor[]>([])
   const [authorTotal, setAuthorTotal] = useState(0)
@@ -113,14 +116,14 @@ export function DashboardBlogAdmin() {
   }, [])
 
   useEffect(() => {
-    if (!ready || !isContentModerator) return
+    if (!ready || !canBlogAdmin) return
     setLoading(true)
     void Promise.all([
       loadOverview(),
       loadAuthors(),
       loadArticles(undefined, 'all'),
     ]).finally(() => setLoading(false))
-  }, [ready, isContentModerator, loadOverview, loadAuthors, loadArticles])
+  }, [ready, canBlogAdmin, loadOverview, loadAuthors, loadArticles])
 
   async function moderate(
     id: number,
@@ -148,10 +151,10 @@ export function DashboardBlogAdmin() {
     void loadArticles(articleKw, status)
   }
 
-  if (ready && !isContentModerator) {
+  if (ready && !canBlogAdmin) {
     return (
       <p className="p-6 text-sm text-muted-foreground">
-        仅站点管理员或资源审核员可管理博客。
+        你还没有管理博客的权限。如有需要，请联系站点管理员开通。
       </p>
     )
   }

@@ -192,7 +192,7 @@ function StatCard({
 }
 
 export function Home() {
-  const { isLogin, isMemberLike, ready, user } = useAuth()
+  const { isLogin, ready, user } = useAuth()
   const [period, setPeriod] = useState<PeriodData | null>(null)
   const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
@@ -316,7 +316,7 @@ export function Home() {
           {OJ_LINKS.map((o) => (
             <OjLink key={o.href} href={o.href} label={o.label} desc={o.desc} icon={o.icon} />
           ))}
-          {isLogin && isMemberLike && (
+          {isLogin && (
             <Link
               to="/change-profile"
               className="col-span-2 flex items-center justify-center rounded-lg border border-dashed px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted/40 lg:col-span-1"

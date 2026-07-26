@@ -4,9 +4,7 @@ import { cn } from '@/lib/utils'
 import { bindMarkdownCodeCopy } from '@/lib/markdown-code-copy'
 import {
   prepareMarkdownHighlight,
-  renderContent,
   renderContentAsync,
-  renderMarkdown,
   renderMarkdownAsync,
   sanitizeHtml,
 } from '@/lib/markdown'
@@ -37,7 +35,8 @@ export function MarkdownBody({
   emptyText = '暂无内容',
 }: MarkdownBodyProps) {
   const rootRef = useRef<HTMLDivElement>(null)
-  const [html, setHtml] = useState(() => syncRender(content, mode))
+  // 首帧留空占位，仅在 effect 中渲染一次，避免挂载时同步+异步双重解析
+  const [html, setHtml] = useState('')
 
   useEffect(() => {
     if (!content) {
@@ -86,11 +85,4 @@ export function MarkdownBody({
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )
-}
-
-function syncRender(content: string, mode: Mode): string {
-  if (!content) return ''
-  if (mode === 'html') return sanitizeHtml(content)
-  if (mode === 'auto') return renderContent(content)
-  return renderMarkdown(content)
 }

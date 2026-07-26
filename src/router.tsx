@@ -8,7 +8,8 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { useAuth } from '@/auth/AuthContext'
 import { RequireCoach } from '@/auth/RequireCoach'
 import { RequireLogin } from '@/auth/RequireLogin'
-import { RequireMemberLike } from '@/auth/RequireMemberLike'
+import { RequirePerm } from '@/auth/RequirePerm'
+import { Perm } from '@/lib/permissions'
 import { RouteErrorFallback } from '@/components/error-boundary'
 import { Spinner } from '@/components/ui/spinner'
 import { lazyWithRetry as lazy } from '@/lib/lazy-with-retry'
@@ -185,6 +186,11 @@ const DashboardBlogAdmin = lazy(() =>
     default: m.DashboardBlogAdmin,
   })),
 )
+const DashboardRolesManage = lazy(() =>
+  import('@/pages/dashboard/RolesManage').then((m) => ({
+    default: m.DashboardRolesManage,
+  })),
+)
 const OrgHub = lazy(() =>
   import('@/pages/OrgHub').then((m) => ({ default: m.OrgHub })),
 )
@@ -274,14 +280,24 @@ function CoachOutlet() {
   )
 }
 
-/** 管理首页：纯资源审核员进题库审查，其余进组织数据 */
+/** 管理首页候选：按权限找第一个可访问的管理页（自定义角色也能落到正确入口） */
+const ADMIN_INDEX_CANDIDATES: { path: string; anyOf: string[] }[] = [
+  { path: 'statistics', anyOf: [Perm.OrgReportView] },
+  { path: 'org', anyOf: [Perm.OrgInfoWrite, Perm.OrgPolicyToggle, Perm.OrgRoleManage] },
+  { path: 'group', anyOf: [Perm.OrgGroupManage] },
+  { path: 'bulletin', anyOf: [Perm.OrgBulletinManage] },
+  { path: 'problem-edits', anyOf: [Perm.ContentProblemReview] },
+  { path: 'blog', anyOf: [Perm.ContentBlogModerate, Perm.SiteBlogBoard] },
+  { path: 'site-statistics', anyOf: [Perm.SiteStatsRead] },
+  { path: 'site-users', anyOf: [Perm.SiteUserList] },
+  { path: 'site', anyOf: [Perm.SiteConfigRead, Perm.SiteConfigWrite] },
+]
+
 function AdminIndexRedirect() {
-  const { isStaff, isContentModerator, ready } = useAuth()
+  const { can, ready } = useAuth()
   if (!ready) return null
-  if (!isStaff && isContentModerator) {
-    return <Navigate to="problem-edits" replace />
-  }
-  return <Navigate to="statistics" replace />
+  const first = ADMIN_INDEX_CANDIDATES.find((c) => c.anyOf.some((x) => can(x)))
+  return <Navigate to={first?.path ?? 'statistics'} replace />
 }
 
 const browserRouter = createBrowserRouter([
@@ -295,6 +311,10 @@ const browserRouter = createBrowserRouter([
     ),
     errorElement: <RouteErrorFallback />,
     children: [
+      // 无路径分组：子页崩溃隔离在博客管理壳内容区
+      {
+        errorElement: <RouteErrorFallback />,
+        children: [
       {
         index: true,
         element: (
@@ -343,6 +363,8 @@ const browserRouter = createBrowserRouter([
           </Lazy>
         ),
       },
+        ],
+      },
     ],
   },
   // Public reading shell (Chirpy / 简约)
@@ -355,6 +377,10 @@ const browserRouter = createBrowserRouter([
     ),
     errorElement: <RouteErrorFallback />,
     children: [
+      // 无路径分组：文章/列表崩溃隔离在博客阅读壳内容区
+      {
+        errorElement: <RouteErrorFallback />,
+        children: [
       {
         index: true,
         element: (
@@ -395,6 +421,8 @@ const browserRouter = createBrowserRouter([
           </Lazy>
         ),
       },
+        ],
+      },
     ],
   },
   {
@@ -402,6 +430,10 @@ const browserRouter = createBrowserRouter([
     element: <AppLayout />,
     errorElement: <RouteErrorFallback />,
     children: [
+      // 无路径分组：子页崩溃时回退 UI 渲染在 AppLayout 内容区，导航仍可用
+      {
+        errorElement: <RouteErrorFallback />,
+        children: [
       {
         index: true,
         element: (
@@ -455,11 +487,11 @@ const browserRouter = createBrowserRouter([
       {
         path: 'profile',
         element: (
-          <RequireMemberLike>
+          <RequireLogin>
             <Lazy>
               <Profile />
             </Lazy>
-          </RequireMemberLike>
+          </RequireLogin>
         ),
       },
       {
@@ -499,11 +531,11 @@ const browserRouter = createBrowserRouter([
       {
         path: 'change-profile',
         element: (
-          <RequireMemberLike>
+          <RequireLogin>
             <Lazy>
               <ChangeProfile />
             </Lazy>
-          </RequireMemberLike>
+          </RequireLogin>
         ),
       },
       {
@@ -707,6 +739,8 @@ const browserRouter = createBrowserRouter([
       {
         path: 'admin',
         element: <CoachOutlet />,
+        // 管理分组独立错误边界：管理页崩溃隔离在内容区
+        errorElement: <RouteErrorFallback />,
         children: [
           {
             index: true,
@@ -715,129 +749,171 @@ const browserRouter = createBrowserRouter([
           {
             path: 'statistics',
             element: (
-              <Lazy>
-                <DashboardOrgStatistics />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.OrgReportView]}>
+                <Lazy>
+                  <DashboardOrgStatistics />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'site-statistics',
             element: (
-              <Lazy>
-                <DashboardSiteStatistics />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.SiteStatsRead]}>
+                <Lazy>
+                  <DashboardSiteStatistics />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'access',
             element: (
-              <Lazy>
-                <DashboardAccessAnalytics />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.SiteStatsRead]}>
+                <Lazy>
+                  <DashboardAccessAnalytics />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'group',
             element: (
-              <Lazy>
-                <DashboardGroup />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.OrgGroupManage]}>
+                <Lazy>
+                  <DashboardGroup />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'user',
             element: (
-              <Lazy>
-                <DashboardOrgUser />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.OrgReportView, Perm.OrgGroupManage, Perm.OrgMemberRole]}>
+                <Lazy>
+                  <DashboardOrgUser />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'site-users',
             element: (
-              <Lazy>
-                <DashboardSiteUser />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.SiteUserList]}>
+                <Lazy>
+                  <DashboardSiteUser />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'bulletin',
             element: (
-              <Lazy>
-                <DashboardOrgBulletinManage />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.OrgBulletinManage]}>
+                <Lazy>
+                  <DashboardOrgBulletinManage />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'site-bulletin',
             element: (
-              <Lazy>
-                <DashboardSiteBulletinManage />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.SiteBulletin]}>
+                <Lazy>
+                  <DashboardSiteBulletinManage />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'emergency',
             element: (
-              <Lazy>
-                <DashboardEmergencyManage />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.SiteEmergency]}>
+                <Lazy>
+                  <DashboardEmergencyManage />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'problem-progress',
             element: (
-              <Lazy>
-                <DashboardProblemProgress />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.OrgReportView, Perm.SiteProblemOps]}>
+                <Lazy>
+                  <DashboardProblemProgress />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'problem-edits',
             element: (
-              <Lazy>
-                <DashboardProblemEditReview />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.ContentProblemReview]}>
+                <Lazy>
+                  <DashboardProblemEditReview />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'site',
             element: (
-              <Lazy>
-                <DashboardSiteSettings />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.SiteConfigRead, Perm.SiteConfigWrite]}>
+                <Lazy>
+                  <DashboardSiteSettings />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'ops',
             element: (
-              <Lazy>
-                <DashboardOps />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.SiteSpiderOps, Perm.SiteProblemOps, Perm.SiteBackup, Perm.SiteConfigWrite]}>
+                <Lazy>
+                  <DashboardOps />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'org',
             element: (
-              <Lazy>
-                <DashboardOrgSettings />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.OrgInfoWrite, Perm.OrgPolicyToggle, Perm.OrgRoleManage, Perm.OrgReportView]}>
+                <Lazy>
+                  <DashboardOrgSettings />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'orgs',
             element: (
-              <Lazy>
-                <DashboardOrgsManage />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.SiteOrgList]}>
+                <Lazy>
+                  <DashboardOrgsManage />
+                </Lazy>
+              </RequirePerm>
+            ),
+          },
+          {
+            path: 'roles',
+            element: (
+              <RequirePerm anyOf={[Perm.SiteRoleManage]}>
+                <Lazy>
+                  <DashboardRolesManage />
+                </Lazy>
+              </RequirePerm>
             ),
           },
           {
             path: 'blog',
             element: (
-              <Lazy>
-                <DashboardBlogAdmin />
-              </Lazy>
+              <RequirePerm anyOf={[Perm.ContentBlogModerate, Perm.SiteBlogBoard]}>
+                <Lazy>
+                  <DashboardBlogAdmin />
+                </Lazy>
+              </RequirePerm>
             ),
           },
         ],
@@ -849,6 +925,8 @@ const browserRouter = createBrowserRouter([
             <NotFound />
           </Lazy>
         ),
+      },
+        ],
       },
     ],
   },

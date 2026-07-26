@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import type { EmergencyInfo } from '@shared/api'
 import { listActiveEmergencies } from '@/api/emergency'
 import {
   getEmergencyAckMaxId,
   setEmergencyAckMaxId,
 } from '@/lib/emergency-ack'
-import { MarkdownBody } from '@/components/markdown-body'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -15,6 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+
+// 弹窗打开时才加载 Markdown 渲染链（katex/marked），避免链入首屏入口 chunk
+const MarkdownBody = lazy(() =>
+  import('@/components/markdown-body').then((m) => ({
+    default: m.MarkdownBody,
+  })),
+)
 
 /**
  * 全站紧急弹窗：拉取生效通知，过滤本地已确认 id，逐条展示后「我知道了」。
@@ -84,11 +91,21 @@ export function EmergencyDialogHost() {
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
-          <MarkdownBody
-            content={current.content}
-            mode="auto"
-            className="text-sm"
-          />
+          <Suspense
+            fallback={
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            }
+          >
+            <MarkdownBody
+              content={current.content}
+              mode="auto"
+              className="text-sm"
+            />
+          </Suspense>
         </div>
         <DialogFooter className="shrink-0 border-t px-5 py-3 sm:justify-end">
           <Button type="button" onClick={handleNext}>

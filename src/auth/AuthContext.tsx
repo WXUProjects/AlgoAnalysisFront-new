@@ -25,6 +25,7 @@ import {
 } from '@/lib/domain-hint'
 import { setAuthExpiredHandler } from '@/lib/http'
 import { jwt, jwtPayloadEquals, type JwtPayload } from '@/lib/jwt'
+import { hasAnyAdminPerm, permsFromPayload } from '@/lib/permissions'
 import {
   canAccessAdminFromPayload,
   isCaptainFromPayload,
@@ -52,9 +53,13 @@ interface AuthState {
   isCaptain: boolean
   /** 管理端入口：站点管理员或组织管理员 */
   isStaff: boolean
-  /** 可进管理壳：staff 或资源审核员 */
+  /** 可进管理壳：staff、资源审核员或持有任意管理权限（含自定义角色） */
   canAccessAdmin: boolean
   isMemberLike: boolean
+  /** 当前有效权限集合（站点 ∪ 当前组织；JWT pm 位图或旧字段推导） */
+  perms: Set<string>
+  /** 细粒度权限判定：can(Perm.OrgBulletinManage) */
+  can: (code: string) => boolean
   user: JwtPayload | null
   profile: UserProfile | null
   orgs: OrgInfo[]
@@ -95,7 +100,7 @@ const RENEW_WHEN_REMAINING_SEC = 24 * 60 * 60
 /** 两次主动续期间隔下限，避免 visibility 连点 */
 const RENEW_MIN_INTERVAL_MS = 60 * 60 * 1000
 
-function deriveFlags(payload: JwtPayload | null) {
+function deriveFlags(payload: JwtPayload | null, perms: Set<string>) {
   return {
     isLogin: Boolean(payload),
     isAdmin: isSiteAdminFromPayload(payload),
@@ -106,7 +111,8 @@ function deriveFlags(payload: JwtPayload | null) {
     isCoach: isCoachFromPayload(payload),
     isCaptain: isCaptainFromPayload(payload),
     isStaff: isStaffFromPayload(payload),
-    canAccessAdmin: canAccessAdminFromPayload(payload),
+    // 自定义角色只赋权限不改 orgRole，持有任意管理权限即可进管理壳
+    canAccessAdmin: canAccessAdminFromPayload(payload) || hasAnyAdminPerm(perms),
     // 任意登录用户均可走队员侧（资料/交题等）
     isMemberLike: Boolean(payload),
   }
@@ -256,12 +262,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         forceProfile || profileLoadedForRef.current !== payload.userId
       let list: OrgInfo[] = orgsRef.current
       if (needProfile) {
-        const res = await fetchProfileById(payload.userId)
+        // profile 与 orgs 互不依赖，并行拉取缩短首屏就绪时间
+        const [res, orgList] = await Promise.all([
+          fetchProfileById(payload.userId),
+          refreshOrgs(),
+        ])
         if (res.success && res.data) {
           setProfile(res.data)
           profileLoadedForRef.current = payload.userId
         }
-        list = await refreshOrgs()
+        list = orgList
       } else if (!list.length) {
         list = await refreshOrgs()
       }
@@ -405,7 +415,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [sync],
   )
 
-  const flags = deriveFlags(user)
+  const perms = useMemo(() => permsFromPayload(user), [user])
+  const can = useCallback((code: string) => perms.has(code), [perms])
+  const flags = useMemo(() => deriveFlags(user, perms), [user, perms])
   const currentOrg = useMemo(() => {
     if (!user?.orgId) return orgs.find((o) => o.isCurrent) || orgs[0] || null
     return orgs.find((o) => o.id === user.orgId) || orgs.find((o) => o.isCurrent) || null
@@ -414,6 +426,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthState>(
     () => ({
       ...flags,
+      perms,
+      can,
       user,
       profile,
       orgs,
@@ -428,6 +442,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }),
     [
       flags,
+      perms,
+      can,
       user,
       profile,
       orgs,

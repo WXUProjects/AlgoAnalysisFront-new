@@ -161,7 +161,7 @@ export function Profile() {
       string,
       { username: string; rating?: number; hasRating?: boolean }
     >()
-    profile?.spiders.forEach((s) =>
+    profile?.spiders?.forEach((s) =>
       m.set(s.platform, {
         username: s.username,
         rating: s.rating,

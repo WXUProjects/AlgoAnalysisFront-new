@@ -1,16 +1,5 @@
 /** 角色：GoAlgo isSiteAdmin + 组织内 orgRole */
 
-export const Role = {
-  Member: 0,
-  Admin: 1,
-  /** @deprecated 旧全局教练；已迁移为 orgRole */
-  Coach: 2,
-  /** @deprecated 旧全局队长；已迁移为 orgRole */
-  Captain: 3,
-} as const
-
-export type RoleId = (typeof Role)[keyof typeof Role]
-
 /** 组织内角色（展示顺序：成员 → 队长 → 教练 → 团队管理员） */
 export const OrgRole = {
   Member: 'member',
@@ -28,20 +17,13 @@ export const OrgRoleLabel: Record<string, string> = {
   org_admin: '团队管理员',
 }
 
-export const RoleLabel: Record<number, string> = {
-  [Role.Member]: '队员',
-  [Role.Admin]: '站点管理员',
-  [Role.Coach]: '教练',
-  [Role.Captain]: '队长',
-}
-
 export function isSiteAdminFromPayload(p?: {
   isSiteAdmin?: boolean
   roleId?: number | null
 } | null) {
   if (!p) return false
-  // roleId===1 仍为历史站管标记；新路径以 isSiteAdmin 为准
-  return Boolean(p.isSiteAdmin) || p.roleId === Role.Admin
+  // roleId===1 为历史站管标记（旧 token 兼容）；新路径以 isSiteAdmin 为准
+  return Boolean(p.isSiteAdmin) || p.roleId === 1
 }
 
 /** 资源审核员（全站身份，不含站管） */
@@ -96,21 +78,6 @@ export function isOrgStaffRole(orgRole?: string | null) {
   )
 }
 
-/** @deprecated 用 isSiteAdminFromPayload */
-export function isAdminRole(roleId?: number | null) {
-  return roleId === Role.Admin
-}
-
-/** @deprecated 旧全局 roleId；请用 isCoachFromPayload */
-export function isCoachOnlyRole(roleId?: number | null) {
-  return roleId === Role.Coach
-}
-
-/** @deprecated 旧全局 roleId；请用 isCaptainFromPayload */
-export function isCaptainRole(roleId?: number | null) {
-  return roleId === Role.Captain
-}
-
 /** 管理端：站点管理员或当前组织教练/队长/管理员 */
 export function isStaffFromPayload(p?: {
   isSiteAdmin?: boolean
@@ -121,67 +88,98 @@ export function isStaffFromPayload(p?: {
   return isSiteAdminFromPayload(p) || isOrgStaffRole(p.orgRole)
 }
 
-/** @deprecated 用 isStaffFromPayload */
-export function isStaffRole(roleId?: number | null) {
-  return (
-    roleId === Role.Admin || roleId === Role.Coach || roleId === Role.Captain
-  )
-}
-
-/** 队员侧能力：任意登录用户均可（含教练） */
-export function isMemberLikeRole(_roleId?: number | null) {
-  return true
-}
-
-export function roleName(roleId?: number | null) {
-  if (roleId === undefined || roleId === null) return '未知'
-  return RoleLabel[roleId] ?? `角色${roleId}`
-}
-
 export function orgRoleName(role?: string | null) {
   if (!role) return '成员'
   return OrgRoleLabel[role] ?? role
 }
 
-/** 侧栏管理入口文案 */
-export function staffNavLabel(p?: {
+/** 导航文案推导所需的 payload 子集（JWT payload 结构兼容） */
+export type StaffLabelPayload = {
   isSiteAdmin?: boolean
   isResourceReviewer?: boolean
   orgRole?: string
   roleId?: number | null
-} | null) {
-  if (isSiteAdminFromPayload(p)) return '站点管理'
-  if (isResourceReviewerFromPayload(p) && !isOrgStaffRole(p?.orgRole)) {
-    return '资源审核'
-  }
-  if (p?.orgRole === OrgRole.OrgAdmin) return '团队管理'
-  if (p?.orgRole === OrgRole.Coach) return '教练管理'
-  if (p?.orgRole === OrgRole.Captain) return '队长管理'
-  if (isResourceReviewerFromPayload(p)) return '资源审核'
-  return '团队管理'
 }
 
+/** 管理端内置身份类别（自定义角色仅有权限、不落入任何类别） */
+export type StaffKind =
+  | 'siteAdmin'
+  | 'reviewer'
+  | 'orgAdmin'
+  | 'coach'
+  | 'captain'
+
 /**
- * 底栏管理入口文案（与侧栏不同，精确区分）。
- * 优先级：站点管理员 → 组织管理员 → 教练 → 队长。
- * 站点管理员优先于组织管理员（避免 isOrgAdmin 同时为 true 时误标）。
+ * 管理入口文案有序规则表（自上而下，命中即止）：
+ * 站点管理员 → 纯资源审核员（无组织 staff 角色）→ 团队管理员 → 教练 → 队长。
+ * 侧栏与底栏仅团队管理员一条文案不同（侧栏「团队管理」/ 底栏「组织管理」）。
  */
-export function bottomNavStaffLabel(p?: {
-  isSiteAdmin?: boolean
-  isResourceReviewer?: boolean
-  orgRole?: string
-  roleId?: number | null
-} | null) {
-  // 与「更多」分区一致：站管 = 站点管理，组织侧 = 组织/教练/队长管理
-  if (isSiteAdminFromPayload(p)) return '站点管理'
-  if (isResourceReviewerFromPayload(p) && !isOrgStaffRole(p?.orgRole)) {
-    return '资源审核'
-  }
-  if (p?.orgRole === OrgRole.OrgAdmin) return '组织管理'
-  if (p?.orgRole === OrgRole.Coach) return '教练管理'
-  if (p?.orgRole === OrgRole.Captain) return '队长管理'
-  if (isResourceReviewerFromPayload(p)) return '资源审核'
-  return '管理'
+const STAFF_NAV_RULES: ReadonlyArray<{
+  kind: StaffKind
+  when: (p: StaffLabelPayload) => boolean
+  sidebar: string
+  bottom: string
+}> = [
+  {
+    kind: 'siteAdmin',
+    when: (p) => isSiteAdminFromPayload(p),
+    sidebar: '站点管理',
+    bottom: '站点管理',
+  },
+  {
+    kind: 'reviewer',
+    when: (p) => isResourceReviewerFromPayload(p) && !isOrgStaffRole(p.orgRole),
+    sidebar: '资源审核',
+    bottom: '资源审核',
+  },
+  {
+    kind: 'orgAdmin',
+    when: (p) => p.orgRole === OrgRole.OrgAdmin,
+    sidebar: '团队管理',
+    bottom: '组织管理',
+  },
+  {
+    kind: 'coach',
+    when: (p) => p.orgRole === OrgRole.Coach,
+    sidebar: '教练管理',
+    bottom: '教练管理',
+  },
+  {
+    kind: 'captain',
+    when: (p) => p.orgRole === OrgRole.Captain,
+    sidebar: '队长管理',
+    bottom: '队长管理',
+  },
+]
+
+/** 无内置角色、仅持自定义角色权限时的管理入口回退文案 */
+export const STAFF_NAV_FALLBACK_LABEL = '管理中心'
+
+/** 按有序规则表判定内置管理身份；无内置角色（自定义角色）返回 null */
+export function staffKindFromPayload(
+  p?: StaffLabelPayload | null,
+): StaffKind | null {
+  if (!p) return null
+  return STAFF_NAV_RULES.find((r) => r.when(p))?.kind ?? null
+}
+
+function staffLabelByVariant(
+  p: StaffLabelPayload | null | undefined,
+  variant: 'sidebar' | 'bottom',
+): string {
+  if (!p) return STAFF_NAV_FALLBACK_LABEL
+  const rule = STAFF_NAV_RULES.find((r) => r.when(p))
+  return rule ? rule[variant] : STAFF_NAV_FALLBACK_LABEL
+}
+
+/** 侧栏管理入口文案（团队管理员显示「团队管理」） */
+export function staffNavLabel(p?: StaffLabelPayload | null): string {
+  return staffLabelByVariant(p, 'sidebar')
+}
+
+/** 底栏管理入口文案（团队管理员显示「组织管理」，与「更多」分区一致） */
+export function bottomNavStaffLabel(p?: StaffLabelPayload | null): string {
+  return staffLabelByVariant(p, 'bottom')
 }
 
 /** 管理端入口：组织 staff、站管、或资源审核员 */

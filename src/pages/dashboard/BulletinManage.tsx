@@ -53,6 +53,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatTime } from '@/lib/format'
+import { Perm } from '@/lib/permissions'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -68,8 +69,12 @@ export function DashboardBulletinManage({
 }: {
   scope?: ManageScope
 }) {
-  const { isAdmin } = useAuth()
+  const { can } = useAuth()
   const isSite = scope === 'site'
+  // 站点公告与组织公告分别对应各自的公告管理权限
+  const canManage = isSite
+    ? can(Perm.SiteBulletin)
+    : can(Perm.OrgBulletinManage)
   const { page, pageSize, setPage, setPageSize } = useListQueryState({
     defaultPageSize: DEFAULT_PAGE_SIZE,
   })
@@ -85,8 +90,8 @@ export function DashboardBulletinManage({
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
-    // 站点公告管理仅站管；组织管理员不应请求/看到
-    if (isSite && !isAdmin) {
+    // 无对应范围的公告管理权限时不发请求
+    if (!canManage) {
       setLoading(false)
       return
     }
@@ -99,7 +104,7 @@ export function DashboardBulletinManage({
     }
     setList(res.data.list)
     setTotal(res.data.total)
-  }, [page, pageSize, scope, isSite, isAdmin])
+  }, [page, pageSize, scope, canManage])
 
   useEffect(() => {
     void load()
@@ -156,9 +161,18 @@ export function DashboardBulletinManage({
     } else toast.error(res.message || '删除失败，请稍后重试')
   }
 
-  // 站点公告仅站点管理员可进管理页（组织管理员不可见）
-  if (isSite && !isAdmin) {
+  // 站点公告需站点公告管理权限；无权限则回组织公告管理页
+  if (isSite && !canManage) {
     return <Navigate to="/admin/bulletin" replace />
+  }
+  if (!canManage) {
+    return (
+      <PageShell>
+        <p className="text-sm text-muted-foreground">
+          你还没有管理公告的权限。如有需要，请联系团队管理员开通。
+        </p>
+      </PageShell>
+    )
   }
 
   const pageTitle = isSite ? '站点公告' : '组织公告'

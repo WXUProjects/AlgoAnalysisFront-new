@@ -17,6 +17,7 @@ import {
   MoonIcon,
   NewspaperIcon,
   SettingsIcon,
+  ShieldCheckIcon,
   SirenIcon,
   SunIcon,
   UserIcon,
@@ -35,45 +36,35 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { Perm } from '@/lib/permissions'
 import {
-  isSiteAdminFromPayload,
-  isStaffFromPayload,
-  OrgRole,
+  orgRoleName,
+  staffKindFromPayload,
+  type StaffLabelPayload,
 } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 
-/** 组织后台入口文案（按角色；站管也进组织侧，不叫「站点管理」） */
-function orgAdminHubLabel(payload?: {
-  isSiteAdmin?: boolean
-  orgRole?: string
-  roleId?: number | null
-} | null): string {
-  if (payload?.orgRole === OrgRole.Coach) return '教练工作台'
-  if (payload?.orgRole === OrgRole.Captain) return '队长工作台'
-  if (payload?.orgRole === OrgRole.OrgAdmin) return '组织工作台'
-  // 站管或其它 staff：明确是「当前组织」后台，避免和站点管理混淆
+/** 组织后台入口文案（按 roles.ts 规则表；站管也进组织侧，不叫「站点管理」） */
+function orgAdminHubLabel(payload?: StaffLabelPayload | null): string {
+  const kind = staffKindFromPayload(payload)
+  if (kind === 'coach') return '教练工作台'
+  if (kind === 'captain') return '队长工作台'
+  // 团队管理员 / 站管 / 自定义角色：明确是「当前组织」后台，避免和站点管理混淆
   return '组织工作台'
 }
 
 /** 组织管理分区标题：永远带「组织管理」前缀 */
 function orgManageSectionTitle(
   orgName?: string | null,
-  payload?: {
-    isSiteAdmin?: boolean
-    orgRole?: string
-    roleId?: number | null
-  } | null,
+  payload?: StaffLabelPayload | null,
 ): string {
+  const kind = staffKindFromPayload(payload)
   const roleHint =
-    payload?.orgRole === OrgRole.Coach
-      ? '教练'
-      : payload?.orgRole === OrgRole.Captain
-        ? '队长'
-        : payload?.orgRole === OrgRole.OrgAdmin
-          ? '团队管理员'
-          : isSiteAdminFromPayload(payload)
-            ? '站管视角'
-            : null
+    kind === 'siteAdmin'
+      ? '站管视角'
+      : kind === 'orgAdmin' || kind === 'coach' || kind === 'captain'
+        ? orgRoleName(payload?.orgRole)
+        : null
   const name = orgName?.trim()
   if (name && roleHint) return `组织管理 · ${name}（${roleHint}）`
   if (name) return `组织管理 · ${name}`
@@ -90,6 +81,8 @@ export type MobileMoreLink = {
   /** 精确匹配路由（默认前缀匹配） */
   end?: boolean
   match?: (pathname: string) => boolean
+  /** 命中任一权限才显示（与 src/router.tsx 路由守卫一致）；缺省不限制 */
+  anyOf?: string[]
 }
 
 export type MobileMoreSection = {
@@ -400,29 +393,151 @@ export type BuildMobileMoreOptions = {
   isMemberLike: boolean
   username?: string
   showAbout: boolean
-  /** 站管或组织教练/队长/团队管理员 */
-  isStaff: boolean
-  isSiteAdmin: boolean
-  /** 资源审核员（非站管时展示内容审核入口） */
-  isContentModerator?: boolean
-  /**
-   * 可改组织设置（品牌/识别码/任命）：站管或 org_admin。
-   * 教练/队长为 false，只看训练报告。
-   */
-  canOrgSettings: boolean
+  /** 可进管理后台：内置角色 / 资源审核员 / 持有任意管理权限（自定义角色） */
+  canAccessAdmin: boolean
+  /** 细粒度权限判定（useAuth().can） */
+  can: (code: string) => boolean
   /** 当前组织名，用于管理分组标题 */
   orgName?: string | null
-  /** 传给 staffNavLabel：isSiteAdmin / orgRole / roleId */
-  staffLabelPayload?: {
-    isSiteAdmin?: boolean
-    isResourceReviewer?: boolean
-    orgRole?: string
-    roleId?: number | null
-  } | null
+  /** 当前登录用户 JWT payload：分区标题 / 工作台文案按身份推导 */
+  user?: StaffLabelPayload | null
 }
 
+/** 管理分区条目（内容审核条目单独标记，用于分区标题回退） */
+type ManageLink = MobileMoreLink & { contentReview?: boolean }
+
+/** 组织管理条目（当前组织范围；不含工作台入口） */
+function orgManageLinks(canOrgSettings: boolean): ManageLink[] {
+  return [
+    {
+      to: '/admin/statistics',
+      label: '组织数据',
+      icon: BarChart3Icon,
+      anyOf: [Perm.OrgReportView],
+      match: (p) =>
+        p === '/admin/statistics' || p.startsWith('/admin/statistics/'),
+    },
+    {
+      to: '/admin/bulletin',
+      label: '组织公告',
+      icon: MegaphoneIcon,
+      anyOf: [Perm.OrgBulletinManage],
+      match: (p) =>
+        p === '/admin/bulletin' || p.startsWith('/admin/bulletin/'),
+    },
+    {
+      to: '/admin/group',
+      label: '组织分组',
+      icon: UsersIcon,
+      anyOf: [Perm.OrgGroupManage],
+    },
+    {
+      to: '/admin/user',
+      label: '组织成员',
+      icon: LayoutDashboardIcon,
+      anyOf: [Perm.OrgReportView, Perm.OrgGroupManage, Perm.OrgMemberRole],
+      match: (p) => p === '/admin/user' || p.startsWith('/admin/user/'),
+    },
+    // 组织设置：可改品牌/识别码/任命；否则仅看训练报告
+    {
+      to: '/admin/org',
+      label: canOrgSettings ? '组织设置' : '组织训练报告',
+      icon: canOrgSettings ? SettingsIcon : FileSpreadsheetIcon,
+      anyOf: [
+        Perm.OrgInfoWrite,
+        Perm.OrgPolicyToggle,
+        Perm.OrgRoleManage,
+        Perm.OrgReportView,
+      ],
+      match: (p) => p.startsWith('/admin/org') && !p.startsWith('/admin/orgs'),
+    },
+  ]
+}
+
+/** 站点管理 / 内容审核条目（全站范围） */
+const SITE_MANAGE_LINKS: ManageLink[] = [
+  {
+    to: '/admin/site-statistics',
+    label: '站点数据',
+    icon: BarChart3Icon,
+    anyOf: [Perm.SiteStatsRead],
+  },
+  {
+    to: '/admin/access',
+    label: '站点访问',
+    icon: ActivityIcon,
+    anyOf: [Perm.SiteStatsRead],
+  },
+  {
+    to: '/admin/site-users',
+    label: '全站用户',
+    icon: LayoutDashboardIcon,
+    anyOf: [Perm.SiteUserList],
+  },
+  {
+    to: '/admin/orgs',
+    label: '全站组织',
+    icon: UsersIcon,
+    anyOf: [Perm.SiteOrgList],
+  },
+  {
+    to: '/admin/problem-progress',
+    label: '题库识别',
+    icon: WorkflowIcon,
+    anyOf: [Perm.OrgReportView, Perm.SiteProblemOps],
+  },
+  {
+    to: '/admin/problem-edits',
+    label: '题库审查',
+    icon: ClipboardCheckIcon,
+    anyOf: [Perm.ContentProblemReview],
+    contentReview: true,
+  },
+  {
+    to: '/admin/blog',
+    label: '博客管理',
+    icon: NewspaperIcon,
+    anyOf: [Perm.ContentBlogModerate, Perm.SiteBlogBoard],
+    contentReview: true,
+  },
+  {
+    to: '/admin/site-bulletin',
+    label: '站点公告',
+    icon: MegaphoneIcon,
+    anyOf: [Perm.SiteBulletin],
+    match: (p) =>
+      p === '/admin/site-bulletin' || p.startsWith('/admin/site-bulletin/'),
+  },
+  {
+    to: '/admin/emergency',
+    label: '站点紧急通知',
+    icon: SirenIcon,
+    anyOf: [Perm.SiteEmergency],
+  },
+  {
+    to: '/admin/roles',
+    label: '角色权限',
+    icon: ShieldCheckIcon,
+    anyOf: [Perm.SiteRoleManage],
+  },
+  {
+    to: '/admin/site',
+    label: '站点设置',
+    icon: SettingsIcon,
+    anyOf: [Perm.SiteConfigRead, Perm.SiteConfigWrite],
+    match: (p) => p === '/admin/site' || p.startsWith('/admin/site/'),
+  },
+  {
+    to: '/admin/ops',
+    label: '站点运维',
+    icon: WrenchIcon,
+    anyOf: [Perm.SiteSpiderOps, Perm.SiteProblemOps, Perm.SiteBackup, Perm.SiteConfigWrite],
+  },
+]
+
 /**
- * 统一「更多」分区：浏览 + 我的 +（有权限时）组织管理 / 站点管理。
+ * 统一「更多」分区：浏览 + 我的 +（canAccessAdmin 时）组织管理 / 站点管理。
+ * 管理条目显隐由权限驱动（anyOf 与路由守卫一致）；
  * 分区标题与条目文案明确区分「当前组织」与「全站」，避免站管场景混淆。
  */
 export function buildMobileMoreSections(
@@ -461,184 +576,45 @@ export function buildMobileMoreSections(
     sections.push({ title: '我的', layout: 'list', items: me })
   }
 
-  // —— 组织管理：当前组织范围（教练 / 队长 / 团队管理员 / 站管在组织视角下）——
-  if (opts.isStaff) {
-    const orgItems: MobileMoreLink[] = [
-      {
-        to: '/admin',
-        label: orgAdminHubLabel(opts.staffLabelPayload),
-        icon: LayoutDashboardIcon,
-        end: true,
-        match: (p) => p === '/admin' || p === '/admin/',
-      },
-      {
-        to: '/admin/statistics',
-        label: '组织数据',
-        icon: BarChart3Icon,
-        match: (p) =>
-          p === '/admin/statistics' || p.startsWith('/admin/statistics/'),
-      },
-      {
-        to: '/admin/bulletin',
-        label: '组织公告',
-        icon: MegaphoneIcon,
-        match: (p) =>
-          p === '/admin/bulletin' || p.startsWith('/admin/bulletin/'),
-      },
-      {
-        to: '/admin/group',
-        label: '组织分组',
-        icon: UsersIcon,
-      },
-      {
-        to: '/admin/user',
-        label: '组织成员',
-        icon: LayoutDashboardIcon,
-        match: (p) => p === '/admin/user' || p.startsWith('/admin/user/'),
-      },
-    ]
+  if (opts.canAccessAdmin) {
+    const visible = (items: ManageLink[]) =>
+      items.filter((i) => !i.anyOf || i.anyOf.some(opts.can))
 
-    // 组织设置：站管 / 团队管理员；训练报告：教练 / 队长
-    if (opts.canOrgSettings) {
-      orgItems.push({
-        to: '/admin/org',
-        label: '组织设置',
-        icon: SettingsIcon,
-        match: (p) =>
-          p.startsWith('/admin/org') && !p.startsWith('/admin/orgs'),
-      })
-    } else {
-      orgItems.push({
-        to: '/admin/org',
-        label: '组织训练报告',
-        icon: FileSpreadsheetIcon,
-        match: (p) =>
-          p.startsWith('/admin/org') && !p.startsWith('/admin/orgs'),
+    // —— 组织管理：当前组织范围（有任一组织条目权限才展示，含工作台入口）——
+    const canOrgSettings =
+      opts.can(Perm.OrgInfoWrite) ||
+      opts.can(Perm.OrgPolicyToggle) ||
+      opts.can(Perm.OrgRoleManage)
+    const orgVisible = visible(orgManageLinks(canOrgSettings))
+    if (orgVisible.length > 0) {
+      sections.push({
+        title: orgManageSectionTitle(opts.orgName, opts.user),
+        layout: 'list',
+        items: [
+          {
+            to: '/admin',
+            label: orgAdminHubLabel(opts.user),
+            icon: LayoutDashboardIcon,
+            end: true,
+            match: (p) => p === '/admin' || p === '/admin/',
+          },
+          ...orgVisible,
+        ],
       })
     }
 
-    sections.push({
-      title: orgManageSectionTitle(opts.orgName, opts.staffLabelPayload),
-      layout: 'list',
-      items: orgItems,
-    })
-  }
-
-  // —— 站点管理：仅站点管理员，全站范围（文案一律带「站点/全站」）——
-  if (opts.isSiteAdmin) {
-    sections.push({
-      title: '站点管理',
-      layout: 'list',
-      items: [
-        {
-          to: '/admin/site-statistics',
-          label: '站点数据',
-          icon: BarChart3Icon,
-        },
-        { to: '/admin/access', label: '站点访问', icon: ActivityIcon },
-        {
-          to: '/admin/site-users',
-          label: '全站用户',
-          icon: LayoutDashboardIcon,
-        },
-        {
-          to: '/admin/orgs',
-          label: '全站组织',
-          icon: UsersIcon,
-        },
-        {
-          to: '/admin/problem-progress',
-          label: '站点题库识别',
-          icon: WorkflowIcon,
-        },
-        {
-          to: '/admin/problem-edits',
-          label: '站点题库审查',
-          icon: ClipboardCheckIcon,
-        },
-        { to: '/admin/blog', label: '站点博客', icon: NewspaperIcon },
-        {
-          to: '/admin/site-bulletin',
-          label: '站点公告',
-          icon: MegaphoneIcon,
-          match: (p) =>
-            p === '/admin/site-bulletin' ||
-            p.startsWith('/admin/site-bulletin/'),
-        },
-        { to: '/admin/emergency', label: '站点紧急通知', icon: SirenIcon },
-        {
-          to: '/admin/site',
-          label: '站点设置',
-          icon: SettingsIcon,
-          match: (p) => p === '/admin/site' || p.startsWith('/admin/site/'),
-        },
-        { to: '/admin/ops', label: '站点运维', icon: WrenchIcon },
-      ],
-    })
-  } else if (opts.isContentModerator) {
-    // —— 资源审核员（非站管）：仅内容审核入口 ——
-    sections.push({
-      title: '内容审核',
-      layout: 'list',
-      items: [
-        {
-          to: '/admin/problem-edits',
-          label: '题库审查',
-          icon: ClipboardCheckIcon,
-        },
-        { to: '/admin/blog', label: '博客管理', icon: NewspaperIcon },
-      ],
-    })
+    // —— 站点管理：全站范围；仅剩内容审核条目（如资源审核员）时标题改「内容审核」——
+    const siteVisible = visible(SITE_MANAGE_LINKS)
+    if (siteVisible.length > 0) {
+      sections.push({
+        title: siteVisible.every((i) => i.contentReview)
+          ? '内容审核'
+          : '站点管理',
+        layout: 'list',
+        items: siteVisible,
+      })
+    }
   }
 
   return sections
-}
-
-/**
- * 从 Auth 字段拼装更多菜单（布局层薄封装）。
- * canOrgSettings：站管或 org_admin（Auth 里 isOrgAdmin 对站管也为 true）。
- */
-export function buildMobileMoreSectionsFromAuth(opts: {
-  isLogin: boolean
-  isMemberLike: boolean
-  username?: string
-  showAbout: boolean
-  isStaff: boolean
-  isSiteAdmin: boolean
-  isOrgAdmin: boolean
-  isContentModerator?: boolean
-  isResourceReviewer?: boolean
-  orgName?: string | null
-  orgRole?: string | null
-  roleId?: number | null
-}): MobileMoreSection[] {
-  const payload = {
-    isSiteAdmin: opts.isSiteAdmin,
-    isResourceReviewer: opts.isResourceReviewer,
-    orgRole: opts.orgRole ?? undefined,
-    roleId: opts.roleId,
-  }
-  // 双重校验，避免布局误传 isStaff
-  const staff = opts.isStaff || isStaffFromPayload(payload)
-  const siteAdmin = opts.isSiteAdmin || isSiteAdminFromPayload(payload)
-  const contentMod =
-    opts.isContentModerator ||
-    siteAdmin ||
-    Boolean(opts.isResourceReviewer)
-  // 组织设置：站管 / 团队管理员（Auth.isOrgAdmin 对站管也为 true）
-  // 教练、队长 isOrgAdmin=false → 训练报告
-  const canOrgSettings = siteAdmin || opts.isOrgAdmin
-
-  return buildMobileMoreSections({
-    isLogin: opts.isLogin,
-    isMemberLike: opts.isMemberLike,
-    username: opts.username,
-    showAbout: opts.showAbout,
-    isStaff: staff,
-    isSiteAdmin: siteAdmin,
-    isContentModerator: contentMod,
-    canOrgSettings,
-    orgName: opts.orgName,
-    staffLabelPayload: payload,
-  })
 }
