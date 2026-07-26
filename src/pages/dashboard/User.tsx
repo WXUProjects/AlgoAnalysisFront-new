@@ -1018,12 +1018,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       />
                     </TableHead>
                   )}
-                  <TableHead className="w-12 hidden sm:table-cell" />
-                  <TableHead>{isSite ? '昵称' : '组织内名称'}</TableHead>
-                  <TableHead>用户名</TableHead>
+                  <TableHead>成员</TableHead>
                   <TableHead>{isSite ? '所属组织' : '分组'}</TableHead>
-                  <TableHead className="w-[7.5rem] hidden md:table-cell">日报</TableHead>
-                  <TableHead className="w-[7.5rem] hidden md:table-cell">周报</TableHead>
+                  <TableHead className="w-[10rem] hidden md:table-cell">报告邮件</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1049,17 +1046,26 @@ function UserListPage({ scope }: { scope: UserScope }) {
                           />
                         </TableCell>
                       )}
-                      <TableCell className="hidden sm:table-cell">
-                        <Avatar className="size-8">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                        <Avatar className="hidden size-8 sm:flex">
                           <AvatarImage src={u.avatar || undefined} />
                           <AvatarFallback>
                             {(u.name || u.username || '?').slice(0, 1)}
                           </AvatarFallback>
                         </Avatar>
-                      </TableCell>
-                      <TableCell>
+                        <div className="flex min-w-0 flex-col gap-0.5">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span>{u.name}</span>
+                          <Link
+                            to={
+                              u.username
+                                ? `/profile/${u.username}`
+                                : `/profile?id=${u.userId}`
+                            }
+                            className="w-fit font-medium hover:underline"
+                          >
+                            {u.name || u.username}
+                          </Link>
                           {u.isSiteAdmin && (
                             <Badge variant="default" className="text-[10px]">
                               站点管理员
@@ -1102,8 +1108,14 @@ function UserListPage({ scope }: { scope: UserScope }) {
                             </Badge>
                           )}
                         </div>
+                        {u.username ? (
+                          <span className="truncate text-xs text-muted-foreground">
+                            @{u.username}
+                          </span>
+                        ) : null}
+                        </div>
+                        </div>
                       </TableCell>
-                      <TableCell>{u.username}</TableCell>
                       <TableCell>
                         {isSite ? (
                           <div className="flex max-w-xs flex-wrap gap-1">
@@ -1130,9 +1142,12 @@ function UserListPage({ scope }: { scope: UserScope }) {
                         )}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <div className="flex flex-col gap-1">
-                          {canToggleEmail ? (
-                            <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="w-7 shrink-0 text-xs text-muted-foreground">
+                              日报
+                            </span>
+                            {canToggleEmail ? (
                               <Switch
                                 checked={dailyOn}
                                 disabled={dailyBusy || (!dailyCanOpen && !dailyOn)}
@@ -1141,29 +1156,25 @@ function UserListPage({ scope }: { scope: UserScope }) {
                                 }
                                 aria-label={`${u.name} 日报`}
                               />
-                              <span className="text-xs text-muted-foreground">
+                            ) : (
+                              <Badge
+                                variant={dailyOn ? 'default' : 'secondary'}
+                                className="font-normal"
+                              >
                                 {dailyOn ? '接收中' : '已关闭'}
+                              </Badge>
+                            )}
+                            {!dailyCanOpen && !dailyOn ? (
+                              <span className="text-[10px] text-muted-foreground">
+                                组织未授权
                               </span>
-                            </div>
-                          ) : (
-                            <Badge
-                              variant={dailyOn ? 'default' : 'secondary'}
-                              className="w-fit font-normal"
-                            >
-                              {dailyOn ? '接收中' : '已关闭'}
-                            </Badge>
-                          )}
-                          {!dailyCanOpen && !dailyOn ? (
-                            <span className="text-[10px] text-muted-foreground">
-                              组织未授权
+                            ) : null}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-7 shrink-0 text-xs text-muted-foreground">
+                              周报
                             </span>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <div className="flex flex-col gap-1">
-                          {canToggleEmail ? (
-                            <div className="flex items-center gap-2">
+                            {canToggleEmail ? (
                               <Switch
                                 checked={weeklyOn}
                                 disabled={
@@ -1174,23 +1185,20 @@ function UserListPage({ scope }: { scope: UserScope }) {
                                 }
                                 aria-label={`${u.name} 周报`}
                               />
-                              <span className="text-xs text-muted-foreground">
+                            ) : (
+                              <Badge
+                                variant={weeklyOn ? 'default' : 'secondary'}
+                                className="font-normal"
+                              >
                                 {weeklyOn ? '接收中' : '已关闭'}
+                              </Badge>
+                            )}
+                            {!weeklyCanOpen && !weeklyOn ? (
+                              <span className="text-[10px] text-muted-foreground">
+                                需教练角色
                               </span>
-                            </div>
-                          ) : (
-                            <Badge
-                              variant={weeklyOn ? 'default' : 'secondary'}
-                              className="w-fit font-normal"
-                            >
-                              {weeklyOn ? '接收中' : '已关闭'}
-                            </Badge>
-                          )}
-                          {!weeklyCanOpen && !weeklyOn ? (
-                            <span className="text-[10px] text-muted-foreground">
-                              需教练角色
-                            </span>
-                          ) : null}
+                            ) : null}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -1215,17 +1223,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
                               调整分组
                             </Button>
                           )}
-                          <Button type="button" size="sm" variant="ghost" asChild>
-                            <Link
-                              to={
-                                u.username
-                                  ? `/profile/${u.username}`
-                                  : `/profile?id=${u.userId}`
-                              }
-                            >
-                              资料
-                            </Link>
-                          </Button>
                           {canSiteSync && !isSite && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>

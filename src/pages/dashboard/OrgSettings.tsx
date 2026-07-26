@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link2Icon, Share2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
@@ -6,22 +6,15 @@ import {
   addOrgMember,
   getInvite,
   listJoinRequests,
-  listOrgMembers,
-  removeOrgMember,
   reviewJoinRequest,
   rotateInvite,
-  setOrgMemberRole,
   updateOrg,
 } from '@/api/org'
 import { getProfileByName } from '@/api/profile'
 import { uploadImage } from '@/api/upload'
-import type { OrgMemberInfo, UserProfile } from '@shared/api'
+import type { UserProfile } from '@shared/api'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ImageUploadTile } from '@/components/image-upload-tile'
-import { Pagination } from '@/components/pagination'
-import { OrgRoleSelect } from '@/components/rbac/org-role-select'
-import { RoleManager } from '@/components/rbac/role-manager'
-import { useListQueryState } from '@/hooks/use-list-query-state'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -45,10 +38,7 @@ import { Switch } from '@/components/ui/switch'
 import { buildDomainShareUrl } from '@/lib/domain-hint'
 import { buildOrgInviteUrl } from '@/lib/org-invite'
 import { Perm } from '@/lib/permissions'
-import { orgRoleName } from '@/lib/roles'
 import { OrgTrainingReportCard } from '@/pages/dashboard/OrgTrainingReportCard'
-
-const DEFAULT_MEMBER_PAGE_SIZE = 10
 
 export function DashboardOrgSettings() {
   const { currentOrg, user, refreshOrgs, can } = useAuth()
@@ -60,25 +50,10 @@ export function DashboardOrgSettings() {
   const canEditOrg = canEditInfo || canTogglePolicy
   const canSitePolicy = can(Perm.SiteOrgPolicy)
   const canViewReport = can(Perm.OrgReportView)
-  const canManageRoles = can(Perm.OrgRoleManage)
   const canAddMember = can(Perm.OrgMemberAdd)
-  const canSetMemberRole = can(Perm.OrgMemberRole)
-  const canRemoveMember = can(Perm.OrgMemberRemove)
   const canReviewJoin = can(Perm.OrgJoinReview)
   const canViewInvite = can(Perm.OrgInviteView)
   const canRotateInvite = can(Perm.OrgInviteRotate)
-  const canViewMembers = canSetMemberRole || canRemoveMember
-
-  const {
-    page: memberPage,
-    pageSize: memberPageSize,
-    setPage: setMemberPage,
-    setPageSize: setMemberPageSize,
-  } = useListQueryState({
-    pageKey: 'mpage',
-    pageSizeKey: 'mpageSize',
-    defaultPageSize: DEFAULT_MEMBER_PAGE_SIZE,
-  })
 
   const [brandTitle, setBrandTitle] = useState('')
   const [brandLogo, setBrandLogo] = useState('')
@@ -90,36 +65,14 @@ export function DashboardOrgSettings() {
   const [spiderInterval, setSpiderInterval] = useState(60)
   const [emailSchedule, setEmailSchedule] = useState('30 7 * * *')
   const [inviteCode, setInviteCode] = useState('')
-  const [members, setMembers] = useState<OrgMemberInfo[]>([])
-  const [memberTotal, setMemberTotal] = useState(0)
-  const [memberKeyword, setMemberKeyword] = useState('')
-  const [memberKeywordDraft, setMemberKeywordDraft] = useState('')
-  const [membersLoading, setMembersLoading] = useState(false)
-  /** 竞态守卫：丢弃过期的成员列表响应 */
-  const membersRequestId = useRef(0)
   const [requests, setRequests] = useState<
     { id: number; name: string; username: string; orgDisplayName?: string }[]
   >([])
   const [addSearch, setAddSearch] = useState('')
   const [addCandidates, setAddCandidates] = useState<UserProfile[]>([])
   const [addSearching, setAddSearching] = useState(false)
-  /** 修改成员角色前二次确认 */
-  const [roleConfirm, setRoleConfirm] = useState<{
-    userId: number
-    name: string
-    from: string
-    to: string
-  } | null>(null)
-  /** 移除成员前二次确认 */
-  const [removeConfirm, setRemoveConfirm] = useState<{
-    userId: number
-    name: string
-  } | null>(null)
   /** 本域入口链接弹窗（非邀请） */
   const [domainShareOpen, setDomainShareOpen] = useState(false)
-
-  const isSystemOrg = Boolean(currentOrg?.isSystem)
-  const myUserId = user?.userId || 0
 
   const domainShareKey = useMemo(() => {
     const slug = (currentOrg?.slug || '').trim()
@@ -143,24 +96,6 @@ export function DashboardOrgSettings() {
       () => toast.error('复制失败，请手动选择复制'),
     )
   }
-
-  const loadMembers = useCallback(async () => {
-    if (!orgId || !canViewMembers) return
-    const rid = ++membersRequestId.current
-    setMembersLoading(true)
-    const r = await listOrgMembers(orgId, {
-      page: memberPage,
-      pageSize: memberPageSize,
-      keyword: memberKeyword,
-    })
-    // 快速翻页/搜索时丢弃旧响应
-    if (rid !== membersRequestId.current) return
-    setMembersLoading(false)
-    if (r.success) {
-      setMembers(r.list)
-      setMemberTotal(r.total)
-    }
-  }, [orgId, canViewMembers, memberPage, memberPageSize, memberKeyword])
 
   useEffect(() => {
     if (!orgId) return
@@ -191,10 +126,6 @@ export function DashboardOrgSettings() {
     // 仅在切换组织时重置草稿；依赖整个 currentOrg 会因对象引用变化反复重跑
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, currentOrg?.id, canViewInvite, canReviewJoin])
-
-  useEffect(() => {
-    void loadMembers()
-  }, [loadMembers])
 
   useEffect(() => {
     if (!addSearch.trim()) {
@@ -252,12 +183,11 @@ export function DashboardOrgSettings() {
   }
 
   // 按持有的权限决定可见区块；一个都没有则拒绝访问
+  // （成员任命与角色管理已迁至「成员与分组」页 /admin/user）
   const hasOrgAdminAccess =
     canViewReport ||
     canEditOrg ||
-    canManageRoles ||
     canAddMember ||
-    canViewMembers ||
     canReviewJoin ||
     canViewInvite
   if (!hasOrgAdminAccess) {
@@ -525,7 +455,6 @@ export function DashboardOrgSettings() {
                           toast.success('已通过')
                           const list = await listJoinRequests(orgId)
                           setRequests(list.list as typeof requests)
-                          await loadMembers()
                         }
                       })
                     }
@@ -583,12 +512,11 @@ export function DashboardOrgSettings() {
               <Button
                 size="sm"
                 onClick={() =>
-                  void addOrgMember({ orgId, userId: c.userId }).then(async (r) => {
+                  void addOrgMember({ orgId, userId: c.userId }).then((r) => {
                     if (r.success) {
                       toast.success(r.message || '已加入')
                       setAddSearch('')
                       setAddCandidates([])
-                      await loadMembers()
                     } else toast.error(r.message)
                   })
                 }
@@ -601,179 +529,6 @@ export function DashboardOrgSettings() {
       </Card>
       ) : null}
 
-      {canViewMembers ? (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">成员与角色</CardTitle>
-          <CardDescription>
-            可设为成员、队长、教练或团队管理员；也可将成员移出本组织。支持分页与模糊搜索。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              placeholder="搜索组织内名称或用户名"
-              value={memberKeywordDraft}
-              onChange={(e) => setMemberKeywordDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  setMemberPage(1)
-                  setMemberKeyword(memberKeywordDraft.trim())
-                }
-              }}
-            />
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setMemberPage(1)
-                setMemberKeyword(memberKeywordDraft.trim())
-              }}
-            >
-              搜索
-            </Button>
-            {(memberKeyword || memberKeywordDraft) && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setMemberKeywordDraft('')
-                  setMemberKeyword('')
-                  setMemberPage(1)
-                }}
-              >
-                清空
-              </Button>
-            )}
-          </div>
-          {membersLoading ? (
-            <p className="text-sm text-muted-foreground">加载中…</p>
-          ) : (
-            members.map((m) => {
-              const label = m.name || m.orgDisplayName || m.username || String(m.userId)
-              const canRemove =
-                canRemoveMember && !isSystemOrg && m.userId !== myUserId
-              return (
-                <div
-                  key={m.userId}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded border p-2"
-                >
-                  <div className="min-w-0 text-sm">
-                    <span className="truncate">{label}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {orgRoleName(m.role)}
-                    </span>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    {canSetMemberRole ? (
-                      <OrgRoleSelect
-                        value={m.role || 'member'}
-                        ariaLabel={`设置「${label}」的角色`}
-                        onRoleChange={(role) =>
-                          setRoleConfirm({
-                            userId: m.userId,
-                            name: label,
-                            from: m.role || 'member',
-                            to: role,
-                          })
-                        }
-                      />
-                    ) : null}
-                    {canRemove ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setRemoveConfirm({ userId: m.userId, name: label })
-                        }
-                      >
-                        移除
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              )
-            })
-          )}
-          {!membersLoading && !members.length && (
-            <p className="text-sm text-muted-foreground">暂时还没有成员</p>
-          )}
-          <Pagination
-            page={memberPage}
-            total={memberTotal}
-            pageSize={memberPageSize}
-            onChange={setMemberPage}
-            onPageSizeChange={setMemberPageSize}
-            disabled={membersLoading}
-          />
-        </CardContent>
-      </Card>
-      ) : null}
-
-      {canManageRoles && orgId > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">角色与权限</CardTitle>
-            <CardDescription>
-              内置角色（成员 / 队长 / 教练 / 团队管理员）的权限固定；也可以新建角色、自由勾选权限，并把组织成员加进来。
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RoleManager scope="org" orgId={orgId} />
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <ConfirmDialog
-        open={roleConfirm != null}
-        onOpenChange={(o) => {
-          if (!o) setRoleConfirm(null)
-        }}
-        title="修改成员角色？"
-        description={
-          roleConfirm
-            ? `确定将「${roleConfirm.name}」从「${orgRoleName(roleConfirm.from)}」改为「${orgRoleName(roleConfirm.to)}」？对方的后台权限会立即变化。`
-            : ''
-        }
-        confirmLabel="确认修改"
-        onConfirm={() => {
-          if (!roleConfirm || !orgId) return
-          const target = roleConfirm
-          setRoleConfirm(null)
-          void setOrgMemberRole(orgId, target.userId, target.to).then(
-            async (r) => {
-              if (r.success) {
-                toast.success('已更新角色')
-                await loadMembers()
-              } else toast.error(r.message)
-            },
-          )
-        }}
-      />
-
-      <ConfirmDialog
-        open={removeConfirm != null}
-        onOpenChange={(o) => {
-          if (!o) setRemoveConfirm(null)
-        }}
-        title="移出组织？"
-        description={
-          removeConfirm
-            ? `确定将「${removeConfirm.name}」移出本组织？对方将无法再访问本组织内容，可随时用邀请链接重新加入。`
-            : ''
-        }
-        confirmLabel="确认移除"
-        destructive
-        onConfirm={() => {
-          if (!removeConfirm || !orgId) return
-          const target = removeConfirm
-          setRemoveConfirm(null)
-          void removeOrgMember(orgId, target.userId).then(async (r) => {
-            if (r.success) {
-              toast.success(r.message || '已移除成员')
-              await loadMembers()
-            } else toast.error(r.message || '移除失败，请稍后重试')
-          })
-        }}
-      />
     </div>
   )
 }

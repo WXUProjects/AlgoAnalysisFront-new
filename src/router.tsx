@@ -273,8 +273,16 @@ function CoachOutlet() {
 /** 管理首页候选：按权限找第一个可访问的管理页（自定义角色也能落到正确入口） */
 const ADMIN_INDEX_CANDIDATES: { path: string; anyOf: string[] }[] = [
   { path: 'statistics', anyOf: [Perm.OrgReportView] },
-  { path: 'org', anyOf: [Perm.OrgInfoWrite, Perm.OrgPolicyToggle, Perm.OrgRoleManage] },
-  { path: 'user', anyOf: [Perm.OrgGroupManage, Perm.OrgMemberRole] },
+  { path: 'org', anyOf: [Perm.OrgInfoWrite, Perm.OrgPolicyToggle] },
+  {
+    path: 'user',
+    anyOf: [
+      Perm.OrgGroupManage,
+      Perm.OrgMemberRole,
+      Perm.OrgMemberRemove,
+      Perm.OrgRoleManage,
+    ],
+  },
   { path: 'bulletin', anyOf: [Perm.OrgBulletinManage] },
   { path: 'problem-edits', anyOf: [Perm.ContentProblemReview] },
   { path: 'blog', anyOf: [Perm.ContentBlogModerate, Perm.SiteBlogBoard] },
@@ -768,10 +776,18 @@ const browserRouter = createBrowserRouter([
             element: <Navigate to="/admin/user?tab=group" replace />,
           },
           {
-            // 融合页：组织成员 + 组织分组（原 /admin/group）
+            // 融合页：组织成员 + 分组 + 成员任命 + 组织角色（原 /admin/group、组织设置页的成员/角色区块）
             path: 'user',
             element: (
-              <RequirePerm anyOf={[Perm.OrgReportView, Perm.OrgGroupManage, Perm.OrgMemberRole]}>
+              <RequirePerm
+                anyOf={[
+                  Perm.OrgReportView,
+                  Perm.OrgGroupManage,
+                  Perm.OrgMemberRole,
+                  Perm.OrgMemberRemove,
+                  Perm.OrgRoleManage,
+                ]}
+              >
                 <Lazy>
                   <DashboardOrgPeople />
                 </Lazy>
@@ -858,7 +874,7 @@ const browserRouter = createBrowserRouter([
           {
             path: 'org',
             element: (
-              <RequirePerm anyOf={[Perm.OrgInfoWrite, Perm.OrgPolicyToggle, Perm.OrgRoleManage, Perm.OrgReportView]}>
+              <RequirePerm anyOf={[Perm.OrgInfoWrite, Perm.OrgPolicyToggle, Perm.OrgReportView]}>
                 <Lazy>
                   <DashboardOrgSettings />
                 </Lazy>

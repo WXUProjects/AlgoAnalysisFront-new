@@ -58,10 +58,9 @@ function pathActive(
 
 /** 按权限过滤后的管理导航条目（顺序即展示顺序） */
 export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[] {
-  // /admin/org 双语义：可改组织设置（品牌/识别码/任命）时是「组织设置」，
+  // /admin/org 双语义：可改组织设置（品牌/识别码/开关）时是「组织设置」，
   // 否则（仅教练/队长类查看权限）入口语义是「训练报告」
-  const canOrgSettings =
-    can(Perm.OrgInfoWrite) || can(Perm.OrgPolicyToggle) || can(Perm.OrgRoleManage)
+  const canOrgSettings = can(Perm.OrgInfoWrite) || can(Perm.OrgPolicyToggle)
   const entries: AdminNavEntry[] = [
     // —— 组织管理（当前组织范围） ——
     {
@@ -76,7 +75,13 @@ export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[]
       to: '/admin/user',
       label: '成员与分组',
       icon: UsersIcon,
-      anyOf: [Perm.OrgReportView, Perm.OrgGroupManage, Perm.OrgMemberRole],
+      anyOf: [
+        Perm.OrgReportView,
+        Perm.OrgGroupManage,
+        Perm.OrgMemberRole,
+        Perm.OrgMemberRemove,
+        Perm.OrgRoleManage,
+      ],
       section: 'org',
       isActive: (p) => pathActive(p, '/admin/user'),
     },
@@ -92,12 +97,7 @@ export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[]
       to: '/admin/org',
       label: canOrgSettings ? '组织设置' : '训练报告',
       icon: canOrgSettings ? SettingsIcon : FileSpreadsheetIcon,
-      anyOf: [
-        Perm.OrgInfoWrite,
-        Perm.OrgPolicyToggle,
-        Perm.OrgRoleManage,
-        Perm.OrgReportView,
-      ],
+      anyOf: [Perm.OrgInfoWrite, Perm.OrgPolicyToggle, Perm.OrgReportView],
       section: 'org',
       isActive: (p) =>
         pathActive(p, '/admin/org', { excludePrefix: '/admin/orgs' }),
