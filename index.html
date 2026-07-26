@@ -2,9 +2,10 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="alternate icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- ?v=2 用于绕开 CDN 对旧图标的 immutable 缓存（30 天），换图标时递增 -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
+    <link rel="alternate icon" type="image/png" href="/favicon.png?v=2" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
@@ -26,7 +27,7 @@
     <meta property="og:url" content="https://algo.zhiyuansofts.cn/" />
     <meta
       property="og:image"
-      content="https://algo.zhiyuansofts.cn/favicon.png"
+      content="https://algo.zhiyuansofts.cn/favicon.png?v=2"
     />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="GoAlgo" />
@@ -36,7 +37,7 @@
     />
     <meta
       name="twitter:image"
-      content="https://algo.zhiyuansofts.cn/favicon.png"
+      content="https://algo.zhiyuansofts.cn/favicon.png?v=2"
     />
     <title>GoAlgo</title>
     <link

@@ -30,7 +30,7 @@ const SiteConfigContext = createContext<Ctx>({
 
 /** 只应用 favicon；浏览器标题由布局按路由动态设置（页面名 - 站点名） */
 function applyBrand(cfg: SiteConfig) {
-  const fav = cfg.favicon || '/favicon.svg'
+  const fav = cfg.favicon || '/favicon.svg?v=2'
   let link = document.querySelector<HTMLLinkElement>("link[rel='icon']")
   if (!link) {
     link = document.createElement('link')
@@ -38,7 +38,8 @@ function applyBrand(cfg: SiteConfig) {
     document.head.appendChild(link)
   }
   link.href = fav
-  link.type = fav.endsWith('.svg') ? 'image/svg+xml' : 'image/png'
+  // 注意带 ?v= 版本号，不能用 endsWith 判断后缀
+  link.type = /\.svg(\?|#|$)/i.test(fav) ? 'image/svg+xml' : 'image/png'
   let apple = document.querySelector<HTMLLinkElement>(
     "link[rel='apple-touch-icon']",
   )
@@ -48,7 +49,7 @@ function applyBrand(cfg: SiteConfig) {
     document.head.appendChild(apple)
   }
   // iOS 不认 svg 的 apple-touch-icon，默认图标退回 png
-  apple.href = cfg.favicon || '/apple-touch-icon.png'
+  apple.href = cfg.favicon || '/apple-touch-icon.png?v=2'
 }
 
 export function SiteConfigProvider({ children }: { children: ReactNode }) {

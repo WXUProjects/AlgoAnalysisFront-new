@@ -125,7 +125,7 @@ function AppLayoutInner() {
       : {
           title,
           description: DEFAULT_SITE_DESCRIPTION,
-          image: brandLogo || config.favicon || '/favicon.png',
+          image: brandLogo || config.favicon || '/favicon.png?v=2',
           url: pathname,
           type: 'website',
           siteName: brand,
