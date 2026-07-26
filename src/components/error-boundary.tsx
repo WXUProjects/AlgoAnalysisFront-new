@@ -113,7 +113,7 @@ export function RouteErrorFallback() {
           </CardTitle>
           <CardDescription>
             {chunky
-              ? '站点刚更新了前端资源，正在为你自动刷新…若未跳转请点下方按钮。'
+              ? '站点刚更新了前端资源，正在自动刷新…若未跳转请点下方按钮。'
               : '请返回首页或刷新后重试。从分享链接进入时偶发，多半是网络或资源更新导致。'}
           </CardDescription>
         </CardHeader>

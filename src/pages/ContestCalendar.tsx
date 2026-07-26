@@ -665,8 +665,8 @@ export function ContestCalendar() {
                   <CardTitle>暂时还没有赛程</CardTitle>
                   <CardDescription>
                     {hasFilters
-                      ? '当前筛选下没有比赛，试试放宽条件。赛程约每 12 小时自动更新一次。'
-                      : '暂时没有可展示的赛程，稍后再来看看。赛程约每 12 小时自动更新一次。'}
+                      ? '当前筛选下没有比赛，可放宽筛选条件。赛程约每 12 小时自动更新一次。'
+                      : '暂无可展示的赛程。赛程约每 12 小时自动更新一次。'}
                   </CardDescription>
                 </CardHeader>
               </Card>

@@ -294,10 +294,10 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     desc = '查看全站用户的提交与通过情况。已冻结用户不会再自动同步做题数据。'
   } else if (isOrgAdmin) {
     title = `${orgName} · 组织管理`
-    desc = '一眼掌握成员活跃、训练参与和待办审批，方便日常运营。'
+    desc = '查看成员活跃、训练参与与待办审批。'
   } else if (isCoach) {
     title = `${orgName} · 教练工作台`
-    desc = '按时间范围查看训练参与与成员排行，及时了解队伍状态。'
+    desc = '按时间范围查看训练参与与成员排行。'
   } else if (isCaptain) {
     title = `${orgName} · 队长工作台`
     desc = '按时间范围查看训练参与与成员排行。'
@@ -514,7 +514,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
               <EmptyHeader>
                 <EmptyTitle>这段时间还没有提交</EmptyTitle>
                 <EmptyDescription>
-                  换一个时间范围，或等队员刷题同步后再来看趋势。
+                  可更换时间范围，或等提交数据同步后查看。
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -547,7 +547,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
                   <EmptyHeader>
                     <EmptyTitle>本期还没有排行</EmptyTitle>
                     <EmptyDescription>
-                      队员有通过记录后会出现在这里。也可以先去「成员管理」看看同步状态。
+                      队员有通过记录后会出现在这里，同步状态可在「成员管理」查看。
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
@@ -656,7 +656,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
         <Card className="gap-3 py-4 shadow-none">
           <CardHeader className="px-4">
             <CardTitle className="text-base">按星期分布</CardTitle>
-            <CardDescription>近 {days} 天提交量按星期汇总，方便安排训练日</CardDescription>
+            <CardDescription>近 {days} 天提交量按星期汇总</CardDescription>
           </CardHeader>
           <CardContent className="px-4">
             {showSkeleton ? (
@@ -781,10 +781,10 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       {!isSite && isStaff && (
         <p className="text-xs text-muted-foreground">
           {isOrgAdmin
-            ? '你是团队管理员：可查看运营数据、处理申请，并生成训练报告。'
+            ? '团队管理员可查看运营数据、处理申请，并生成训练报告。'
             : isCoach
-              ? '你是教练：可查看训练参与与排行，并管理分组与成员。'
-              : '你是队长：可查看训练参与与排行，并协助管理分组。'}
+              ? '教练可查看训练参与与排行，并管理分组与成员。'
+              : '队长可查看训练参与与排行，并协助管理分组。'}
         </p>
       )}
     </PageShell>

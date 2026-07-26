@@ -482,7 +482,7 @@ export function BlogArticlePage() {
       <p className="text-center text-sm text-muted-foreground">
         {(article.likeCount ?? 0) > 0
           ? `已有 ${article.likeCount} 人为这篇文章点赞`
-          : '觉得写得好？给作者点个赞吧'}
+          : '还没有人点赞'}
       </p>
     </div>
   ) : null
