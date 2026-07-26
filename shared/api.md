@@ -637,7 +637,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 - **内置角色**（`isSystem`，不可改名/删除）：站点管理员 `site_admin`（旁路全部校验）、团队管理员 `org_admin`（全部 org.\*）、教练 `coach` / 队长 `captain`（默认：分组/组织公告/训练报告/代管日报）、成员 `member`（无管理权限）。内置角色的任命仍走既有入口（`org/members/set-role`、`platform/set-site-admin`），后端双写 `user_roles` 镜像。
 - **内置角色的组织级权限覆盖**：教练 / 队长的权限**可由所在组织自行调整**（`permsEditable=true`），覆盖只对本组织生效，存 `org_role_perms`；团队管理员与成员是组织基本盘，权限固定（`permsEditable=false`）。`customized=true` 表示本组织已改过，可用 `resetPermissions` 恢复默认。
 - **自定义角色**：站点级需 `site.role.manage`；组织级需该组织 `org.role.manage`（org_admin 默认持有）。自定义角色只赋权限、不改 `orgRole`，一个用户可叠加多个；**删除自定义角色后成员退回最基本身份**（组织内为「成员」，站点为「普通用户」）。
-- **已下线**：内置角色「资源审核员」`resource_reviewer` 与权限点 `site.appoint.reviewer`（bit 16 永久退休不复用）。存量持有者已被剥离（`users.is_resource_reviewer` 全部置 false，列保留仅为回滚）；内容审核受众改按 `content.*` 权限点推导。
+- **已下线**：内置角色「资源审核员」`resource_reviewer` 与权限点 `site.appoint.reviewer`（bit 16 永久退休不复用）。存量持有者已被剥离（`users.is_resource_reviewer` 全部置 false，列保留仅为回滚）；内容审核受众改按 `content.*` 权限点推导。`/user/profile/list` 的 `isResourceReviewer` 为 protobuf 遗留字段，恒为 `false`，前端已不再读取。
 
 **JWT**：新增 `pm` claim = 权限位图（base64url，站点权限 ∪ 当前组织权限）。旧 token（无 `pm`）按 `isSiteAdmin`/`orgRole` 模板推导（不含组织级覆盖）。`isResourceReviewer` claim 已移除。权限/角色变更后 `POST /user/auth/refresh` 或重登生效。原文档中「是(站点管理员)」的端点现按对应权限点校验（站点管理员天然旁路，行为向后兼容；持有对应权限的自定义角色成员亦可访问）。
 
