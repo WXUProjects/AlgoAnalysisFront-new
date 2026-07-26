@@ -313,6 +313,9 @@ export async function listProfiles(
           lastSubmit: str(u.lastSubmit),
           roleId: num(u.roleId),
           isSiteAdmin: bool(u.isSiteAdmin),
+          siteRoles: Array.isArray(u.siteRoles)
+            ? (u.siteRoles as unknown[]).map((x) => str(x)).filter(Boolean)
+            : undefined,
           emailEnabled: bool(u.emailEnabled),
           emailWeeklyEnabled: bool(u.emailWeeklyEnabled),
           // 字段缺失时保持 undefined，UI 按「可开」处理（兼容未部署新后端）

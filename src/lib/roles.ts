@@ -76,38 +76,6 @@ export function orgRoleName(role?: string | null) {
   return OrgRoleLabel[role] ?? role
 }
 
-/** 站点内置身份（互斥，按权限从大到小：站点管理员 → 普通用户） */
-export const SiteIdentity = {
-  Admin: 'site_admin',
-  User: 'user',
-} as const
-
-export type SiteIdentityValue = (typeof SiteIdentity)[keyof typeof SiteIdentity]
-
-/** 下拉展示顺序：权限从大到小 */
-export const SITE_IDENTITY_ORDER = [
-  SiteIdentity.Admin,
-  SiteIdentity.User,
-] as const
-
-export const SiteIdentityLabel: Record<string, string> = {
-  site_admin: '站点管理员',
-  user: '普通用户',
-}
-
-export function siteIdentityName(v?: string | null) {
-  if (!v) return SiteIdentityLabel[SiteIdentity.User]
-  return SiteIdentityLabel[v] ?? v
-}
-
-/** 由用户标记推导当前站点身份 */
-export function siteIdentityOf(u?: {
-  isSiteAdmin?: boolean
-} | null): SiteIdentityValue {
-  if (u?.isSiteAdmin) return SiteIdentity.Admin
-  return SiteIdentity.User
-}
-
 /** 导航文案推导所需的 payload 子集（JWT payload 结构兼容） */
 export type StaffLabelPayload = {
   isSiteAdmin?: boolean

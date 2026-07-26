@@ -21,6 +21,16 @@ function normalizeSharedOrgs(raw: unknown): SharedOrgAlias[] {
     .filter((a) => a.orgId > 0 && a.displayName)
 }
 
+/** 自定义站点角色名：滤掉空串，最多保留 3 个，避免徽章挤爆一行 */
+function normalizeSiteRoles(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const out = raw
+    .map((x) => str(x).trim())
+    .filter((x) => x.length > 0)
+    .slice(0, 3)
+  return out
+}
+
 function normalizeUser(raw: Record<string, unknown>): SocialUser {
   return {
     userId: num(raw.userId),
@@ -31,6 +41,7 @@ function normalizeUser(raw: Record<string, unknown>): SocialUser {
     sharedOrgs: normalizeSharedOrgs(raw.sharedOrgs),
     isSiteAdmin:
       raw.isSiteAdmin === undefined ? undefined : bool(raw.isSiteAdmin),
+    siteRoles: normalizeSiteRoles(raw.siteRoles),
   }
 }
 

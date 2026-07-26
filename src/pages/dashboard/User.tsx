@@ -77,15 +77,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { SiteIdentitySelect } from '@/components/rbac/site-identity-select'
 import { Perm } from '@/lib/permissions'
-import {
-  SiteIdentity,
-  siteIdentityName,
-  siteIdentityOf,
-  type SiteIdentityValue,
-  orgRoleName,
-} from '@/lib/roles'
+import { orgRoleName } from '@/lib/roles'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -179,19 +172,15 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const siteRolesCacheRef = useRef<RbacRole[] | null>(null)
   /** 已加载持有角色的用户，避免详情对象更新时反复拉取 */
   const siteRolesLoadedForRef = useRef<number | null>(null)
-  /** 添加 / 移除站点角色前二次确认 */
+  /** 添加 / 移除站点角色前二次确认（内置站点管理员与自建角色同一套交互） */
   const [roleToggleTarget, setRoleToggleTarget] = useState<{
-    role: RbacRole
+    kind: 'siteAdmin' | 'custom'
+    /** kind==='custom' 时为对应自建角色 */
+    role?: RbacRole
+    name: string
     assign: boolean
   } | null>(null)
   const [roleToggling, setRoleToggling] = useState(false)
-  /** 详情内「站点身份」下拉：切换前二次确认 */
-  const [identityConfirm, setIdentityConfirm] = useState<{
-    userId: number
-    name: string
-    from: SiteIdentityValue
-    to: SiteIdentityValue
-  } | null>(null)
   const [identitySaving, setIdentitySaving] = useState(false)
 
   const groupName = useCallback(
@@ -268,7 +257,14 @@ function UserListPage({ scope }: { scope: UserScope }) {
         all = r.list
         siteRolesCacheRef.current = r.list
       }
-      const custom = all.filter((x) => !x.isSystem)
+      // 权限从大到小；同权限数按名称稳定排序（站点管理员是内置角色，恒排最前）
+      const custom = all
+        .filter((x) => !x.isSystem)
+        .sort(
+          (a, b) =>
+            (b.permissions?.length || 0) - (a.permissions?.length || 0) ||
+            a.name.localeCompare(b.name),
+        )
       setSiteRoles(custom)
       const held = new Set<number>()
       await Promise.all(
@@ -321,13 +317,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
     } else toast.error(res.message || '更新失败，请稍后重试')
   }
 
-  /** 站点身份下拉的落库：站点管理员 / 普通用户两档互斥 */
-  async function handleSetSiteIdentity(
-    u: UserListItem,
-    next: SiteIdentityValue,
-  ) {
+  /** 内置「站点管理员」角色的增删（与自建站点角色同一套交互） */
+  async function handleToggleSiteAdminRole(u: UserListItem, wantAdmin: boolean) {
     const userId = u.userId
-    const wantAdmin = next === SiteIdentity.Admin
     setIdentitySaving(true)
     const res = await setSiteAdmin(userId, wantAdmin)
     setIdentitySaving(false)
@@ -338,8 +330,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
     }
     toast.success(
       wantAdmin
-        ? '已设为站点管理员'
-        : '已恢复为普通用户，对方将不再拥有站点级权限',
+        ? '已添加站点管理员角色'
+        : '已移除站点管理员角色，对方将不再拥有站点级管理权限',
     )
     const patchRow = <T extends UserListItem>(row: T): T => ({
       ...row,
@@ -354,7 +346,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
 
   /** 为详情用户添加 / 移除自建站点角色（内置身份走上方「站点身份」下拉） */
   async function handleToggleSiteRole() {
-    if (!roleToggleTarget || !detailUser || !canSiteRoles) return
+    if (!roleToggleTarget?.role || !detailUser || !canSiteRoles) return
     const { role, assign } = roleToggleTarget
     const userId = detailUser.userId
     setRoleToggling(true)
@@ -1073,6 +1065,15 @@ function UserListPage({ scope }: { scope: UserScope }) {
                               站点管理员
                             </Badge>
                           )}
+                          {(u.siteRoles || []).map((r) => (
+                            <Badge
+                              key={r}
+                              variant="secondary"
+                              className="max-w-[8rem] truncate text-[10px]"
+                            >
+                              {r}
+                            </Badge>
+                          ))}
                           {u.disabled ? (
                             <Badge
                               variant="destructive"
@@ -1335,6 +1336,15 @@ function UserListPage({ scope }: { scope: UserScope }) {
                         站点管理员
                       </Badge>
                     )}
+                    {(detailUser.siteRoles || []).map((r) => (
+                      <Badge
+                        key={r}
+                        variant="secondary"
+                        className="max-w-[8rem] truncate text-[10px]"
+                      >
+                        {r}
+                      </Badge>
+                    ))}
                     {detailUser.disabled ? (
                       <Badge
                         variant="destructive"
@@ -1669,74 +1679,77 @@ function UserListPage({ scope }: { scope: UserScope }) {
               </>
               )}
 
-              {canAppointAdmin && (
-                <>
-                  <Separator />
-                  <div className="flex flex-col gap-2">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">站点身份</p>
-                      <p className="text-xs text-muted-foreground">
-                        按权限从大到小可选：站点管理员 →
-                        普通用户，切换后对方重新进入即生效；更细的授权请用下方「站点角色」。
-                      </p>
-                    </div>
-                    <SiteIdentitySelect
-                      value={siteIdentityOf(detailUser)}
-                      disabled={identitySaving}
-                      ariaLabel={`设置「${detailUser.name || detailUser.username}」的站点身份`}
-                      onIdentityChange={(next) =>
-                        setIdentityConfirm({
-                          userId: detailUser.userId,
-                          name: detailUser.name || detailUser.username,
-                          from: siteIdentityOf(detailUser),
-                          to: next,
-                        })
-                      }
-                    />
-                  </div>
-                </>
-              )}
-
-              {canSiteRoles && (
+              {(canAppointAdmin || canSiteRoles) && (
                 <>
                   <Separator />
                   <div className="flex flex-col gap-2">
                     <div className="space-y-1">
                       <p className="text-sm font-medium">站点角色</p>
                       <p className="text-xs text-muted-foreground">
-                        点选可为该用户添加或移除自建的站点角色，对方重新进入后生效；站点管理员请用上方「站点身份」设置。
+                        点选可为该用户添加或移除站点角色，按权限从大到小排列，对方重新进入后生效。
                       </p>
                     </div>
                     {siteRolesLoading ? (
                       <p className="text-xs text-muted-foreground">加载中…</p>
-                    ) : siteRoles.length === 0 ? (
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {canAppointAdmin && (
+                          <button
+                            type="button"
+                            disabled={identitySaving}
+                            aria-pressed={Boolean(detailUser.isSiteAdmin)}
+                            title="站点管理员：内置角色，拥有全站管理权限"
+                            className="rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                            onClick={() =>
+                              setRoleToggleTarget({
+                                kind: 'siteAdmin',
+                                name: '站点管理员',
+                                assign: !detailUser.isSiteAdmin,
+                              })
+                            }
+                          >
+                            <Badge
+                              variant={
+                                detailUser.isSiteAdmin ? 'default' : 'outline'
+                              }
+                            >
+                              站点管理员
+                            </Badge>
+                          </button>
+                        )}
+                        {canSiteRoles &&
+                          siteRoles.map((role) => {
+                            const held = heldRoleIds.has(role.roleId)
+                            return (
+                              <button
+                                key={role.roleId}
+                                type="button"
+                                disabled={roleToggling}
+                                aria-pressed={held}
+                                title={role.description || role.name}
+                                className="rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                                onClick={() =>
+                                  setRoleToggleTarget({
+                                    kind: 'custom',
+                                    role,
+                                    name: role.name,
+                                    assign: !held,
+                                  })
+                                }
+                              >
+                                <Badge variant={held ? 'default' : 'outline'}>
+                                  {role.name}
+                                </Badge>
+                              </button>
+                            )
+                          })}
+                      </div>
+                    )}
+                    {canSiteRoles && !siteRolesLoading && siteRoles.length === 0 ? (
                       <p className="text-xs text-muted-foreground">
                         还没有自建的站点角色，可到「角色与权限」页新建。
                       </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {siteRoles.map((role) => {
-                          const held = heldRoleIds.has(role.roleId)
-                          return (
-                            <button
-                              key={role.roleId}
-                              type="button"
-                              disabled={roleToggling}
-                              aria-pressed={held}
-                              title={role.description || role.name}
-                              className="rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-                              onClick={() =>
-                                setRoleToggleTarget({ role, assign: !held })
-                              }
-                            >
-                              <Badge variant={held ? 'default' : 'outline'}>
-                                {role.name}
-                              </Badge>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
+                    ) : null}
                   </div>
                 </>
               )}
@@ -1864,51 +1877,38 @@ function UserListPage({ scope }: { scope: UserScope }) {
           if (!o) setRoleToggleTarget(null)
         }}
         title={
-          roleToggleTarget?.assign
-            ? `添加站点角色「${roleToggleTarget?.role.name || ''}」？`
-            : `移除站点角色「${roleToggleTarget?.role.name || ''}」？`
+          roleToggleTarget
+            ? `${roleToggleTarget.assign ? '添加' : '移除'}站点角色「${roleToggleTarget.name}」？`
+            : ''
         }
         description={
           roleToggleTarget && detailUser
-            ? roleToggleTarget.assign
-              ? `确定为「${detailUser.name || detailUser.username}」添加角色「${roleToggleTarget.role.name}」？对方将获得该角色勾选的权限，重新进入后生效。`
-              : `确定移除「${detailUser.name || detailUser.username}」的角色「${roleToggleTarget.role.name}」？对方将失去该角色带来的权限，重新进入后生效。`
+            ? (() => {
+                const who = detailUser.name || detailUser.username
+                const role = roleToggleTarget.name
+                if (roleToggleTarget.kind === 'siteAdmin') {
+                  return roleToggleTarget.assign
+                    ? `确定为「${who}」添加内置角色「${role}」？对方将获得全站管理权限，重新进入后生效。`
+                    : `确定移除「${who}」的内置角色「${role}」？对方将无法再使用站点级管理功能，重新进入后生效。`
+                }
+                return roleToggleTarget.assign
+                  ? `确定为「${who}」添加角色「${role}」？对方将获得该角色勾选的权限，重新进入后生效。`
+                  : `确定移除「${who}」的角色「${role}」？对方将失去该角色带来的权限，重新进入后生效。`
+              })()
             : ''
         }
         confirmLabel={roleToggleTarget?.assign ? '确认添加' : '确认移除'}
         destructive={roleToggleTarget ? !roleToggleTarget.assign : false}
-        loading={roleToggling}
-        onConfirm={() => void handleToggleSiteRole()}
-      />
-
-      <ConfirmDialog
-        open={identityConfirm != null}
-        onOpenChange={(o) => {
-          if (!o) setIdentityConfirm(null)
-        }}
-        title={
-          identityConfirm
-            ? `将站点身份改为「${siteIdentityName(identityConfirm.to)}」？`
-            : ''
-        }
-        description={
-          identityConfirm
-            ? identityConfirm.to === SiteIdentity.Admin
-              ? `确定将「${identityConfirm.name}」设为站点管理员？对方将获得全站管理权限。`
-              : `确定取消「${identityConfirm.name}」现有的「${siteIdentityName(identityConfirm.from)}」身份？对方将无法再使用站点级管理功能。`
-            : ''
-        }
-        confirmLabel={
-          identityConfirm?.to === SiteIdentity.User ? '取消权限' : '确认任命'
-        }
-        destructive={identityConfirm?.to === SiteIdentity.User}
-        loading={identitySaving}
+        loading={roleToggling || identitySaving}
         onConfirm={() => {
-          if (!identityConfirm || !detailUser) return
-          if (detailUser.userId !== identityConfirm.userId) return
-          const target = identityConfirm
-          setIdentityConfirm(null)
-          void handleSetSiteIdentity(detailUser, target.to)
+          const target = roleToggleTarget
+          if (!target || !detailUser) return
+          if (target.kind === 'siteAdmin') {
+            setRoleToggleTarget(null)
+            void handleToggleSiteAdminRole(detailUser, target.assign)
+            return
+          }
+          void handleToggleSiteRole()
         }}
       />
 

@@ -10,6 +10,8 @@ export type UserIdentityData = {
   sharedOrgs?: SharedOrgAlias[] | null
   /** 全站特殊身份（仅公共域视图展示 badge） */
   isSiteAdmin?: boolean | null
+  /** 自定义站点角色名（仅公共域视图展示 badge） */
+  siteRoles?: string[] | null
 }
 
 /** 解析主展示文案：name 优先，否则 @username */
@@ -56,6 +58,11 @@ export function UserIdentity({
   if (showRoleBadges) {
     if (user.isSiteAdmin) {
       roleBadges.push({ key: 'site_admin', label: '站点管理员' })
+    }
+    // 自定义站点角色：站管已有专属徽章，这里只补角色名
+    for (const name of user.siteRoles || []) {
+      const label = (name || '').trim()
+      if (label) roleBadges.push({ key: `site_role:${label}`, label })
     }
   }
 

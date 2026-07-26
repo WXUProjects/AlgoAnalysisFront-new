@@ -162,6 +162,7 @@
 | `inCurrentOrg` | 目标是否属于观众当前组织 |
 | `sharedOrgs` | 双方共属、且**非当前观看域**的组织列表 `{ orgId, orgName, displayName }`（**含公共域**；切换到校队后仍会标公共域与其他共属校队）；观众不在的组织**绝不**出现（隐私边界） |
 | `username` / `avatar` | 账号与头像 |
+| `isSiteAdmin` / `siteRoles` | 全站角色 badge（仅公共域视图展示）：`isSiteAdmin` 为内置「站点管理员」，`siteRoles` 为持有的自建站点角色名数组（内置角色不在其中） |
 | GET | `/user/privacy/get` | 是 | 本人隐私：`privacyConfigured`, `allowPublicProfile`(默认 true), `allowPublicFeed`(默认 true) |
 | POST | `/user/privacy/update` | 是 | body: `{ allowPublicProfile?, allowPublicFeed? }`；保存后 `privacyConfigured=true` |
 | GET | `/user/privacy/status` | 否（可选 JWT） | `{ privacyConfigured }`；未登录视为 true（不弹窗） |
@@ -638,6 +639,10 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 - **内置角色的组织级权限覆盖**：教练 / 队长的权限**可由所在组织自行调整**（`permsEditable=true`），覆盖只对本组织生效，存 `org_role_perms`；团队管理员与成员是组织基本盘，权限固定（`permsEditable=false`）。`customized=true` 表示本组织已改过，可用 `resetPermissions` 恢复默认。
 - **自定义角色**：站点级需 `site.role.manage`；组织级需该组织 `org.role.manage`（org_admin 默认持有）。自定义角色只赋权限、不改 `orgRole`，一个用户可叠加多个；**删除自定义角色后成员退回最基本身份**（组织内为「成员」，站点为「普通用户」）。
 - **已下线**：内置角色「资源审核员」`resource_reviewer` 与权限点 `site.appoint.reviewer`（bit 16 永久退休不复用）。存量持有者已被剥离（`users.is_resource_reviewer` 全部置 false，列保留仅为回滚）；内容审核受众改按 `content.*` 权限点推导。`/user/profile/list` 的 `isResourceReviewer` 为 protobuf 遗留字段，恒为 `false`，前端已不再读取。
+
+**角色即身份**：站点侧不再区分「身份」与「角色」——内置「站点管理员」与自建站点角色在管理端是同一套点选交互（`/admin/site-users` 用户详情），按权限从大到小排列。
+
+`/user/profile/list` 的每项同样带 `siteRoles`（自建站点角色名数组），供管理端列表展示 badge。
 
 **JWT**：新增 `pm` claim = 权限位图（base64url，站点权限 ∪ 当前组织权限）。旧 token（无 `pm`）按 `isSiteAdmin`/`orgRole` 模板推导（不含组织级覆盖）。`isResourceReviewer` claim 已移除。权限/角色变更后 `POST /user/auth/refresh` 或重登生效。原文档中「是(站点管理员)」的端点现按对应权限点校验（站点管理员天然旁路，行为向后兼容；持有对应权限的自定义角色成员亦可访问）。
 

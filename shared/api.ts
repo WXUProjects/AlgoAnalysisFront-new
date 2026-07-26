@@ -578,6 +578,8 @@ export interface SocialUser {
   sharedOrgs?: SharedOrgAlias[]
   /** 全站特殊身份（公共域 badge） */
   isSiteAdmin?: boolean
+  /** 持有的自定义站点角色名（公共域 badge；内置角色不在其中） */
+  siteRoles?: string[]
 }
 
 export interface SocialListRes {
@@ -618,6 +620,8 @@ export interface UserListItem {
   lastSubmit: string
   roleId?: number
   isSiteAdmin?: boolean
+  /** 持有的自定义站点角色名（管理端 badge；内置角色不在其中） */
+  siteRoles?: string[]
   orgs?: UserOrgBrief[]
   /** 个人日报邮件偏好 */
   emailEnabled?: boolean
