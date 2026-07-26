@@ -231,7 +231,7 @@ export function ProblemContentEdit() {
           <CardDescription>
             {canReview
               ? '可同时改题面、标签与难度。保存后立即生效，并记入「已通过」审核记录；若仍无标签，系统会继续尝试自动分析。'
-              : '可同时改题面、标签与难度。提交后由管理员或资源审核员审核通过才会展示。'}
+              : '可同时改题面、标签与难度。提交后由具备题库审查权限的管理员审核通过才会展示。'}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 px-4 pt-1">

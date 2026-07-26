@@ -26,23 +26,6 @@ export function isSiteAdminFromPayload(p?: {
   return Boolean(p.isSiteAdmin) || p.roleId === 1
 }
 
-/** 资源审核员（全站身份，不含站管） */
-export function isResourceReviewerFromPayload(p?: {
-  isResourceReviewer?: boolean
-} | null) {
-  return Boolean(p?.isResourceReviewer)
-}
-
-/** 内容审核：站管或资源审核员（题库审查 / 博客 moderate / 举报） */
-export function isContentModeratorFromPayload(p?: {
-  isSiteAdmin?: boolean
-  isResourceReviewer?: boolean
-  roleId?: number | null
-} | null) {
-  if (!p) return false
-  return isSiteAdminFromPayload(p) || isResourceReviewerFromPayload(p)
-}
-
 export function isOrgAdminFromPayload(p?: {
   orgRole?: string
   isSiteAdmin?: boolean
@@ -93,25 +76,51 @@ export function orgRoleName(role?: string | null) {
   return OrgRoleLabel[role] ?? role
 }
 
+/** 站点内置身份（互斥，按权限从大到小：站点管理员 → 普通用户） */
+export const SiteIdentity = {
+  Admin: 'site_admin',
+  User: 'user',
+} as const
+
+export type SiteIdentityValue = (typeof SiteIdentity)[keyof typeof SiteIdentity]
+
+/** 下拉展示顺序：权限从大到小 */
+export const SITE_IDENTITY_ORDER = [
+  SiteIdentity.Admin,
+  SiteIdentity.User,
+] as const
+
+export const SiteIdentityLabel: Record<string, string> = {
+  site_admin: '站点管理员',
+  user: '普通用户',
+}
+
+export function siteIdentityName(v?: string | null) {
+  if (!v) return SiteIdentityLabel[SiteIdentity.User]
+  return SiteIdentityLabel[v] ?? v
+}
+
+/** 由用户标记推导当前站点身份 */
+export function siteIdentityOf(u?: {
+  isSiteAdmin?: boolean
+} | null): SiteIdentityValue {
+  if (u?.isSiteAdmin) return SiteIdentity.Admin
+  return SiteIdentity.User
+}
+
 /** 导航文案推导所需的 payload 子集（JWT payload 结构兼容） */
 export type StaffLabelPayload = {
   isSiteAdmin?: boolean
-  isResourceReviewer?: boolean
   orgRole?: string
   roleId?: number | null
 }
 
 /** 管理端内置身份类别（自定义角色仅有权限、不落入任何类别） */
-export type StaffKind =
-  | 'siteAdmin'
-  | 'reviewer'
-  | 'orgAdmin'
-  | 'coach'
-  | 'captain'
+export type StaffKind = 'siteAdmin' | 'orgAdmin' | 'coach' | 'captain'
 
 /**
  * 管理入口文案有序规则表（自上而下，命中即止）：
- * 站点管理员 → 纯资源审核员（无组织 staff 角色）→ 团队管理员 → 教练 → 队长。
+ * 站点管理员 → 团队管理员 → 教练 → 队长。
  * 侧栏与底栏仅团队管理员一条文案不同（侧栏「团队管理」/ 底栏「组织管理」）。
  */
 const STAFF_NAV_RULES: ReadonlyArray<{
@@ -125,12 +134,6 @@ const STAFF_NAV_RULES: ReadonlyArray<{
     when: (p) => isSiteAdminFromPayload(p),
     sidebar: '站点管理',
     bottom: '站点管理',
-  },
-  {
-    kind: 'reviewer',
-    when: (p) => isResourceReviewerFromPayload(p) && !isOrgStaffRole(p.orgRole),
-    sidebar: '资源审核',
-    bottom: '资源审核',
   },
   {
     kind: 'orgAdmin',
@@ -182,13 +185,12 @@ export function bottomNavStaffLabel(p?: StaffLabelPayload | null): string {
   return staffLabelByVariant(p, 'bottom')
 }
 
-/** 管理端入口：组织 staff、站管、或资源审核员 */
+/** 管理端入口：组织 staff 或站管（自定义角色另按权限判定） */
 export function canAccessAdminFromPayload(p?: {
   isSiteAdmin?: boolean
-  isResourceReviewer?: boolean
   orgRole?: string
   roleId?: number | null
 } | null) {
   if (!p) return false
-  return isStaffFromPayload(p) || isResourceReviewerFromPayload(p)
+  return isStaffFromPayload(p)
 }

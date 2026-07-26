@@ -74,7 +74,7 @@ function isMoreActive(
 
 type Props = {
   isLogin: boolean
-  /** 可进管理后台：内置角色 / 资源审核员 / 持有任意管理权限（自定义角色） */
+  /** 可进管理后台：内置角色 / 持有任意管理权限（自定义角色） */
   canAccessAdmin: boolean
   /** 当前登录用户 JWT payload：管理入口文案按身份推导 */
   user?: StaffLabelPayload | null

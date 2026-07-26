@@ -30,9 +30,7 @@ import {
   canAccessAdminFromPayload,
   isCaptainFromPayload,
   isCoachFromPayload,
-  isContentModeratorFromPayload,
   isOrgAdminFromPayload,
-  isResourceReviewerFromPayload,
   isSiteAdminFromPayload,
   isStaffFromPayload,
 } from '@/lib/roles'
@@ -42,10 +40,6 @@ interface AuthState {
   /** 站点管理员 */
   isAdmin: boolean
   isSiteAdmin: boolean
-  /** 资源审核员 */
-  isResourceReviewer: boolean
-  /** 站管或资源审核员（题库审查 / 博客管理） */
-  isContentModerator: boolean
   /** 当前组织管理员 */
   isOrgAdmin: boolean
   /** 兼容：旧纯教练 */
@@ -53,7 +47,7 @@ interface AuthState {
   isCaptain: boolean
   /** 管理端入口：站点管理员或组织管理员 */
   isStaff: boolean
-  /** 可进管理壳：staff、资源审核员或持有任意管理权限（含自定义角色） */
+  /** 可进管理壳：staff 或持有任意管理权限（含自定义角色） */
   canAccessAdmin: boolean
   isMemberLike: boolean
   /** 当前有效权限集合（站点 ∪ 当前组织；JWT pm 位图或旧字段推导） */
@@ -105,8 +99,6 @@ function deriveFlags(payload: JwtPayload | null, perms: Set<string>) {
     isLogin: Boolean(payload),
     isAdmin: isSiteAdminFromPayload(payload),
     isSiteAdmin: isSiteAdminFromPayload(payload),
-    isResourceReviewer: isResourceReviewerFromPayload(payload),
-    isContentModerator: isContentModeratorFromPayload(payload),
     isOrgAdmin: isOrgAdminFromPayload(payload),
     isCoach: isCoachFromPayload(payload),
     isCaptain: isCaptainFromPayload(payload),

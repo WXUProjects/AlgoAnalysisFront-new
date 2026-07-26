@@ -31,10 +31,6 @@ function normalizeUser(raw: Record<string, unknown>): SocialUser {
     sharedOrgs: normalizeSharedOrgs(raw.sharedOrgs),
     isSiteAdmin:
       raw.isSiteAdmin === undefined ? undefined : bool(raw.isSiteAdmin),
-    isResourceReviewer:
-      raw.isResourceReviewer === undefined
-        ? undefined
-        : bool(raw.isResourceReviewer),
   }
 }
 

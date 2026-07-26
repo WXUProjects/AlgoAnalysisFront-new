@@ -324,7 +324,7 @@ export function RoleManager({
   }
 
   function openEdit(role: RbacRole) {
-    if (role.isSystem) return
+    if (role.isSystem && !role.permsEditable) return
     setEditorRole(role)
     setDraftName(role.name)
     setDraftDesc(role.description || '')
@@ -334,23 +334,35 @@ export function RoleManager({
 
   async function saveEditor() {
     const name = draftName.trim()
-    if (!name) {
-      toast.error('请填写角色名称')
-      return
-    }
-    if (name.length > ROLE_NAME_MAX) {
-      toast.error(`角色名称最多 ${ROLE_NAME_MAX} 个字`)
-      return
+    const systemPermsOnly = Boolean(editorRole?.isSystem)
+    if (!systemPermsOnly) {
+      if (!name) {
+        toast.error('请填写角色名称')
+        return
+      }
+      if (name.length > ROLE_NAME_MAX) {
+        toast.error(`角色名称最多 ${ROLE_NAME_MAX} 个字`)
+        return
+      }
     }
     const permissions = Array.from(draftPerms)
     setSavingRole(true)
     if (editorRole) {
-      const res = await updateRole({
-        roleId: editorRole.roleId,
-        name,
-        description: draftDesc.trim(),
-        permissions,
-      })
+      // 内置角色只改本组织权限：名称与说明由系统固定
+      const res = await updateRole(
+        editorRole.isSystem
+          ? {
+              roleId: editorRole.roleId,
+              orgId: scopeOrgId,
+              permissions,
+            }
+          : {
+              roleId: editorRole.roleId,
+              name,
+              description: draftDesc.trim(),
+              permissions,
+            },
+      )
       setSavingRole(false)
       if (!res.success) {
         toast.error(res.message || '保存失败，请稍后重试')
@@ -376,6 +388,25 @@ export function RoleManager({
       setEditorOpen(false)
       await loadRoles(res.data?.roleId)
     }
+  }
+
+  /** 内置角色：清除本组织的权限覆盖，恢复系统默认 */
+  async function handleResetRolePerms() {
+    if (!editorRole?.isSystem) return
+    setSavingRole(true)
+    const res = await updateRole({
+      roleId: editorRole.roleId,
+      orgId: scopeOrgId,
+      resetPermissions: true,
+    })
+    setSavingRole(false)
+    if (!res.success) {
+      toast.error(res.message || '恢复失败，请稍后重试')
+      return
+    }
+    toast.success(res.message || '已恢复默认权限')
+    setEditorOpen(false)
+    await loadRoles(editorRole.roleId)
   }
 
   async function handleDeleteRole() {
@@ -430,6 +461,10 @@ export function RoleManager({
   }
 
   const isSystemRole = Boolean(selectedRole?.isSystem)
+  // 内置角色里只有教练/队长允许本组织改权限（后端 permsEditable 下发）
+  const canEditPerms = Boolean(
+    selectedRole && (!selectedRole.isSystem || selectedRole.permsEditable),
+  )
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
@@ -508,6 +543,11 @@ export function RoleManager({
                       内置
                     </Badge>
                   ) : null}
+                  {selectedRole.customized ? (
+                    <Badge variant="outline" className="text-[10px]">
+                      已按本组织调整
+                    </Badge>
+                  ) : null}
                   <span className="text-xs text-muted-foreground">
                     {selectedRole.memberCount} 名成员
                   </span>
@@ -515,12 +555,14 @@ export function RoleManager({
                 <p className="text-sm text-muted-foreground">
                   {selectedRole.description ||
                     (isSystemRole
-                      ? '系统预设角色，权限组合固定，不能修改或删除。'
+                      ? canEditPerms
+                        ? '系统预设角色，名称固定、不能删除；权限可按本组织需要调整。'
+                        : '系统预设角色，权限组合固定，不能修改或删除。'
                       : '还没有填写角色说明。')}
                 </p>
               </div>
-              {!isSystemRole ? (
-                <div className="flex shrink-0 gap-2">
+              <div className="flex shrink-0 gap-2">
+                {canEditPerms ? (
                   <Button
                     type="button"
                     size="sm"
@@ -528,11 +570,17 @@ export function RoleManager({
                     onClick={() => openEdit(selectedRole)}
                   >
                     <PencilIcon data-icon="inline-start" />
-                    编辑
+                    {isSystemRole ? '调整权限' : '编辑'}
                   </Button>
+                ) : null}
+                {!isSystemRole ? (
                   <ConfirmDialog
                     title={`删除角色「${selectedRole.name}」？`}
-                    description="删除后，持有该角色的成员会同时失去该角色带来的权限，此操作无法撤销。"
+                    description={
+                      scope === 'org'
+                        ? '删除后，持有该角色的成员会失去该角色带来的权限，退回普通成员，此操作无法撤销。'
+                        : '删除后，持有该角色的成员会失去该角色带来的权限，退回普通用户，此操作无法撤销。'
+                    }
                     confirmLabel="确认删除"
                     destructive
                     loading={deleting}
@@ -549,8 +597,8 @@ export function RoleManager({
                       删除
                     </Button>
                   </ConfirmDialog>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
             </div>
 
             <Tabs defaultValue="perms">
@@ -561,7 +609,11 @@ export function RoleManager({
               <TabsContent value="perms" className="flex flex-col gap-2 pt-2">
                 {isSystemRole ? (
                   <p className="text-xs text-muted-foreground">
-                    内置角色的权限已固定；如需其它组合，请新建角色。
+                    {canEditPerms
+                      ? `本组织可自行调整「${selectedRole.name}」的权限，点「调整权限」修改；只影响本组织。${
+                          selectedRole.customized ? '当前已按本组织自定义。' : ''
+                        }`
+                      : '这是基本角色，权限固定，不能修改也不能删除。'}
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
@@ -700,13 +752,18 @@ export function RoleManager({
         <DialogContent className="flex max-h-[min(90vh,44rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
           <DialogHeader className="shrink-0 border-b px-6 py-4 pr-12">
             <DialogTitle>
-              {editorRole ? `编辑角色 · ${editorRole.name}` : '新建角色'}
+              {editorRole
+                ? `${editorRole.isSystem ? '调整权限' : '编辑角色'} · ${editorRole.name}`
+                : '新建角色'}
             </DialogTitle>
             <DialogDescription>
-              为角色勾选权限；保存后，持有该角色的成员重新进入或刷新页面即可生效。
+              {editorRole?.isSystem
+                ? '这是内置角色，名称固定；这里勾选的权限只对本组织生效，保存后成员重新进入或刷新页面即可生效。'
+                : '为角色勾选权限；保存后，持有该角色的成员重新进入或刷新页面即可生效。'}
             </DialogDescription>
           </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
+            {editorRole?.isSystem ? null : (
             <FieldGroup className="gap-4">
               <Field>
                 <FieldLabel htmlFor={`rbac-${scope}-role-name`}>
@@ -734,6 +791,7 @@ export function RoleManager({
                 />
               </Field>
             </FieldGroup>
+            )}
             <div className="flex flex-col gap-2">
               <p className="text-sm font-medium">权限</p>
               <PermMatrix
@@ -744,6 +802,17 @@ export function RoleManager({
             </div>
           </div>
           <DialogFooter className="shrink-0 border-t px-6 py-4">
+            {editorRole?.isSystem && editorRole.customized ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="mr-auto"
+                disabled={savingRole}
+                onClick={() => void handleResetRolePerms()}
+              >
+                恢复默认
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"
@@ -757,7 +826,13 @@ export function RoleManager({
               disabled={savingRole}
               onClick={() => void saveEditor()}
             >
-              {savingRole ? '保存中…' : editorRole ? '保存修改' : '创建角色'}
+              {savingRole
+                ? '保存中…'
+                : editorRole
+                  ? editorRole.isSystem
+                    ? '保存权限'
+                    : '保存修改'
+                  : '创建角色'}
             </Button>
           </DialogFooter>
         </DialogContent>

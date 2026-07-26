@@ -59,11 +59,17 @@ export async function createRole(input: {
   return { success, message, data: body.data as RbacRole | undefined }
 }
 
+/**
+ * 保存角色。自定义角色可改名称/说明/权限；
+ * 内置的教练 / 队长只能改权限，且只作用于 orgId 指定的组织（resetPermissions 恢复默认）。
+ */
 export async function updateRole(input: {
   roleId: number
+  orgId?: number
   name?: string
   description?: string
   permissions?: string[]
+  resetPermissions?: boolean
 }) {
   const res = await post<Body>(endpoints.user.rbac.roleUpdate, input)
   const { success, message } = unwrap(res)

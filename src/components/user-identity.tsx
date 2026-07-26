@@ -10,7 +10,6 @@ export type UserIdentityData = {
   sharedOrgs?: SharedOrgAlias[] | null
   /** 全站特殊身份（仅公共域视图展示 badge） */
   isSiteAdmin?: boolean | null
-  isResourceReviewer?: boolean | null
 }
 
 /** 解析主展示文案：name 优先，否则 @username */
@@ -57,9 +56,6 @@ export function UserIdentity({
   if (showRoleBadges) {
     if (user.isSiteAdmin) {
       roleBadges.push({ key: 'site_admin', label: '站点管理员' })
-    }
-    if (user.isResourceReviewer) {
-      roleBadges.push({ key: 'resource_reviewer', label: '资源审核员' })
     }
   }
 

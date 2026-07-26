@@ -248,7 +248,7 @@ export function BlogPlaza() {
 
           {sort === 'recommend' ? (
             <p className="text-xs text-muted-foreground">
-              由站点管理员或资源审核员挑选的公开文章
+              由具备博客审核权限的管理员挑选的公开文章
             </p>
           ) : null}
 

@@ -8,8 +8,6 @@ export interface JwtPayload {
   name: string
   roleId: number
   isSiteAdmin?: boolean
-  /** 资源审核员：可审举报/内容修改 */
-  isResourceReviewer?: boolean
   orgId?: number
   orgRole?: string
   /** 细粒度权限位图（base64url；见 src/lib/permissions.ts） */
@@ -95,7 +93,6 @@ export function jwtPayloadEquals(
     a.name === b.name &&
     a.roleId === b.roleId &&
     Boolean(a.isSiteAdmin) === Boolean(b.isSiteAdmin) &&
-    Boolean(a.isResourceReviewer) === Boolean(b.isResourceReviewer) &&
     (a.orgId ?? 0) === (b.orgId ?? 0) &&
     (a.orgRole ?? '') === (b.orgRole ?? '') &&
     // 权限位图变化必须触发 UI 更新（角色/权限调整后 refresh 重签）

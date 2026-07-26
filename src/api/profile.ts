@@ -313,7 +313,6 @@ export async function listProfiles(
           lastSubmit: str(u.lastSubmit),
           roleId: num(u.roleId),
           isSiteAdmin: bool(u.isSiteAdmin),
-          isResourceReviewer: bool(u.isResourceReviewer),
           emailEnabled: bool(u.emailEnabled),
           emailWeeklyEnabled: bool(u.emailWeeklyEnabled),
           // 字段缺失时保持 undefined，UI 按「可开」处理（兼容未部署新后端）
@@ -385,12 +384,3 @@ export async function setSiteAdmin(
   return post(endpoints.user.platform.setSiteAdmin, { userId, isSiteAdmin })
 }
 
-export async function setResourceReviewer(
-  userId: number,
-  isResourceReviewer: boolean,
-): Promise<ApiResult<unknown>> {
-  return post(endpoints.user.platform.setResourceReviewer, {
-    userId,
-    isResourceReviewer,
-  })
-}

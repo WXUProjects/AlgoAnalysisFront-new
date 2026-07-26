@@ -1167,7 +1167,7 @@ export function QuestionBankDetail() {
             <DialogDescription>
               {canReview
                 ? '点选已有标签，或输入后回车新建。保存后立即生效，并记入「已通过」审核记录；有标签后不再自动分析该题。'
-                : '点选已有标签，或输入后回车新建。提交后由管理员或资源审核员审核才会更新。'}
+                : '点选已有标签，或输入后回车新建。提交后由具备题库审查权限的管理员审核才会更新。'}
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>

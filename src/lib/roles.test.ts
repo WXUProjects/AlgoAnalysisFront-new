@@ -27,25 +27,8 @@ describe('staffKindFromPayload（有序规则表）', () => {
     )
   })
 
-  it('纯资源审核员（无组织 staff 角色）→ reviewer', () => {
-    assert.equal(
-      staffKindFromPayload({ isResourceReviewer: true }),
-      'reviewer',
-    )
-    assert.equal(
-      staffKindFromPayload({
-        isResourceReviewer: true,
-        orgRole: OrgRole.Member,
-      }),
-      'reviewer',
-    )
-  })
-
-  it('审核员兼组织 staff → 组织角色优先', () => {
-    assert.equal(
-      staffKindFromPayload({ isResourceReviewer: true, orgRole: OrgRole.Coach }),
-      'coach',
-    )
+  it('资源审核员已下线 → 不再是内置身份', () => {
+    assert.equal(staffKindFromPayload({ orgRole: OrgRole.Member }), null)
   })
 
   it('组织角色逐级判定', () => {
@@ -66,10 +49,6 @@ describe('staffNavLabel（侧栏）', () => {
   it('站点管理员 → 站点管理', () => {
     assert.equal(staffNavLabel({ isSiteAdmin: true }), '站点管理')
     assert.equal(staffNavLabel({ roleId: 1 }), '站点管理')
-  })
-
-  it('纯资源审核员 → 资源审核', () => {
-    assert.equal(staffNavLabel({ isResourceReviewer: true }), '资源审核')
   })
 
   it('团队管理员 → 团队管理（侧栏专属文案）', () => {
@@ -106,10 +85,9 @@ describe('bottomNavStaffLabel（底栏）', () => {
     assert.equal(bottomNavStaffLabel({ orgRole: OrgRole.OrgAdmin }), '组织管理')
   })
 
-  it('教练 / 队长 / 纯审核员（与侧栏一致）', () => {
+  it('教练 / 队长（与侧栏一致）', () => {
     assert.equal(bottomNavStaffLabel({ orgRole: OrgRole.Coach }), '教练管理')
     assert.equal(bottomNavStaffLabel({ orgRole: OrgRole.Captain }), '队长管理')
-    assert.equal(bottomNavStaffLabel({ isResourceReviewer: true }), '资源审核')
   })
 
   it('无内置角色 → 管理中心', () => {
@@ -131,12 +109,11 @@ describe('isSiteAdminFromPayload（旧 token 兼容）', () => {
 })
 
 describe('canAccessAdminFromPayload', () => {
-  it('组织 staff / 站管 / 审核员可进管理端', () => {
+  it('组织 staff / 站管可进管理端', () => {
     assert.equal(canAccessAdminFromPayload({ isSiteAdmin: true }), true)
     assert.equal(canAccessAdminFromPayload({ orgRole: OrgRole.Coach }), true)
     assert.equal(canAccessAdminFromPayload({ orgRole: OrgRole.Captain }), true)
     assert.equal(canAccessAdminFromPayload({ orgRole: OrgRole.OrgAdmin }), true)
-    assert.equal(canAccessAdminFromPayload({ isResourceReviewer: true }), true)
   })
 
   it('普通成员 / 未登录不可进', () => {

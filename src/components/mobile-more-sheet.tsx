@@ -389,7 +389,7 @@ export type BuildMobileMoreOptions = {
   isMemberLike: boolean
   username?: string
   showAbout: boolean
-  /** 可进管理后台：内置角色 / 资源审核员 / 持有任意管理权限（自定义角色） */
+  /** 可进管理后台：内置角色 / 持有任意管理权限（自定义角色） */
   canAccessAdmin: boolean
   /** 细粒度权限判定（useAuth().can） */
   can: (code: string) => boolean

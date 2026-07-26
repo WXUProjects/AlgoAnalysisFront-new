@@ -413,7 +413,7 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | GET | `/user/blog/admin/overview` | 站管 | 开通人数、文章/阅读/点赞/评论汇总、待审/驳回数 |
 | GET | `/user/blog/admin/authors` | 站管 | 已开通作者列表；query: `page`/`pageSize`/`keyword`（模糊） |
 | GET | `/user/blog/admin/articles` | 站管 | 文章审查列表（**含 private/password**）；query: `page`/`pageSize`/`keyword`/`status`/`visibility` |
-| POST | `/user/blog/admin/moderate` | 站管/资源审核员 | body: `{ id, action: approve\|reject\|pending\|feature\|unfeature, note? }`；`feature`/`unfeature` 设/取消广场精选（仅公开且已通过） |
+| POST | `/user/blog/admin/moderate` | 站管/博客审核权限 | body: `{ id, action: approve\|reject\|pending\|feature\|unfeature, note? }`；`feature`/`unfeature` 设/取消广场精选（仅公开且已通过） |
 
 **开通协议**：初次使用/发文/改外观前须签署；存量已有文章或主题配置用户启动时自动回填为已开通。
 
@@ -488,7 +488,7 @@ nginx：**首版策略**——上述公开页 **一律** 反代 SEO HTML（不�
 ```
 
 - 头图仅支持 **http(s) 外链**，不提供上传。
-- `recommend` 作者端不可写；仅站管/资源审核员 `POST /user/blog/admin/moderate` `action=feature|unfeature` 设精选。`syncToMainProfile` / 组织发现对公开文仍自动。
+- `recommend` 作者端不可写；仅站管/持博客审核权限者 `POST /user/blog/admin/moderate` `action=feature|unfeature` 设精选。`syncToMainProfile` / 组织发现对公开文仍自动。
 - `summary` 可选；空则按正文生成默认简述。
 
 前端路由：
@@ -535,7 +535,8 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/user/org/join-requests` | 组织管理员 | 待审批列表 |
 | POST | `/user/org/join-requests/review` | 组织管理员 | `{ id, approve }` |
 | POST | `/user/platform/set-site-admin` | 站点管理员 | `{ userId, isSiteAdmin }` |
-| POST | `/user/platform/set-resource-reviewer` | 站点管理员 | `{ userId, isResourceReviewer }`；任命/撤销后站内信 + 邮件通知被任命人 |
+
+> `/user/platform/set-resource-reviewer` 已随「资源审核员」内置身份下线移除；内容审核权限改由站点自定义角色（`content.*` 权限点）授予。
 
 默认组织（`users.current_org_id`）：注册时为 **公共域** `slug=public`（全员自动加入，不可退出）。  
 **管理员拉入**某组织后，该组织成为用户默认组织（下次打开自动进入）。用户之后只需 **switch 切换**，切换即记忆，无需刻意「修改默认组织」。
@@ -631,20 +632,22 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 ### RBAC 角色与权限（细粒度）
 
-权限模型：**权限点目录以后端代码为唯一权威**（`cwxu-algo/app/common/rbac/perm.go`，38 个权限点、9 个分组，作用域 `site` 站点级 / `org` 组织级）。角色 = 权限点集合：
+权限模型：**权限点目录以后端代码为唯一权威**（`cwxu-algo/app/common/rbac/perm.go`，37 个权限点、9 个分组，作用域 `site` 站点级 / `org` 组织级）。角色 = 权限点集合：
 
-- **内置角色**（`isSystem`，权限集代码锁定，不可编辑/删除）：站点管理员 `site_admin`（旁路全部校验）、资源审核员 `resource_reviewer`（content.\* 四项：题库审查/博客审核/社区治理/举报处理）、团队管理员 `org_admin`（全部 org.\*）、教练 `coach` / 队长 `captain`（分组/组织公告/训练报告/代管日报，暂相同）、成员 `member`（无管理权限）。内置角色的任命仍走既有入口（`org/members/set-role`、`platform/set-*`），后端双写 `user_roles` 镜像。
-- **自定义角色**：站点级需 `site.role.manage`；组织级需该组织 `org.role.manage`（org_admin 默认持有）。自定义角色只赋权限、不改 `orgRole`，一个用户可叠加多个。
+- **内置角色**（`isSystem`，不可改名/删除）：站点管理员 `site_admin`（旁路全部校验）、团队管理员 `org_admin`（全部 org.\*）、教练 `coach` / 队长 `captain`（默认：分组/组织公告/训练报告/代管日报）、成员 `member`（无管理权限）。内置角色的任命仍走既有入口（`org/members/set-role`、`platform/set-site-admin`），后端双写 `user_roles` 镜像。
+- **内置角色的组织级权限覆盖**：教练 / 队长的权限**可由所在组织自行调整**（`permsEditable=true`），覆盖只对本组织生效，存 `org_role_perms`；团队管理员与成员是组织基本盘，权限固定（`permsEditable=false`）。`customized=true` 表示本组织已改过，可用 `resetPermissions` 恢复默认。
+- **自定义角色**：站点级需 `site.role.manage`；组织级需该组织 `org.role.manage`（org_admin 默认持有）。自定义角色只赋权限、不改 `orgRole`，一个用户可叠加多个；**删除自定义角色后成员退回最基本身份**（组织内为「成员」，站点为「普通用户」）。
+- **已下线**：内置角色「资源审核员」`resource_reviewer` 与权限点 `site.appoint.reviewer`（bit 16 永久退休不复用）。存量持有者已被剥离（`users.is_resource_reviewer` 全部置 false，列保留仅为回滚）；内容审核受众改按 `content.*` 权限点推导。
 
-**JWT**：新增 `pm` claim = 权限位图（base64url，站点权限 ∪ 当前组织权限）。旧 token（无 `pm`）按 `isSiteAdmin`/`isResourceReviewer`/`orgRole` 模板推导，行为不变。权限/角色变更后 `POST /user/auth/refresh` 或重登生效。原文档中「是(站点管理员)」的端点现按对应权限点校验（站点管理员天然旁路，行为向后兼容；持有对应权限的自定义角色成员亦可访问）。
+**JWT**：新增 `pm` claim = 权限位图（base64url，站点权限 ∪ 当前组织权限）。旧 token（无 `pm`）按 `isSiteAdmin`/`orgRole` 模板推导（不含组织级覆盖）。`isResourceReviewer` claim 已移除。权限/角色变更后 `POST /user/auth/refresh` 或重登生效。原文档中「是(站点管理员)」的端点现按对应权限点校验（站点管理员天然旁路，行为向后兼容；持有对应权限的自定义角色成员亦可访问）。
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
 | GET | `/user/rbac/permissions` | 是 | 权限目录：`{groups:[{key,label,scope,perms:[{code,label,desc,scope}]}]}` |
-| GET | `/user/rbac/roles` | 是(见说明) | `scope=site`（需 `site.role.manage`）或 `scope=org&orgId=`（需该组织 `org.role.manage` 或 `org.member.role`）；项含 `roleId,code,name,description,scope,orgId,isSystem,permissions[],memberCount` |
+| GET | `/user/rbac/roles` | 是(见说明) | `scope=site`（需 `site.role.manage`）或 `scope=org&orgId=`（需该组织 `org.role.manage` 或 `org.member.role`）；项含 `roleId,code,name,description,scope,orgId,isSystem,permsEditable,customized,permissions[],memberCount`（内置组织角色的 `permissions` 已按该组织覆盖后返回） |
 | POST | `/user/rbac/roles/create` | 是 | `{scope,orgId?,name,description?,permissions[]}`；权限点须与 scope 匹配 |
-| POST | `/user/rbac/roles/update` | 是 | `{roleId,name?,description?,permissions?}`；内置角色 403 |
-| POST | `/user/rbac/roles/delete` | 是 | `{roleId}`；内置角色 403；级联移除成员指派 |
+| POST | `/user/rbac/roles/update` | 是 | 自定义角色：`{roleId,name?,description?,permissions?}`。内置教练/队长：`{roleId,orgId?,permissions[]}` 只改本组织权限覆盖，或 `{roleId,orgId?,resetPermissions:true}` 恢复默认；改名/改说明与其余内置角色 400/403 |
+| POST | `/user/rbac/roles/delete` | 是 | `{roleId}`；内置角色 403；级联移除成员指派（成员退回最基本身份） |
 | GET | `/user/rbac/roles/members` | 是 | `roleId`（+系统组织角色需 `orgId`）`page/pageSize/keyword` 分页模糊搜索 |
 | POST | `/user/rbac/roles/assign` | 是 | `{roleId,userIds[]}` 仅自定义角色；组织角色要求目标已是该组织成员；返回 `added/skipped` |
 | POST | `/user/rbac/roles/unassign` | 是 | `{roleId,userIds[]}` |
@@ -939,10 +942,10 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problem/clear-nowcoder-content` | 是(管理员) | **只清** NowCoder `content_md`（保留 tags/solutions）；`{ requeue?: true }` 清空后强制重爬题面 |
 | POST | `/core/problem/toggle-analyze` | 是(管理员) | 暂停/恢复分析（不清队列）；`{ pause?, pauseSet? }` |
 | POST | `/core/problem/toggle-fetch` | 是(管理员) | 暂停/恢复爬取（不清队列）；`{ pause?, pauseSet? }` |
-| POST | `/core/problem/admin-update` | 是(**站管/资源审核员**) | 改标签/题面/难度；写审核记录并 auto-approve（「已通过」可见）；`{ id, updateTags?, tags?, updateContent?, contentMd?, title?, updateDifficulty?, difficulty? }` |
-| POST | `/core/problem/propose-edit` | 是(登录) | 提交标签/题面/难度修改申请；站管/资源审核员调用时写记录并自动通过；`{ problemId, updateTags?, tags?, updateContent?, contentMd?, title?, note?, updateDifficulty?, difficulty? }` |
-| GET | `/core/problem/edit-requests` | 是(**站管/资源审核员**) | 审核列表 `?page&pageSize&status=pending\|approved\|rejected` |
-| POST | `/core/problem/review-edit` | 是(**站管/资源审核员**) | 通过/驳回；`{ id, approve, reviewNote? }` |
+| POST | `/core/problem/admin-update` | 是(**站管/题库审查权限**) | 改标签/题面/难度；写审核记录并 auto-approve（「已通过」可见）；`{ id, updateTags?, tags?, updateContent?, contentMd?, title?, updateDifficulty?, difficulty? }` |
+| POST | `/core/problem/propose-edit` | 是(登录) | 提交标签/题面/难度修改申请；站管/持题库审查权限者调用时写记录并自动通过；`{ problemId, updateTags?, tags?, updateContent?, contentMd?, title?, note?, updateDifficulty?, difficulty? }` |
+| GET | `/core/problem/edit-requests` | 是(**站管/题库审查权限**) | 审核列表 `?page&pageSize&status=pending\|approved\|rejected` |
+| POST | `/core/problem/review-edit` | 是(**站管/题库审查权限**) | 通过/驳回；`{ id, approve, reviewNote? }` |
 | GET | `/core/problem/my-pending-edit` | 是(登录) | 当前用户对该题的待审申请 `?problemId=` |
 
 **人工修改与 AI 规则**
@@ -1295,7 +1298,6 @@ POST   /api/user/org/invite/rotate
 GET    /api/user/org/join-requests
 POST   /api/user/org/join-requests/review
 POST   /api/user/platform/set-site-admin
-POST   /api/user/platform/set-resource-reviewer
 GET    /api/user/rbac/permissions
 GET    /api/user/rbac/roles
 POST   /api/user/rbac/roles/create

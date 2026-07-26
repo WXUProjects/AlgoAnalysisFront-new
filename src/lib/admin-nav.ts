@@ -22,7 +22,7 @@ import { Perm } from '@/lib/permissions'
  *
  * 三分区：
  * - org     组织管理（当前组织范围）
- * - content 内容审核（题库/博客等全站内容治理，资源审核员的主场）
+ * - content 内容审核（题库/博客等全站内容治理，按内容审核权限点开放）
  * - site    站点管理（全站数据/用户/组织/触达/配置/运维）
  *
  * 条目显隐由权限驱动，anyOf 必须与 src/router.tsx 的 RequirePerm 守卫一致。

@@ -11,7 +11,6 @@ import {
   setEmailEnabled,
   setProblemPipeline,
   setSiteAdmin,
-  setResourceReviewer,
   setSyncExempt,
   setSyncIntervals,
   setUserDisabled,
@@ -78,8 +77,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { SiteIdentitySelect } from '@/components/rbac/site-identity-select'
 import { Perm } from '@/lib/permissions'
-import { orgRoleName } from '@/lib/roles'
+import {
+  SiteIdentity,
+  siteIdentityName,
+  siteIdentityOf,
+  type SiteIdentityValue,
+  orgRoleName,
+} from '@/lib/roles'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -109,7 +115,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const canSiteDisable = can(Perm.SiteUserDisable)
   const canSiteDelete = can(Perm.SiteUserDelete)
   const canAppointAdmin = can(Perm.SiteAppointAdmin)
-  const canAppointReviewer = can(Perm.SiteAppointReviewer)
   const canSiteRoles = can(Perm.SiteRoleManage)
   const { page, pageSize, setPage, setPageSize, patch, searchParams } =
     useListQueryState({
@@ -180,6 +185,14 @@ function UserListPage({ scope }: { scope: UserScope }) {
     assign: boolean
   } | null>(null)
   const [roleToggling, setRoleToggling] = useState(false)
+  /** 详情内「站点身份」下拉：切换前二次确认 */
+  const [identityConfirm, setIdentityConfirm] = useState<{
+    userId: number
+    name: string
+    from: SiteIdentityValue
+    to: SiteIdentityValue
+  } | null>(null)
+  const [identitySaving, setIdentitySaving] = useState(false)
 
   const groupName = useCallback(
     (u: UserListItem) => {
@@ -308,49 +321,38 @@ function UserListPage({ scope }: { scope: UserScope }) {
     } else toast.error(res.message || '更新失败，请稍后重试')
   }
 
-  async function handleToggleSiteAdmin(u: UserListItem) {
-    const next = !u.isSiteAdmin
-    const res = await setSiteAdmin(u.userId, next)
-    if (res.success) {
-      toast.success(next ? '已设为站点管理员' : '已取消站点管理员')
-      setList((prev) =>
-        prev.map((row) =>
-          row.userId === u.userId ? { ...row, isSiteAdmin: next } : row,
-        ),
-      )
-      setDetailUser((cur) =>
-        cur && cur.userId === u.userId ? { ...cur, isSiteAdmin: next } : cur,
-      )
+  /** 站点身份下拉的落库：站点管理员 / 普通用户两档互斥 */
+  async function handleSetSiteIdentity(
+    u: UserListItem,
+    next: SiteIdentityValue,
+  ) {
+    const userId = u.userId
+    const wantAdmin = next === SiteIdentity.Admin
+    setIdentitySaving(true)
+    const res = await setSiteAdmin(userId, wantAdmin)
+    setIdentitySaving(false)
+    if (!res.success) {
+      toast.error(res.message || '操作未完成，请稍后重试')
       void load()
-    } else toast.error(res.message || '操作未完成，请稍后重试')
+      return
+    }
+    toast.success(
+      wantAdmin
+        ? '已设为站点管理员'
+        : '已恢复为普通用户，对方将不再拥有站点级权限',
+    )
+    const patchRow = <T extends UserListItem>(row: T): T => ({
+      ...row,
+      isSiteAdmin: wantAdmin,
+    })
+    setList((prev) =>
+      prev.map((row) => (row.userId === userId ? patchRow(row) : row)),
+    )
+    setDetailUser((cur) => (cur && cur.userId === userId ? patchRow(cur) : cur))
+    void load()
   }
 
-  async function handleToggleResourceReviewer(u: UserListItem) {
-    const next = !u.isResourceReviewer
-    const res = await setResourceReviewer(u.userId, next)
-    if (res.success) {
-      toast.success(
-        next
-          ? '已设为资源审核员，对方将收到站内信与邮件'
-          : '已取消资源审核员，对方将收到站内信与邮件',
-      )
-      setList((prev) =>
-        prev.map((row) =>
-          row.userId === u.userId
-            ? { ...row, isResourceReviewer: next }
-            : row,
-        ),
-      )
-      setDetailUser((cur) =>
-        cur && cur.userId === u.userId
-          ? { ...cur, isResourceReviewer: next }
-          : cur,
-      )
-      void load()
-    } else toast.error(res.message || '操作未完成，请稍后重试')
-  }
-
-  /** 为详情用户添加 / 移除自建站点角色（内置身份走下方任命按钮） */
+  /** 为详情用户添加 / 移除自建站点角色（内置身份走上方「站点身份」下拉） */
   async function handleToggleSiteRole() {
     if (!roleToggleTarget || !detailUser || !canSiteRoles) return
     const { role, assign } = roleToggleTarget
@@ -1071,11 +1073,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
                               站点管理员
                             </Badge>
                           )}
-                          {u.isResourceReviewer && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              资源审核员
-                            </Badge>
-                          )}
                           {u.disabled ? (
                             <Badge
                               variant="destructive"
@@ -1336,11 +1333,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     {detailUser.isSiteAdmin && (
                       <Badge variant="default" className="text-[10px]">
                         站点管理员
-                      </Badge>
-                    )}
-                    {detailUser.isResourceReviewer && (
-                      <Badge variant="secondary" className="text-[10px]">
-                        资源审核员
                       </Badge>
                     )}
                     {detailUser.disabled ? (
@@ -1677,6 +1669,34 @@ function UserListPage({ scope }: { scope: UserScope }) {
               </>
               )}
 
+              {canAppointAdmin && (
+                <>
+                  <Separator />
+                  <div className="flex flex-col gap-2">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">站点身份</p>
+                      <p className="text-xs text-muted-foreground">
+                        按权限从大到小可选：站点管理员 →
+                        普通用户，切换后对方重新进入即生效；更细的授权请用下方「站点角色」。
+                      </p>
+                    </div>
+                    <SiteIdentitySelect
+                      value={siteIdentityOf(detailUser)}
+                      disabled={identitySaving}
+                      ariaLabel={`设置「${detailUser.name || detailUser.username}」的站点身份`}
+                      onIdentityChange={(next) =>
+                        setIdentityConfirm({
+                          userId: detailUser.userId,
+                          name: detailUser.name || detailUser.username,
+                          from: siteIdentityOf(detailUser),
+                          to: next,
+                        })
+                      }
+                    />
+                  </div>
+                </>
+              )}
+
               {canSiteRoles && (
                 <>
                   <Separator />
@@ -1684,7 +1704,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     <div className="space-y-1">
                       <p className="text-sm font-medium">站点角色</p>
                       <p className="text-xs text-muted-foreground">
-                        点选可为该用户添加或移除自建的站点角色，对方重新进入后生效；站点管理员与资源审核员请用下方按钮任命。
+                        点选可为该用户添加或移除自建的站点角色，对方重新进入后生效；站点管理员请用上方「站点身份」设置。
                       </p>
                     </div>
                     {siteRolesLoading ? (
@@ -1724,56 +1744,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
               <Separator />
 
               <div className="flex flex-wrap gap-2">
-                {canAppointAdmin && (
-                <ConfirmDialog
-                  title={
-                    detailUser.isSiteAdmin
-                      ? '取消站点管理员？'
-                      : '设为站点管理员？'
-                  }
-                  description={
-                    detailUser.isSiteAdmin
-                      ? `确定取消「${detailUser.name || detailUser.username}」的站点管理员权限？对方将无法再使用站点级管理功能。`
-                      : `确定将「${detailUser.name || detailUser.username}」设为站点管理员？对方将获得全站管理权限。`
-                  }
-                  confirmLabel={
-                    detailUser.isSiteAdmin ? '取消权限' : '确认任命'
-                  }
-                  destructive={detailUser.isSiteAdmin}
-                  onConfirm={() => void handleToggleSiteAdmin(detailUser)}
-                >
-                  <Button type="button" size="sm" variant="outline">
-                    {detailUser.isSiteAdmin
-                      ? '取消站点管理员'
-                      : '设为站点管理员'}
-                  </Button>
-                </ConfirmDialog>
-                )}
-                {canAppointReviewer && (
-                <ConfirmDialog
-                  title={
-                    detailUser.isResourceReviewer
-                      ? '取消资源审核员？'
-                      : '设为资源审核员？'
-                  }
-                  description={
-                    detailUser.isResourceReviewer
-                      ? `确定取消「${detailUser.name || detailUser.username}」的资源审核员权限？对方将收到站内信与邮件通知，并无法再审核题面修改与举报。`
-                      : `确定将「${detailUser.name || detailUser.username}」设为资源审核员？对方可审核题面修改与举报，本人修改自动通过并记入审核记录；将收到站内信与邮件通知。`
-                  }
-                  confirmLabel={
-                    detailUser.isResourceReviewer ? '取消权限' : '确认任命'
-                  }
-                  destructive={detailUser.isResourceReviewer}
-                  onConfirm={() => void handleToggleResourceReviewer(detailUser)}
-                >
-                  <Button type="button" size="sm" variant="outline">
-                    {detailUser.isResourceReviewer
-                      ? '取消资源审核员'
-                      : '设为资源审核员'}
-                  </Button>
-                </ConfirmDialog>
-                )}
                 <Button type="button" size="sm" variant="ghost" asChild>
                   <Link
                     to={
@@ -1909,6 +1879,37 @@ function UserListPage({ scope }: { scope: UserScope }) {
         destructive={roleToggleTarget ? !roleToggleTarget.assign : false}
         loading={roleToggling}
         onConfirm={() => void handleToggleSiteRole()}
+      />
+
+      <ConfirmDialog
+        open={identityConfirm != null}
+        onOpenChange={(o) => {
+          if (!o) setIdentityConfirm(null)
+        }}
+        title={
+          identityConfirm
+            ? `将站点身份改为「${siteIdentityName(identityConfirm.to)}」？`
+            : ''
+        }
+        description={
+          identityConfirm
+            ? identityConfirm.to === SiteIdentity.Admin
+              ? `确定将「${identityConfirm.name}」设为站点管理员？对方将获得全站管理权限。`
+              : `确定取消「${identityConfirm.name}」现有的「${siteIdentityName(identityConfirm.from)}」身份？对方将无法再使用站点级管理功能。`
+            : ''
+        }
+        confirmLabel={
+          identityConfirm?.to === SiteIdentity.User ? '取消权限' : '确认任命'
+        }
+        destructive={identityConfirm?.to === SiteIdentity.User}
+        loading={identitySaving}
+        onConfirm={() => {
+          if (!identityConfirm || !detailUser) return
+          if (detailUser.userId !== identityConfirm.userId) return
+          const target = identityConfirm
+          setIdentityConfirm(null)
+          void handleSetSiteIdentity(detailUser, target.to)
+        }}
       />
 
       <Dialog open={freezeDialogOpen} onOpenChange={setFreezeDialogOpen}>

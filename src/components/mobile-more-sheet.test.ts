@@ -9,7 +9,6 @@ import { canAccessAdminFromPayload, OrgRole } from '@/lib/roles'
 
 type Payload = {
   isSiteAdmin?: boolean
-  isResourceReviewer?: boolean
   orgRole?: string
   roleId?: number | null
   pm?: string
@@ -187,9 +186,18 @@ describe('buildMobileMoreSections（权限驱动）', () => {
     assert.ok(allLabels(sections).includes('个人资料'))
   })
 
-  it('纯资源审核员：仅「内容审核」分区，无组织管理', () => {
+  it('仅持内容审核权限（站点自定义角色）：仅「内容审核」分区，无组织管理', () => {
     const sections = buildMobileMoreSections(
-      authOpts({ isResourceReviewer: true }, { username: 'rev1' }),
+      authOpts(
+        {},
+        {
+          username: 'rev1',
+          perms: new Set<string>([
+            Perm.ContentProblemReview,
+            Perm.ContentBlogModerate,
+          ]),
+        },
+      ),
     )
     const titles = sectionTitles(sections)
     assert.ok(!titles.some((t) => t?.includes('组织管理')))

@@ -13,7 +13,7 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import { getHomePath } from '@/lib/home-path'
 
-/** 管理端守卫：组织 staff / 站管 / 资源审核员 */
+/** 管理端守卫：组织 staff / 站管 / 持有任意管理权限（自定义角色） */
 export function RequireCoach({ children }: { children: React.ReactNode }) {
   const { isLogin, canAccessAdmin, ready } = useAuth()
   const location = useLocation()
@@ -46,7 +46,7 @@ export function RequireCoach({ children }: { children: React.ReactNode }) {
           <CardHeader>
             <CardTitle>暂无管理权限</CardTitle>
             <CardDescription>
-              当前账号无法进入管理后台。如需使用，请联系组织管理员开通教练、队长或团队管理员权限，或由站点管理员任命资源审核员。
+              当前账号无法进入管理后台。如需使用，请联系组织管理员开通教练、队长或团队管理员权限，或请站点管理员为你分配相应的站点角色。
             </CardDescription>
           </CardHeader>
           <CardContent>

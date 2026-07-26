@@ -114,7 +114,6 @@ export const endpoints = {
     profileIdsByOrg: `${API_PREFIX}/user/profile/ids-by-org`,
     platform: {
       setSiteAdmin: `${API_PREFIX}/user/platform/set-site-admin`,
-      setResourceReviewer: `${API_PREFIX}/user/platform/set-resource-reviewer`,
     },
     paste: {
       create: `${API_PREFIX}/user/paste/create`,
@@ -579,7 +578,6 @@ export interface SocialUser {
   sharedOrgs?: SharedOrgAlias[]
   /** 全站特殊身份（公共域 badge） */
   isSiteAdmin?: boolean
-  isResourceReviewer?: boolean
 }
 
 export interface SocialListRes {
@@ -620,8 +618,6 @@ export interface UserListItem {
   lastSubmit: string
   roleId?: number
   isSiteAdmin?: boolean
-  /** 资源审核员 */
-  isResourceReviewer?: boolean
   orgs?: UserOrgBrief[]
   /** 个人日报邮件偏好 */
   emailEnabled?: boolean
@@ -705,6 +701,10 @@ export interface RbacRole {
   /** 组织自定义角色的组织 ID；站点级/全局模板为 0 */
   orgId: number
   isSystem: boolean
+  /** 内置角色是否允许当前组织改权限（教练/队长为 true；团队管理员/成员固定 false） */
+  permsEditable?: boolean
+  /** 内置角色的权限已被本组织改过（可恢复默认） */
+  customized?: boolean
   permissions: string[]
   memberCount: number
 }

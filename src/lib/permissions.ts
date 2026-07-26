@@ -27,7 +27,6 @@ export const Perm = {
   SiteUserSync: 'site.user.sync',
   // 站点 · 任命与角色
   SiteAppointAdmin: 'site.appoint.admin',
-  SiteAppointReviewer: 'site.appoint.reviewer',
   SiteRoleManage: 'site.role.manage',
   // 站点 · 公告通知
   SiteBulletin: 'site.bulletin.manage',
@@ -58,8 +57,11 @@ export const Perm = {
 
 export type PermCode = (typeof Perm)[keyof typeof Perm]
 
+/** 已退休的 bit 占位（权限点下线后 bit 永不复用，位序必须保持） */
+const RETIRED = '_retired' as const
+
 /** bit 位序（与后端注册表严格一致，勿改顺序） */
-const PERM_ORDER: PermCode[] = [
+const PERM_ORDER: (PermCode | typeof RETIRED)[] = [
   Perm.SiteConfigRead,
   Perm.SiteConfigWrite,
   Perm.SiteStatsRead,
@@ -76,7 +78,8 @@ const PERM_ORDER: PermCode[] = [
   Perm.SiteUserDelete,
   Perm.SiteUserSync,
   Perm.SiteAppointAdmin,
-  Perm.SiteAppointReviewer,
+  // bit 16 = 已下线的「任命资源审核员」，永久退休不复用
+  RETIRED,
   Perm.SiteRoleManage,
   Perm.SiteBulletin,
   Perm.SiteEmergency,
@@ -101,17 +104,19 @@ const PERM_ORDER: PermCode[] = [
   Perm.ContentReportHandle,
 ]
 
-export const ALL_PERMS: readonly PermCode[] = PERM_ORDER
+export const ALL_PERMS: readonly PermCode[] = PERM_ORDER.filter(
+  (c): c is PermCode => c !== RETIRED,
+)
 
-/** 内容审核（资源审核员模板） */
-export const REVIEWER_PERMS: readonly PermCode[] = [
+/** 内容审核权限点（题库审查 / 博客审核 / 社区治理 / 举报处理） */
+export const CONTENT_PERMS: readonly PermCode[] = [
   Perm.ContentProblemReview,
   Perm.ContentBlogModerate,
   Perm.ContentCommunityMod,
   Perm.ContentReportHandle,
 ]
 
-/** 教练/队长模板（现状两者相同） */
+/** 教练/队长默认模板（组织可在本组织内覆盖，仅用于旧 token 兜底推导） */
 export const ORG_STAFF_PERMS: readonly PermCode[] = [
   Perm.OrgGroupManage,
   Perm.OrgBulletinManage,
@@ -120,7 +125,7 @@ export const ORG_STAFF_PERMS: readonly PermCode[] = [
 ]
 
 /** 团队管理员模板 = 全部组织级权限 */
-export const ORG_ADMIN_PERMS: readonly PermCode[] = PERM_ORDER.filter((c) =>
+export const ORG_ADMIN_PERMS: readonly PermCode[] = ALL_PERMS.filter((c) =>
   c.startsWith('org.'),
 )
 
@@ -132,6 +137,7 @@ export function decodePermMask(mask?: string | null): Set<string> | null {
     const bin = atob(b64)
     const out = new Set<string>()
     PERM_ORDER.forEach((code, bit) => {
+      if (code === RETIRED) return
       const idx = Math.floor(bit / 8)
       if (idx < bin.length && (bin.charCodeAt(idx) & (1 << bit % 8)) !== 0) {
         out.add(code)
@@ -146,14 +152,13 @@ export function decodePermMask(mask?: string | null): Set<string> | null {
 interface PermPayload {
   isSiteAdmin?: boolean
   roleId?: number | null
-  isResourceReviewer?: boolean
   orgRole?: string
   pm?: string
 }
 
 /**
  * payload → 有效权限集合。
- * 站点管理员旁路（返回全量）；否则 pm 位图；旧 token 按审核员/组织角色模板推导。
+ * 站点管理员旁路（返回全量）；否则 pm 位图；旧 token 按组织角色模板推导。
  */
 export function permsFromPayload(p?: PermPayload | null): Set<string> {
   if (!p) return new Set()
@@ -161,7 +166,6 @@ export function permsFromPayload(p?: PermPayload | null): Set<string> {
   const fromMask = decodePermMask(p.pm)
   if (fromMask) return fromMask
   const out = new Set<string>()
-  if (p.isResourceReviewer) REVIEWER_PERMS.forEach((c) => out.add(c))
   if (p.orgRole === 'org_admin') ORG_ADMIN_PERMS.forEach((c) => out.add(c))
   else if (p.orgRole === 'coach' || p.orgRole === 'captain')
     ORG_STAFF_PERMS.forEach((c) => out.add(c))
