@@ -377,7 +377,7 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | POST | `/user/blog/article/delete` | 是 | body: `{ id }` |
 | GET | `/user/blog/article/mine` | 是 | 作者全部文章（含 private） |
 | GET | `/user/blog/recommend` | 否 | 主站/发现**精选**：仅 `recommend=true` 的公开已审文；query: `page`/`pageSize`/`orgId?`（私有域=仅该组织成员；公共域/缺省=全站）/`excludeSolutions=1`（排除题解镜像） |
-| GET | `/user/blog/plaza` | 否 | **博客广场**公开文流；query: `page`/`pageSize`/`keyword`/`sort=latest\|hot\|recommend`；`recommend` 仅精选；列表**不含 content** |
+| GET | `/user/blog/plaza` | 否 | **博客广场**公开文流；query: `page`/`pageSize`/`keyword`/`sort=latest\|hot\|recommend`；`recommend` 仅精选；`orgId?`（私有域=仅该组织成员作者；公共域/缺省=全站）/`excludeSolutions=1`（排除题解镜像，发现页去重）；列表**不含 content** |
 | GET | `/user/blog/authors` | 否 | 广场侧栏：最近有公开文的作者；query: `page`/`pageSize`/`keyword`；按最近发布时间排序 |
 | GET | `/user/blog/analytics` | 是 | 作者统计：阅读/点赞/评论汇总 + top 文章 |
 | GET | `/user/blog/categories` | 否 | query: `username`；公开分类列表（项含 `isDefault`） |

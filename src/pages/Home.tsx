@@ -284,9 +284,9 @@ export function Home() {
 
   const stats: PeriodItem | null = mode === 'ac' ? period?.ac ?? null : period?.submit ?? null
   const modeLabel = mode === 'ac' ? 'AC' : '提交'
-  /** 生涯 AC 次数（不去重）；日汇总落后时用题数兜底 */
+  /** 生涯 AC 次数：力扣模拟历史每题 1 次，有真实明细用实际次数（可 > 总题数） */
   const careerAcTimes = period
-    ? Math.max(period.ac.totalRaw ?? period.ac.total, period.ac.total)
+    ? (period.ac.totalRaw ?? period.ac.total)
     : null
   /** 累计去重题数 */
   const totalProblems = period?.ac.total ?? null

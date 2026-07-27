@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { listBlogRecommend } from '@/api/blog'
+import { listBlogPlaza } from '@/api/blog'
 import { listActivityFeed } from '@/api/community'
 import { getRank } from '@/api/statistic'
 import { useAuth } from '@/auth/AuthContext'
@@ -92,11 +92,14 @@ export function RecommendStream() {
         )
       }
 
-      // First page: merge pure blog articles (exclude solution mirrors — 题解只走 activity)
+      // First page: merge pure public blogs (latest). 不用 recommend 精选接口——
+      // 公开已审文默认 recommend=false，站管精选才为 true；发现应展示全站最新，
+      // 否则最近发的博客永远进不了发现（题解镜像仍排除，题解只走 activity）。
       if (reset) {
-        const blogRes = await listBlogRecommend({
+        const blogRes = await listBlogPlaza({
           page: 1,
           pageSize: 10,
+          sort: 'latest',
           excludeSolutions: true,
           orgId: currentOrg?.id,
         })

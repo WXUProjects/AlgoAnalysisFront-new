@@ -300,6 +300,10 @@ export async function listBlogPlaza(params?: {
   pageSize?: number
   keyword?: string
   sort?: BlogPlazaSort | string
+  /** 排除题解镜像文（发现推荐去重） */
+  excludeSolutions?: boolean
+  /** 按组织过滤（私有域发现） */
+  orgId?: number
 }): Promise<
   ApiResult<{ list: BlogArticle[]; total: number; page: number; pageSize: number }>
 > {
@@ -308,6 +312,8 @@ export async function listBlogPlaza(params?: {
     pageSize: params?.pageSize,
     keyword: params?.keyword,
     sort: params?.sort,
+    excludeSolutions: params?.excludeSolutions ? 1 : undefined,
+    orgId: params?.orgId,
   })
   return wrapData(res, (data) => {
     const listRaw = (Array.isArray(data.list) ? data.list : []) as Record<

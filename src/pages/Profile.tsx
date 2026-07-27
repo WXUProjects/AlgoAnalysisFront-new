@@ -1049,7 +1049,7 @@ function ProfilePeriodPanel({ period }: { period: PeriodData | null }) {
   const delta =
     ac != null ? weekAcDelta(ac.thisWeek, ac.lastWeek) : null
   const totalAcTimes = ac
-    ? String(Math.max(ac.totalRaw ?? ac.total, ac.total))
+    ? String(ac.totalRaw ?? ac.total)
     : '—'
   const totalProblems = ac ? String(ac.total) : '—'
 
