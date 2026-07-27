@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useStickyPin } from '@/hooks/use-sticky-pin'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { FeedScopeBar } from './FeedScopeBar'
@@ -94,6 +95,8 @@ export function LeftRail({
 
   const [contests, setContests] = useState<ContestCalendarItem[]>([])
   const [contestLoading, setContestLoading] = useState(true)
+  /** 桌面侧栏：跟主滚动方向钉住，不建内部滚动条 */
+  const pinRef = useStickyPin<HTMLElement>({ offsetTop: 16, offsetBottom: 16 })
 
   useEffect(() => {
     let cancelled = false
@@ -120,8 +123,9 @@ export function LeftRail({
 
   return (
     <aside
+      ref={pinRef}
       data-discover-left-rail=""
-      className="hidden w-[200px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:flex lg:max-h-[calc(100svh-6rem)] lg:overflow-y-auto xl:w-[220px]"
+      className="hidden w-[200px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:flex xl:w-[220px]"
     >
       {showFeedScope ? (
         <Card className="gap-2 py-3 shadow-none">

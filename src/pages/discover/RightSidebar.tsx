@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { useStickyPin } from '@/hooks/use-sticky-pin'
 import { formatRelativeTime } from '@/lib/discover-feed'
 import { HotAllSheet } from './HotAllSheet'
 import { RankAllSheet, type RankPeriod } from './RankAllSheet'
@@ -68,6 +69,8 @@ export function RightSidebar() {
   const [hotLoading, setHotLoading] = useState(true)
   const [hotAllOpen, setHotAllOpen] = useState(false)
   const range = useMemo(() => rankRange(rankPeriod), [rankPeriod])
+  /** 桌面侧栏：跟主滚动方向钉住，不建内部滚动条 */
+  const pinRef = useStickyPin<HTMLElement>({ offsetTop: 16, offsetBottom: 16 })
 
   useEffect(() => {
     let cancelled = false
@@ -113,8 +116,9 @@ export function RightSidebar() {
 
   return (
     <aside
+      ref={pinRef}
       data-discover-right-sidebar=""
-      className="hidden w-[260px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:flex lg:max-h-[calc(100svh-6rem)] lg:overflow-y-auto xl:w-[300px]"
+      className="hidden w-[260px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:flex xl:w-[300px]"
     >
       <Card className="gap-0 py-0 shadow-none">
         <CardHeader className="border-b px-4 py-3">
