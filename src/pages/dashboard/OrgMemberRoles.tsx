@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/table'
 import { Perm } from '@/lib/permissions'
 import { orgRoleName } from '@/lib/roles'
+import { ScopeGrantDialog } from '@/components/scope-grant-dialog'
 
 const DEFAULT_MEMBER_PAGE_SIZE = 10
 
@@ -74,6 +75,10 @@ export function DashboardOrgMemberRoles() {
     userId: number
     name: string
   } | null>(null)
+  const [scopeEdit, setScopeEdit] = useState<{
+    userId: number
+    name: string
+  } | null>(null)
 
   const loadMembers = useCallback(async () => {
     if (!orgId || !canViewMembers) return
@@ -103,7 +108,16 @@ export function DashboardOrgMemberRoles() {
         <p className="text-sm text-muted-foreground">
           需要「设置成员角色」或「移除成员」权限才能访问这里。
         </p>
-      </PageShell>
+            <ScopeGrantDialog
+        open={scopeEdit != null}
+        onOpenChange={(o) => {
+          if (!o) setScopeEdit(null)
+        }}
+        orgId={orgId}
+        userId={scopeEdit?.userId || 0}
+        userName={scopeEdit?.name || ''}
+      />
+    </PageShell>
     )
   }
 
@@ -233,6 +247,20 @@ export function DashboardOrgMemberRoles() {
                         ) : (
                           <Badge variant="outline">{orgRoleName(m.role)}</Badge>
                         )}
+                        {canSetMemberRole &&
+                        (m.role === 'coach' || m.role === 'captain') ? (
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-auto px-0"
+                            onClick={() =>
+                              setScopeEdit({ userId: m.userId, name: label })
+                            }
+                          >
+                            管理范围
+                          </Button>
+                        ) : null}
                       </TableCell>
                       {canRemoveMember && (
                         <TableCell className="text-right">

@@ -31,9 +31,14 @@ function normalizePeriodItem(raw: Record<string, unknown> | undefined): PeriodIt
   }
 }
 
-export async function getPeriod(userId: number): Promise<ApiResult<PeriodData>> {
+export async function getPeriod(
+  userId: number,
+  opts?: { groupId?: number; squadId?: number },
+): Promise<ApiResult<PeriodData>> {
   const res = await get<Record<string, unknown>>(endpoints.core.statistic.period, {
     userId,
+    ...(opts?.groupId ? { groupId: opts.groupId } : {}),
+    ...(opts?.squadId ? { squadId: opts.squadId } : {}),
   })
   if (!res.success || !res.data) return { ...res, data: null }
   const d = res.data
@@ -53,6 +58,7 @@ export async function getRank(params: {
   page?: number
   pageSize?: number
   groupId?: number
+  squadId?: number
 }): Promise<ApiResult<{ list: StatisticRankItem[]; total: number }>> {
   // 后端 pageSize 上限 50；超过会被截断，snap 缓存也要求 ≤50
   const pageSize = Math.min(Math.max(params.pageSize ?? 20, 1), 50)
@@ -97,10 +103,14 @@ export async function getHeatmap(params: {
   endDate: string
   isAc: boolean
   userId?: number
+  groupId?: number
+  squadId?: number
 }): Promise<ApiResult<HeatmapItem[]>> {
   const res = await get<Record<string, unknown>[]>(endpoints.core.statistic.heatmap, {
     startDate: apiDate(params.startDate),
     endDate: apiDate(params.endDate),
+    ...(params.groupId ? { groupId: params.groupId } : {}),
+    ...(params.squadId ? { squadId: params.squadId } : {}),
     // 网关/部分环境对 boolean query 不稳定，统一传 0/1
     isAc: params.isAc ? 1 : 0,
     ...(params.userId !== undefined ? { userId: params.userId } : {}),

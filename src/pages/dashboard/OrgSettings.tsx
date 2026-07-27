@@ -38,18 +38,17 @@ import { Switch } from '@/components/ui/switch'
 import { buildDomainShareUrl } from '@/lib/domain-hint'
 import { buildOrgInviteUrl } from '@/lib/org-invite'
 import { Perm } from '@/lib/permissions'
-import { OrgTrainingReportCard } from '@/pages/dashboard/OrgTrainingReportCard'
 
 export function DashboardOrgSettings() {
   const { currentOrg, user, refreshOrgs, can } = useAuth()
   const orgId = currentOrg?.id || user?.orgId || 0
 
   // 细粒度权限判定（站管 / 团队管理员 / 自定义角色统一走 can()）
+  // 训练报告已统一到「组织数据」页，本页不再挂报告入口
   const canEditInfo = can(Perm.OrgInfoWrite)
   const canTogglePolicy = can(Perm.OrgPolicyToggle)
   const canEditOrg = canEditInfo || canTogglePolicy
   const canSitePolicy = can(Perm.SiteOrgPolicy)
-  const canViewReport = can(Perm.OrgReportView)
   const canAddMember = can(Perm.OrgMemberAdd)
   const canReviewJoin = can(Perm.OrgJoinReview)
   const canViewInvite = can(Perm.OrgInviteView)
@@ -183,25 +182,19 @@ export function DashboardOrgSettings() {
   }
 
   // 按持有的权限决定可见区块；一个都没有则拒绝访问
-  // （成员任命与角色管理已迁至「成员与分组」页 /admin/user）
+  // （成员任命与角色管理已迁至「成员与分组」页 /admin/user；训练报告在「组织数据」）
   const hasOrgAdminAccess =
-    canViewReport ||
-    canEditOrg ||
-    canAddMember ||
-    canReviewJoin ||
-    canViewInvite
+    canEditOrg || canAddMember || canReviewJoin || canViewInvite
   if (!hasOrgAdminAccess) {
     return (
       <div className="p-6 text-sm text-muted-foreground">
-        你还没有本组织的管理权限；需要教练、队长、团队管理员或获得相应授权后才能访问。
+        你还没有本组织的设置权限。训练报告请到「组织数据」；需要改品牌或邀请时，请联系团队管理员开通。
       </div>
     )
   }
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-      {canViewReport && orgId > 0 ? <OrgTrainingReportCard orgId={orgId} /> : null}
-
       {canEditOrg ? (
       <Card>
         <CardHeader>

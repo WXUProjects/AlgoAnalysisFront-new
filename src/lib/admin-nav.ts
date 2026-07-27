@@ -2,7 +2,6 @@ import {
   BarChart3Icon,
   Building2Icon,
   ClipboardCheckIcon,
-  FileSpreadsheetIcon,
   FlagIcon,
   MegaphoneIcon,
   NewspaperIcon,
@@ -58,9 +57,7 @@ function pathActive(
 
 /** 按权限过滤后的管理导航条目（顺序即展示顺序） */
 export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[] {
-  // /admin/org 双语义：可改组织设置（品牌/识别码/开关）时是「组织设置」，
-  // 否则（仅教练/队长类查看权限）入口语义是「训练报告」
-  const canOrgSettings = can(Perm.OrgInfoWrite) || can(Perm.OrgPolicyToggle)
+  // 训练报告挂在「组织数据」页（#training-report），不再与「组织设置」共用 /admin/org
   const entries: AdminNavEntry[] = [
     // —— 组织管理（当前组织范围） ——
     {
@@ -95,9 +92,9 @@ export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[]
     },
     {
       to: '/admin/org',
-      label: canOrgSettings ? '组织设置' : '训练报告',
-      icon: canOrgSettings ? SettingsIcon : FileSpreadsheetIcon,
-      anyOf: [Perm.OrgInfoWrite, Perm.OrgPolicyToggle, Perm.OrgReportView],
+      label: '组织设置',
+      icon: SettingsIcon,
+      anyOf: [Perm.OrgInfoWrite, Perm.OrgPolicyToggle],
       section: 'org',
       isActive: (p) =>
         pathActive(p, '/admin/org', { excludePrefix: '/admin/orgs' }),

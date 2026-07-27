@@ -85,7 +85,7 @@ describe('buildMobileMoreSections（权限驱动）', () => {
     assert.ok(!sectionTitles(sections).includes('内容审核'))
   })
 
-  it('教练：组织管理（教练）+ 组织训练报告，无组织设置', () => {
+  it('教练：组织管理（教练）含组织数据，无组织设置；训练报告在组织数据页', () => {
     const sections = buildMobileMoreSections(
       authOpts(
         { orgRole: OrgRole.Coach },
@@ -101,10 +101,10 @@ describe('buildMobileMoreSections（权限驱动）', () => {
     assert.ok(manage.includes('教练工作台'))
     assert.ok(manage.includes('组织数据'))
     assert.ok(manage.includes('组织公告'))
-    assert.ok(manage.includes('组织分组'))
-    assert.ok(manage.includes('组织成员'))
-    assert.ok(manage.includes('组织训练报告'))
+    assert.ok(manage.includes('成员与分组'))
     assert.ok(!manage.includes('组织设置'))
+    assert.ok(!manage.includes('训练报告'))
+    assert.ok(!manage.includes('组织训练报告'))
     // 持 OrgReportView → 题库识别入口可见（与路由守卫一致），其余站点条目不可见
     const site = sectionLabels(sections, /^站点管理$/)
     assert.deepEqual(site, ['题库识别'])
@@ -112,7 +112,7 @@ describe('buildMobileMoreSections（权限驱动）', () => {
     assert.ok(!allLabels(sections).includes('站点设置'))
   })
 
-  it('队长：组织管理（队长）+ 组织训练报告', () => {
+  it('队长：组织管理（队长）含组织数据，无组织设置', () => {
     const sections = buildMobileMoreSections(
       authOpts(
         { orgRole: OrgRole.Captain },
@@ -126,11 +126,13 @@ describe('buildMobileMoreSections（权限驱动）', () => {
     )
     const manage = sectionLabels(sections, '组织管理')
     assert.ok(manage.includes('队长工作台'))
-    assert.ok(manage.includes('组织训练报告'))
+    assert.ok(manage.includes('组织数据'))
     assert.ok(!manage.includes('组织设置'))
+    assert.ok(!manage.includes('训练报告'))
+    assert.ok(!manage.includes('组织训练报告'))
   })
 
-  it('团队管理员：组织设置可见，无站点专属条目', () => {
+  it('团队管理员：组织设置可见，训练报告不单独占导航', () => {
     const sections = buildMobileMoreSections(
       authOpts(
         { orgRole: OrgRole.OrgAdmin },
@@ -145,7 +147,9 @@ describe('buildMobileMoreSections（权限驱动）', () => {
     const manage = sectionLabels(sections, '组织管理')
     assert.ok(manage.includes('组织工作台'))
     assert.ok(manage.includes('组织设置'))
+    assert.ok(manage.includes('组织数据'))
     assert.ok(!manage.includes('组织训练报告'))
+    assert.ok(!manage.includes('训练报告'))
     assert.ok(!allLabels(sections).includes('全站用户'))
     assert.ok(!allLabels(sections).includes('站点设置'))
     assert.ok(!allLabels(sections).includes('角色权限'))

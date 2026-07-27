@@ -137,20 +137,22 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
     activeJob?.status === 'running' ||
     jobs.some((j) => j.status === 'pending' || j.status === 'running')
 
-  async function onStart() {
+  async function onStart(override?: { start: string; end: string }) {
     if (!orgId || starting) return
-    if (!startDate || !endDate) {
+    const start = override?.start ?? startDate
+    const end = override?.end ?? endDate
+    if (!start || !end) {
       toast.error('请选择分析起止日期')
       return
     }
-    if (startDate > endDate) {
+    if (start > end) {
       toast.error('结束日期不能早于开始日期')
       return
     }
     if (useAi) {
-      const days = rangeDays(startDate, endDate)
+      const days = rangeDays(start, end)
       if (days > MAX_AI_RANGE_DAYS) {
-        toast.error(`AI 分析最长 ${MAX_AI_RANGE_DAYS} 天（约 8 个月），当前 ${days} 天`)
+        toast.error(`AI 分析最长约 8 个月（${MAX_AI_RANGE_DAYS} 天），当前选了 ${days} 天`)
         return
       }
     }
@@ -159,8 +161,8 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
     const sameActive = jobs.find(
       (j) =>
         (j.status === 'pending' || j.status === 'running') &&
-        j.startDate === startDate &&
-        j.endDate === endDate &&
+        j.startDate === start &&
+        j.endDate === end &&
         (j.groupId ?? 0) === gid &&
         Boolean(j.useAi) === useAi,
     )
@@ -174,14 +176,14 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
     setStarting(true)
     const res = await startTrainingReport({
       orgId,
-      startDate,
-      endDate,
+      startDate: start,
+      endDate: end,
       groupId: gid,
       useAi,
     })
     setStarting(false)
     if (!res.success || !res.data?.jobId) {
-      toast.error(res.message || '创建失败，请稍后重试')
+      toast.error(res.message || '暂时无法开始生成，请稍后重试')
       return
     }
     toast.success('已开始生成，完成后会发邮件通知你')
@@ -190,12 +192,20 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
       jobId: res.data.jobId,
       status: 'pending',
       progress: 0,
-      startDate,
-      endDate,
+      startDate: start,
+      endDate: end,
       useAi,
       message: '排队中',
     })
     void loadJobs()
+  }
+
+  /** 一键上周：日期固定为昨天往前 6 天（YYYY-MM-DD），与默认区间一致 */
+  function onStartLastWeek() {
+    const r = defaultRange()
+    setStartDate(r.start)
+    setEndDate(r.end)
+    void onStart(r)
   }
 
   function onDownload(jobId: string) {
@@ -206,13 +216,32 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">导出训练报告</CardTitle>
+        <CardTitle className="text-base">训练报告</CardTitle>
         <CardDescription>
-          一键汇总队员活跃排行、题目标签、做题概览、比赛与博客。报告可在手机和电脑上打开；可选用
-          AI 深度点评（最长约 8 个月）。生成完成后会发邮件，并在 24 小时内可下载。
+          汇总活跃排行与未提交名单；默认上周（{defaults.start} ~ {defaults.end}），也可自选日期与分组。生成后
+          24 小时内可下载，并会发邮件通知你。
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        {/* 快捷：上周 + 自定义生成 */}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            onClick={() => onStartLastWeek()}
+            disabled={starting || !orgId}
+          >
+            {starting ? '提交中…' : '一键生成上周报告'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void onStart()}
+            disabled={starting || !orgId}
+          >
+            {busy && !starting ? '按下方日期生成（有任务进行中）' : '按下方日期生成'}
+          </Button>
+        </div>
+
         {/* 日期范围 */}
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
@@ -262,29 +291,11 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
           <div className="flex flex-col gap-0.5">
             <Label>启用 AI 分析</Label>
             <p className="text-xs text-muted-foreground">
-              关闭：规则模板回填（全员活跃榜、标签、做题概览）。开启：AI 深度点评，最长约 8
-              个月，更慢。
+              关闭时用规则模板汇总（排行、标签、做题概览）。开启后会做更细的点评，最长约 8
+              个月，耗时更久。
             </p>
           </div>
           <Switch checked={useAi} onCheckedChange={setUseAi} />
-        </div>
-
-        {/* 操作按钮 */}
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => void onStart()} disabled={starting || !orgId}>
-            {starting ? '提交中…' : busy ? '开始生成（有任务进行中）' : '开始生成'}
-          </Button>
-          <Button
-            variant="outline"
-            type="button"
-            onClick={() => {
-              const r = defaultRange()
-              setStartDate(r.start)
-              setEndDate(r.end)
-            }}
-          >
-            填入上周
-          </Button>
         </div>
 
         {/* 当前任务 */}
@@ -344,7 +355,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
               <EmptyHeader>
                 <EmptyTitle>还没有导出记录</EmptyTitle>
                 <EmptyDescription>
-                  选好日期范围后点「开始生成」，第一份报告会出现在这里。
+                  点「一键生成上周报告」，或选好日期后点「按下方日期生成」，第一份会出现在这里。
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>

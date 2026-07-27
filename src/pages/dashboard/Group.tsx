@@ -13,6 +13,7 @@ import type { GroupInfo, UserListItem, UserProfile } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageShell } from '@/components/page-shell'
+import { SquadPanel } from '@/pages/dashboard/SquadPanel'
 import { Pagination } from '@/components/pagination'
 import {
   AlertDialog,
@@ -240,7 +241,8 @@ export function DashboardGroup() {
   }
 
   return (
-    <PageShell className="grid gap-4 grid-cols-1 lg:grid-cols-[280px_1fr]">
+    <PageShell className="flex flex-col gap-4">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-[280px_1fr]">
       <Card className="gap-2 py-3">
         <CardHeader className="flex flex-row items-center justify-between px-3 space-y-0">
           <CardTitle className="text-base">分组</CardTitle>
@@ -463,6 +465,10 @@ export function DashboardGroup() {
           </CardContent>
         </Card>
       </div>
+
+      </div>
+
+      <SquadPanel canWrite={canManage} />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>

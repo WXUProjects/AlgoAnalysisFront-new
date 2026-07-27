@@ -109,6 +109,16 @@ export const endpoints = {
       invitePreview: `${API_PREFIX}/user/org/invite/preview`,
       inviteRotate: `${API_PREFIX}/user/org/invite/rotate`,
       joinRequests: `${API_PREFIX}/user/org/join-requests`,
+
+      // 分队
+      squads: `${API_PREFIX}/user/org/squads`,
+      squadCreate: `${API_PREFIX}/user/org/squads/create`,
+      squadUpdate: `${API_PREFIX}/user/org/squads/update`,
+      squadDelete: `${API_PREFIX}/user/org/squads/delete`,
+      squadMembers: `${API_PREFIX}/user/org/squads/members`,
+      squadMemberSet: `${API_PREFIX}/user/org/squads/members/set`,
+      scopes: `${API_PREFIX}/user/org/scopes`,
+      scopesSet: `${API_PREFIX}/user/org/scopes/set`,
       joinReview: `${API_PREFIX}/user/org/join-requests/review`,
     },
     profileIdsByOrg: `${API_PREFIX}/user/profile/ids-by-org`,
@@ -1699,4 +1709,20 @@ export interface BackupJob {
   startedAt?: string
   finishedAt?: string
   downloadable: boolean
+}
+
+
+/** 分队 */
+export interface SquadInfo {
+  id: number
+  orgId: number
+  groupId: number
+  name: string
+  describe?: string
+  memberCount?: number
+}
+
+export interface ScopeGrant {
+  scopeType: 'group' | 'squad'
+  scopeId: number
 }

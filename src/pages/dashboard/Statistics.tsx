@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { listGroups } from '@/api/group'
+import { listSquads } from '@/api/squad'
 import { listProfiles } from '@/api/profile'
 import { listJoinRequests } from '@/api/org'
 import { updateAllSpiders } from '@/api/spider'
@@ -104,6 +105,11 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   const isSite = scope === 'site'
 
   const [timeRange, setTimeRange] = useState<TimeRangeValue>('30')
+  /** 0 = 全组织 */
+  const [scopeGroupId, setScopeGroupId] = useState(0)
+  const [scopeSquadId, setScopeSquadId] = useState(0)
+  const [scopeGroups, setScopeGroups] = useState<Array<{ id: number; name: string }>>([])
+  const [scopeSquads, setScopeSquads] = useState<Array<{ id: number; name: string; groupId: number }>>([])
   const [period, setPeriod] = useState<PeriodData | null>(null)
   const [userCount, setUserCount] = useState(0)
   const [frozenCount, setFrozenCount] = useState(0)
@@ -117,6 +123,37 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   const [updating, setUpdating] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
   const hasLoadedOnce = useRef(false)
+
+  useEffect(() => {
+    if (isSite) return
+    let cancelled = false
+    void (async () => {
+      const gRes = await listGroups(1, 100)
+      if (cancelled) return
+      if (gRes.success && gRes.data?.list) {
+        setScopeGroups(
+          gRes.data.list.map((g) => ({
+            id: Number(g.id),
+            name: g.name || `组 #${g.id}`,
+          })),
+        )
+      }
+      const sRes = await listSquads()
+      if (cancelled) return
+      if (sRes.success && sRes.data) {
+        setScopeSquads(
+          sRes.data.map((s) => ({
+            id: s.id,
+            name: s.name,
+            groupId: s.groupId,
+          })),
+        )
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isSite, currentOrg?.id])
 
   const canSiteStats = can(Perm.SiteStatsRead)
   const canJoinReview = can(Perm.OrgJoinReview)
@@ -143,7 +180,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
 
       try {
         const results = await Promise.allSettled([
-          getPeriod(periodUserId),
+          getPeriod(periodUserId, isSite ? undefined : { groupId: scopeGroupId || undefined, squadId: scopeSquadId || undefined }),
           listProfiles(1, 1, listScope),
           isSite
             ? listProfiles(1, 1, 'site', undefined, { dormantOnly: true })
@@ -151,9 +188,30 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
           isSite
             ? Promise.resolve({ success: true, data: { total: 0, list: [] } } as const)
             : listGroups(1, 1),
-          getHeatmap({ startDate: start, endDate: end, isAc: false, userId: heatmapUserId }),
-          getHeatmap({ startDate: start, endDate: end, isAc: true, userId: heatmapUserId }),
-          getRank({ startDate: start, endDate: end, scoreType: 'ac', pageSize: 50 }),
+          getHeatmap({
+            startDate: start,
+            endDate: end,
+            isAc: false,
+            userId: heatmapUserId,
+            groupId: isSite ? undefined : scopeGroupId || undefined,
+            squadId: isSite ? undefined : scopeSquadId || undefined,
+          }),
+          getHeatmap({
+            startDate: start,
+            endDate: end,
+            isAc: true,
+            userId: heatmapUserId,
+            groupId: isSite ? undefined : scopeGroupId || undefined,
+            squadId: isSite ? undefined : scopeSquadId || undefined,
+          }),
+          getRank({
+            startDate: start,
+            endDate: end,
+            scoreType: 'ac',
+            pageSize: 50,
+            groupId: isSite ? undefined : scopeGroupId || undefined,
+            squadId: isSite ? undefined : scopeSquadId || undefined,
+          }),
           // 仅持有入队审批权限的角色拉待审批，其余成员不请求
           !isSite && canJoinReview && currentOrg?.id
             ? listJoinRequests(currentOrg.id).catch(() => ({
@@ -245,7 +303,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     return () => {
       cancelled = true
     }
-  }, [isSite, canSiteStats, canJoinReview, currentOrg?.id, periodUserId, heatmapUserId, days])
+  }, [isSite, canSiteStats, canJoinReview, currentOrg?.id, periodUserId, heatmapUserId, days, scopeGroupId, scopeSquadId])
 
   const metrics = useMemo(() => {
     const rangeSubmit = sumHeatmap(submitHeat)
@@ -443,6 +501,43 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             ))}
           </ToggleGroup>
 
+          
+          {!isSite ? (
+            <>
+              <select
+                className="h-8 rounded-md border bg-background px-2 text-sm"
+                value={scopeGroupId}
+                onChange={(e) => {
+                  setScopeGroupId(Number(e.target.value) || 0)
+                  setScopeSquadId(0)
+                }}
+                aria-label="按分组查看"
+              >
+                <option value={0}>全组织</option>
+                {scopeGroups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-8 rounded-md border bg-background px-2 text-sm"
+                value={scopeSquadId}
+                onChange={(e) => setScopeSquadId(Number(e.target.value) || 0)}
+                aria-label="按分队查看"
+              >
+                <option value={0}>全部分队</option>
+                {scopeSquads
+                  .filter((s) => !scopeGroupId || s.groupId === scopeGroupId)
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+              </select>
+            </>
+          ) : null}
+
           {!isSite && canJoinReview && pendingJoinCount !== null && pendingJoinCount > 0 && (
             <Button asChild size="sm" variant="destructive">
               <Link to="/admin/user">待审批 {pendingJoinCount}</Link>
@@ -477,11 +572,16 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       </div>
 
       {!isSite && can(Perm.OrgReportView) && (currentOrg?.id ?? 0) > 0 ? (
-        <CoachWeekPanel
-          orgId={currentOrg!.id}
-          canInvite={can(Perm.OrgInviteView)}
-          canReport={can(Perm.OrgReportView)}
-        />
+        <>
+          <CoachWeekPanel
+            orgId={currentOrg!.id}
+            canInvite={can(Perm.OrgInviteView)}
+          />
+          {/* 队况 + 训练报告相邻：报告入口只此一处（组织设置不再挂） */}
+          <div id="training-report" className="scroll-mt-20">
+            <OrgTrainingReportCard orgId={currentOrg!.id} />
+          </div>
+        </>
       ) : null}
 
       <ToggleGroup
@@ -795,10 +895,10 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             )}
             {can(Perm.OrgReportView) && (
               <Button asChild size="sm" variant="outline">
-                <Link to="/admin/org">生成训练报告</Link>
+                <a href="#training-report">生成训练报告</a>
               </Button>
             )}
-            {can(Perm.OrgInfoWrite) && (
+            {(can(Perm.OrgInfoWrite) || can(Perm.OrgPolicyToggle)) && (
               <Button asChild size="sm" variant="outline">
                 <Link to="/admin/org">组织设置</Link>
               </Button>
@@ -815,12 +915,6 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       {!isSite && selfNote && (
         <p className="text-xs text-muted-foreground">{selfNote}</p>
       )}
-
-      {!isSite && can(Perm.OrgReportView) && (currentOrg?.id ?? 0) > 0 ? (
-        <div id="training-report" className="scroll-mt-20">
-          <OrgTrainingReportCard orgId={currentOrg!.id} />
-        </div>
-      ) : null}
 
     </PageShell>
   )

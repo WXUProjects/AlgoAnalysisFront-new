@@ -874,7 +874,7 @@ const browserRouter = createBrowserRouter([
           {
             path: 'org',
             element: (
-              <RequirePerm anyOf={[Perm.OrgInfoWrite, Perm.OrgPolicyToggle, Perm.OrgReportView]}>
+              <RequirePerm anyOf={[Perm.OrgInfoWrite, Perm.OrgPolicyToggle]}>
                 <Lazy>
                   <DashboardOrgSettings />
                 </Lazy>
