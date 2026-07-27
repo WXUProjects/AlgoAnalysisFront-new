@@ -36,6 +36,7 @@ import {
   normalizeOjQuery,
   type OjPlatform,
 } from '@/lib/link'
+import { spiderPlatformHealth } from '@/lib/spider-health'
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
 
@@ -62,6 +63,10 @@ export function ChangeProfile() {
   const [allowPublicProfile, setAllowPublicProfile] = useState(true)
   const [allowPublicFeed, setAllowPublicFeed] = useState(true)
   const ojGuide = getOjBindGuide(platform)
+  const currentSpider = profile?.spiders?.find((s) => s.platform === platform)
+  const platformHealth = currentSpider
+    ? spiderPlatformHealth(currentSpider)
+    : null
 
   const boundEmail = (profile?.email || '').trim()
   const displayName = profile?.name || user?.username || 'U'
@@ -85,6 +90,13 @@ export function ChangeProfile() {
   useEffect(() => {
     if (preOj) setPlatform(preOj)
   }, [preOj])
+
+  useEffect(() => {
+    if (searchParams.get('focus') !== 'oj') return
+    const el = document.getElementById('bind-oj')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [searchParams])
+
 
   useEffect(() => {
     if (codeCooldown <= 0) return
@@ -214,7 +226,7 @@ export function ChangeProfile() {
     })
     setBinding(false)
     if (res.success) {
-      toast.success(res.message || '绑定成功')
+      toast.success(res.message || '已保存，正在同步做题数据')
       await sync()
     } else {
       toast.error(res.message || '绑定失败，请稍后重试')
@@ -423,7 +435,7 @@ export function ChangeProfile() {
         </form>
       </Card>
 
-      <Card className="gap-4 py-4">
+      <Card id="bind-oj" className="scroll-mt-20 gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>绑定 OJ</CardTitle>
           <CardDescription>
@@ -456,6 +468,26 @@ export function ChangeProfile() {
                   </SelectContent>
                 </Select>
               </Field>
+              {platformHealth && platformHealth.kind !== 'ok' ? (
+                <div
+                  className={
+                    platformHealth.kind === 'failed'
+                      ? 'rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive'
+                      : 'rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-200'
+                  }
+                >
+                  <p className="font-medium">{platformHealth.label}</p>
+                  <p className="mt-1 leading-relaxed opacity-90">
+                    {platformHealth.detail}
+                  </p>
+                </div>
+              ) : currentSpider ? (
+                <p className="text-xs text-muted-foreground">
+                  当前已绑定：
+                  <span className="font-mono text-foreground">{currentSpider.username}</span>
+                  {platformHealth?.kind === 'ok' ? ' · 同步正常' : null}
+                </p>
+              ) : null}
               <div className="rounded-lg border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
                 <p className="font-medium text-foreground">如何填写？</p>
                 <p className="mt-1 leading-relaxed">{ojGuide.tip}</p>

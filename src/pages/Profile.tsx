@@ -83,6 +83,7 @@ import {
   todayYmd,
 } from '@/lib/format'
 import { getPlatformHomeLink, getSubmitLink, OJ_PLATFORMS } from '@/lib/link'
+import { spiderPlatformHealth } from '@/lib/spider-health'
 import { cn } from '@/lib/utils'
 import {
   contestSeedFromItem,
@@ -159,13 +160,23 @@ export function Profile() {
   const spiderMap = useMemo(() => {
     const m = new Map<
       string,
-      { username: string; rating?: number; hasRating?: boolean }
+      {
+        username: string
+        rating?: number
+        hasRating?: boolean
+        lastSyncAt?: number
+        lastFailAt?: number
+        lastError?: string
+      }
     >()
     profile?.spiders?.forEach((s) =>
       m.set(s.platform, {
         username: s.username,
         rating: s.rating,
         hasRating: s.hasRating,
+        lastSyncAt: s.lastSyncAt,
+        lastFailAt: s.lastFailAt,
+        lastError: s.lastError,
       }),
     )
     return m
@@ -408,6 +419,7 @@ export function Profile() {
           <div className="flex flex-wrap gap-1.5">
             {bound.map(({ platform: p, bind }) => {
               const href = getPlatformHomeLink(p.value, bind.username)
+              const health = spiderPlatformHealth(bind)
               const label = (
                 <>
                   <span className="font-medium text-foreground">{p.label}</span>
@@ -416,19 +428,32 @@ export function Profile() {
                       ({bind.rating})
                     </span>
                   ) : null}
+                  {health.kind === 'failed' || health.kind === 'never' || health.kind === 'stale' ? (
+                    <span
+                      className={cn(
+                        'ml-1 text-[10px] font-medium',
+                        health.kind === 'failed'
+                          ? 'text-destructive'
+                          : 'text-amber-600 dark:text-amber-400',
+                      )}
+                    >
+                      · {health.label}
+                    </span>
+                  ) : null}
                 </>
               )
               const className = cn(
                 'inline-flex h-7 max-w-full items-center gap-0 rounded-full border border-border/80',
                 'bg-muted/40 px-2.5 text-xs transition-colors',
                 'hover:bg-muted/70 active:bg-muted',
+                health.kind === 'failed' && 'border-destructive/40',
               )
               if (!href) {
                 return (
                   <span
                     key={p.value}
                     className={className}
-                    title={bind.username}
+                    title={`${bind.username} · ${health.detail}`}
                   >
                     {label}
                   </span>
@@ -440,7 +465,7 @@ export function Profile() {
                   href={href}
                   target="_blank"
                   rel="noreferrer"
-                  title={`${p.label} · ${bind.username}`}
+                  title={`${p.label} · ${bind.username} · ${health.detail}`}
                   className={className}
                 >
                   {label}
@@ -582,6 +607,11 @@ export function Profile() {
                     {profile.lastSyncAt
                       ? formatTime(profile.lastSyncAt)
                       : '尚未同步'}
+                    {profile.spiders?.some(
+                      (s) => spiderPlatformHealth(s).kind === 'failed',
+                    ) ? (
+                      <span className="ml-1 text-destructive">· 有平台异常</span>
+                    ) : null}
                   </p>
                   {/* 移动端：博客 / 关注 / 编辑 贴在身份旁，避免滚到页底才看到 */}
                   <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">

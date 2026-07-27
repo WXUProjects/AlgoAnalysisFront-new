@@ -9,6 +9,8 @@ import { getHeatmap, getPeriod, getRank } from '@/api/statistic'
 import type { HeatmapItem, PeriodData, StatisticRankItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
+import { CoachWeekPanel } from '@/pages/dashboard/CoachWeekPanel'
+import { OrgTrainingReportCard } from '@/pages/dashboard/OrgTrainingReportCard'
 import { TrendChart } from '@/components/charts/trend-chart'
 import {
   AlertDialog,
@@ -474,6 +476,14 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
         </div>
       </div>
 
+      {!isSite && can(Perm.OrgReportView) && (currentOrg?.id ?? 0) > 0 ? (
+        <CoachWeekPanel
+          orgId={currentOrg!.id}
+          canInvite={can(Perm.OrgInviteView)}
+          canReport={can(Perm.OrgReportView)}
+        />
+      ) : null}
+
       <ToggleGroup
         type="single"
         value={timeRange}
@@ -805,6 +815,13 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       {!isSite && selfNote && (
         <p className="text-xs text-muted-foreground">{selfNote}</p>
       )}
+
+      {!isSite && can(Perm.OrgReportView) && (currentOrg?.id ?? 0) > 0 ? (
+        <div id="training-report" className="scroll-mt-20">
+          <OrgTrainingReportCard orgId={currentOrg!.id} />
+        </div>
+      ) : null}
+
     </PageShell>
   )
 }

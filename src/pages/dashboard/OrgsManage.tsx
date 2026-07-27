@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   addOrgMember,
   createOrg,
   deleteOrg,
+  switchOrg,
   listMyOrgs,
   listOrgMembers,
   setOrgMemberRole,
@@ -52,6 +54,7 @@ const MEMBER_PAGE_SIZE = 20
 /** 站点侧：集中管理所有组织，无需切换当前组织 */
 export function DashboardOrgsManage() {
   const { can, user, refreshOrgs } = useAuth()
+  const navigate = useNavigate()
   const canListOrgs = can(Perm.SiteOrgList)
   const canOrgPolicy = can(Perm.SiteOrgPolicy)
   const canCreateOrg = can(Perm.SiteOrgCreate)
@@ -225,12 +228,23 @@ export function DashboardOrgsManage() {
                   seatLimit: Math.max(1, newSeatLimit || 50),
                 }).then(async (r) => {
                   if (r.success) {
-                    toast.success('已创建')
+                    toast.success('组织已创建，正在打开设置页以便复制邀请链接')
                     setNewName('')
                     setNewSeatLimit(50)
                     await load()
                     await refreshOrgs()
-                    if (r.data) setSelected(r.data)
+                    if (r.data) {
+                      setSelected(r.data)
+                      const orgId = r.data.id
+                      if (orgId) {
+                        const sw = await switchOrg(orgId)
+                        if (sw.success) {
+                          await refreshOrgs()
+                          navigate('/admin/org')
+                          return
+                        }
+                      }
+                    }
                   } else toast.error(r.message)
                 })
               }

@@ -24,6 +24,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { AlgoProfileChart } from '@/components/charts/algo-profile-chart'
 import { HeatmapSimple } from '@/components/heatmap-simple'
 import { PageShell } from '@/components/page-shell'
+import { HomeSetupCards } from '@/components/home-setup-cards'
 import { Badge } from '@/components/ui/badge'
 import {
   Card,
@@ -318,7 +319,7 @@ export function Home() {
           ))}
           {isLogin && (
             <Link
-              to="/change-profile"
+              to="/change-profile?focus=oj"
               className="col-span-2 flex items-center justify-center rounded-lg border border-dashed px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted/40 lg:col-span-1"
             >
               绑定 OJ 账号
@@ -331,6 +332,7 @@ export function Home() {
 
   return (
     <PageShell className="gap-5">
+      <HomeSetupCards />
       {/* ① 全宽统计 — 对齐旧版 data-section */}
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">

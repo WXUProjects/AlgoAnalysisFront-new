@@ -12,11 +12,16 @@ function normalizeProfile(raw: Record<string, unknown>): UserProfile {
         const hasRating =
           hasRatingFlag === true ||
           (hasRatingFlag !== false && Number.isFinite(rating) && rating > 0)
+        const platLastSync = num(s.lastSyncAt)
+        const platLastFail = num(s.lastFailAt)
         return {
           platform: str(s.platform),
           username: str(s.username),
           rating,
           hasRating,
+          lastSyncAt: platLastSync > 0 ? platLastSync : undefined,
+          lastFailAt: platLastFail > 0 ? platLastFail : undefined,
+          lastError: str(s.lastError) || undefined,
         }
       })
     : []

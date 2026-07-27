@@ -291,7 +291,7 @@ export function DashboardOrgSettings() {
       ) : null}
 
       {canViewInvite ? (
-      <Card>
+      <Card id="org-invite" className="scroll-mt-20">
         <CardHeader>
           <CardTitle className="text-base">邀请加入</CardTitle>
           <CardDescription>

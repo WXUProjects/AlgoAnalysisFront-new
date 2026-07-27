@@ -535,6 +535,12 @@ export interface SpiderBinding {
   rating?: number
   /** 是否已抓到有效 Rating */
   hasRating?: boolean
+  /** 该平台最近一次同步成功时间（unix 秒；0/缺省=尚无） */
+  lastSyncAt?: number
+  /** 该平台最近一次同步失败时间（unix 秒；0/缺省=无或已恢复） */
+  lastFailAt?: number
+  /** 最近一次失败的短文案（成功后清空） */
+  lastError?: string
 }
 
 export interface UserProfile {
