@@ -5,7 +5,7 @@ import { listBlogPlaza } from '@/api/blog'
 import { listActivityFeed } from '@/api/community'
 import { getRank } from '@/api/statistic'
 import { useAuth } from '@/auth/AuthContext'
-import { mergeCursorPage } from '@/lib/discover-feed'
+import { mergeCursorPage, sortByTimeDesc } from '@/lib/discover-feed'
 import {
   Empty,
   EmptyDescription,
@@ -24,9 +24,8 @@ import { VirtualFeedList } from './VirtualFeedList'
 import type { DiscoverStreamItem, PreviewTarget } from './types'
 
 /**
- * Recommend / Discover surface — high-signal activity (题解/讨论) + rank-backed signal.
- * Decoupled from chronological Feed; no inject into Feed array.
- * 公共域：后端全站聚合；私有域：仅本组织成员内容（题解/博客跨作者所属各域可见）。
+ * Recommend / Discover surface — 博客 + 题解/讨论，合并后按时间倒序。
+ * 公共域：后端全站聚合；私有域：仅本组织成员内容。
  */
 export function RecommendStream() {
   const { currentOrg } = useAuth()
@@ -54,47 +53,26 @@ export function RecommendStream() {
     }
     const page = reset ? 1 : pageRef.current
     try {
-      // Prefer solutions first page for high-signal; then all activity
-      const type = page === 1 ? 'solution' : undefined
+      // 不筛 type：首屏也要时间序（勿只拉 solution 再整块插博客）
       const res = await listActivityFeed({
         page,
         pageSize: 20,
-        type,
       })
       // 已有更新的请求在途：丢弃旧响应
       if (seq !== requestSeq.current) return
       if (!res.success || !res.data) {
         if (reset) {
-          // Fallback: surface rank as pseudo-cards? keep empty honest
           toast.error(res.message || '推荐内容加载失败')
           setItems([])
           setHasMore(false)
         }
         return
       }
-      const mapped = res.data.list.map(mapActivityToStreamItem)
-      // Boost: if first page empty solutions, try comments/all once
-      let batch = mapped
-      if (reset && !batch.length) {
-        const all = await listActivityFeed({ page: 1, pageSize: 20 })
-        if (seq !== requestSeq.current) return
-        if (all.success && all.data) {
-          batch = all.data.list.map(mapActivityToStreamItem)
-          pageRef.current = 2
-          setHasMore(all.data.list.length >= 20)
-        } else {
-          setHasMore(false)
-        }
-      } else {
-        pageRef.current = page + 1
-        setHasMore(
-          res.data.list.length >= 20 || page * 20 < res.data.total,
-        )
-      }
+      let batch = res.data.list.map(mapActivityToStreamItem)
+      pageRef.current = page + 1
+      setHasMore(res.data.list.length >= 20 || page * 20 < res.data.total)
 
-      // First page: merge pure public blogs (latest). 不用 recommend 精选接口——
-      // 公开已审文默认 recommend=false，站管精选才为 true；发现应展示全站最新，
-      // 否则最近发的博客永远进不了发现（题解镜像仍排除，题解只走 activity）。
+      // 首屏并入纯公开博客（非精选）；题解镜像排除，题解只走 activity
       if (reset) {
         const blogRes = await listBlogPlaza({
           page: 1,
@@ -105,15 +83,17 @@ export function RecommendStream() {
         })
         if (seq !== requestSeq.current) return
         if (blogRes.success && blogRes.data?.list?.length) {
-          // client-side guard: never show solution-mirrored blogs in recommend
           const pure = blogRes.data.list.filter((a) => !a.sourceSolutionId)
           const blogItems = pure.map(mapBlogArticleToStreamItem)
           batch = mergeCursorPage(blogItems, batch, (x) => x.uid)
         }
       }
 
+      // 多源合并后必须按时间倒序，否则博客会整块压在讨论前面
       setItems((prev) =>
-        mergeCursorPage(reset ? [] : prev, batch, (x) => x.uid),
+        sortByTimeDesc(
+          mergeCursorPage(reset ? [] : prev, batch, (x) => x.uid),
+        ),
       )
     } finally {
       // 状态归位只归属最新一次请求，避免旧请求关掉新请求的加载态

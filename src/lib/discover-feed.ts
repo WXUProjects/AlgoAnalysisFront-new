@@ -111,6 +111,21 @@ export function mergeCursorPage<T>(
   return appended.length ? [...prev, ...appended] : prev
 }
 
+/**
+ * Newest-first by timeSec. Stable for equal times (preserves relative order).
+ * Discover 推荐流：博客 + 题解/讨论多源合并后必须按时间排，不能整块前置。
+ */
+export function sortByTimeDesc<T extends { timeSec: number }>(items: T[]): T[] {
+  if (items.length < 2) return items
+  return items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      const dt = (b.item.timeSec || 0) - (a.item.timeSec || 0)
+      return dt !== 0 ? dt : a.index - b.index
+    })
+    .map(({ item }) => item)
+}
+
 function defaultId(item: unknown): string | number {
   if (item && typeof item === 'object') {
     const o = item as Record<string, unknown>

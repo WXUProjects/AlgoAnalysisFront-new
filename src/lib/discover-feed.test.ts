@@ -8,6 +8,7 @@ import {
   shouldCollapseContent,
   excerptContent,
   mergeCursorPage,
+  sortByTimeDesc,
   filterFeedByChip,
   normalizeDiscoverTab,
   normalizeFeedChip,
@@ -81,6 +82,34 @@ describe('mergeCursorPage', () => {
   it('returns prev when next is empty', () => {
     const prev = [{ id: 1 }]
     assert.equal(mergeCursorPage(prev, []), prev)
+  })
+})
+
+describe('sortByTimeDesc', () => {
+  it('orders newest first across mixed sources', () => {
+    // 模拟：博客整块前置后未排序 → 5天前的博客压在 1 天前的题解上面
+    const mixed = [
+      { uid: 'blog-old', timeSec: 1000 },
+      { uid: 'blog-new', timeSec: 5000 },
+      { uid: 'sol-mid', timeSec: 3000 },
+      { uid: 'sol-old', timeSec: 2000 },
+    ]
+    assert.deepEqual(
+      sortByTimeDesc(mixed).map((x) => x.uid),
+      ['blog-new', 'sol-mid', 'sol-old', 'blog-old'],
+    )
+  })
+
+  it('is stable when times equal', () => {
+    const same = [
+      { uid: 'a', timeSec: 10 },
+      { uid: 'b', timeSec: 10 },
+      { uid: 'c', timeSec: 10 },
+    ]
+    assert.deepEqual(
+      sortByTimeDesc(same).map((x) => x.uid),
+      ['a', 'b', 'c'],
+    )
   })
 })
 
