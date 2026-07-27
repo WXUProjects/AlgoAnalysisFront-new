@@ -690,7 +690,12 @@ export interface GroupInfo {
 }
 
 /** 组织内系统角色取值（自定义角色见 RbacRole） */
-export type OrgRoleValue = 'member' | 'coach' | 'captain' | 'org_admin'
+export type OrgRoleValue =
+  | 'member'
+  | 'captain'
+  | 'group_leader'
+  | 'coach'
+  | 'org_admin'
 
 /** 权限作用域：site=站点级 org=组织级 */
 export type PermScope = 'site' | 'org'
@@ -788,6 +793,8 @@ export interface OrgMemberInfo {
   role: OrgRoleValue | string
   groupId?: number | null
   joinedAt?: number
+  /** 组长/队长的管理范围（任命时绑定） */
+  scopes?: ScopeGrant[]
 }
 
 export interface SubmitLogItem {

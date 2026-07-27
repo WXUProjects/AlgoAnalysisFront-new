@@ -11,7 +11,7 @@ export function DashboardOrgRoles() {
       <div>
         <h3 className="font-semibold">角色与权限</h3>
         <p className="text-sm text-muted-foreground">
-          团队管理员与成员是基本角色，权限固定；教练、队长的权限可按本组织需要调整。也可以新建角色、自由勾选权限，并把组织成员加进来。
+          组织管理员与成员是基本角色，权限固定；教练、组长、队长的权限可按本组织需要调整。也可以新建角色、自由勾选权限，并把组织成员加进来。
         </p>
       </div>
       {orgId > 0 ? (

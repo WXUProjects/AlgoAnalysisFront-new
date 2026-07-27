@@ -62,7 +62,11 @@ const MEMBER_PAGE_SIZE = 20
 
 export function DashboardGroup() {
   const { can } = useAuth()
+  /** 分组本身 CRUD / 移人 */
   const canManage = can(Perm.OrgGroupManage)
+  /** 分队写：教练有 group.manage；组长/队长由后端按 scope 再裁 */
+  const canWriteSquad =
+    can(Perm.OrgGroupManage) || can(Perm.OrgMemberRole) || can(Perm.OrgReportView)
   const { page, pageSize, setPage, setPageSize } = useListQueryState({
     defaultPageSize: DEFAULT_PAGE_SIZE,
   })
@@ -312,7 +316,7 @@ export function DashboardGroup() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>确认删除该分组？</AlertDialogTitle>
                         <AlertDialogDescription>
-                          成员将移至「默认分组」。默认分组不可删除。
+                          成员将移至「默认分组」；组内分队会一并解散，该组组长与相关队长将降为成员。默认分组不可删除。
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -468,7 +472,7 @@ export function DashboardGroup() {
 
       </div>
 
-      <SquadPanel canWrite={canManage} />
+      <SquadPanel canWrite={canWriteSquad} />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>

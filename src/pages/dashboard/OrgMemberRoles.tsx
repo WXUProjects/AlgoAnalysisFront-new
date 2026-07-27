@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
 import { listOrgMembers, removeOrgMember, setOrgMemberRole } from '@/api/org'
-import type { OrgMemberInfo } from '@shared/api'
+import { listAllGroups } from '@/api/group'
+import { listSquads } from '@/api/squad'
+import type { GroupInfo, OrgMemberInfo, SquadInfo } from '@shared/api'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
@@ -19,6 +21,14 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -29,22 +39,28 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Perm } from '@/lib/permissions'
-import { orgRoleName } from '@/lib/roles'
-import { ScopeGrantDialog } from '@/components/scope-grant-dialog'
+import {
+  OrgRole,
+  orgRoleName,
+  roleNeedsScope,
+} from '@/lib/roles'
 
 const DEFAULT_MEMBER_PAGE_SIZE = 10
 
 /** 组织成员任命：设置成员角色 / 移出组织（/admin/user?tab=member-roles） */
 export function DashboardOrgMemberRoles() {
-  const { currentOrg, user, can } = useAuth()
+  const { currentOrg, user, can, isSiteAdmin } = useAuth()
   const orgId = currentOrg?.id || user?.orgId || 0
   const canSetMemberRole = can(Perm.OrgMemberRole)
   const canRemoveMember = can(Perm.OrgMemberRemove)
   const canViewMembers = canSetMemberRole || canRemoveMember
   const isSystemOrg = Boolean(currentOrg?.isSystem)
   const myUserId = user?.userId || 0
+  // 站管视为组织管理员等级，可任命全部
+  const actorRole = isSiteAdmin
+    ? OrgRole.OrgAdmin
+    : user?.orgRole || OrgRole.Member
 
-  // mpage/mpageSize 与「成员」页签的 page/pageSize 区分，避免同一 URL 上互相覆盖
   const {
     page: memberPage,
     pageSize: memberPageSize,
@@ -61,21 +77,21 @@ export function DashboardOrgMemberRoles() {
   const [memberKeyword, setMemberKeyword] = useState('')
   const [memberKeywordDraft, setMemberKeywordDraft] = useState('')
   const [membersLoading, setMembersLoading] = useState(false)
-  /** 竞态守卫：丢弃过期的成员列表响应 */
   const membersRequestId = useRef(0)
-  /** 修改成员角色前二次确认 */
+
   const [roleConfirm, setRoleConfirm] = useState<{
     userId: number
     name: string
     from: string
     to: string
   } | null>(null)
-  /** 移除成员前二次确认 */
+  const [scopeGroupId, setScopeGroupId] = useState<string>('')
+  const [scopeSquadId, setScopeSquadId] = useState<string>('')
+  const [groups, setGroups] = useState<GroupInfo[]>([])
+  const [squads, setSquads] = useState<SquadInfo[]>([])
+  const [scopeLoading, setScopeLoading] = useState(false)
+
   const [removeConfirm, setRemoveConfirm] = useState<{
-    userId: number
-    name: string
-  } | null>(null)
-  const [scopeEdit, setScopeEdit] = useState<{
     userId: number
     name: string
   } | null>(null)
@@ -89,7 +105,6 @@ export function DashboardOrgMemberRoles() {
       pageSize: memberPageSize,
       keyword: memberKeyword,
     })
-    // 快速翻页/搜索时丢弃旧响应
     if (rid !== membersRequestId.current) return
     setMembersLoading(false)
     if (r.success) {
@@ -102,22 +117,55 @@ export function DashboardOrgMemberRoles() {
     void loadMembers()
   }, [loadMembers])
 
+  // 打开任命确认时加载分组/分队
+  useEffect(() => {
+    if (!roleConfirm || !orgId) return
+    const need = roleNeedsScope(roleConfirm.to)
+    if (!need) {
+      setScopeGroupId('')
+      setScopeSquadId('')
+      return
+    }
+    setScopeLoading(true)
+    setScopeGroupId('')
+    setScopeSquadId('')
+    void Promise.all([listAllGroups(), listSquads({ orgId })]).then(
+      ([g, s]) => {
+        setScopeLoading(false)
+        if (g.success && g.data) setGroups(g.data.list)
+        if (s.success && s.data) setSquads(s.data)
+      },
+    )
+  }, [roleConfirm, orgId])
+
+  const squadsInGroup = useMemo(() => {
+    if (!scopeGroupId) return squads
+    const gid = Number(scopeGroupId)
+    return squads.filter((s) => s.groupId === gid)
+  }, [squads, scopeGroupId])
+
+  const scopeLabel = useMemo(() => {
+    if (!roleConfirm) return ''
+    if (roleConfirm.to === OrgRole.GroupLeader) {
+      const g = groups.find((x) => String(x.id) === scopeGroupId)
+      return g?.name || ''
+    }
+    if (roleConfirm.to === OrgRole.Captain) {
+      const sq = squads.find((x) => String(x.id) === scopeSquadId)
+      const g = groups.find((x) => x.id === sq?.groupId)
+      if (sq && g) return `${g.name} · ${sq.name}`
+      return sq?.name || ''
+    }
+    return ''
+  }, [roleConfirm, groups, squads, scopeGroupId, scopeSquadId])
+
   if (!canViewMembers) {
     return (
       <PageShell>
         <p className="text-sm text-muted-foreground">
           需要「设置成员角色」或「移除成员」权限才能访问这里。
         </p>
-            <ScopeGrantDialog
-        open={scopeEdit != null}
-        onOpenChange={(o) => {
-          if (!o) setScopeEdit(null)
-        }}
-        orgId={orgId}
-        userId={scopeEdit?.userId || 0}
-        userName={scopeEdit?.name || ''}
-      />
-    </PageShell>
+      </PageShell>
     )
   }
 
@@ -126,7 +174,7 @@ export function DashboardOrgMemberRoles() {
       <div>
         <h3 className="font-semibold">成员与角色</h3>
         <p className="text-sm text-muted-foreground">
-          可设为成员、队长、教练或团队管理员；也可将成员移出本组织。支持分页与模糊搜索。
+          权限从高到低：组织管理员 → 教练 → 组长 → 队长 → 成员。任命组长须指定分组，任命队长须指定分队；教练可看全组织数据。
         </p>
       </div>
 
@@ -190,7 +238,7 @@ export function DashboardOrgMemberRoles() {
               <TableHeader>
                 <TableRow>
                   <TableHead>成员</TableHead>
-                  <TableHead className="w-40">角色</TableHead>
+                  <TableHead className="w-48">角色</TableHead>
                   {canRemoveMember && (
                     <TableHead className="w-20 text-right">操作</TableHead>
                   )}
@@ -202,6 +250,19 @@ export function DashboardOrgMemberRoles() {
                     m.name || m.orgDisplayName || m.username || String(m.userId)
                   const canRemove =
                     canRemoveMember && !isSystemOrg && m.userId !== myUserId
+                  const scopes = (m as OrgMemberInfo & {
+                    scopes?: { scopeType: string; scopeId: number }[]
+                  }).scopes
+                  const scopeHint =
+                    scopes && scopes.length > 0
+                      ? scopes
+                          .map((s) =>
+                            s.scopeType === 'group'
+                              ? `组#${s.scopeId}`
+                              : `队#${s.scopeId}`,
+                          )
+                          .join('、')
+                      : ''
                   return (
                     <TableRow key={m.userId}>
                       <TableCell>
@@ -226,6 +287,11 @@ export function DashboardOrgMemberRoles() {
                                 @{m.username}
                               </span>
                             ) : null}
+                            {scopeHint ? (
+                              <span className="truncate text-xs text-muted-foreground">
+                                管理范围：{scopeHint}
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                       </TableCell>
@@ -233,7 +299,8 @@ export function DashboardOrgMemberRoles() {
                         {canSetMemberRole ? (
                           <OrgRoleSelect
                             value={m.role || 'member'}
-                            triggerClassName="w-32"
+                            actorRole={actorRole}
+                            triggerClassName="w-36"
                             ariaLabel={`设置「${label}」的角色`}
                             onRoleChange={(role) =>
                               setRoleConfirm({
@@ -247,20 +314,6 @@ export function DashboardOrgMemberRoles() {
                         ) : (
                           <Badge variant="outline">{orgRoleName(m.role)}</Badge>
                         )}
-                        {canSetMemberRole &&
-                        (m.role === 'coach' || m.role === 'captain') ? (
-                          <Button
-                            type="button"
-                            variant="link"
-                            size="sm"
-                            className="h-auto px-0"
-                            onClick={() =>
-                              setScopeEdit({ userId: m.userId, name: label })
-                            }
-                          >
-                            管理范围
-                          </Button>
-                        ) : null}
                       </TableCell>
                       {canRemoveMember && (
                         <TableCell className="text-right">
@@ -301,23 +354,124 @@ export function DashboardOrgMemberRoles() {
       <ConfirmDialog
         open={roleConfirm != null}
         onOpenChange={(o) => {
-          if (!o) setRoleConfirm(null)
+          if (!o) {
+            setRoleConfirm(null)
+            setScopeGroupId('')
+            setScopeSquadId('')
+          }
         }}
         title="修改成员角色？"
         description={
-          roleConfirm
-            ? `确定将「${roleConfirm.name}」从「${orgRoleName(roleConfirm.from)}」改为「${orgRoleName(roleConfirm.to)}」？对方的后台权限会立即变化。`
-            : ''
+          roleConfirm ? (
+            <div className="space-y-3">
+              <p>
+                将「{roleConfirm.name}」从「{orgRoleName(roleConfirm.from)}」改为「
+                {orgRoleName(roleConfirm.to)}」。对方的后台权限会立即变化。
+              </p>
+              {roleNeedsScope(roleConfirm.to) ? (
+                scopeLoading ? (
+                  <Skeleton className="h-9 w-full" />
+                ) : (
+                  <div className="space-y-3 text-foreground">
+                    {(roleConfirm.to === OrgRole.GroupLeader ||
+                      roleConfirm.to === OrgRole.Captain) && (
+                      <div className="space-y-1.5">
+                        <Label>
+                          {roleConfirm.to === OrgRole.GroupLeader
+                            ? '管理哪个分组'
+                            : '所属分组（可选，便于筛选分队）'}
+                        </Label>
+                        <Select
+                          value={scopeGroupId}
+                          onValueChange={(v) => {
+                            setScopeGroupId(v || '')
+                            setScopeSquadId('')
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="选择分组" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {groups.map((g) => (
+                              <SelectItem key={g.id} value={String(g.id)}>
+                                {g.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {roleConfirm.to === OrgRole.Captain && (
+                      <div className="space-y-1.5">
+                        <Label>管理哪支分队</Label>
+                        <Select
+                          value={scopeSquadId}
+                          onValueChange={(v) => setScopeSquadId(v || '')}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="选择分队" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {squadsInGroup.length === 0 ? (
+                              <SelectItem value="__empty" disabled>
+                                暂无分队，请先在「分组」页创建
+                              </SelectItem>
+                            ) : (
+                              squadsInGroup.map((s) => (
+                                <SelectItem key={s.id} value={String(s.id)}>
+                                  {s.name}
+                                  {s.groupId
+                                    ? `（${groups.find((g) => g.id === s.groupId)?.name || `组#${s.groupId}`}）`
+                                    : ''}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                )
+              ) : null}
+            </div>
+          ) : (
+            ''
+          )
         }
         confirmLabel="确认修改"
+        disabled={
+          !!roleConfirm &&
+          ((roleConfirm.to === OrgRole.GroupLeader && !scopeGroupId) ||
+            (roleConfirm.to === OrgRole.Captain && !scopeSquadId) ||
+            scopeLoading)
+        }
         onConfirm={() => {
           if (!roleConfirm || !orgId) return
           const target = roleConfirm
+          const need = roleNeedsScope(target.to)
+          let scope:
+            | { scopeType: 'group' | 'squad'; scopeId: number }
+            | undefined
+          if (need === 'group') {
+            if (!scopeGroupId) {
+              toast.error('请选择要管理的分组')
+              return
+            }
+            scope = { scopeType: 'group', scopeId: Number(scopeGroupId) }
+          } else if (need === 'squad') {
+            if (!scopeSquadId) {
+              toast.error('请选择要管理的分队')
+              return
+            }
+            scope = { scopeType: 'squad', scopeId: Number(scopeSquadId) }
+          }
+          const labelSnap = scopeLabel
           setRoleConfirm(null)
-          void setOrgMemberRole(orgId, target.userId, target.to).then(
+          void setOrgMemberRole(orgId, target.userId, target.to, scope).then(
             async (r) => {
               if (r.success) {
-                toast.success('已更新角色')
+                const extra = labelSnap ? `（${labelSnap}）` : ''
+                toast.success(`已更新为${orgRoleName(target.to)}${extra}`)
                 await loadMembers()
               } else toast.error(r.message)
             },

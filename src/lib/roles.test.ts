@@ -34,6 +34,10 @@ describe('staffKindFromPayload（有序规则表）', () => {
   it('组织角色逐级判定', () => {
     assert.equal(staffKindFromPayload({ orgRole: OrgRole.OrgAdmin }), 'orgAdmin')
     assert.equal(staffKindFromPayload({ orgRole: OrgRole.Coach }), 'coach')
+    assert.equal(
+      staffKindFromPayload({ orgRole: OrgRole.GroupLeader }),
+      'groupLeader',
+    )
     assert.equal(staffKindFromPayload({ orgRole: OrgRole.Captain }), 'captain')
   })
 
@@ -51,12 +55,13 @@ describe('staffNavLabel（侧栏）', () => {
     assert.equal(staffNavLabel({ roleId: 1 }), '站点管理')
   })
 
-  it('团队管理员 → 团队管理（侧栏专属文案）', () => {
+  it('组织管理员 → 团队管理（侧栏专属文案）', () => {
     assert.equal(staffNavLabel({ orgRole: OrgRole.OrgAdmin }), '团队管理')
   })
 
-  it('教练 / 队长', () => {
+  it('教练 / 组长 / 队长', () => {
     assert.equal(staffNavLabel({ orgRole: OrgRole.Coach }), '教练管理')
+    assert.equal(staffNavLabel({ orgRole: OrgRole.GroupLeader }), '组长管理')
     assert.equal(staffNavLabel({ orgRole: OrgRole.Captain }), '队长管理')
   })
 
@@ -127,8 +132,9 @@ describe('orgRoleName', () => {
   it('已知角色映射为中文名，未知回退原值', () => {
     assert.equal(orgRoleName(OrgRole.Member), '成员')
     assert.equal(orgRoleName(OrgRole.Captain), '队长')
+    assert.equal(orgRoleName(OrgRole.GroupLeader), '组长')
     assert.equal(orgRoleName(OrgRole.Coach), '教练')
-    assert.equal(orgRoleName(OrgRole.OrgAdmin), '团队管理员')
+    assert.equal(orgRoleName(OrgRole.OrgAdmin), '组织管理员')
     assert.equal(orgRoleName(null), '成员')
     assert.equal(orgRoleName('custom_x'), 'custom_x')
   })

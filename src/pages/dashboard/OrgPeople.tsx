@@ -32,7 +32,8 @@ export function DashboardOrgPeople() {
         {
           value: 'group',
           label: '分组',
-          show: can(Perm.OrgGroupManage),
+          // 教练持分组管理；组长/队长持报告权限也可查看组内分队
+          show: can(Perm.OrgGroupManage) || can(Perm.OrgReportView),
           content: <Group />,
         },
         {

@@ -507,7 +507,7 @@ nginx：**首版策略**——上述公开页 **一律** 反代 SEO HTML（不�
 
 ### Org（GoAlgo 多租户）
 
-HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`（`member|coach|captain|org_admin`）/ `pm`（细粒度权限位图，见「RBAC 角色与权限」一节）。以下「组织/站点管理员」权限均已细化为对应权限点（org.member.\* / org.invite.\* / org.join.review / site.org.\* 等），管理员为默认持有者。
+HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`（`member|captain|group_leader|coach|org_admin`）/ `pm`（细粒度权限位图，见「RBAC 角色与权限」一节）。组织内层级：组织管理员 > 教练 > 组长 > 队长 > 成员。以下「组织/站点管理员」权限均已细化为对应权限点。
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
@@ -523,7 +523,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/user/org/join` | 是 | `{ inviteCode, orgDisplayName }` 团队识别码 + **组织内名称（必填）**；**不改**默认组织 |
 | POST | `/user/org/leave` | 是 | `{ orgId }`；**公共域不可退出**；若离开的是默认组织则回落公共域 |
 | GET | `/user/org/members` | 成员 | query: `orgId`、`page`（默认 1）、`pageSize`（默认 20，最大 100）、`keyword` 模糊；排序 **团队管理员 > 教练 > 队长 > 成员**；返回 `name`（组织内名称，空则 username）、`orgDisplayName`、`total`/`page`/`pageSize` |
-| POST | `/user/org/members/set-role` | 组织/站点管理员 | `{ orgId, userId, role: member\|coach\|captain\|org_admin }`；若不在组织则加入并 **设为默认组织** |
+| POST | `/user/org/members/set-role` | 持 `org.member.role` 且等级足够 | `{ orgId, userId, role: member\|captain\|group_leader\|coach\|org_admin, scopeType?, scopeId? }`；任命队长须 `scopeType=squad`；任命组长须 `scopeType=group`；只能任命严格低于自己的角色 |
 | POST | `/user/org/members/remove` | 组织/站点管理员 | `{ orgId, userId }`；不可移出公共域；若移出默认组织则回落公共域 |
 | POST | `/user/org/members/add` | 站点/组织管理员 | `{ orgId, userId?\|username?, role?, orgDisplayName? }` 搜索加入；**设为默认组织**；组织内名称可填，默认用对方全局昵称 |
 | POST | `/user/org/members/set-display-name` | 本人或组织/站点管理员 | `{ orgId, userId?, orgDisplayName }` 改组织内名称 |
@@ -635,7 +635,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 权限模型：**权限点目录以后端代码为唯一权威**（`cwxu-algo/app/common/rbac/perm.go`，37 个权限点、9 个分组，作用域 `site` 站点级 / `org` 组织级）。角色 = 权限点集合：
 
-- **内置角色**（`isSystem`，不可改名/删除）：站点管理员 `site_admin`（旁路全部校验）、团队管理员 `org_admin`（全部 org.\*）、教练 `coach` / 队长 `captain`（默认：分组/组织公告/训练报告/代管日报）、成员 `member`（无管理权限）。内置角色的任命仍走既有入口（`org/members/set-role`、`platform/set-site-admin`），后端双写 `user_roles` 镜像。
+- **内置角色**（`isSystem`，不可改名/删除）：站点管理员 `site_admin`（旁路全部校验）、组织管理员 `org_admin`（全部 org.\*）、教练 `coach`（全组织数据+任命组长/队长）、组长 `group_leader`（绑定分组）、队长 `captain`（绑定分队）、成员 `member`。层级：org_admin > coach > group_leader > captain > member。
 - **内置角色的组织级权限覆盖**：教练 / 队长的权限**可由所在组织自行调整**（`permsEditable=true`），覆盖只对本组织生效，存 `org_role_perms`；团队管理员与成员是组织基本盘，权限固定（`permsEditable=false`）。`customized=true` 表示本组织已改过，可用 `resetPermissions` 恢复默认。
 - **自定义角色**：站点级需 `site.role.manage`；组织级需该组织 `org.role.manage`（org_admin 默认持有）。自定义角色只赋权限、不改 `orgRole`，一个用户可叠加多个；**删除自定义角色后成员退回最基本身份**（组织内为「成员」，站点为「普通用户」）。
 - **已下线**：内置角色「资源审核员」`resource_reviewer` 与权限点 `site.appoint.reviewer`（bit 16 永久退休不复用）。存量持有者已被剥离（`users.is_resource_reviewer` 全部置 false，列保留仅为回滚）；内容审核受众改按 `content.*` 权限点推导。`/user/profile/list` 的 `isResourceReviewer` 为 protobuf 遗留字段，恒为 `false`，前端已不再读取。

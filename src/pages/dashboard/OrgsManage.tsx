@@ -525,6 +525,7 @@ export function DashboardOrgsManage() {
                           </span>
                           <OrgRoleSelect
                             value={m.role || 'member'}
+                            actorRole="org_admin"
                             triggerClassName="w-36 shrink-0"
                             ariaLabel={`设置「${m.name || m.username}」的角色`}
                             onRoleChange={(role) =>
@@ -568,14 +569,29 @@ export function DashboardOrgsManage() {
           title="修改成员角色？"
           description={
             roleConfirm
-              ? `确定将「${roleConfirm.name}」从「${orgRoleName(roleConfirm.from)}」改为「${orgRoleName(roleConfirm.to)}」？对方的后台权限会立即变化。`
+              ? roleConfirm.to === 'captain' ||
+                roleConfirm.to === 'group_leader'
+                ? `任命「${orgRoleName(roleConfirm.to)}」须指定分组或分队。请到该组织的「成员与角色」页完成任命（需先切换到目标组织）。`
+                : `确定将「${roleConfirm.name}」从「${orgRoleName(roleConfirm.from)}」改为「${orgRoleName(roleConfirm.to)}」？对方的后台权限会立即变化。`
               : ''
           }
-          confirmLabel="确认修改"
+          confirmLabel={
+            roleConfirm &&
+            (roleConfirm.to === 'captain' ||
+              roleConfirm.to === 'group_leader')
+              ? '知道了'
+              : '确认修改'
+          }
           onConfirm={() => {
             if (!roleConfirm) return
             const target = roleConfirm
             setRoleConfirm(null)
+            if (
+              target.to === 'captain' ||
+              target.to === 'group_leader'
+            ) {
+              return
+            }
             void setOrgMemberRole(target.orgId, target.userId, target.to).then(
               async (r) => {
                 if (r.success) {

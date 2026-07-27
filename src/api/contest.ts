@@ -185,9 +185,11 @@ function normalizeBoardRow(r: Record<string, unknown>): ContestBoardRow {
   const cellsRaw = Array.isArray(r.cells)
     ? (r.cells as Record<string, unknown>[])
     : []
+  // name 优先；空则回落 username，避免整榜「未知选手」
+  const name = str(r.name).trim() || str(r.username).trim()
   return {
     userId: num(r.userId),
-    name: str(r.name),
+    name,
     avatar: normalizeStaticUrl(str(r.avatar)),
     rankOfficial: num(r.rankOfficial),
     rankLocal: num(r.rankLocal),

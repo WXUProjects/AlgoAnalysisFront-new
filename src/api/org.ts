@@ -241,8 +241,21 @@ export async function listOrgMembers(
   }
 }
 
-export async function setOrgMemberRole(orgId: number, userId: number, role: string) {
-  const res = await post(endpoints.user.org.setRole, { orgId, userId, role })
+/** 任命组织角色；组长须带 scopeType=group，队长须带 scopeType=squad */
+export async function setOrgMemberRole(
+  orgId: number,
+  userId: number,
+  role: string,
+  scope?: { scopeType?: 'group' | 'squad'; scopeId?: number },
+) {
+  const res = await post(endpoints.user.org.setRole, {
+    orgId,
+    userId,
+    role,
+    ...(scope?.scopeType && scope.scopeId
+      ? { scopeType: scope.scopeType, scopeId: scope.scopeId }
+      : {}),
+  })
   const body = res.data as { code?: number; message?: string }
   return {
     success: res.success && bizOk(body?.code),

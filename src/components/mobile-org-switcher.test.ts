@@ -48,7 +48,8 @@ describe('角色全称统一走 roles.ts 常量', () => {
   it('OrgRoleLabel 提供切换器所需的全部中文角色名', () => {
     assert.equal(OrgRoleLabel[OrgRole.Member], '成员')
     assert.equal(OrgRoleLabel[OrgRole.Captain], '队长')
+    assert.equal(OrgRoleLabel[OrgRole.GroupLeader], '组长')
     assert.equal(OrgRoleLabel[OrgRole.Coach], '教练')
-    assert.equal(OrgRoleLabel[OrgRole.OrgAdmin], '团队管理员')
+    assert.equal(OrgRoleLabel[OrgRole.OrgAdmin], '组织管理员')
   })
 })

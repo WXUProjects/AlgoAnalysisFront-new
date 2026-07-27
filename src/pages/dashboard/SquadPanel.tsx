@@ -160,7 +160,7 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
       <CardHeader className="pb-3">
         <CardTitle className="text-base">分队</CardTitle>
         <CardDescription>
-          分组下面还可以再拆分队。教练可按分队看训练数据；队长可被限制为只管理某一分队。
+          分组下面可以再拆分队。组织管理员与教练管理全部分队；组长管理本组内分队；队长只管理被任命的那支分队。
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 lg:grid-cols-2">

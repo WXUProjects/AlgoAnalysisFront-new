@@ -81,6 +81,7 @@ export function HomeSetupCards() {
     isCaptain ||
     currentOrg?.myRole === OrgRole.OrgAdmin ||
     currentOrg?.myRole === OrgRole.Coach ||
+    currentOrg?.myRole === OrgRole.GroupLeader ||
     currentOrg?.myRole === OrgRole.Captain
 
   const nonSystemOrg =

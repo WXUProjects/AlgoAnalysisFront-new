@@ -1,9 +1,13 @@
 /** 角色：GoAlgo isSiteAdmin + 组织内 orgRole */
 
-/** 组织内角色（展示顺序：成员 → 队长 → 教练 → 团队管理员） */
+/**
+ * 组织内角色（展示顺序：成员 → 队长 → 组长 → 教练 → 组织管理员）
+ * 等级：org_admin > coach > group_leader > captain > member
+ */
 export const OrgRole = {
   Member: 'member',
   Captain: 'captain',
+  GroupLeader: 'group_leader',
   Coach: 'coach',
   OrgAdmin: 'org_admin',
 } as const
@@ -13,8 +17,46 @@ export type OrgRoleValue = (typeof OrgRole)[keyof typeof OrgRole]
 export const OrgRoleLabel: Record<string, string> = {
   member: '成员',
   captain: '队长',
+  group_leader: '组长',
   coach: '教练',
-  org_admin: '团队管理员',
+  org_admin: '组织管理员',
+}
+
+/** 角色等级（越高权限越大），与后端 model.OrgRoleRank 对齐 */
+export const OrgRoleRank: Record<string, number> = {
+  member: 0,
+  captain: 10,
+  group_leader: 20,
+  coach: 30,
+  org_admin: 40,
+}
+
+export function orgRoleRank(role?: string | null): number {
+  if (!role) return 0
+  return OrgRoleRank[role] ?? 0
+}
+
+/** 操作者可任命的角色列表（严格低于自己；队长及以下无任命权） */
+export function appointableRoles(actorRole?: string | null): OrgRoleValue[] {
+  const ar = orgRoleRank(actorRole)
+  if (ar < OrgRoleRank.group_leader) return []
+  const all: OrgRoleValue[] = [
+    OrgRole.Member,
+    OrgRole.Captain,
+    OrgRole.GroupLeader,
+    OrgRole.Coach,
+    OrgRole.OrgAdmin,
+  ]
+  return all.filter((r) => orgRoleRank(r) < ar)
+}
+
+/** 该角色任命时是否需要绑定范围 */
+export function roleNeedsScope(
+  role?: string | null,
+): 'group' | 'squad' | null {
+  if (role === OrgRole.GroupLeader) return 'group'
+  if (role === OrgRole.Captain) return 'squad'
+  return null
 }
 
 export function isSiteAdminFromPayload(p?: {
@@ -44,6 +86,13 @@ export function isCoachFromPayload(p?: {
   return p.orgRole === OrgRole.Coach
 }
 
+export function isGroupLeaderFromPayload(p?: {
+  orgRole?: string
+} | null) {
+  if (!p) return false
+  return p.orgRole === OrgRole.GroupLeader
+}
+
 export function isCaptainFromPayload(p?: {
   orgRole?: string
   roleId?: number | null
@@ -52,16 +101,17 @@ export function isCaptainFromPayload(p?: {
   return p.orgRole === OrgRole.Captain
 }
 
-/** 组织内可进管理端：教练 / 队长 / 团队管理员 */
+/** 组织内可进管理端：教练 / 组长 / 队长 / 组织管理员 */
 export function isOrgStaffRole(orgRole?: string | null) {
   return (
     orgRole === OrgRole.Coach ||
+    orgRole === OrgRole.GroupLeader ||
     orgRole === OrgRole.Captain ||
     orgRole === OrgRole.OrgAdmin
   )
 }
 
-/** 管理端：站点管理员或当前组织教练/队长/管理员 */
+/** 管理端：站点管理员或当前组织教练/组长/队长/管理员 */
 export function isStaffFromPayload(p?: {
   isSiteAdmin?: boolean
   orgRole?: string
@@ -84,12 +134,16 @@ export type StaffLabelPayload = {
 }
 
 /** 管理端内置身份类别（自定义角色仅有权限、不落入任何类别） */
-export type StaffKind = 'siteAdmin' | 'orgAdmin' | 'coach' | 'captain'
+export type StaffKind =
+  | 'siteAdmin'
+  | 'orgAdmin'
+  | 'coach'
+  | 'groupLeader'
+  | 'captain'
 
 /**
  * 管理入口文案有序规则表（自上而下，命中即止）：
- * 站点管理员 → 团队管理员 → 教练 → 队长。
- * 侧栏与底栏仅团队管理员一条文案不同（侧栏「团队管理」/ 底栏「组织管理」）。
+ * 站点管理员 → 组织管理员 → 教练 → 组长 → 队长。
  */
 const STAFF_NAV_RULES: ReadonlyArray<{
   kind: StaffKind
@@ -114,6 +168,12 @@ const STAFF_NAV_RULES: ReadonlyArray<{
     when: (p) => p.orgRole === OrgRole.Coach,
     sidebar: '教练管理',
     bottom: '教练管理',
+  },
+  {
+    kind: 'groupLeader',
+    when: (p) => p.orgRole === OrgRole.GroupLeader,
+    sidebar: '组长管理',
+    bottom: '组长管理',
   },
   {
     kind: 'captain',
@@ -143,12 +203,12 @@ function staffLabelByVariant(
   return rule ? rule[variant] : STAFF_NAV_FALLBACK_LABEL
 }
 
-/** 侧栏管理入口文案（团队管理员显示「团队管理」） */
+/** 侧栏管理入口文案（组织管理员显示「团队管理」） */
 export function staffNavLabel(p?: StaffLabelPayload | null): string {
   return staffLabelByVariant(p, 'sidebar')
 }
 
-/** 底栏管理入口文案（团队管理员显示「组织管理」，与「更多」分区一致） */
+/** 底栏管理入口文案（组织管理员显示「组织管理」，与「更多」分区一致） */
 export function bottomNavStaffLabel(p?: StaffLabelPayload | null): string {
   return staffLabelByVariant(p, 'bottom')
 }

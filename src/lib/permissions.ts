@@ -116,15 +116,30 @@ export const CONTENT_PERMS: readonly PermCode[] = [
   Perm.ContentReportHandle,
 ]
 
-/** 教练/队长默认模板（组织可在本组织内覆盖，仅用于旧 token 兜底推导） */
-export const ORG_STAFF_PERMS: readonly PermCode[] = [
+/** 教练默认模板（全组织数据 + 任命组长/队长；组织可覆盖） */
+export const ORG_COACH_PERMS: readonly PermCode[] = [
   Perm.OrgGroupManage,
   Perm.OrgBulletinManage,
   Perm.OrgReportView,
   Perm.OrgMemberEmail,
+  Perm.OrgMemberRole,
+  Perm.OrgMemberDisplayName,
 ]
 
-/** 团队管理员模板 = 全部组织级权限 */
+/** 组长默认模板（组内数据 + 有限任命） */
+export const ORG_GROUP_LEADER_PERMS: readonly PermCode[] = [
+  Perm.OrgReportView,
+  Perm.OrgMemberRole,
+  Perm.OrgMemberDisplayName,
+]
+
+/** 队长默认模板（仅本分队报告） */
+export const ORG_CAPTAIN_PERMS: readonly PermCode[] = [Perm.OrgReportView]
+
+/** @deprecated 兼容旧引用：等同教练模板 */
+export const ORG_STAFF_PERMS: readonly PermCode[] = ORG_COACH_PERMS
+
+/** 组织管理员模板 = 全部组织级权限 */
 export const ORG_ADMIN_PERMS: readonly PermCode[] = ALL_PERMS.filter((c) =>
   c.startsWith('org.'),
 )
@@ -167,8 +182,11 @@ export function permsFromPayload(p?: PermPayload | null): Set<string> {
   if (fromMask) return fromMask
   const out = new Set<string>()
   if (p.orgRole === 'org_admin') ORG_ADMIN_PERMS.forEach((c) => out.add(c))
-  else if (p.orgRole === 'coach' || p.orgRole === 'captain')
-    ORG_STAFF_PERMS.forEach((c) => out.add(c))
+  else if (p.orgRole === 'coach') ORG_COACH_PERMS.forEach((c) => out.add(c))
+  else if (p.orgRole === 'group_leader')
+    ORG_GROUP_LEADER_PERMS.forEach((c) => out.add(c))
+  else if (p.orgRole === 'captain')
+    ORG_CAPTAIN_PERMS.forEach((c) => out.add(c))
   return out
 }
 
