@@ -121,7 +121,7 @@ export function LeftRail({
   return (
     <aside
       data-discover-left-rail=""
-      className="hidden w-[200px] shrink-0 flex-col gap-3 xl:w-[220px] lg:flex"
+      className="hidden w-[200px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:flex lg:max-h-[calc(100svh-6rem)] lg:overflow-y-auto xl:w-[220px]"
     >
       {showFeedScope ? (
         <Card className="gap-2 py-3 shadow-none">
