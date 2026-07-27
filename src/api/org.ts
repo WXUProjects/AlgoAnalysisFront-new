@@ -231,7 +231,15 @@ export async function listOrgMembers(
     page?: number
     pageSize?: number
   }
-  const list = asList<OrgMemberInfo>(body.list ?? res.data)
+  const rawList = asList<OrgMemberInfo>(body.list ?? res.data)
+  // 保留 scopes（组长/队长管理范围，含 label）
+  const list = rawList.map((m) => {
+    const raw = m as OrgMemberInfo & { scopes?: OrgMemberInfo['scopes'] }
+    return {
+      ...m,
+      scopes: Array.isArray(raw.scopes) ? raw.scopes : m.scopes,
+    }
+  })
   return {
     success: res.success,
     list,
@@ -241,19 +249,28 @@ export async function listOrgMembers(
   }
 }
 
-/** 任命组织角色；组长须带 scopeType=group，队长须带 scopeType=squad */
+/** 任命组织角色；组长须带 scopeType=group，队长须带 scopeType=squad（可叠加多组/多队） */
 export async function setOrgMemberRole(
   orgId: number,
   userId: number,
   role: string,
-  scope?: { scopeType?: 'group' | 'squad'; scopeId?: number },
+  scope?: {
+    scopeType?: 'group' | 'squad'
+    scopeId?: number
+    /** 卸任某一范围 */
+    removeScope?: boolean
+  },
 ) {
   const res = await post(endpoints.user.org.setRole, {
     orgId,
     userId,
     role,
     ...(scope?.scopeType && scope.scopeId
-      ? { scopeType: scope.scopeType, scopeId: scope.scopeId }
+      ? {
+          scopeType: scope.scopeType,
+          scopeId: scope.scopeId,
+          ...(scope.removeScope ? { removeScope: true } : {}),
+        }
       : {}),
   })
   const body = res.data as { code?: number; message?: string }
@@ -261,6 +278,34 @@ export async function setOrgMemberRole(
     success: res.success && bizOk(body?.code),
     message: body?.message || res.message,
   }
+}
+
+/** 在指定分组任命/卸任组长 */
+export async function setGroupLeader(
+  orgId: number,
+  userId: number,
+  groupId: number,
+  on: boolean,
+) {
+  return setOrgMemberRole(orgId, userId, 'group_leader', {
+    scopeType: 'group',
+    scopeId: groupId,
+    removeScope: !on,
+  })
+}
+
+/** 在指定分队任命/卸任队长 */
+export async function setSquadCaptain(
+  orgId: number,
+  userId: number,
+  squadId: number,
+  on: boolean,
+) {
+  return setOrgMemberRole(orgId, userId, 'captain', {
+    scopeType: 'squad',
+    scopeId: squadId,
+    removeScope: !on,
+  })
 }
 
 export async function removeOrgMember(orgId: number, userId: number) {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { listAllGroups } from '@/api/group'
+import { listOrgMembers, setSquadCaptain } from '@/api/org'
 import {
   createSquad,
   deleteSquad,
@@ -9,7 +10,8 @@ import {
   setSquadMember,
   updateSquad,
 } from '@/api/squad'
-import type { GroupInfo, SquadInfo } from '@shared/api'
+import type { GroupInfo, OrgMemberInfo, SquadInfo } from '@shared/api'
+import { useAuth } from '@/auth/AuthContext'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -29,23 +31,38 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
+import { Badge } from '@/components/ui/badge'
+import { Perm } from '@/lib/permissions'
+
+type SquadMemberRow = {
+  userId: number
+  username: string
+  name: string
+  isCaptain?: boolean
+}
 
 /**
- * 分组内分队管理：创建分队、调整成员。
+ * 分组内分队管理：创建分队、模糊搜索加人、队内任命队长。
  */
 export function SquadPanel({ canWrite }: { canWrite: boolean }) {
+  const { currentOrg, user, can } = useAuth()
+  const orgId = currentOrg?.id || user?.orgId || 0
+  const canAppoint = can(Perm.OrgMemberRole)
+
   const [groups, setGroups] = useState<GroupInfo[]>([])
   const [squads, setSquads] = useState<SquadInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState(0)
-  const [members, setMembers] = useState<
-    Array<{ userId: number; username: string; name: string }>
-  >([])
+  const [members, setMembers] = useState<SquadMemberRow[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
   const [newName, setNewName] = useState('')
   const [newGroupId, setNewGroupId] = useState('')
   const [creating, setCreating] = useState(false)
-  const [addUserId, setAddUserId] = useState('')
+
+  const [search, setSearch] = useState('')
+  const [candidates, setCandidates] = useState<OrgMemberInfo[]>([])
+  const [searching, setSearching] = useState(false)
+  const [captainIds, setCaptainIds] = useState<Set<number>>(new Set())
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -58,6 +75,29 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
     }
   }, [selectedId])
 
+  const refreshCaptains = useCallback(async () => {
+    if (!orgId || !selectedId) {
+      setCaptainIds(new Set())
+      return
+    }
+    // 从成员列表 scopes 推断本分队队长（分页拉全量 staff 成本高，改为按 keyword 空拉一页够用时）
+    // 更稳：listOrgMembers 多页；此处拉较大 pageSize
+    const r = await listOrgMembers(orgId, { page: 1, pageSize: 100 })
+    if (!r.success) return
+    const ids = new Set<number>()
+    for (const m of r.list) {
+      const scopes = m.scopes || []
+      if (
+        scopes.some(
+          (sc) => sc.scopeType === 'squad' && Number(sc.scopeId) === selectedId,
+        )
+      ) {
+        ids.add(m.userId)
+      }
+    }
+    setCaptainIds(ids)
+  }, [orgId, selectedId])
+
   useEffect(() => {
     void load()
   }, [load])
@@ -69,18 +109,43 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
     }
     let cancelled = false
     setMembersLoading(true)
-    void listSquadMembers(selectedId).then((res) => {
+    void listSquadMembers(selectedId).then(async (res) => {
       if (cancelled) return
       setMembersLoading(false)
       if (res.success && res.data) setMembers(res.data)
       else setMembers([])
+      await refreshCaptains()
     })
     return () => {
       cancelled = true
     }
-  }, [selectedId])
+  }, [selectedId, refreshCaptains])
+
+  useEffect(() => {
+    if (!search.trim() || !orgId) {
+      setCandidates([])
+      return
+    }
+    const t = window.setTimeout(async () => {
+      setSearching(true)
+      const r = await listOrgMembers(orgId, {
+        page: 1,
+        pageSize: 20,
+        keyword: search.trim(),
+      })
+      setSearching(false)
+      if (r.success) {
+        const inSquad = new Set(members.map((m) => m.userId))
+        setCandidates(r.list.filter((m) => !inSquad.has(m.userId)))
+      }
+    }, 300)
+    return () => window.clearTimeout(t)
+  }, [search, orgId, members])
 
   const selected = squads.find((s) => s.id === selectedId)
+  const groupName =
+    groups.find((g) => Number(g.id) === selected?.groupId)?.name ||
+    (selected ? `分组 #${selected.groupId}` : '')
 
   async function onCreate() {
     const gid = Number(newGroupId)
@@ -115,7 +180,11 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
 
   async function onDelete() {
     if (!selected) return
-    if (!window.confirm(`确定删除分队「${selected.name}」？队员会移出分队，不会退出组织。`)) {
+    if (
+      !window.confirm(
+        `确定删除分队「${selected.name}」？队员会移出分队，不会退出组织；该分队队长职务会解除。`,
+      )
+    ) {
       return
     }
     const res = await deleteSquad(selected.id)
@@ -127,17 +196,18 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
     }
   }
 
-  async function onAddMember() {
-    const uid = Number(addUserId)
-    if (!selectedId || !uid) {
-      toast.error('请填写用户 ID')
-      return
-    }
-    const res = await setSquadMember({ squadId: selectedId, userId: uid, in: true })
+  async function onAddMember(userId: number) {
+    if (!selectedId || !userId) return
+    const res = await setSquadMember({
+      squadId: selectedId,
+      userId,
+      in: true,
+    })
     if (!res.success) toast.error(res.message || '加入失败')
     else {
       toast.success('已加入分队')
-      setAddUserId('')
+      setSearch('')
+      setCandidates([])
       const m = await listSquadMembers(selectedId)
       if (m.success && m.data) setMembers(m.data)
       void load()
@@ -146,7 +216,11 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
 
   async function onRemove(userId: number) {
     if (!selectedId) return
-    const res = await setSquadMember({ squadId: selectedId, userId, in: false })
+    const res = await setSquadMember({
+      squadId: selectedId,
+      userId,
+      in: false,
+    })
     if (!res.success) toast.error(res.message || '移出失败')
     else {
       toast.success('已移出')
@@ -155,12 +229,26 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
     }
   }
 
+  async function onToggleCaptain(userId: number, name: string, on: boolean) {
+    if (!orgId || !selectedId) return
+    const res = await setSquadCaptain(orgId, userId, selectedId, on)
+    if (!res.success) toast.error(res.message || '操作失败')
+    else {
+      toast.success(
+        on
+          ? `已任命「${name}」为「${groupName} / ${selected?.name || '分队'}」队长`
+          : `已解除「${name}」在本分队的队长职务`,
+      )
+      await refreshCaptains()
+    }
+  }
+
   return (
     <Card className="shadow-none">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">分队</CardTitle>
         <CardDescription>
-          分组下面可以再拆分队。组织管理员与教练管理全部分队；组长管理本组内分队；队长只管理被任命的那支分队。
+          分组下可建多支分队。可模糊搜索加人；可在队内直接任命队长。一人可兼任多队队长，也可同时担任组长。
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 lg:grid-cols-2">
@@ -172,7 +260,8 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
           ) : (
             <ul className="flex flex-col gap-1.5">
               {squads.map((s) => {
-                const gname = groups.find((g) => Number(g.id) === s.groupId)?.name
+                const gname =
+                  groups.find((g) => Number(g.id) === s.groupId)?.name
                 return (
                   <li key={s.id}>
                     <button
@@ -221,7 +310,12 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
                   />
                 </div>
               </div>
-              <Button type="button" size="sm" disabled={creating} onClick={() => void onCreate()}>
+              <Button
+                type="button"
+                size="sm"
+                disabled={creating}
+                onClick={() => void onCreate()}
+              >
                 {creating ? <Spinner data-icon="inline-start" /> : null}
                 创建分队
               </Button>
@@ -236,15 +330,25 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
                 <div>
                   <p className="font-medium">{selected.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    分组 ID {selected.groupId} · 分队 ID {selected.id}
+                    所属分组：{groupName}
                   </p>
                 </div>
                 {canWrite ? (
                   <div className="flex gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={() => void onRename()}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void onRename()}
+                    >
                       改名
                     </Button>
-                    <Button type="button" size="sm" variant="destructive" onClick={() => void onDelete()}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => void onDelete()}
+                    >
                       删除
                     </Button>
                   </div>
@@ -256,48 +360,97 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
                 <p className="text-sm text-muted-foreground">暂无队员</p>
               ) : (
                 <ul className="flex flex-col gap-1.5">
-                  {members.map((m) => (
-                    <li
-                      key={m.userId}
-                      className="flex items-center justify-between gap-2 text-sm"
-                    >
-                      <span className="truncate">
-                        {m.name || m.username}
-                        <span className="ml-1 text-xs text-muted-foreground">#{m.userId}</span>
-                      </span>
-                      {canWrite ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => void onRemove(m.userId)}
-                        >
-                          移出
-                        </Button>
-                      ) : null}
-                    </li>
-                  ))}
+                  {members.map((m) => {
+                    const label = m.name || m.username
+                    const isCap = captainIds.has(m.userId)
+                    return (
+                      <li
+                        key={m.userId}
+                        className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                      >
+                        <span className="flex min-w-0 items-center gap-1.5 truncate">
+                          <span className="truncate">{label}</span>
+                          {isCap ? (
+                            <Badge variant="secondary" className="shrink-0">
+                              队长
+                            </Badge>
+                          ) : null}
+                        </span>
+                        <span className="flex shrink-0 gap-1">
+                          {canAppoint ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={isCap ? 'outline' : 'secondary'}
+                              onClick={() =>
+                                void onToggleCaptain(m.userId, label, !isCap)
+                              }
+                            >
+                              {isCap ? '卸任队长' : '设为队长'}
+                            </Button>
+                          ) : null}
+                          {canWrite ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => void onRemove(m.userId)}
+                            >
+                              移出
+                            </Button>
+                          ) : null}
+                        </span>
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
               {canWrite ? (
-                <div className="flex flex-wrap items-end gap-2 border-t pt-3">
-                  <div className="min-w-[8rem] flex-1 space-y-1">
-                    <Label htmlFor="squad-add-uid">加入队员（用户 ID）</Label>
-                    <Input
-                      id="squad-add-uid"
-                      value={addUserId}
-                      onChange={(e) => setAddUserId(e.target.value)}
-                      placeholder="例如 72"
-                    />
-                  </div>
-                  <Button type="button" size="sm" onClick={() => void onAddMember()}>
-                    加入
-                  </Button>
+                <div className="space-y-2 border-t pt-3">
+                  <Label htmlFor="squad-add-search">加入队员</Label>
+                  <Input
+                    id="squad-add-search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="按组织内名称或用户名搜索"
+                  />
+                  {searching ? (
+                    <p className="text-xs text-muted-foreground">搜索中…</p>
+                  ) : null}
+                  {candidates.map((c) => (
+                    <div
+                      key={c.userId}
+                      className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                    >
+                      <span className="truncate">
+                        {c.name || c.orgDisplayName || c.username}
+                        {c.username ? (
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            @{c.username}
+                          </span>
+                        ) : null}
+                      </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => void onAddMember(c.userId)}
+                      >
+                        加入
+                      </Button>
+                    </div>
+                  ))}
+                  {search.trim() && !searching && candidates.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      没有找到可加入的成员
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">选择左侧分队查看队员</p>
+            <p className="text-sm text-muted-foreground">
+              选择左侧分队查看队员
+            </p>
           )}
         </div>
       </CardContent>

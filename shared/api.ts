@@ -1732,4 +1732,10 @@ export interface SquadInfo {
 export interface ScopeGrant {
   scopeType: 'group' | 'squad'
   scopeId: number
+  /** 分组名或分队名 */
+  scopeName?: string
+  /** 分队所属分组名 */
+  groupName?: string
+  /** 展示文案，如「队长 · 算法协会 / A队」 */
+  label?: string
 }

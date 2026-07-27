@@ -174,7 +174,7 @@ export function DashboardOrgMemberRoles() {
       <div>
         <h3 className="font-semibold">成员与角色</h3>
         <p className="text-sm text-muted-foreground">
-          权限从高到低：组织管理员 → 教练 → 组长 → 队长 → 成员。任命组长须指定分组，任命队长须指定分队；教练可看全组织数据。
+          权限从高到低：组织管理员 → 教练 → 组长 → 队长 → 成员。一人可兼任多组组长与多队队长。也可在「分组 / 分队」页就地任命。
         </p>
       </div>
 
@@ -250,18 +250,19 @@ export function DashboardOrgMemberRoles() {
                     m.name || m.orgDisplayName || m.username || String(m.userId)
                   const canRemove =
                     canRemoveMember && !isSystemOrg && m.userId !== myUserId
-                  const scopes = (m as OrgMemberInfo & {
-                    scopes?: { scopeType: string; scopeId: number }[]
-                  }).scopes
+                  const scopes = m.scopes || []
                   const scopeHint =
-                    scopes && scopes.length > 0
+                    scopes.length > 0
                       ? scopes
-                          .map((s) =>
-                            s.scopeType === 'group'
-                              ? `组#${s.scopeId}`
-                              : `队#${s.scopeId}`,
-                          )
-                          .join('、')
+                          .map((s) => {
+                            if (s.label) return s.label
+                            if (s.scopeType === 'group') {
+                              return `组长 · ${s.scopeName || `分组 #${s.scopeId}`}`
+                            }
+                            const g = s.groupName ? `${s.groupName} / ` : ''
+                            return `队长 · ${g}${s.scopeName || `分队 #${s.scopeId}`}`
+                          })
+                          .join('；')
                       : ''
                   return (
                     <TableRow key={m.userId}>
@@ -288,8 +289,8 @@ export function DashboardOrgMemberRoles() {
                               </span>
                             ) : null}
                             {scopeHint ? (
-                              <span className="truncate text-xs text-muted-foreground">
-                                管理范围：{scopeHint}
+                              <span className="text-xs text-muted-foreground">
+                                {scopeHint}
                               </span>
                             ) : null}
                           </div>

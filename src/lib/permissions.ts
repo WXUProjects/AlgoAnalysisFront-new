@@ -126,15 +126,20 @@ export const ORG_COACH_PERMS: readonly PermCode[] = [
   Perm.OrgMemberDisplayName,
 ]
 
-/** 组长默认模板（组内数据 + 有限任命） */
+/** 组长默认模板（组内数据 + 有限任命 + 公告/代管日报；组织可覆盖） */
 export const ORG_GROUP_LEADER_PERMS: readonly PermCode[] = [
   Perm.OrgReportView,
   Perm.OrgMemberRole,
   Perm.OrgMemberDisplayName,
+  Perm.OrgBulletinManage,
+  Perm.OrgMemberEmail,
 ]
 
-/** 队长默认模板（仅本分队报告） */
-export const ORG_CAPTAIN_PERMS: readonly PermCode[] = [Perm.OrgReportView]
+/** 队长默认模板（本分队报告 + 代管日报；组织可覆盖） */
+export const ORG_CAPTAIN_PERMS: readonly PermCode[] = [
+  Perm.OrgReportView,
+  Perm.OrgMemberEmail,
+]
 
 /** @deprecated 兼容旧引用：等同教练模板 */
 export const ORG_STAFF_PERMS: readonly PermCode[] = ORG_COACH_PERMS

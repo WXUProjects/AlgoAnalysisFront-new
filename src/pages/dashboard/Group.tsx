@@ -8,9 +8,11 @@ import {
   listGroups,
   updateGroup,
 } from '@/api/group'
-import { getProfileByName, moveGroup } from '@/api/profile'
-import type { GroupInfo, UserListItem, UserProfile } from '@shared/api'
+import { listOrgMembers, setGroupLeader } from '@/api/org'
+import { moveGroup } from '@/api/profile'
+import type { GroupInfo, OrgMemberInfo, UserListItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+import { Badge } from '@/components/ui/badge'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageShell } from '@/components/page-shell'
 import { SquadPanel } from '@/pages/dashboard/SquadPanel'
@@ -61,9 +63,12 @@ const DEFAULT_PAGE_SIZE = 20
 const MEMBER_PAGE_SIZE = 20
 
 export function DashboardGroup() {
-  const { can } = useAuth()
+  const { can, currentOrg, user } = useAuth()
+  const orgId = currentOrg?.id || user?.orgId || 0
   /** 分组本身 CRUD / 移人 */
   const canManage = can(Perm.OrgGroupManage)
+  const canView = canManage || can(Perm.OrgReportView)
+  const canAppoint = can(Perm.OrgMemberRole)
   /** 分队写：教练有 group.manage；组长/队长由后端按 scope 再裁 */
   const canWriteSquad =
     can(Perm.OrgGroupManage) || can(Perm.OrgMemberRole) || can(Perm.OrgReportView)
@@ -87,8 +92,9 @@ export function DashboardGroup() {
   const [saving, setSaving] = useState(false)
 
   const [search, setSearch] = useState('')
-  const [candidates, setCandidates] = useState<UserProfile[]>([])
+  const [candidates, setCandidates] = useState<OrgMemberInfo[]>([])
   const [searching, setSearching] = useState(false)
+  const [leaderIds, setLeaderIds] = useState<Set<number>>(new Set())
 
   const loadList = useCallback(async () => {
     setLoading(true)
@@ -126,13 +132,34 @@ export function DashboardGroup() {
   )
 
   useEffect(() => {
-    // 无分组管理权限时不发请求
-    if (!canManage) {
+    if (!canView) {
       setLoading(false)
       return
     }
     void loadList()
-  }, [canManage, loadList])
+  }, [canView, loadList])
+
+  const refreshLeaders = useCallback(async () => {
+    if (!orgId || selectedId == null || selectedId === 0) {
+      setLeaderIds(new Set())
+      return
+    }
+    const r = await listOrgMembers(orgId, { page: 1, pageSize: 100 })
+    if (!r.success) return
+    const ids = new Set<number>()
+    for (const m of r.list) {
+      const scopes = m.scopes || []
+      if (
+        scopes.some(
+          (sc) =>
+            sc.scopeType === 'group' && Number(sc.scopeId) === selectedId,
+        )
+      ) {
+        ids.add(m.userId)
+      }
+    }
+    setLeaderIds(ids)
+  }, [orgId, selectedId])
 
   // 切换分组时回到成员第 1 页
   useEffect(() => {
@@ -146,21 +173,29 @@ export function DashboardGroup() {
       return
     }
     void loadDetail(selectedId, memberPage, memberPageSize)
-  }, [selectedId, memberPage, memberPageSize, loadDetail])
+    void refreshLeaders()
+  }, [selectedId, memberPage, memberPageSize, loadDetail, refreshLeaders])
 
   useEffect(() => {
-    if (!search.trim()) {
+    if (!search.trim() || !orgId) {
       setCandidates([])
       return
     }
     const t = window.setTimeout(async () => {
       setSearching(true)
-      const res = await getProfileByName(search.trim())
+      const res = await listOrgMembers(orgId, {
+        page: 1,
+        pageSize: 20,
+        keyword: search.trim(),
+      })
       setSearching(false)
-      if (res.success) setCandidates(res.data || [])
-    }, 350)
+      if (res.success) {
+        const inGroup = new Set((detail?.users || []).map((u) => u.userId))
+        setCandidates(res.list.filter((m) => !inGroup.has(m.userId)))
+      }
+    }, 300)
     return () => window.clearTimeout(t)
-  }, [search])
+  }, [search, orgId, detail?.users])
 
   function openCreate() {
     setEditMode('create')
@@ -217,6 +252,7 @@ export function DashboardGroup() {
     if (res.success) {
       toast.success('已加入分组')
       setSearch('')
+      setCandidates([])
       void loadDetail(selectedId, memberPage, memberPageSize)
     } else toast.error(res.message || '添加失败')
   }
@@ -228,17 +264,36 @@ export function DashboardGroup() {
       toast.success('已移出')
       if (selectedId !== null) {
         void loadDetail(selectedId, memberPage, memberPageSize)
+        void refreshLeaders()
       }
     } else toast.error(res.message || '移出失败')
   }
 
+  async function handleToggleLeader(
+    userId: number,
+    name: string,
+    on: boolean,
+  ) {
+    if (!orgId || selectedId == null || selectedId === 0) return
+    const res = await setGroupLeader(orgId, userId, selectedId, on)
+    if (!res.success) toast.error(res.message || '操作失败')
+    else {
+      toast.success(
+        on
+          ? `已任命「${name}」为「${detail?.name || '本组'}」组长`
+          : `已解除「${name}」在本组的组长职务`,
+      )
+      await refreshLeaders()
+    }
+  }
+
   const members: UserListItem[] = detail?.users || []
 
-  if (!canManage) {
+  if (!canView) {
     return (
       <PageShell>
         <p className="text-sm text-muted-foreground">
-          你还没有管理分组的权限。如有需要，请联系团队管理员开通。
+          你还没有查看分组的权限。如有需要，请联系组织管理员开通。
         </p>
       </PageShell>
     )
@@ -250,9 +305,11 @@ export function DashboardGroup() {
       <Card className="gap-2 py-3">
         <CardHeader className="flex flex-row items-center justify-between px-3 space-y-0">
           <CardTitle className="text-base">分组</CardTitle>
-          <Button type="button" size="sm" onClick={openCreate}>
-            创建
-          </Button>
+          {canManage ? (
+            <Button type="button" size="sm" onClick={openCreate}>
+              创建
+            </Button>
+          ) : null}
         </CardHeader>
         <CardContent className="flex flex-col gap-1 px-2">
           {loading
@@ -295,7 +352,7 @@ export function DashboardGroup() {
               </CardTitle>
               <CardDescription>{detail?.describe}</CardDescription>
             </div>
-            {selectedId !== null && selectedId !== 0 && (
+            {canManage && selectedId !== null && selectedId !== 0 && (
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -316,7 +373,7 @@ export function DashboardGroup() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>确认删除该分组？</AlertDialogTitle>
                         <AlertDialogDescription>
-                          成员将移至「默认分组」；组内分队会一并解散，该组组长与相关队长将降为成员。默认分组不可删除。
+                          成员将移至「默认分组」；组内分队会一并解散，该组组长与相关队长将解除对应职务。默认分组不可删除。
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -333,7 +390,7 @@ export function DashboardGroup() {
           </CardHeader>
         </Card>
 
-        {selectedId !== null && selectedId !== 0 && (
+        {canManage && selectedId !== null && selectedId !== 0 && (
           <Card className="gap-2 py-3">
             <CardHeader className="px-4">
               <CardTitle className="text-sm font-medium">添加成员</CardTitle>
@@ -353,7 +410,12 @@ export function DashboardGroup() {
                   className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
                 >
                   <span>
-                    {c.name} @{c.username}
+                    {c.name || c.orgDisplayName || c.username}
+                    {c.username ? (
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        @{c.username}
+                      </span>
+                    ) : null}
                   </span>
                   <Button
                     type="button"
@@ -364,6 +426,11 @@ export function DashboardGroup() {
                   </Button>
                 </div>
               ))}
+              {search.trim() && !searching && candidates.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  没有找到可加入的成员
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         )}
@@ -396,17 +463,27 @@ export function DashboardGroup() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {members.map((m) => (
+                    {members.map((m) => {
+                      const label = m.name || m.username || String(m.userId)
+                      const isLeader = leaderIds.has(m.userId)
+                      return (
                       <TableRow key={m.userId}>
                         <TableCell className="hidden sm:table-cell">
                           {m.userId}
                         </TableCell>
-                        <TableCell>{m.name || m.username}</TableCell>
+                        <TableCell>
+                          <span className="inline-flex flex-wrap items-center gap-1.5">
+                            {label}
+                            {isLeader ? (
+                              <Badge variant="secondary">组长</Badge>
+                            ) : null}
+                          </span>
+                        </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {m.lastSubmit ? formatTime(m.lastSubmit) : '-'}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex flex-wrap justify-end gap-2">
                             <Button type="button" size="sm" variant="ghost" asChild>
                               <Link
                                 to={
@@ -418,10 +495,26 @@ export function DashboardGroup() {
                                 资料
                               </Link>
                             </Button>
-                            {selectedId !== 0 && (
+                            {canAppoint && selectedId !== 0 ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={isLeader ? 'outline' : 'secondary'}
+                                onClick={() =>
+                                  void handleToggleLeader(
+                                    m.userId,
+                                    label,
+                                    !isLeader,
+                                  )
+                                }
+                              >
+                                {isLeader ? '卸任组长' : '设为组长'}
+                              </Button>
+                            ) : null}
+                            {canManage && selectedId !== 0 && (
                               <ConfirmDialog
                                 title="移出该成员？"
-                                description={`确定将「${m.name || m.username || m.userId}」移出当前分组？对方会回到默认分组。`}
+                                description={`确定将「${label}」移出当前分组？对方会回到默认分组。`}
                                 confirmLabel="移出"
                                 destructive
                                 onConfirm={() => void handleRemove(m.userId)}
@@ -438,7 +531,7 @@ export function DashboardGroup() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )})}
                     {!members.length && (
                       <TableRow>
                         <TableCell
