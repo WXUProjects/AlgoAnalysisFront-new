@@ -24,6 +24,9 @@ describe('editor layout (blog + solution)', () => {
     assert.match(src, /imageUploadEnabled/)
     assert.match(src, /onPaste/)
     assert.match(src, /purpose.*blog|uploadImage\(file, 'blog'\)/)
+    assert.match(src, /multiple/)
+    assert.match(src, /resizableImages|setMarkdownImageWidth/)
+    assert.match(src, /全屏|fullscreen|Maximize2Icon/)
   })
 
   it('BlogEditor default height is significantly above old 480', () => {
@@ -32,6 +35,8 @@ describe('editor layout (blog + solution)', () => {
     assert.doesNotMatch(src, /minHeight=\{480\}/)
     assert.match(src, /0\.72|880|720/)
     assert.match(src, /imageUploadEnabled/)
+    assert.match(src, /全屏编辑|setFullscreen/)
+    assert.match(src, /BlogImagePanel/)
   })
 
   it('ProblemSolutionEdit default height is significantly above old 640', () => {

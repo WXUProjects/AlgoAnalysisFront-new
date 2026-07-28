@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import 'katex/dist/katex.min.css'
+import { MarkdownImageLightbox } from '@/components/markdown-image-lightbox'
 import { cn } from '@/lib/utils'
 import { bindMarkdownCodeCopy } from '@/lib/markdown-code-copy'
+import {
+  bindMarkdownImageLightbox,
+  bindMarkdownImageResize,
+} from '@/lib/markdown-img-interact'
 import {
   prepareMarkdownHighlight,
   renderContentAsync,
@@ -22,6 +27,13 @@ type MarkdownBodyProps = {
   className?: string
   /** 空内容时的占位文案 */
   emptyText?: string
+  /** 点击图片放大（博客正文默认开） */
+  enableLightbox?: boolean
+  /**
+   * 预览区拖拽调整图片宽度（写入 Markdown `![alt|W](url)`）。
+   * 传入时启用右下角拖拽手柄。
+   */
+  onImageWidthChange?: (src: string, widthPx: number) => void
 }
 
 /**
@@ -33,10 +45,15 @@ export function MarkdownBody({
   mode = 'markdown',
   className,
   emptyText = '暂无内容',
+  enableLightbox = false,
+  onImageWidthChange,
 }: MarkdownBodyProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   // 首帧留空占位，仅在 effect 中渲染一次，避免挂载时同步+异步双重解析
   const [html, setHtml] = useState('')
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
+  const [lightboxAlt, setLightboxAlt] = useState('')
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   useEffect(() => {
     if (!content) {
@@ -65,9 +82,29 @@ export function MarkdownBody({
   // 事件委托：复制按钮在 HTML 字符串里，不依赖 React 重挂载
   useEffect(() => {
     const root = rootRef.current
-    if (!root) return
+    if (!root || !html) return
     return bindMarkdownCodeCopy(root)
   }, [html])
+
+  // 点击放大
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root || !html || !enableLightbox) return
+    return bindMarkdownImageLightbox(root, (src, alt) => {
+      setLightboxSrc(src)
+      setLightboxAlt(alt)
+      setLightboxOpen(true)
+    })
+  }, [html, enableLightbox])
+
+  // 预览拖拽改宽
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root || !html || !onImageWidthChange) return
+    return bindMarkdownImageResize(root, {
+      onWidthChange: onImageWidthChange,
+    })
+  }, [html, onImageWidthChange])
 
   if (!content?.trim()) {
     return (
@@ -76,13 +113,26 @@ export function MarkdownBody({
   }
 
   return (
-    <div
-      ref={rootRef}
-      className={cn(
-        'markdown-body content-md min-w-0 max-w-full',
-        className,
-      )}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <>
+      <div
+        ref={rootRef}
+        className={cn(
+          'markdown-body content-md min-w-0 max-w-full',
+          className,
+        )}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      {enableLightbox ? (
+        <MarkdownImageLightbox
+          src={lightboxSrc}
+          alt={lightboxAlt}
+          open={lightboxOpen}
+          onOpenChange={(o) => {
+            setLightboxOpen(o)
+            if (!o) setLightboxSrc(null)
+          }}
+        />
+      ) : null}
+    </>
   )
 }

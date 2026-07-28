@@ -20,6 +20,8 @@ import {
   LinkIcon,
   ListIcon,
   ListOrderedIcon,
+  Maximize2Icon,
+  Minimize2Icon,
   PanelLeftIcon,
   QuoteIcon,
   SquareCodeIcon,
@@ -30,7 +32,9 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { uploadImage } from '@/api/upload'
+import type { UploadProgressItem } from '@/components/blog-image-panel'
 import { MarkdownBody } from '@/components/markdown-body'
+import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -43,6 +47,8 @@ import {
   blogImageToolbarAction,
   markdownImageSnippet,
   rejectBlogImageUpload,
+  setMarkdownImageWidth,
+  type BlogSessionImage,
 } from '@/lib/blog-image'
 import { cn } from '@/lib/utils'
 
@@ -70,6 +76,20 @@ export type MarkdownEditorProps = {
    * 又拍云图片上传已授权：工具栏选图 + 粘贴图片走 `purpose=blog`。
    */
   imageUploadEnabled?: boolean
+  /** 预览区可拖拽改图宽（写入 ![alt|W](url)） */
+  resizableImages?: boolean
+  /** 预览图点击放大 */
+  previewLightbox?: boolean
+  /** 工具栏显示「全屏」切换（由外层控制时也可用） */
+  showFullscreenToggle?: boolean
+  fullscreen?: boolean
+  onFullscreenChange?: (full: boolean) => void
+  /** 上传成功时回调（用于文章图片库） */
+  onImageUploaded?: (image: BlogSessionImage) => void
+  /** 多图上传进度（外层可同步到图片库） */
+  onUploadProgressChange?: (items: UploadProgressItem[]) => void
+  /** 暴露插入 markdown 的方法给外层（通过 ref 不便，用 callback 注册） */
+  onRegisterInsert?: (insert: (text: string) => void) => void
 }
 
 /**
@@ -94,6 +114,8 @@ function syncPreviewScroll(
   target.scrollTop = (source.scrollTop / srcMax) * tgtMax
 }
 
+let uploadSeq = 0
+
 /**
  * 正式 Markdown 编辑器：左侧源码 · 右侧实时预览（GFM / 代码高亮 / KaTeX）。
  * 文字在编辑器内滚动，不依赖父容器；预览按比例跟随编辑区滚动。
@@ -109,14 +131,34 @@ export function MarkdownEditor({
   minHeight = 320,
   linkOnlyImages = false,
   imageUploadEnabled = false,
+  resizableImages = false,
+  previewLightbox = false,
+  showFullscreenToggle = false,
+  fullscreen = false,
+  onFullscreenChange,
+  onImageUploaded,
+  onUploadProgressChange,
+  onRegisterInsert,
 }: MarkdownEditorProps) {
   const taRef = useRef<HTMLTextAreaElement>(null)
   const previewScrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [pane, setPane] = useState<PaneMode>('split')
-  const [uploading, setUploading] = useState(false)
+  const [uploads, setUploads] = useState<UploadProgressItem[]>([])
   const editorId = useId()
   const canUpload = imageUploadEnabled
+  const uploading = uploads.some((u) => u.status === 'uploading')
+
+  const patchUploads = useCallback(
+    (updater: (prev: UploadProgressItem[]) => UploadProgressItem[]) => {
+      setUploads((prev) => {
+        const next = updater(prev)
+        onUploadProgressChange?.(next)
+        return next
+      })
+    },
+    [onUploadProgressChange],
+  )
 
   const insertAtCursor = useCallback(
     (text: string) => {
@@ -143,9 +185,12 @@ export function MarkdownEditor({
     [value, onChange, disabled],
   )
 
-  const uploadAndInsert = useCallback(
-    async (file: File) => {
-      if (disabled || uploading) return
+  useEffect(() => {
+    onRegisterInsert?.(insertAtCursor)
+  }, [onRegisterInsert, insertAtCursor])
+
+  const uploadOne = useCallback(
+    async (file: File, autoInsert: boolean) => {
       const gate = rejectBlogImageUpload(file, { uploadEnabled: canUpload })
       if (!gate.ok) {
         toast.message(gate.message)
@@ -155,17 +200,85 @@ export function MarkdownEditor({
         toast.error('请选择图片文件')
         return
       }
-      setUploading(true)
-      const res = await uploadImage(file, 'blog')
-      setUploading(false)
+      const id = `up-${++uploadSeq}`
+      const name = file.name || '图片'
+      patchUploads((prev) => [
+        ...prev,
+        { id, name, percent: 0, status: 'uploading' },
+      ])
+      const res = await uploadImage(file, 'blog', {
+        onProgress: (percent) => {
+          patchUploads((prev) =>
+            prev.map((u) => (u.id === id ? { ...u, percent } : u)),
+          )
+        },
+      })
       if (!res.success || !res.data?.url) {
+        patchUploads((prev) =>
+          prev.map((u) =>
+            u.id === id
+              ? {
+                  ...u,
+                  status: 'error',
+                  error: res.message || '上传失败',
+                  percent: u.percent,
+                }
+              : u,
+          ),
+        )
         toast.error(res.message || '图片上传失败，请稍后重试')
         return
       }
-      insertAtCursor(markdownImageSnippet(res.data.url, '图片'))
-      toast.success('图片已插入')
+      patchUploads((prev) =>
+        prev.map((u) =>
+          u.id === id ? { ...u, percent: 100, status: 'done' } : u,
+        ),
+      )
+      const url = res.data.url
+      onImageUploaded?.({
+        id: `img-${uploadSeq}-${Date.now()}`,
+        url,
+        name: name.replace(/\.[^.]+$/, '') || '图片',
+        fromUpload: true,
+      })
+      if (autoInsert) {
+        insertAtCursor(markdownImageSnippet(url, '图片'))
+      }
+      // 清理完成条目（稍留片刻）
+      window.setTimeout(() => {
+        patchUploads((prev) => prev.filter((u) => u.id !== id))
+      }, 1200)
     },
-    [canUpload, disabled, uploading, insertAtCursor],
+    [canUpload, insertAtCursor, onImageUploaded, patchUploads],
+  )
+
+  const uploadMany = useCallback(
+    async (files: FileList | File[]) => {
+      if (disabled) return
+      const list = Array.from(files).filter((f) => f.type.startsWith('image/'))
+      if (!list.length) {
+        toast.error('请选择图片文件')
+        return
+      }
+      // 多图：都进库；第一张插入正文，其余仅入库（可从图片库插入）
+      for (let i = 0; i < list.length; i++) {
+        await uploadOne(list[i]!, i === 0)
+      }
+      if (list.length > 1) {
+        toast.success(`已上传 ${list.length} 张，可在下方图片库插入`)
+      } else if (list.length === 1) {
+        toast.success('图片已插入')
+      }
+    },
+    [disabled, uploadOne],
+  )
+
+  const handleImageWidthChange = useCallback(
+    (src: string, widthPx: number) => {
+      const next = setMarkdownImageWidth(value, src, widthPx)
+      if (next !== value) onChange(next)
+    },
+    [value, onChange],
   )
 
   const wrapSelection = useCallback(
@@ -266,6 +379,11 @@ export function MarkdownEditor({
         wrapSelection('[', '](https://)')
         return
       }
+      if (e.key === 'Escape' && fullscreen && onFullscreenChange) {
+        e.preventDefault()
+        onFullscreenChange(false)
+        return
+      }
       if (e.key === 'Tab') {
         e.preventDefault()
         const el = e.currentTarget
@@ -278,7 +396,7 @@ export function MarkdownEditor({
         })
       }
     },
-    [disabled, wrapSelection, value, onChange],
+    [disabled, wrapSelection, value, onChange, fullscreen, onFullscreenChange],
   )
 
   const showEdit = pane === 'split' || pane === 'edit'
@@ -302,6 +420,27 @@ export function MarkdownEditor({
     if (child) ro.observe(child)
     return () => ro.disconnect()
   }, [value, pane, showEdit, showPreview])
+
+  // Esc 退出全屏（全局，因焦点可能不在 textarea）
+  useEffect(() => {
+    if (!fullscreen || !onFullscreenChange) return
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onFullscreenChange(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [fullscreen, onFullscreenChange])
+
+  const overallProgress =
+    uploads.length === 0
+      ? 0
+      : Math.round(
+          uploads.reduce((s, u) => s + (u.status === 'done' ? 100 : u.percent), 0) /
+            uploads.length,
+        )
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -403,7 +542,7 @@ export function MarkdownEditor({
               canUpload
                 ? uploading
                   ? '上传中…'
-                  : '上传或插入图片'
+                  : '上传图片（可多选）'
                 : linkOnlyImages
                   ? '插入图片链接（不支持上传）'
                   : '图片'
@@ -435,11 +574,12 @@ export function MarkdownEditor({
             ref={fileInputRef}
             type="file"
             accept="image/jpeg,image/png,image/gif,image/webp"
+            multiple
             className="hidden"
             onChange={(e) => {
-              const f = e.target.files?.[0]
+              const files = e.target.files
               e.target.value = ''
-              if (f) void uploadAndInsert(f)
+              if (files?.length) void uploadMany(files)
             }}
           />
           <ToolBtn
@@ -491,8 +631,26 @@ export function MarkdownEditor({
             >
               <EyeIcon />
             </ToolBtn>
+            {showFullscreenToggle && onFullscreenChange ? (
+              <ToolBtn
+                title={fullscreen ? '退出全屏 Esc' : '全屏编辑'}
+                active={fullscreen}
+                onClick={() => onFullscreenChange(!fullscreen)}
+              >
+                {fullscreen ? <Minimize2Icon /> : <Maximize2Icon />}
+              </ToolBtn>
+            ) : null}
           </div>
         </div>
+
+        {uploading ? (
+          <div className="flex shrink-0 items-center gap-2 border-b bg-muted/20 px-3 py-1.5">
+            <Progress value={overallProgress} className="h-1.5 flex-1" />
+            <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+              上传 {overallProgress}%
+            </span>
+          </div>
+        ) : null}
 
         {/* 分栏主体：高度锁死，内部各自滚动 */}
         <div
@@ -524,15 +682,16 @@ export function MarkdownEditor({
                   if (!canUpload || disabled || uploading) return
                   const items = e.clipboardData?.items
                   if (!items) return
+                  const files: File[] = []
                   for (const item of Array.from(items)) {
                     if (item.kind === 'file' && item.type.startsWith('image/')) {
                       const file = item.getAsFile()
-                      if (file) {
-                        e.preventDefault()
-                        void uploadAndInsert(file)
-                      }
-                      return
+                      if (file) files.push(file)
                     }
+                  }
+                  if (files.length) {
+                    e.preventDefault()
+                    void uploadMany(files)
                   }
                 }}
                 disabled={disabled}
@@ -566,6 +725,10 @@ export function MarkdownEditor({
                   mode={previewMode}
                   emptyText="预览将显示在这里"
                   className="text-sm"
+                  enableLightbox={previewLightbox}
+                  onImageWidthChange={
+                    resizableImages ? handleImageWidthChange : undefined
+                  }
                 />
               </div>
             </div>

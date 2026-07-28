@@ -3,9 +3,12 @@ import { describe, it } from 'node:test'
 import {
   BLOG_IMAGE_UPLOAD_HINT,
   blogImageToolbarAction,
+  extractMarkdownImageUrls,
   isAllowedBlogImageUrl,
+  isImageUsedInArticle,
   markdownImageSnippet,
   rejectBlogImageUpload,
+  setMarkdownImageWidth,
 } from './blog-image.ts'
 
 describe('blog image policy', () => {
@@ -51,5 +54,41 @@ describe('blog image policy', () => {
       markdownImageSnippet('https://x/a.webp', '图'),
       '![图](https://x/a.webp)',
     )
+  })
+
+  it('extractMarkdownImageUrls collects md + cover + html img', () => {
+    const urls = extractMarkdownImageUrls(
+      'hello ![a](https://cdn.example.com/a.png) and <img src="https://cdn.example.com/b.jpg">',
+      'https://cdn.example.com/cover.webp',
+    )
+    assert.deepEqual(urls, [
+      'https://cdn.example.com/cover.webp',
+      'https://cdn.example.com/a.png',
+      'https://cdn.example.com/b.jpg',
+    ])
+  })
+
+  it('setMarkdownImageWidth rewrites first matching image', () => {
+    const md = 'x ![说明](https://x/a.webp) y ![说明](https://x/a.webp)'
+    const next = setMarkdownImageWidth(md, 'https://x/a.webp', 480)
+    assert.equal(next, 'x ![说明|480](https://x/a.webp) y ![说明](https://x/a.webp)')
+    const cleared = setMarkdownImageWidth(
+      '![图|200](https://x/a.webp)',
+      'https://x/a.webp',
+      0,
+    )
+    assert.equal(cleared, '![图](https://x/a.webp)')
+  })
+
+  it('isImageUsedInArticle checks content and cover', () => {
+    assert.equal(
+      isImageUsedInArticle('https://x/a.webp', '![x](https://x/a.webp)', ''),
+      true,
+    )
+    assert.equal(
+      isImageUsedInArticle('https://x/a.webp', 'nope', 'https://x/a.webp'),
+      true,
+    )
+    assert.equal(isImageUsedInArticle('https://x/a.webp', 'nope', ''), false)
   })
 })

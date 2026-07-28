@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Link,
   Navigate,
@@ -6,6 +6,7 @@ import {
   useOutletContext,
   useParams,
 } from 'react-router-dom'
+import { Maximize2Icon, Minimize2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   createBlogArticle,
@@ -16,6 +17,10 @@ import {
 } from '@/api/blog'
 import { uploadImage } from '@/api/upload'
 import { useAuth } from '@/auth/AuthContext'
+import {
+  BlogImagePanel,
+  type UploadProgressItem,
+} from '@/components/blog-image-panel'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { Button } from '@/components/ui/button'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
@@ -32,12 +37,15 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   BLOG_IMAGE_UPLOAD_ENABLED_HINT,
   BLOG_IMAGE_UPLOAD_HINT,
+  extractMarkdownImageUrls,
   isAllowedBlogImageUrl,
+  type BlogSessionImage,
 } from '@/lib/blog-image'
 import {
   isDefaultSummary,
   resolveSummaryForSave,
 } from '@/lib/blog-summary'
+import { cn } from '@/lib/utils'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogCategory, BlogVisibility } from '@shared/api'
 
@@ -62,6 +70,10 @@ export function BlogEditor() {
   const [categories, setCategories] = useState<BlogCategory[]>([])
   const [imageUploadEnabled, setImageUploadEnabled] = useState(false)
   const [coverUploading, setCoverUploading] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
+  const [sessionImages, setSessionImages] = useState<BlogSessionImage[]>([])
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressItem[]>([])
+  const insertFnRef = useRef<((text: string) => void) | null>(null)
 
   useEffect(() => {
     void listMyBlogCategories().then((res) => {
@@ -103,12 +115,74 @@ export function BlogEditor() {
       setCoverUrl(a.coverUrl || '')
       setVisibility((a.visibility as BlogVisibility) || 'public')
       setCategoryId(a.categoryId ? String(a.categoryId) : '')
+      // 种子：已有正文中的图
+      const urls = extractMarkdownImageUrls(body, a.coverUrl || '')
+      setSessionImages(
+        urls.map((url, i) => ({
+          id: `seed-${i}-${url.slice(-24)}`,
+          url,
+          name: `图片 ${i + 1}`,
+          fromUpload: false,
+        })),
+      )
       setLoading(false)
     })()
     return () => {
       cancelled = true
     }
   }, [editId, isNew, isOwner])
+
+  // 正文里新出现的外链图也并入图片库
+  useEffect(() => {
+    const urls = extractMarkdownImageUrls(content, coverUrl)
+    if (!urls.length) return
+    setSessionImages((prev) => {
+      const have = new Set(prev.map((p) => p.url))
+      const extra: BlogSessionImage[] = []
+      for (const url of urls) {
+        if (have.has(url)) continue
+        extra.push({
+          id: `auto-${url.slice(-32)}-${extra.length}`,
+          url,
+          name: '图片',
+          fromUpload: false,
+        })
+      }
+      return extra.length ? [...prev, ...extra] : prev
+    })
+  }, [content, coverUrl])
+
+  // 全屏时锁 body 滚动
+  useEffect(() => {
+    if (!fullscreen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [fullscreen])
+
+  const handleImageUploaded = useCallback((img: BlogSessionImage) => {
+    setSessionImages((prev) => {
+      if (prev.some((p) => p.url === img.url)) return prev
+      return [...prev, img]
+    })
+  }, [])
+
+  const handleRegisterInsert = useCallback((fn: (text: string) => void) => {
+    insertFnRef.current = fn
+  }, [])
+
+  const handleInsertFromLibrary = useCallback((md: string) => {
+    if (insertFnRef.current) {
+      insertFnRef.current(md)
+      return
+    }
+    setContent((c) => {
+      const needNl = c.length > 0 && !c.endsWith('\n') ? '\n' : ''
+      return c + needNl + md
+    })
+  }, [])
 
   if (ready && !isLogin) {
     return (
@@ -165,9 +239,56 @@ export function BlogEditor() {
       toast.error(res.message || '保存失败')
       return
     }
-    toast.success(isNew ? '已发布' : '已保存')
+    toast.success(
+      isNew
+        ? '已发布'
+        : '已保存；未使用的图片将自动清理',
+    )
+    setFullscreen(false)
     navigate(`/blog/${username}/${res.data.slug}`)
   }
+
+  const editorBlock = useMemo(
+    () => (
+      <MarkdownEditor
+        value={content}
+        onChange={setContent}
+        fullPage={fullscreen}
+        minHeight={
+          fullscreen
+            ? undefined
+            : Math.min(
+                typeof window !== 'undefined'
+                  ? Math.round(window.innerHeight * 0.72)
+                  : 720,
+                880,
+              )
+        }
+        linkOnlyImages
+        imageUploadEnabled={imageUploadEnabled}
+        resizableImages
+        previewLightbox
+        showFullscreenToggle
+        fullscreen={fullscreen}
+        onFullscreenChange={setFullscreen}
+        onImageUploaded={handleImageUploaded}
+        onUploadProgressChange={setUploadProgress}
+        onRegisterInsert={handleRegisterInsert}
+        placeholder={
+          imageUploadEnabled
+            ? '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n可粘贴/多选上传图片；预览区可拖拽调图宽\n工具栏可全屏编辑 · 未使用图片保存后自动清理'
+            : '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n图片请用 ![说明|550](https://…) 外链定宽\n工具栏可全屏编辑 · 预览区可拖拽调图宽'
+        }
+      />
+    ),
+    [
+      content,
+      fullscreen,
+      imageUploadEnabled,
+      handleImageUploaded,
+      handleRegisterInsert,
+    ],
+  )
 
   if (loading) {
     return (
@@ -177,21 +298,66 @@ export function BlogEditor() {
     )
   }
 
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-background">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">
+              {title.trim() || (isNew ? '写文章' : '编辑文章')}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              全屏编辑 · Esc 退出 · 预览可拖拽调图宽
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setFullscreen(false)}
+            >
+              <Minimize2Icon data-icon="inline-start" />
+              退出全屏
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void handleSave()}
+              disabled={saving}
+            >
+              {saving ? '保存中…' : isNew ? '发布' : '保存'}
+            </Button>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 p-2 sm:p-3">{editorBlock}</div>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">
             {isNew ? '写文章' : '编辑文章'}
           </h1>
           <p className="text-sm text-muted-foreground">
-            支持 Markdown · 可隐藏右侧预览 ·{' '}
+            支持 Markdown · 可全屏 · 预览可调图宽 ·{' '}
             {imageUploadEnabled
               ? '可上传/粘贴图片'
               : '图片请用外链（未开通上传）'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setFullscreen(true)}
+          >
+            <Maximize2Icon data-icon="inline-start" />
+            全屏编辑
+          </Button>
           <Button variant="outline" asChild>
             <Link to={`/blog/${username}/manage`}>返回列表</Link>
           </Button>
@@ -281,6 +447,12 @@ export function BlogEditor() {
                         return
                       }
                       setCoverUrl(res.data.url)
+                      handleImageUploaded({
+                        id: `cover-${Date.now()}`,
+                        url: res.data.url,
+                        name: '头图',
+                        fromUpload: true,
+                      })
                       toast.success('头图已上传')
                     }}
                   />
@@ -330,26 +502,17 @@ export function BlogEditor() {
         )}
       </FieldGroup>
 
-      <div className="min-h-[min(72vh,880px)]">
-        <MarkdownEditor
-          value={content}
-          onChange={setContent}
-          fullPage={false}
-          minHeight={Math.min(
-            typeof window !== 'undefined'
-              ? Math.round(window.innerHeight * 0.72)
-              : 720,
-            880,
-          )}
-          linkOnlyImages
-          imageUploadEnabled={imageUploadEnabled}
-          placeholder={
-            imageUploadEnabled
-              ? '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n可粘贴/上传图片；定宽：![说明|550](url)\n工具栏「仅编辑」可隐藏右侧预览'
-              : '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n图片请用 ![说明|550](https://…) 外链定宽\n工具栏「仅编辑」可隐藏右侧预览'
-          }
+      <div className={cn('min-h-[min(72vh,880px)]')}>{editorBlock}</div>
+
+      {imageUploadEnabled || sessionImages.length > 0 ? (
+        <BlogImagePanel
+          images={sessionImages}
+          content={content}
+          coverUrl={coverUrl}
+          uploads={uploadProgress}
+          onInsert={handleInsertFromLibrary}
         />
-      </div>
+      ) : null}
 
       <div className="flex justify-end gap-2">
         <Button variant="outline" asChild>

@@ -414,6 +414,7 @@ export function BlogArticlePage() {
             mode="markdown"
             emptyText="（空文章）"
             className="prose-blog"
+            enableLightbox
           />
         </div>
       ) : isMizuki ? (
@@ -423,6 +424,7 @@ export function BlogArticlePage() {
             mode="markdown"
             emptyText="（空文章）"
             className="prose-blog"
+            enableLightbox
           />
         </div>
       ) : (
@@ -432,6 +434,7 @@ export function BlogArticlePage() {
             mode="markdown"
             emptyText="（空文章）"
             className="prose-blog text-[15px] leading-relaxed"
+            enableLightbox
           />
         </div>
       )

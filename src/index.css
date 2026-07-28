@@ -620,10 +620,75 @@
 }
 
 .markdown-body img {
-  /* 默认自适应；Obsidian |N 定宽通过 width/style 生效，勿强制 width:100% */
+  /* 默认居中自适应；Obsidian |N 定宽通过 width/style 生效，勿强制 width:100% */
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
   max-width: 100%;
   height: auto;
   width: auto;
+}
+
+/* 正文图可点击放大 */
+.markdown-body img.md-img-zoomable {
+  cursor: zoom-in;
+}
+
+/* 预览区可拖拽改宽 */
+.markdown-body .md-img-resize-wrap {
+  position: relative;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.markdown-body .md-img-resize-wrap > img {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.markdown-body .md-img-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border: 2px solid var(--primary);
+  border-radius: 2px 0 2px 0;
+  background: color-mix(in srgb, var(--background) 85%, var(--primary));
+  cursor: nwse-resize;
+  touch-action: none;
+  opacity: 0.85;
+}
+
+.markdown-body .md-img-resize-wrap:hover .md-img-resize-handle,
+.markdown-body .md-img-resize-wrap:focus-within .md-img-resize-handle {
+  opacity: 1;
+}
+
+.markdown-body .md-img-resize-badge {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 2;
+  padding: 1px 6px;
+  border-radius: 0 0 0 6px;
+  background: color-mix(in srgb, var(--background) 88%, transparent);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.markdown-body .md-img-resize-wrap:hover .md-img-resize-badge,
+.markdown-body .md-img-resize-wrap[data-resizing='true'] .md-img-resize-badge {
+  opacity: 1;
 }
 
 .markdown-body .katex {

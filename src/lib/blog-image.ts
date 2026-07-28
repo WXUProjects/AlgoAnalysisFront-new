@@ -75,3 +75,83 @@ export function markdownImageSnippet(
   }
   return `![${safeAlt}](${safeUrl})`
 }
+
+/** Markdown image token: ![alt|WxH?](url) — factory avoids global lastIndex bugs. */
+function mdImageRe() {
+  return /!\[([^\]]*)]\(\s*<?([^)\s>]+)>?\s*(?:["'][^"']*["'])?\s*\)/g
+}
+
+function htmlImgRe() {
+  return /<img[^>]+src=["']([^"']+)["']/gi
+}
+
+/** Collect unique http(s) image URLs from markdown body (+ optional cover). */
+export function extractMarkdownImageUrls(
+  content: string,
+  cover = '',
+): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  const add = (raw: string) => {
+    const u = (raw || '').trim()
+    if (!u) return
+    if (!/^https?:\/\//i.test(u)) return
+    if (seen.has(u)) return
+    seen.add(u)
+    out.push(u)
+  }
+  add(cover)
+  const md = content || ''
+  for (const m of md.matchAll(mdImageRe())) {
+    if (m[2]) add(m[2])
+  }
+  for (const m of md.matchAll(htmlImgRe())) {
+    if (m[1]) add(m[1])
+  }
+  return out
+}
+
+/** True if url appears in content or cover (substring match on image src). */
+export function isImageUsedInArticle(
+  url: string,
+  content: string,
+  cover = '',
+): boolean {
+  const u = (url || '').trim()
+  if (!u) return false
+  if ((cover || '').includes(u)) return true
+  return (content || '').includes(u)
+}
+
+/**
+ * Rewrite width for the first markdown image whose URL equals `url`.
+ * Uses Obsidian `![alt|W](url)` form; clears width when width <= 0.
+ */
+export function setMarkdownImageWidth(
+  content: string,
+  url: string,
+  width: number,
+): string {
+  const target = (url || '').trim()
+  if (!target || !content) return content
+  let replaced = false
+  return content.replace(mdImageRe(), (full, altRaw: string, href: string) => {
+    if (replaced) return full
+    if ((href || '').trim() !== target) return full
+    replaced = true
+    const altBase = String(altRaw ?? '').replace(/\|\d{1,5}(?:x\d{1,5})?\s*$/i, '')
+    const w = Math.round(width)
+    if (w > 0) {
+      return `![${altBase}|${w}](${href})`
+    }
+    return `![${altBase}](${href})`
+  })
+}
+
+export type BlogSessionImage = {
+  id: string
+  url: string
+  name: string
+  /** Uploaded in this edit session (vs already in content). */
+  fromUpload: boolean
+}
