@@ -259,6 +259,8 @@ export const endpoints = {
       clearRecentFailed: `${API_PREFIX}/core/problem/clear-recent-failed`,
       /** 清空牛客题面并重爬（保留标签/分析） */
       clearNowCoderContent: `${API_PREFIX}/core/problem/clear-nowcoder-content`,
+      /** 全量修复 QOJ 标题误为 QOJ.ac；body: { limit?, refetch? } */
+      repairQojTitles: `${API_PREFIX}/core/problem/repair-qoj-titles`,
       toggleAnalyze: `${API_PREFIX}/core/problem/toggle-analyze`,
       toggleFetch: `${API_PREFIX}/core/problem/toggle-fetch`,
       /** 站点管理员直接改标签/题面 */
