@@ -388,7 +388,7 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | GET | `/user/blog/plaza` | 否 | **博客广场**公开文流；query: `page`/`pageSize`/`keyword`/`sort=latest\|hot\|recommend`；`recommend` 仅精选；`orgId?`（私有域=仅该组织成员作者；公共域/缺省=全站）/`excludeSolutions=1`（排除题解镜像，发现页去重）；列表**不含 content** |
 | GET | `/user/blog/authors` | 否 | 广场侧栏：最近有公开文的作者；query: `page`/`pageSize`/`keyword`；按最近发布时间排序 |
 | GET | `/user/blog/analytics` | 是 | 作者统计：阅读/点赞/评论汇总 + top 文章 |
-| GET | `/user/blog/categories` | 否 | query: `username`；公开分类列表（项含 `isDefault`） |
+| GET | `/user/blog/categories` | 否 | query: `username`；公开分类列表（项含 `isDefault`）；**仅返回有公开文章的分类**（`articleCount > 0`，空分类对访客隐藏） |
 | GET | `/user/blog/category/mine` | 是 | 我的分类；**自动确保默认分类「默认」存在**；项含 `isDefault` |
 | POST | `/user/blog/category/create` | 是 | body: `{ name, sortOrder? }` |
 | POST | `/user/blog/category/update` | 是 | body: `{ id, name?, sortOrder? }`（默认可改名，仍 `isDefault`） |

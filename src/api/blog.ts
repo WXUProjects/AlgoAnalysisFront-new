@@ -395,16 +395,20 @@ export async function listBlogCategories(
   if (!res.success && listRaw.length === 0) {
     return { success: false, message: res.message || '加载失败', data: null }
   }
-  return {
-    success: true,
-    message: 'ok',
-    data: listRaw.map((c) => ({
+  // 前台只展示有公开文章的分类；空分类对访客不可见（管理端走 listMyBlogCategories）
+  const data = listRaw
+    .map((c) => ({
       id: num(c.id),
       name: str(c.name),
       sortOrder: num(c.sortOrder),
       articleCount: num(c.articleCount),
       isDefault: Boolean(c.isDefault),
-    })),
+    }))
+    .filter((c) => (c.articleCount ?? 0) > 0)
+  return {
+    success: true,
+    message: 'ok',
+    data,
   }
 }
 
