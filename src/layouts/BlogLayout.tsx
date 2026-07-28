@@ -167,7 +167,21 @@ export function BlogLayout() {
       setPanelExtra(null)
       return
     }
-    // 管理 / 写文章：隐藏侧栏，正文区更宽
+    // 写文章 / 编辑：与文章阅读页同宽（保留侧栏栅格）
+    if (
+      path.includes('/manage/new') ||
+      /\/manage\/edit(\/|$)/.test(path)
+    ) {
+      setBreadcrumb([
+        { label: '首页', to: base },
+        { label: '管理', to: `${base}/manage` },
+        { label: path.includes('/manage/new') ? '写文章' : '编辑' },
+      ])
+      setShowPanel(true)
+      setPanelExtra(null)
+      return
+    }
+    // 其它管理页：隐藏侧栏
     if (path.startsWith(`${base}/manage`)) {
       setBreadcrumb([
         { label: '首页', to: base },

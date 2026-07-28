@@ -294,20 +294,6 @@
   padding: 1rem 0.75rem 2.5rem;
 }
 
-/* 写文章 / 管理：再放宽一点（侧栏已关） */
-.mz-main-wrap:has(.blog-editor-wide) {
-  max-width: min(100%, 96rem);
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-}
-
-@media (min-width: 768px) {
-  .mz-main-wrap:has(.blog-editor-wide) {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-  }
-}
-
 @media (min-width: 768px) {
   .mz-main-wrap {
     padding: 1.25rem 1.25rem 3rem;

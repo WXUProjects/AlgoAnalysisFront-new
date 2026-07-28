@@ -374,18 +374,9 @@
   padding-right: 0.75rem;
 }
 
-/* 写文章 / 管理：加宽正文区 */
-.chirpy-container:has(.blog-editor-wide) {
-  max-width: min(100%, 96rem);
-}
-
 @media (min-width: 1200px) {
   .chirpy-container {
     max-width: 1140px;
-  }
-
-  .chirpy-container:has(.blog-editor-wide) {
-    max-width: min(100%, 96rem);
   }
 }
 
@@ -394,10 +385,6 @@
     max-width: 1320px;
     padding-left: 3rem;
     padding-right: 3rem;
-  }
-
-  .chirpy-container:has(.blog-editor-wide) {
-    max-width: min(100%, 96rem);
   }
 }
 
@@ -597,7 +584,7 @@
     max-width: 91.666%;
   }
 
-  .chirpy-main:has(.blog-editor-wide),
+  /* 无侧栏时（如管理列表）占满 */
   .chirpy-content-row:not(:has(.chirpy-panel)) .chirpy-main {
     width: 100%;
     max-width: 100%;
@@ -612,7 +599,6 @@
     padding-right: 1.5rem;
   }
 
-  .chirpy-main:has(.blog-editor-wide),
   .chirpy-content-row:not(:has(.chirpy-panel)) .chirpy-main {
     width: 100%;
     max-width: 100%;
