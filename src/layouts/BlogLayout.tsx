@@ -14,6 +14,7 @@ import {
 import { listBlogByUsername, listBlogCategories } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
 import { BlogActivateDialog } from '@/components/blog/blog-activate-dialog'
+import { BlogColorSchemeProvider } from '@/components/blog/blog-color-scheme'
 import { ChirpyShell } from '@/components/blog/chirpy-shell'
 import { MizukiShell } from '@/components/blog/mizuki-shell'
 import { SimpleShell } from '@/components/blog/simple-shell'
@@ -66,6 +67,7 @@ export function BlogLayout() {
   const [activated, setActivated] = useState(false)
   const [themeEnabled, setThemeEnabled] = useState(false)
   const [themeId, setThemeId] = useState<string>('mizuki')
+  const [colorScheme, setColorScheme] = useState<string>('system')
   const [subtitle, setSubtitle] = useState('')
   const [socialLinks, setSocialLinks] = useState<
     BlogThemeContext['socialLinks']
@@ -99,6 +101,7 @@ export function BlogLayout() {
     setActivated(res.data.activated)
     setThemeEnabled(res.data.themeEnabled)
     setThemeId(res.data.themeId || 'mizuki')
+    setColorScheme(res.data.colorScheme || 'system')
     setSubtitle(res.data.subtitle || '')
     setSocialLinks(res.data.socialLinks || [])
     setRecentPosts(res.data.list || [])
@@ -172,11 +175,12 @@ export function BlogLayout() {
     () =>
       resolveBlogTheme({
         themeId,
+        colorScheme,
         subtitle,
         socialLinks,
         enabled: themeEnabled,
       }),
-    [themeId, subtitle, socialLinks, themeEnabled],
+    [themeId, colorScheme, subtitle, socialLinks, themeEnabled],
   )
   const themeStyle = blogThemeStyle(theme)
   const displayName = author?.name || author?.username || username
@@ -283,54 +287,59 @@ export function BlogLayout() {
   return (
     <MotionProvider>
       <TooltipProvider delayDuration={300}>
-        <div
-          style={themeStyle}
-          data-blog-shell="1"
-          data-blog-theme={theme.themeId}
-          data-blog-theme-enabled={theme.enabled ? '1' : '0'}
+        <BlogColorSchemeProvider
+          username={username}
+          authorDefault={theme.colorScheme}
         >
-          {theme.themeId === 'chirpy' ? (
-            <ChirpyShell
-              username={username}
-              author={author}
-              displayName={displayName}
-              subtitle={theme.subtitle}
-              socialLinks={theme.socialLinks}
-              isOwner={isOwner}
-              breadcrumb={breadcrumb}
-              recentPosts={recentPosts}
-              categories={categories}
-              showPanel={showPanel && !loading && !error}
-              panelExtra={panelExtra}
-            >
-              {body}
-            </ChirpyShell>
-          ) : theme.themeId === 'mizuki' ? (
-            <MizukiShell
-              username={username}
-              author={author}
-              displayName={displayName}
-              subtitle={theme.subtitle}
-              socialLinks={theme.socialLinks}
-              isOwner={isOwner}
-              recentPosts={recentPosts}
-              categories={categories}
-              showSidebar={showPanel && !loading && !error}
-              panelExtra={panelExtra}
-            >
-              {body}
-            </MizukiShell>
-          ) : (
-            <SimpleShell
-              username={username}
-              displayName={displayName}
-              isOwner={isOwner}
-            >
-              {body}
-            </SimpleShell>
-          )}
-          <Toaster />
-        </div>
+          <div
+            style={themeStyle}
+            data-blog-shell="1"
+            data-blog-theme={theme.themeId}
+            data-blog-theme-enabled={theme.enabled ? '1' : '0'}
+          >
+            {theme.themeId === 'chirpy' ? (
+              <ChirpyShell
+                username={username}
+                author={author}
+                displayName={displayName}
+                subtitle={theme.subtitle}
+                socialLinks={theme.socialLinks}
+                isOwner={isOwner}
+                breadcrumb={breadcrumb}
+                recentPosts={recentPosts}
+                categories={categories}
+                showPanel={showPanel && !loading && !error}
+                panelExtra={panelExtra}
+              >
+                {body}
+              </ChirpyShell>
+            ) : theme.themeId === 'mizuki' ? (
+              <MizukiShell
+                username={username}
+                author={author}
+                displayName={displayName}
+                subtitle={theme.subtitle}
+                socialLinks={theme.socialLinks}
+                isOwner={isOwner}
+                recentPosts={recentPosts}
+                categories={categories}
+                showSidebar={showPanel && !loading && !error}
+                panelExtra={panelExtra}
+              >
+                {body}
+              </MizukiShell>
+            ) : (
+              <SimpleShell
+                username={username}
+                displayName={displayName}
+                isOwner={isOwner}
+              >
+                {body}
+              </SimpleShell>
+            )}
+            <Toaster />
+          </div>
+        </BlogColorSchemeProvider>
       </TooltipProvider>
     </MotionProvider>
   )

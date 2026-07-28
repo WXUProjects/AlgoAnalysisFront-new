@@ -1,5 +1,6 @@
 import { ThemeProvider as NextThemesProvider } from 'next-themes'
 import type { ReactNode } from 'react'
+import { MAIN_SITE_THEME_STORAGE_KEY } from '@/lib/color-scheme'
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
@@ -8,7 +9,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       defaultTheme="system"
       enableSystem
       disableTransitionOnChange
-      storageKey="algo-cwux-theme"
+      storageKey={MAIN_SITE_THEME_STORAGE_KEY}
     >
       {children}
     </NextThemesProvider>

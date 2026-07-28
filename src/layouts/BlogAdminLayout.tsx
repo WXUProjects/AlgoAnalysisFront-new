@@ -18,6 +18,7 @@ import {
 import { getBlogActivationStatus, listBlogByUsername } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
 import { BlogActivateDialog } from '@/components/blog/blog-activate-dialog'
+import { BlogColorSchemeProvider } from '@/components/blog/blog-color-scheme'
 import { MobileNavBack } from '@/components/mobile-nav-back'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -71,6 +72,7 @@ export function BlogAdminLayout() {
     setTheme(
       resolveBlogTheme({
         themeId: res.data.themeId,
+        colorScheme: res.data.colorScheme,
         subtitle: res.data.subtitle,
         socialLinks: res.data.socialLinks,
         enabled: res.data.themeEnabled,
@@ -132,6 +134,10 @@ export function BlogAdminLayout() {
   return (
     <MotionProvider>
       <TooltipProvider delayDuration={300}>
+        <BlogColorSchemeProvider
+          username={username}
+          authorDefault={theme.colorScheme}
+        >
         <div
           className="flex min-h-svh flex-col bg-background text-foreground"
           style={blogThemeStyle(theme)}
@@ -214,6 +220,7 @@ export function BlogAdminLayout() {
           />
           <Toaster />
         </div>
+        </BlogColorSchemeProvider>
       </TooltipProvider>
     </MotionProvider>
   )

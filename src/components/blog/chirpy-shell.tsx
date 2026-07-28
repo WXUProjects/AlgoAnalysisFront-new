@@ -19,12 +19,13 @@ import {
   SearchIcon,
   SettingsIcon,
 } from 'lucide-react'
-import { useTheme } from 'next-themes'
 import { listBlogByUsername } from '@/api/blog'
 import { SocialIcon, socialAriaLabel } from '@/components/blog/blog-social-icons'
 import { BlogSiteFooter } from '@/components/blog/blog-site-footer'
 import { BlogSubsiteBar } from '@/components/blog/blog-subsite-bar'
 import { MarkdownSummary } from '@/components/markdown-summary'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { useAppearance } from '@/hooks/use-appearance'
 import { BLOG_NEW_TAB_PROPS } from '@/lib/blog-nav'
 import { cn } from '@/lib/utils'
 import type { BlogSocialLink } from '@/lib/blog-theme'
@@ -63,7 +64,7 @@ export function ChirpyShell({
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { resolvedTheme, setTheme } = useTheme()
+  const { resolvedTheme } = useAppearance()
   const isDark = resolvedTheme === 'dark'
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -231,15 +232,7 @@ export function ChirpyShell({
         </nav>
 
         <div className="chirpy-sidebar-bottom">
-          <button
-            type="button"
-            className="chirpy-icon-btn"
-            aria-label="切换明暗"
-            title="切换明暗"
-            onClick={() => setTheme(isDark ? 'light' : 'dark')}
-          >
-            <span className="text-[0.7rem] leading-none">◐</span>
-          </button>
+          <ThemeToggle variant="cycle" className="chirpy-icon-btn" />
           {socialLinks.length > 0 && (
             <span className="chirpy-icon-border" aria-hidden />
           )}

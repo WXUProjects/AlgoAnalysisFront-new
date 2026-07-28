@@ -25,9 +25,17 @@ describe('blog theme', () => {
       socialLinks: [{ type: 'github', url: 'https://github.com/x' }],
     })
     assert.equal(t.themeId, 'mizuki')
+    assert.equal(t.colorScheme, 'system')
     assert.equal(t.useMainSiteTokens, false)
     assert.equal(t.socialLinks.length, 1)
     assert.equal(t.socialLinks[0].type, 'github')
+  })
+
+  it('keeps author colorScheme default', () => {
+    const t = resolveBlogTheme({ themeId: 'chirpy', colorScheme: 'dark' })
+    assert.equal(t.colorScheme, 'dark')
+    const auto = resolveBlogTheme({ colorScheme: '' })
+    assert.equal(auto.colorScheme, 'system')
   })
 
   it('simple theme uses main-site tokens', () => {

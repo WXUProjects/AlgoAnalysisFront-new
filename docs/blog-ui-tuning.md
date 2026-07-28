@@ -2,6 +2,7 @@
 
 > 状态：**三主题已上线**。默认 **Mizuki**（适配 [LyraVoid/Mizuki](https://github.com/LyraVoid/Mizuki)，动画轻度–中度）；备选 **Chirpy**（1:1 复刻 [lumenvestige.github.io](https://lumenvestige.github.io/) / jekyll-theme-chirpy）、**简约**。  
 > 作者可在「外观设置」切换主题，并自定义 Chirpy/Mizuki 外链图标。  
+> **明暗**：三主题均支持 **浅色 / 深色 / 跟随系统**。博主可在「外观设置」指定**默认明暗**（不设则跟随系统）；读者默认用博主设置，仍可本机自行切换。  
 > 页脚**备案信息始终使用主站** `footerIcp`（`SiteConfig`）。
 
 ---
@@ -29,14 +30,17 @@
 | 位置 | 职责 |
 |------|------|
 | `src/lib/blog-theme.ts` | `themeId` / `socialLinks` 解析；默认 `mizuki` |
+| `src/lib/color-scheme.ts` | 明暗三模式 + 博主默认 / 读者本机覆盖 |
+| `src/components/blog/blog-color-scheme.tsx` | 博客作用域明暗 Provider（不污染主站） |
+| `src/components/theme-toggle.tsx` | 下拉选择或 cycle 轮换；博客三壳共用 |
 | `src/styles/blog-chirpy.css` | Chirpy 色板与布局（侧栏 260/300px、卡片、归档时间线…） |
 | `src/styles/blog-mizuki.css` | Mizuki 色板与布局（hue 系 oklch、毛玻璃顶栏、圆角卡片） |
 | `src/components/blog/chirpy-shell.tsx` | Chirpy 壳：侧栏 / 顶栏 / 右栏 / 页脚 |
 | `src/components/blog/simple-shell.tsx` | 简约壳：原顶栏 + Tab |
 | `src/components/blog/mizuki-shell.tsx` | Mizuki 壳：浮动顶栏 / 渐变横幅 / 右侧资料卡（无樱花/轮播等重特效） |
-| `BlogLayout` | 读 `by-username` 的 `themeId`/`subtitle`/`socialLinks` 并切换壳 |
-| `GET /user/blog/theme/status` | 返回主题配置 |
-| `POST /user/blog/theme/config` | **作者**保存 `themeId` + `subtitle` + `socialLinks` |
+| `BlogLayout` | 读 `by-username` 的 `themeId`/`colorScheme`/`subtitle`/`socialLinks` 并切换壳 |
+| `GET /user/blog/theme/status` | 返回主题配置（含 `colorScheme`） |
+| `POST /user/blog/theme/config` | **作者**保存 `themeId` + `colorScheme` + `subtitle` + `socialLinks` |
 | `POST /user/blog/theme/enable` | 站管遗留：自由 CSS 能力开关（未使用） |
 | `blog_site_configs` 表 | 后端持久化 |
 
@@ -125,3 +129,5 @@ MizukiShell  ← 适配 https://github.com/LyraVoid/Mizuki
 | 2026-07-17 | Chirpy 默认主题 1:1 复原；简约=原壳；社交链接可配；备案走主站 |
 | 2026-07-17 | 新增可选主题 Mizuki（适配 LyraVoid/Mizuki，轻度动画，非默认） |
 | 2026-07-18 | 默认主题改为 Mizuki；Chirpy / 简约仍为可选 |
+| 2026-07-28 | 明暗三模式：浅色 / 深色 / 跟随系统；三主题壳与主站统一 |
+| 2026-07-28 | 博主可设默认明暗（`colorScheme`）；读者可本机覆盖，默认跟随系统 |

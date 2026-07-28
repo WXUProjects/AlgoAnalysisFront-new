@@ -19,12 +19,13 @@ import {
   SettingsIcon,
   XIcon,
 } from 'lucide-react'
-import { useTheme } from 'next-themes'
 import { listBlogByUsername } from '@/api/blog'
 import { SocialIcon, socialAriaLabel } from '@/components/blog/blog-social-icons'
 import { BlogSiteFooter } from '@/components/blog/blog-site-footer'
 import { BlogSubsiteBar } from '@/components/blog/blog-subsite-bar'
 import { MarkdownSummary } from '@/components/markdown-summary'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { useAppearance } from '@/hooks/use-appearance'
 import { BLOG_NEW_TAB_PROPS } from '@/lib/blog-nav'
 import { cn } from '@/lib/utils'
 import type { BlogSocialLink } from '@/lib/blog-theme'
@@ -66,7 +67,7 @@ export function MizukiShell({
 }: Props) {
   const location = useLocation()
   const navigate = useNavigate()
-  const { resolvedTheme, setTheme } = useTheme()
+  const { resolvedTheme } = useAppearance()
   const isDark = resolvedTheme === 'dark'
 
   const [menuOpen, setMenuOpen] = useState(false)
@@ -210,15 +211,7 @@ export function MizukiShell({
                   <SearchIcon className="size-4" />
                 )}
               </button>
-              <button
-                type="button"
-                className="mz-icon-btn"
-                aria-label="切换明暗"
-                title="切换明暗"
-                onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              >
-                <span className="text-[0.8rem] leading-none">◐</span>
-              </button>
+              <ThemeToggle variant="cycle" className="mz-icon-btn" />
               <Link
                 to="/blog-plaza"
                 className="mz-icon-btn hidden sm:inline-flex"

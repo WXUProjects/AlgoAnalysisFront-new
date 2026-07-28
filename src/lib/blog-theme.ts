@@ -7,8 +7,12 @@
  */
 
 import type { BlogSocialLink, BlogThemeId } from '@shared/api'
+import {
+  normalizeColorScheme,
+  type ColorSchemeMode,
+} from '@/lib/color-scheme'
 
-export type { BlogSocialLink, BlogThemeId }
+export type { BlogSocialLink, BlogThemeId, ColorSchemeMode }
 
 export const BLOG_THEME_IDS = ['chirpy', 'simple', 'mizuki'] as const
 
@@ -57,6 +61,11 @@ export type BlogThemeTokens = {
 export type BlogThemeContext = {
   /** Resolved shell theme id */
   themeId: BlogThemeId
+  /**
+   * Author default appearance for visitors (light | dark | system).
+   * Unset / empty → system. Visitors may override locally.
+   */
+  colorScheme: ColorSchemeMode
   /** Sidebar subtitle (Chirpy / Mizuki) */
   subtitle: string
   /** Bottom-left / profile social links */
@@ -103,6 +112,7 @@ export function normalizeSocialLinks(
  */
 export function resolveBlogTheme(input: {
   themeId?: string | null
+  colorScheme?: string | null
   subtitle?: string | null
   socialLinks?: BlogSocialLink[] | null
   enabled?: boolean
@@ -114,6 +124,7 @@ export function resolveBlogTheme(input: {
     enabled && input.customTheme ? input.customTheme : null
   return {
     themeId,
+    colorScheme: normalizeColorScheme(input.colorScheme),
     subtitle: (input.subtitle || '').trim(),
     socialLinks: normalizeSocialLinks(input.socialLinks ?? []),
     enabled,

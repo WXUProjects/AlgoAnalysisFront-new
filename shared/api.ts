@@ -1567,9 +1567,14 @@ export interface BlogSocialLink {
   label?: string
 }
 
+/** 博客默认明暗（读者可本地覆盖） */
+export type BlogColorScheme = 'light' | 'dark' | 'system'
+
 /** 个人博客壳配置 */
 export interface BlogSiteConfig {
   themeId: BlogThemeId | string
+  /** 博主默认明暗；缺省 system（跟随系统） */
+  colorScheme?: BlogColorScheme | string
   subtitle?: string
   socialLinks: BlogSocialLink[]
 }

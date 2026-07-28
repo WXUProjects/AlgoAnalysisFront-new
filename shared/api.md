@@ -412,8 +412,8 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | POST | `/user/blog/report` | 是 | body: `{ articleId, reason }`；写 `blog_reports` + 站管站内信 + 邮件 |
 | GET | `/user/blog/report/list` | 是（`content.report.handle`） | query: `status?`=`pending`（默认）`\|resolved\|dismissed\|all`、`page`/`pageSize` → `BlogReportAdminItem` 列表（含举报人、文章预览；文章已删 `target.exists=false`） |
 | POST | `/user/blog/report/handle` | 是（`content.report.handle`） | body: `{ id, action: "resolve"\|"dismiss" }` → 标记已处理 / 驳回 |
-| GET | `/user/blog/theme/status` | 否 | query: `username?`；返回 `enabled`（遗留）、`themeId`（`mizuki` 默认 / `chirpy` / `simple`）、`subtitle`、`socialLinks` |
-| POST | `/user/blog/theme/config` | 是（作者） | body: `{ themeId, subtitle?, socialLinks? }`；保存博客壳主题与侧栏社交链接；**须已开通** |
+| GET | `/user/blog/theme/status` | 否 | query: `username?`；返回 `enabled`（遗留）、`themeId`（`mizuki` 默认 / `chirpy` / `simple`）、`colorScheme`（`light`/`dark`/`system`，默认 `system`）、`subtitle`、`socialLinks` |
+| POST | `/user/blog/theme/config` | 是（作者） | body: `{ themeId, colorScheme?, subtitle?, socialLinks? }`；保存博客壳主题、**默认明暗**与侧栏社交链接；`colorScheme` 缺省/`system`=跟随系统；**须已开通** |
 | POST | `/user/blog/theme/enable` | 站管 | body: `{ mode: user\|batch\|all, userId?, userIds?, enabled }`（遗留能力开关） |
 | GET | `/user/blog/agreement` | 否* | 协议正文 + 当前用户开通状态（`BlogActivationStatus` + `title`/`content`） |
 | GET | `/user/blog/activation/status` | 是 | 当前用户开通状态 |
@@ -434,7 +434,7 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 
 **互动通知**（写主站 `notifications`）：博客文章点赞 `blog_article_like`、博客评论 `blog_comment` / `blog_comment_reply`、博客评论点赞 `blog_comment_like`；题解/评论点赞 `solution_like` / `comment_like`；举报 `blog_report` / `community_report`（站管 + 邮件）。payload 可含 `blogUsername`+`blogSlug` 跳转。邮件通知偏好默认关。
 
-`GET /user/blog/by-username` 额外返回：`themeId`、`subtitle`、`socialLinks`（与 theme/status 一致）、`activated`（`agreement_accepted_at` 非空为已开通）。未开通用户的个人博客壳应提示「此用户未开通博客」；个人资料页不展示「访问博客」。
+`GET /user/blog/by-username` 额外返回：`themeId`、`colorScheme`、`subtitle`、`socialLinks`（与 theme/status 一致）、`activated`（`agreement_accepted_at` 非空为已开通）。未开通用户的个人博客壳应提示「此用户未开通博客」；个人资料页不展示「访问博客」。
 
 **主题说明**
 
@@ -443,6 +443,16 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | `mizuki` | Mizuki | 默认；适配 [LyraVoid/Mizuki](https://github.com/LyraVoid/Mizuki)（MD3 气质，动画轻度–中度，无樱花/轮播等重特效） |
 | `chirpy` | Chirpy | 可选；复刻 jekyll-theme-chirpy 布局 |
 | `simple` | 简约 | 原 shadcn 顶栏壳 |
+
+**默认明暗 `colorScheme`**
+
+| 值 | 说明 |
+|----|------|
+| `system`（默认） | 跟随读者设备浅色/深色 |
+| `light` | 博客默认浅色 |
+| `dark` | 博客默认深色 |
+
+读者仍可在博客顶栏/侧栏自行切换；选择会记在本机该博客下，不改博主设置、也不改主站外观。
 
 **socialLinks 项**
 

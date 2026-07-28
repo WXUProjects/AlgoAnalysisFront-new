@@ -10,16 +10,14 @@ import {
   LogInIcon,
   LogOutIcon,
   MegaphoneIcon,
-  MoonIcon,
   NewspaperIcon,
-  SunIcon,
   UserIcon,
   UserPlusIcon,
   WrenchIcon,
   type LucideProps,
 } from 'lucide-react'
-import { useTheme } from 'next-themes'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { ThemeModeStatus } from '@/components/theme-toggle'
 import {
   Sheet,
   SheetContent,
@@ -234,35 +232,16 @@ export function MobileMoreSheet({
   )
 }
 
-/** 主题切换行（底部更多面板用） */
+/** 主题切换行（底部更多面板用）：浅色 / 深色 / 跟随系统 轮换 */
 export function MobileMoreThemeRow() {
-  const { resolvedTheme, setTheme } = useTheme()
-  const isDark = resolvedTheme === 'dark'
-  const label = isDark ? '浅色模式' : '深色模式'
-
   return (
-    <button
-      type="button"
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+    <ThemeModeStatus
       className={cn(
         'flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5',
         'bg-muted/50 text-sm ring-1 ring-border/50',
         'transition-colors active:bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring',
       )}
-      aria-label={label}
-    >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background shadow-sm ring-1 ring-border/50">
-        {isDark ? (
-          <SunIcon className="size-4" />
-        ) : (
-          <MoonIcon className="size-4" />
-        )}
-      </span>
-      <span className="min-w-0 flex-1 text-left font-medium">外观</span>
-      <span className="text-xs text-muted-foreground">
-        {isDark ? '深色' : '浅色'}
-      </span>
-    </button>
+    />
   )
 }
 

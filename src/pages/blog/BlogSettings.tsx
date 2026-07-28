@@ -25,11 +25,15 @@ import {
   type BlogSocialLink,
   type BlogThemeId,
 } from '@/lib/blog-theme'
+import {
+  COLOR_SCHEME_OPTIONS,
+  type ColorSchemeMode,
+} from '@/lib/color-scheme'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogEmailNotifyStrategy } from '@shared/api'
 
 /**
- * Owner-only: pick shell theme + customize Chirpy sidebar social links.
+ * Owner-only: pick shell theme + default color + Chirpy/Mizuki social links.
  */
 export function BlogSettingsPage() {
   const { username, isOwner, theme, refreshMeta } =
@@ -37,6 +41,9 @@ export function BlogSettingsPage() {
   const { isLogin, ready } = useAuth()
 
   const [themeId, setThemeId] = useState<BlogThemeId>(theme.themeId)
+  const [colorScheme, setColorScheme] = useState<ColorSchemeMode>(
+    theme.colorScheme,
+  )
   const [subtitle, setSubtitle] = useState(theme.subtitle)
   const [links, setLinks] = useState<BlogSocialLink[]>(
     theme.socialLinks.length
@@ -51,9 +58,10 @@ export function BlogSettingsPage() {
 
   useEffect(() => {
     setThemeId(theme.themeId)
+    setColorScheme(theme.colorScheme)
     setSubtitle(theme.subtitle)
     setLinks(theme.socialLinks.map((l) => ({ ...l })))
-  }, [theme.themeId, theme.subtitle, theme.socialLinks])
+  }, [theme.themeId, theme.colorScheme, theme.subtitle, theme.socialLinks])
 
   useEffect(() => {
     if (!isLogin || !isOwner) return
@@ -107,6 +115,7 @@ export function BlogSettingsPage() {
     setSaving(true)
     const res = await saveBlogThemeConfig({
       themeId,
+      colorScheme,
       subtitle: subtitle.trim(),
       socialLinks: cleaned,
     })
@@ -129,8 +138,9 @@ export function BlogSettingsPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">外观设置</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          选择博客主题，并自定义资料区/侧栏的外链图标（Chirpy、Mizuki
-          会显示）。页脚备案信息与主站保持一致，无需在此填写。
+          选择布局主题和读者默认明暗。未指定明暗时跟随设备自动切换；
+          读者仍可在博客里自己改，只影响本机。外链图标在 Chirpy、Mizuki
+          会显示。页脚备案与主站一致，无需在此填写。
         </p>
       </div>
 
@@ -170,6 +180,40 @@ export function BlogSettingsPage() {
                   >
                     来源：{meta.credit || meta.creditUrl}
                   </a>
+                ) : null}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>默认明暗</Label>
+        <p className="text-xs text-muted-foreground">
+          读者第一次打开你的博客时使用的外观。选「跟随系统」则随对方设备自动切换。
+        </p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {COLOR_SCHEME_OPTIONS.map((opt) => {
+            const active = colorScheme === opt.id
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setColorScheme(opt.id)}
+                className={
+                  active
+                    ? 'rounded-xl border-2 border-primary bg-primary/5 p-3 text-left'
+                    : 'rounded-xl border p-3 text-left hover:bg-muted/50'
+                }
+              >
+                <div className="font-medium">{opt.label}</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {opt.description}
+                </p>
+                {opt.id === 'system' ? (
+                  <span className="mt-2 inline-block text-[11px] text-primary">
+                    推荐默认
+                  </span>
                 ) : null}
               </button>
             )
