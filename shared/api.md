@@ -220,11 +220,11 @@
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc`，返回 `{ url }`（≤3MB 图片，支持 jpg/png/gif/webp/ico/**svg**；svg 含脚本或 `on*` 事件处理器会被拒收）。**url 带真实扩展名**（如 `.png`/`.svg`） |
+| POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc\|blog\|blog_cover`。本地用途 ≤3MB（jpg/png/gif/webp/ico/**svg**；svg 拒脚本）。**`blog`/`blog_cover`**：走又拍云（需站点配置又拍云 + 站管在 `/admin/blog` 授权该用户），清晰度优先压缩，≤约 12MB 原图，返回公网 `{ url }`；未授权或未配置则 403。本地 url 带真实扩展名 |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
 | GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo） |
-| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI 密钥脱敏 + `inactiveDays` + `adminNotifyEmails`） |
-| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails`（审核/举报邮件收件人，可清空）；密钥空串表示不修改 |
+| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails`） |
+| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云**（`upyunBucket`/`upyunOperator`/`upyunPassword`/`clearUpyunPassword`/`upyunDomain`/`upyunScheme`）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails`；密钥空串表示不修改 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
 | POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
 | GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |
@@ -319,11 +319,19 @@
   "aiAnalyzeSecretSet": true,
   "clearAiAnalyzeSecret": false,
   "inactiveDays": 14,
-  "adminNotifyEmails": "ops@example.com\nadmin@example.com"
+  "adminNotifyEmails": "ops@example.com\nadmin@example.com",
+  "upyunBucket": "yangcongxueyuan",
+  "upyunOperator": "enchensan",
+  "upyunPassword": "",
+  "upyunPasswordMasked": "••••••••",
+  "upyunPasswordSet": true,
+  "clearUpyunPassword": false,
+  "upyunDomain": "zhiyuansofts.cn",
+  "upyunScheme": "http"
 }
 ```
 
-说明：`smtp` / `agent` / `ai_analyze` 原 yaml 配置已迁入站点设置；服务 yaml 仅作启动兜底。保存后写入 DB 并同步 Redis。`footerIcp` 为空时前端页脚使用默认备案号。`adminNotifyEmails` 为审核/举报邮件接收人（逗号或换行分隔）；留空则发给全部站点管理员账号邮箱；**不影响**站内信收件人。
+说明：`smtp` / `agent` / `ai_analyze` / **`upyun`** 原 yaml 配置已迁入站点设置；服务 yaml 仅作启动兜底。保存后写入 DB 并同步 Redis。`footerIcp` 为空时前端页脚使用默认备案号。`adminNotifyEmails` 为审核/举报邮件接收人（逗号或换行分隔）；留空则发给全部站点管理员账号邮箱；**不影响**站内信收件人。又拍云密码**不得**写入仓库源码。
 
 ### Paste（粘贴板 / Pastebin）
 
@@ -412,9 +420,13 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | POST | `/user/blog/activate` | 是 | body: `{ accept: true, agreementVersion?, emailNotifyEnabled?, emailNotifyStrategy? }`；**不同意不可开通** |
 | POST | `/user/blog/notify-pref` | 是 | body: `{ emailNotifyEnabled?, emailNotifyStrategy? }`；互动邮件偏好，**默认关**；`off\|immediate\|digest_daily\|random` |
 | GET | `/user/blog/admin/overview` | 站管 | 开通人数、文章/阅读/点赞/评论汇总、待审/驳回数 |
-| GET | `/user/blog/admin/authors` | 站管 | 已开通作者列表；query: `page`/`pageSize`/`keyword`（模糊） |
+| GET | `/user/blog/admin/authors` | 站管 | 已开通作者列表（含 `imageUploadEnabled`）；query: `page`/`pageSize`/`keyword`（模糊） |
 | GET | `/user/blog/admin/articles` | 站管 | 文章审查列表（**含 private/password**）；query: `page`/`pageSize`/`keyword`/`status`/`visibility` |
 | POST | `/user/blog/admin/moderate` | 站管/博客审核权限 | body: `{ id, action: approve\|reject\|pending\|feature\|unfeature, note? }`；`feature`/`unfeature` 设/取消广场精选（仅公开且已通过） |
+| POST | `/user/blog/admin/image-upload` | 站管/博客管理 | body: `{ userId, enabled }`；**默认全员关闭**图片上传，须在此按作者授权 |
+| GET | `/user/blog/image-upload/status` | 是 | 当前用户：`{ configured, authorized, enabled }`（站点又拍云已配且已授权时 `enabled=true`） |
+
+**又拍云图床**：站点设置配置 `upyunBucket`（服务名）、`upyunOperator`、`upyunPassword`（脱敏存储）、`upyunDomain`（用户侧访问域，如 `zhiyuansofts.cn`）、`upyunScheme`（`http`/`https`）。上传走服务端代传；保存/删文后会 GC 未引用的本站又拍云对象。正文支持 Obsidian 定宽 `![说明|550](url)`。
 
 **开通协议**：初次使用/发文/改外观前须签署；存量已有文章或主题配置用户启动时自动回填为已开通。
 
@@ -507,7 +519,19 @@ nginx：**首版策略**——上述公开页 **一律** 反代 SEO HTML（不�
 
 ### Org（GoAlgo 多租户）
 
-HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`（`member|captain|group_leader|coach|org_admin`）/ `pm`（细粒度权限位图，见「RBAC 角色与权限」一节）。组织内层级：组织管理员 > 教练 > 组长 > 队长 > 成员。以下「组织/站点管理员」权限均已细化为对应权限点。
+HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`（`member|captain|group_leader|coach|org_admin`）/ `pm`（细粒度权限位图，见「RBAC 角色与权限」一节）。
+
+**组织内角色层级（严格）**：`org_admin`（组织管理员）> `coach`（教练）> `group_leader`（组长）> `captain`（队长）> `member`（成员）。
+
+| 角色 | 数据范围 | 任命 |
+|------|----------|------|
+| 组织管理员 | 全组织 | 可任命全部组织角色 |
+| 教练 | **始终全组织**（不受分组限制） | 可任命组长/队长/成员（不可任命组织管理员/教练） |
+| 组长 | 绑定的分组（及组内分队） | 可任命本组内队长/成员 |
+| 队长 | 绑定的分队 | 无任命权 |
+| 成员 | — | — |
+
+以下「组织/站点管理员」权限均已细化为对应权限点（org.member.\* / org.invite.\* / org.join.review / site.org.\* 等），管理员为默认持有者。
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
@@ -522,8 +546,10 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/user/org/switch` | 是 | `{ orgId }` → 新 `jwtToken`；**同时写入默认组织**（下次打开自动进入，无需单独设默认） |
 | POST | `/user/org/join` | 是 | `{ inviteCode, orgDisplayName }` 团队识别码 + **组织内名称（必填）**；**不改**默认组织 |
 | POST | `/user/org/leave` | 是 | `{ orgId }`；**公共域不可退出**；若离开的是默认组织则回落公共域 |
-| GET | `/user/org/members` | 成员 | query: `orgId`、`page`（默认 1）、`pageSize`（默认 20，最大 100）、`keyword` 模糊；排序 **团队管理员 > 教练 > 队长 > 成员**；返回 `name`（组织内名称，空则 username）、`orgDisplayName`、`total`/`page`/`pageSize` |
-| POST | `/user/org/members/set-role` | 持 `org.member.role` 且等级足够 | `{ orgId, userId, role: member\|captain\|group_leader\|coach\|org_admin, scopeType?, scopeId? }`；任命队长须 `scopeType=squad`；任命组长须 `scopeType=group`；只能任命严格低于自己的角色 |
+| GET | `/user/org/members` | 成员 | query: `orgId`、`page`（默认 1）、`pageSize`（默认 20，最大 100）、`keyword` 模糊；排序 **组织管理员 > 教练 > 组长 > 队长 > 成员**；返回 `name`、`orgDisplayName`、`scopes?`（组长/队长管理范围）、`total`/`page`/`pageSize` |
+| POST | `/user/org/members/set-role` | 持 `org.member.role` 且等级足够 | `{ orgId, userId, role: member\|captain\|group_leader\|coach\|org_admin, scopeType?, scopeId? }`；**任命队长必填** `scopeType=squad`+`scopeId`；**任命组长必填** `scopeType=group`+`scopeId`；只能任命**严格低于自己**的角色；教练/组织管理员清空 scope；若不在组织则加入并 **设为默认组织** |
+| GET/POST | `/user/org/squads*` | staff | 分队 CRUD 与成员；写权限：组织管理员/教练全组织，组长限本组，队长仅本分队成员调整 |
+| GET/POST | `/user/org/scopes*` | 组织管理员/站管 | 手动改管理范围；**禁止**给教练写入限制；组长/队长范围以任命为准 |
 | POST | `/user/org/members/remove` | 组织/站点管理员 | `{ orgId, userId }`；不可移出公共域；若移出默认组织则回落公共域 |
 | POST | `/user/org/members/add` | 站点/组织管理员 | `{ orgId, userId?\|username?, role?, orgDisplayName? }` 搜索加入；**设为默认组织**；组织内名称可填，默认用对方全局昵称 |
 | POST | `/user/org/members/set-display-name` | 本人或组织/站点管理员 | `{ orgId, userId?, orgDisplayName }` 改组织内名称 |
@@ -575,11 +601,12 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
   "avatar": "string",
   "emailEnabled": true,
   "roleId": 1,
-  "spiders": [{ "platform": "NowCoder", "username": "xxx", "rating": 1500, "hasRating": true }],
+  "spiders": [{ "platform": "NowCoder", "username": "xxx", "rating": 1500, "hasRating": true, "lastSyncAt": 0, "lastFailAt": 0, "lastError": "" }],
   "lastSyncAt": 0
 }
 ```
 - `lastSyncAt`：最近一次 OJ 数据同步成功时间（unix 秒；`0` 表示尚无成功同步记录，部署本字段前的历史用户会在下次定时/手动同步后出现）
+- `spiders[].lastSyncAt` / `lastFailAt` / `lastError`：单平台同步健康；失败后 `lastFailAt` 有值，成功后失败字段清空
 - `spiders[].rating` / `hasRating`：各平台当前 Rating；绑定后爬虫会一并抓取。`hasRating=false` 表示未参赛/平台无 Rating/尚未同步。支持：AtCoder、牛客、Codeforces、洛谷、力扣、LOJ、UOJ；QOJ 暂无
 
 **UpdateReq**
@@ -635,7 +662,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 
 权限模型：**权限点目录以后端代码为唯一权威**（`cwxu-algo/app/common/rbac/perm.go`，37 个权限点、9 个分组，作用域 `site` 站点级 / `org` 组织级）。角色 = 权限点集合：
 
-- **内置角色**（`isSystem`，不可改名/删除）：站点管理员 `site_admin`（旁路全部校验）、组织管理员 `org_admin`（全部 org.\*）、教练 `coach`（全组织数据+任命组长/队长）、组长 `group_leader`（绑定分组）、队长 `captain`（绑定分队）、成员 `member`。层级：org_admin > coach > group_leader > captain > member。
+- **内置角色**（`isSystem`，不可改名/删除）：站点管理员 `site_admin`（旁路全部校验）、组织管理员 `org_admin`（全部 org.\*）、教练 `coach`（全组织数据+任命组长/队长）、组长 `group_leader`（绑定分组）、队长 `captain`（绑定分队）、成员 `member`。层级：org_admin > coach > group_leader > captain > member。内置角色任命走 `org/members/set-role`（含 scope），后端双写 `user_roles` 镜像。
 - **内置角色的组织级权限覆盖**：教练 / 队长的权限**可由所在组织自行调整**（`permsEditable=true`），覆盖只对本组织生效，存 `org_role_perms`；团队管理员与成员是组织基本盘，权限固定（`permsEditable=false`）。`customized=true` 表示本组织已改过，可用 `resetPermissions` 恢复默认。
 - **自定义角色**：站点级需 `site.role.manage`；组织级需该组织 `org.role.manage`（org_admin 默认持有）。自定义角色只赋权限、不改 `orgRole`，一个用户可叠加多个；**删除自定义角色后成员退回最基本身份**（组织内为「成员」，站点为「普通用户」）。
 - **已下线**：内置角色「资源审核员」`resource_reviewer` 与权限点 `site.appoint.reviewer`（bit 16 永久退休不复用）。存量持有者已被剥离（`users.is_resource_reviewer` 全部置 false，列保留仅为回滚）；内容审核受众改按 `content.*` 权限点推导。`/user/profile/list` 的 `isResourceReviewer` 为 protobuf 遗留字段，恒为 `false`，前端已不再读取。

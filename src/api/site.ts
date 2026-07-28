@@ -32,6 +32,14 @@ export type SiteAdminConfig = SiteConfig & {
   inactiveDays: number
   /** 审核/举报邮件收件人（逗号或换行）；空则发给全部站管账号邮箱 */
   adminNotifyEmails: string
+  /** 又拍云图床 */
+  upyunBucket: string
+  upyunOperator: string
+  upyunPasswordMasked: string
+  upyunPasswordSet: boolean
+  upyunDomain: string
+  /** http | https */
+  upyunScheme: string
 }
 
 function normalizeBrand(raw: Record<string, unknown> | null | undefined): SiteConfig {
@@ -63,6 +71,12 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     aiAnalyzeSecretSet: Boolean(d.aiAnalyzeSecretSet),
     inactiveDays: Math.max(1, Math.min(365, num(d.inactiveDays, 14) || 14)),
     adminNotifyEmails: str(d.adminNotifyEmails),
+    upyunBucket: str(d.upyunBucket),
+    upyunOperator: str(d.upyunOperator),
+    upyunPasswordMasked: str(d.upyunPasswordMasked),
+    upyunPasswordSet: Boolean(d.upyunPasswordSet),
+    upyunDomain: str(d.upyunDomain),
+    upyunScheme: str(d.upyunScheme) || 'http',
   }
 }
 
@@ -120,6 +134,12 @@ export async function updateSiteConfig(body: {
   setInactiveDays?: boolean
   /** 审核/举报邮件收件人；可传空串清空 */
   adminNotifyEmails?: string
+  upyunBucket?: string
+  upyunOperator?: string
+  upyunPassword?: string
+  clearUpyunPassword?: boolean
+  upyunDomain?: string
+  upyunScheme?: string
 }): Promise<ApiResult<SiteConfig>> {
   const res = await post<Record<string, unknown>>(endpoints.user.site.config, body)
   if (!res.success) return { ...res, data: null }

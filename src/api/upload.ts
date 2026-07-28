@@ -3,7 +3,15 @@ import { jwt } from '@/lib/jwt'
 import { str, type ApiResult } from '@/lib/http'
 import { UX_NETWORK, UX_UPLOAD_FAILED, sanitizeUserMessage } from '@/lib/ux-copy'
 
-export type UploadPurpose = 'avatar' | 'site' | 'bulletin' | 'misc'
+export type UploadPurpose =
+  | 'avatar'
+  | 'site'
+  | 'bulletin'
+  | 'misc'
+  /** 博客/题解正文图（又拍云，需授权） */
+  | 'blog'
+  /** 博客头图（又拍云，需授权） */
+  | 'blog_cover'
 
 export async function uploadImage(
   file: File,

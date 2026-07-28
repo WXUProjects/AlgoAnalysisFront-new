@@ -96,6 +96,13 @@ export function DashboardSiteSettings() {
   const [inactiveDays, setInactiveDays] = useState('14')
   const [adminNotifyEmails, setAdminNotifyEmails] = useState('')
 
+  const [upyunBucket, setUpyunBucket] = useState('')
+  const [upyunOperator, setUpyunOperator] = useState('')
+  const [upyunPassword, setUpyunPassword] = useState('')
+  const [upyunPasswordSet, setUpyunPasswordSet] = useState(false)
+  const [upyunDomain, setUpyunDomain] = useState('')
+  const [upyunScheme, setUpyunScheme] = useState('http')
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -214,6 +221,12 @@ export function DashboardSiteSettings() {
       setAiSecretSet(d.aiAnalyzeSecretSet)
       setInactiveDays(String(d.inactiveDays || 14))
       setAdminNotifyEmails(d.adminNotifyEmails || '')
+      setUpyunBucket(d.upyunBucket || '')
+      setUpyunOperator(d.upyunOperator || '')
+      setUpyunPassword(d.upyunPasswordSet ? SECRET_PLACEHOLDER : '')
+      setUpyunPasswordSet(d.upyunPasswordSet)
+      setUpyunDomain(d.upyunDomain || '')
+      setUpyunScheme(d.upyunScheme || 'http')
     })()
     return () => {
       cancelled = true
@@ -266,6 +279,7 @@ export function DashboardSiteSettings() {
     const smtpPw = secretPayload(smtpPassword, smtpPasswordSet)
     const agentSec = secretPayload(agentSecret, agentSecretSet)
     const aiSec = secretPayload(aiSecret, aiSecretSet)
+    const upyunPw = secretPayload(upyunPassword, upyunPasswordSet)
 
     const days = Math.max(1, Math.min(365, Number(inactiveDays) || 14))
     setSaving(true)
@@ -290,6 +304,12 @@ export function DashboardSiteSettings() {
       inactiveDays: days,
       setInactiveDays: true,
       adminNotifyEmails: adminNotifyEmails.trim(),
+      upyunBucket: upyunBucket.trim(),
+      upyunOperator: upyunOperator.trim(),
+      upyunPassword: upyunPw.secret,
+      clearUpyunPassword: upyunPw.clear,
+      upyunDomain: upyunDomain.trim(),
+      upyunScheme: upyunScheme.trim() || 'http',
     })
     setSaving(false)
     if (res.success) {
@@ -304,6 +324,8 @@ export function DashboardSiteSettings() {
         setAgentSecretSet(again.data.agentSecretSet)
         setAiSecret(again.data.aiAnalyzeSecretSet ? SECRET_PLACEHOLDER : '')
         setAiSecretSet(again.data.aiAnalyzeSecretSet)
+        setUpyunPassword(again.data.upyunPasswordSet ? SECRET_PLACEHOLDER : '')
+        setUpyunPasswordSet(again.data.upyunPasswordSet)
       }
     } else {
       toast.error(res.message || '保存失败，请稍后重试')
@@ -600,6 +622,82 @@ export function DashboardSiteSettings() {
                     发送测试邮件
                   </Button>
                 </div>
+              </Field>
+            </FieldGroup>
+          </CardContent>
+        </Card>
+
+        <Card className="gap-3 py-4">
+          <CardHeader className="px-4 pb-0">
+            <CardTitle>又拍云图床</CardTitle>
+            <CardDescription>
+              博客与题解图片上传。配置后仍须在「博客管理」按作者授权；默认全员关闭上传。
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4">
+            <FieldGroup className="gap-3">
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="upyun-bucket">服务名称</FieldLabel>
+                <Input
+                  id="upyun-bucket"
+                  value={upyunBucket}
+                  onChange={(e) => setUpyunBucket(e.target.value)}
+                  placeholder="如 yangcongxueyuan"
+                  autoComplete="off"
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="upyun-operator">操作员</FieldLabel>
+                <Input
+                  id="upyun-operator"
+                  value={upyunOperator}
+                  onChange={(e) => setUpyunOperator(e.target.value)}
+                  placeholder="操作员用户名"
+                  autoComplete="off"
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="upyun-password">操作员密码</FieldLabel>
+                <Input
+                  id="upyun-password"
+                  type="password"
+                  value={upyunPassword}
+                  onChange={(e) => setUpyunPassword(e.target.value)}
+                  placeholder={
+                    upyunPasswordSet ? '已保存；留空表示不修改' : '操作员密码'
+                  }
+                  autoComplete="new-password"
+                  onFocus={() => {
+                    if (upyunPassword === SECRET_PLACEHOLDER) setUpyunPassword('')
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  密码仅保存在服务器，不会出现在页面源码或公开仓库。
+                </p>
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="upyun-domain">访问域名</FieldLabel>
+                <Input
+                  id="upyun-domain"
+                  value={upyunDomain}
+                  onChange={(e) => setUpyunDomain(e.target.value)}
+                  placeholder="如 zhiyuansofts.cn"
+                  autoComplete="off"
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="upyun-scheme">访问协议</FieldLabel>
+                <Input
+                  id="upyun-scheme"
+                  value={upyunScheme}
+                  onChange={(e) => setUpyunScheme(e.target.value)}
+                  placeholder="http 或 https"
+                  autoComplete="off"
+                />
+                <p className="text-xs text-muted-foreground">
+                  用户侧图片地址形如 http://域名/路径。若主站为 https 而图床为
+                  http，浏览器可能提示混合内容。
+                </p>
               </Field>
             </FieldGroup>
           </CardContent>

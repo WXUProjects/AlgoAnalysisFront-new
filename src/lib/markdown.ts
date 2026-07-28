@@ -21,6 +21,32 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
+/**
+ * Obsidian 风格图片尺寸：`![说明|550](url)` / `![|550](url)` / `![说明|550x300](url)`。
+ * 解析 alt 中的 `|width` 或 `|widthxheight`，返回干净 alt 与可选像素尺寸。
+ */
+export function parseObsidianImageAlt(raw: string): {
+  alt: string
+  width?: number
+  height?: number
+} {
+  const text = raw ?? ''
+  // 末尾 |W 或 |WxH（W/H 为正整数像素）
+  const m = /^(.*?)\|(\d{1,5})(?:x(\d{1,5}))?\s*$/i.exec(text)
+  if (!m) return { alt: text }
+  const width = Number(m[2])
+  if (!Number.isFinite(width) || width <= 0) return { alt: text }
+  const out: { alt: string; width?: number; height?: number } = {
+    alt: (m[1] ?? '').trimEnd(),
+    width,
+  }
+  if (m[3]) {
+    const height = Number(m[3])
+    if (Number.isFinite(height) && height > 0) out.height = height
+  }
+  return out
+}
+
 function extractMath(src: string): { text: string; pieces: MathPiece[] } {
   const pieces: MathPiece[] = []
   let text = src
@@ -149,9 +175,11 @@ export function sanitizeHtml(html: string): string {
           /\bmd-code-src\b/.test(el.getAttribute('class') || '')) ||
         (tag === 'button' && name === 'type') ||
         (tag === 'a' && ['href', 'target', 'rel'].includes(name)) ||
-        (tag === 'img' && ['src', 'alt', 'width', 'height', 'loading'].includes(name)) ||
+        (tag === 'img' &&
+          ['src', 'alt', 'width', 'height', 'loading', 'style'].includes(name)) ||
         (['td', 'th'].includes(tag) && ['colspan', 'rowspan', 'align'].includes(name)) ||
-        (name === 'style' && Boolean(el.closest('.katex')))
+        (name === 'style' &&
+          (Boolean(el.closest('.katex')) || tag === 'img'))
       if (
         !allowed ||
         name.startsWith('on') ||
@@ -388,8 +416,13 @@ function ensureRenderer() {
     const safeHref = (href || '').trim()
     if (/^\s*javascript:/i.test(safeHref)) return ''
     const t = title ? ` title="${escapeHtml(title)}"` : ''
-    const alt = escapeHtml(text || '')
-    return `<img src="${escapeHtml(safeHref)}" alt="${alt}"${t} loading="lazy" />`
+    // Obsidian 定宽：![说明|550](url) / ![|550x300](url)
+    const { alt, width, height } = parseObsidianImageAlt(text || '')
+    const w = width != null ? ` width="${width}"` : ''
+    const h = height != null ? ` height="${height}"` : ''
+    // 定宽写 width 属性 + style；容器 CSS 提供 max-width:100%，避免满宽拉伸
+    const style = width != null ? ` style="width:${width}px;height:auto"` : ''
+    return `<img src="${escapeHtml(safeHref)}" alt="${escapeHtml(alt)}"${t}${w}${h}${style} loading="lazy" />`
   }
 
   marked.use({ renderer })

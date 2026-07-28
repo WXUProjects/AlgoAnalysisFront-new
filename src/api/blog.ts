@@ -4,6 +4,7 @@ import {
   type BlogAdminArticle,
   type BlogAdminAuthor,
   type BlogAdminOverview,
+  type BlogImageUploadStatus,
   type BlogAnalytics,
   type BlogArticle,
   type BlogArticleWriteReq,
@@ -745,6 +746,7 @@ export async function listBlogAdminAuthors(params?: {
         emailNotifyEnabled: Boolean(r.emailNotifyEnabled),
         emailNotifyStrategy: str(r.emailNotifyStrategy) || undefined,
         themeId: str(r.themeId) || undefined,
+        imageUploadEnabled: Boolean(r.imageUploadEnabled),
         articleCount: num(r.articleCount),
         viewCount: num(r.viewCount),
         likeCount: num(r.likeCount),
@@ -755,6 +757,35 @@ export async function listBlogAdminAuthors(params?: {
       pageSize: num(data.pageSize, 20),
     }
   })
+}
+
+/** 站管：开关作者图片上传（又拍云） */
+export async function setBlogAuthorImageUpload(body: {
+  userId: number
+  enabled: boolean
+}): Promise<ApiResult<{ userId: number; imageUploadEnabled: boolean }>> {
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.blog.adminImageUpload,
+    body,
+  )
+  return wrapData(res, (data) => ({
+    userId: num(data.userId),
+    imageUploadEnabled: Boolean(data.imageUploadEnabled),
+  }))
+}
+
+/** 当前用户是否可上传博客图片 */
+export async function getBlogImageUploadStatus(): Promise<
+  ApiResult<BlogImageUploadStatus>
+> {
+  const res = await get<Record<string, unknown>>(
+    endpoints.user.blog.imageUploadStatus,
+  )
+  return wrapData(res, (data) => ({
+    configured: Boolean(data.configured),
+    authorized: Boolean(data.authorized),
+    enabled: Boolean(data.enabled),
+  }))
 }
 
 export async function listBlogAdminArticles(params?: {

@@ -10,9 +10,11 @@ import { toast } from 'sonner'
 import {
   createBlogArticle,
   getBlogArticle,
+  getBlogImageUploadStatus,
   listMyBlogCategories,
   updateBlogArticle,
 } from '@/api/blog'
+import { uploadImage } from '@/api/upload'
 import { useAuth } from '@/auth/AuthContext'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { Button } from '@/components/ui/button'
@@ -28,6 +30,7 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import {
+  BLOG_IMAGE_UPLOAD_ENABLED_HINT,
   BLOG_IMAGE_UPLOAD_HINT,
   isAllowedBlogImageUrl,
 } from '@/lib/blog-image'
@@ -57,10 +60,15 @@ export function BlogEditor() {
   const [password, setPassword] = useState('')
   const [categoryId, setCategoryId] = useState<string>('')
   const [categories, setCategories] = useState<BlogCategory[]>([])
+  const [imageUploadEnabled, setImageUploadEnabled] = useState(false)
+  const [coverUploading, setCoverUploading] = useState(false)
 
   useEffect(() => {
     void listMyBlogCategories().then((res) => {
       if (res.data) setCategories(res.data)
+    })
+    void getBlogImageUploadStatus().then((res) => {
+      if (res.success && res.data) setImageUploadEnabled(res.data.enabled)
     })
   }, [])
 
@@ -177,7 +185,10 @@ export function BlogEditor() {
             {isNew ? '写文章' : '编辑文章'}
           </h1>
           <p className="text-sm text-muted-foreground">
-            支持 Markdown · 实时预览 · 图片请用外链
+            支持 Markdown · 可隐藏右侧预览 ·{' '}
+            {imageUploadEnabled
+              ? '可上传/粘贴图片'
+              : '图片请用外链（未开通上传）'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -236,14 +247,51 @@ export function BlogEditor() {
           />
         </Field>
         <Field className="sm:col-span-2">
-          <FieldLabel>头图链接（可选）</FieldLabel>
-          <Input
-            value={coverUrl}
-            onChange={(e) => setCoverUrl(e.target.value)}
-            placeholder="https://…"
-          />
+          <FieldLabel>头图（可选）</FieldLabel>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              value={coverUrl}
+              onChange={(e) => setCoverUrl(e.target.value)}
+              placeholder="https://…"
+              className="min-w-[12rem] flex-1"
+            />
+            {imageUploadEnabled ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={coverUploading}
+                asChild
+              >
+                <label className="cursor-pointer">
+                  {coverUploading ? '上传中…' : '上传头图'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0]
+                      e.target.value = ''
+                      if (!f) return
+                      setCoverUploading(true)
+                      const res = await uploadImage(f, 'blog_cover')
+                      setCoverUploading(false)
+                      if (!res.success || !res.data?.url) {
+                        toast.error(res.message || '头图上传失败')
+                        return
+                      }
+                      setCoverUrl(res.data.url)
+                      toast.success('头图已上传')
+                    }}
+                  />
+                </label>
+              </Button>
+            ) : null}
+          </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            {BLOG_IMAGE_UPLOAD_HINT}
+            {imageUploadEnabled
+              ? BLOG_IMAGE_UPLOAD_ENABLED_HINT
+              : BLOG_IMAGE_UPLOAD_HINT}
           </p>
         </Field>
         <Field>
@@ -282,15 +330,23 @@ export function BlogEditor() {
         )}
       </FieldGroup>
 
-      <div className="min-h-[480px]">
+      <div className="min-h-[min(72vh,880px)]">
         <MarkdownEditor
           value={content}
           onChange={setContent}
           fullPage={false}
-          minHeight={480}
+          minHeight={Math.min(
+            typeof window !== 'undefined'
+              ? Math.round(window.innerHeight * 0.72)
+              : 720,
+            880,
+          )}
           linkOnlyImages
+          imageUploadEnabled={imageUploadEnabled}
           placeholder={
-            '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n图片请用 ![说明](https://…) 外链'
+            imageUploadEnabled
+              ? '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n可粘贴/上传图片；定宽：![说明|550](url)\n工具栏「仅编辑」可隐藏右侧预览'
+              : '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n图片请用 ![说明|550](https://…) 外链定宽\n工具栏「仅编辑」可隐藏右侧预览'
           }
         />
       </div>

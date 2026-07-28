@@ -29,6 +29,7 @@ import {
   MinusIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { uploadImage } from '@/api/upload'
 import { MarkdownBody } from '@/components/markdown-body'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -38,7 +39,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { blogImageToolbarAction } from '@/lib/blog-image'
+import {
+  blogImageToolbarAction,
+  markdownImageSnippet,
+  rejectBlogImageUpload,
+} from '@/lib/blog-image'
 import { cn } from '@/lib/utils'
 
 type PaneMode = 'split' | 'edit' | 'preview'
@@ -58,8 +63,13 @@ export type MarkdownEditorProps = {
   /**
    * 博客等场景：禁止图片上传，工具栏图片仅插入链接并提示用户。
    * 默认 false（主站题解等仍可插入 markdown 图片语法，同样无上传）。
+   * 若同时 `imageUploadEnabled`，则允许选图/粘贴上传。
    */
   linkOnlyImages?: boolean
+  /**
+   * 又拍云图片上传已授权：工具栏选图 + 粘贴图片走 `purpose=blog`。
+   */
+  imageUploadEnabled?: boolean
 }
 
 /**
@@ -98,11 +108,65 @@ export function MarkdownEditor({
   previewMode = 'markdown',
   minHeight = 320,
   linkOnlyImages = false,
+  imageUploadEnabled = false,
 }: MarkdownEditorProps) {
   const taRef = useRef<HTMLTextAreaElement>(null)
   const previewScrollRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [pane, setPane] = useState<PaneMode>('split')
+  const [uploading, setUploading] = useState(false)
   const editorId = useId()
+  const canUpload = imageUploadEnabled
+
+  const insertAtCursor = useCallback(
+    (text: string) => {
+      const el = taRef.current
+      if (!el || disabled) {
+        onChange(value + text)
+        return
+      }
+      const start = el.selectionStart
+      const end = el.selectionEnd
+      const before = value.slice(0, start)
+      const after = value.slice(end)
+      const needNl =
+        before.length > 0 && !before.endsWith('\n') ? '\n' : ''
+      const inserted = needNl + text
+      const next = before + inserted + after
+      onChange(next)
+      requestAnimationFrame(() => {
+        el.focus()
+        const pos = start + inserted.length
+        el.setSelectionRange(pos, pos)
+      })
+    },
+    [value, onChange, disabled],
+  )
+
+  const uploadAndInsert = useCallback(
+    async (file: File) => {
+      if (disabled || uploading) return
+      const gate = rejectBlogImageUpload(file, { uploadEnabled: canUpload })
+      if (!gate.ok) {
+        toast.message(gate.message)
+        return
+      }
+      if (!file.type.startsWith('image/')) {
+        toast.error('请选择图片文件')
+        return
+      }
+      setUploading(true)
+      const res = await uploadImage(file, 'blog')
+      setUploading(false)
+      if (!res.success || !res.data?.url) {
+        toast.error(res.message || '图片上传失败，请稍后重试')
+        return
+      }
+      insertAtCursor(markdownImageSnippet(res.data.url, '图片'))
+      toast.success('图片已插入')
+    },
+    [canUpload, disabled, uploading, insertAtCursor],
+  )
 
   const wrapSelection = useCallback(
     (before: string, after = before, placeholderText = '文本') => {
@@ -335,11 +399,25 @@ export function MarkdownEditor({
             <LinkIcon />
           </ToolBtn>
           <ToolBtn
-            title={linkOnlyImages ? '插入图片链接（不支持上传）' : '图片'}
-            disabled={disabled}
+            title={
+              canUpload
+                ? uploading
+                  ? '上传中…'
+                  : '上传或插入图片'
+                : linkOnlyImages
+                  ? '插入图片链接（不支持上传）'
+                  : '图片'
+            }
+            disabled={disabled || uploading}
             onClick={() => {
+              if (canUpload) {
+                fileInputRef.current?.click()
+                return
+              }
               if (linkOnlyImages) {
-                const action = blogImageToolbarAction()
+                const action = blogImageToolbarAction({
+                  uploadEnabled: false,
+                })
                 wrapSelection(
                   action.markdownSnippet.before,
                   action.markdownSnippet.after,
@@ -353,6 +431,17 @@ export function MarkdownEditor({
           >
             <ImageIcon />
           </ToolBtn>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              e.target.value = ''
+              if (f) void uploadAndInsert(f)
+            }}
+          />
           <ToolBtn
             title="行内公式"
             disabled={disabled}
@@ -431,6 +520,21 @@ export function MarkdownEditor({
                 onChange={(e) => onChange(e.target.value)}
                 onKeyDown={onKeyDown}
                 onScroll={handleEditorScroll}
+                onPaste={(e) => {
+                  if (!canUpload || disabled || uploading) return
+                  const items = e.clipboardData?.items
+                  if (!items) return
+                  for (const item of Array.from(items)) {
+                    if (item.kind === 'file' && item.type.startsWith('image/')) {
+                      const file = item.getAsFile()
+                      if (file) {
+                        e.preventDefault()
+                        void uploadAndInsert(file)
+                      }
+                      return
+                    }
+                  }
+                }}
                 disabled={disabled}
                 placeholder={placeholder}
                 spellCheck={false}

@@ -571,19 +571,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
         </div>
       </div>
 
-      {!isSite && can(Perm.OrgReportView) && (currentOrg?.id ?? 0) > 0 ? (
-        <>
-          <CoachWeekPanel
-            orgId={currentOrg!.id}
-            canInvite={can(Perm.OrgInviteView)}
-          />
-          {/* 队况 + 训练报告相邻：报告入口只此一处（组织设置不再挂） */}
-          <div id="training-report" className="scroll-mt-20">
-            <OrgTrainingReportCard orgId={currentOrg!.id} />
-          </div>
-        </>
-      ) : null}
-
+      {/* KPI + 趋势置顶：标题栏后立刻看到本期数据 */}
       <ToggleGroup
         type="single"
         value={timeRange}
@@ -657,6 +645,19 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
           )}
         </CardContent>
       </Card>
+
+      {!isSite && can(Perm.OrgReportView) && (currentOrg?.id ?? 0) > 0 ? (
+        <>
+          <CoachWeekPanel
+            orgId={currentOrg!.id}
+            canInvite={can(Perm.OrgInviteView)}
+          />
+          {/* 队况 + 训练报告相邻：报告入口只此一处（组织设置不再挂） */}
+          <div id="training-report" className="scroll-mt-20">
+            <OrgTrainingReportCard orgId={currentOrg!.id} />
+          </div>
+        </>
+      ) : null}
 
       {!isSite && (
         <div className="grid gap-4 md:grid-cols-2">

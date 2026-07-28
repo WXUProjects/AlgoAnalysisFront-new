@@ -16,6 +16,7 @@ import {
   listBlogAdminArticles,
   listBlogAdminAuthors,
   moderateBlogArticle,
+  setBlogAuthorImageUpload,
 } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -80,6 +81,7 @@ export function DashboardBlogAdmin() {
   const [articleKw, setArticleKw] = useState('')
   const [status, setStatus] = useState<string>('all')
   const [busyId, setBusyId] = useState(0)
+  const [uploadBusyId, setUploadBusyId] = useState(0)
 
   const loadOverview = useCallback(async () => {
     const res = await getBlogAdminOverview()
@@ -124,6 +126,18 @@ export function DashboardBlogAdmin() {
       loadArticles(undefined, 'all'),
     ]).finally(() => setLoading(false))
   }, [ready, canBlogAdmin, loadOverview, loadAuthors, loadArticles])
+
+  async function toggleImageUpload(userId: number, enabled: boolean) {
+    setUploadBusyId(userId)
+    const res = await setBlogAuthorImageUpload({ userId, enabled })
+    setUploadBusyId(0)
+    if (!res.success) {
+      toast.error(res.message || '设置失败')
+      return
+    }
+    toast.success(enabled ? '已开通图片上传' : '已关闭图片上传')
+    void loadAuthors(authorKw.trim() || undefined)
+  }
 
   async function moderate(
     id: number,
@@ -173,7 +187,7 @@ export function DashboardBlogAdmin() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">博客管理</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          查看开通情况与文章审核；公开文可通过后设为「精选」出现在博客广场。
+          查看开通情况与文章审核；公开文可通过后设为「精选」出现在博客广场。图片上传默认关闭，可在作者列表中单独授权。
         </p>
       </div>
 
@@ -244,6 +258,7 @@ export function DashboardBlogAdmin() {
                     <TableHead>文章</TableHead>
                     <TableHead>阅读 / 赞 / 评</TableHead>
                     <TableHead>邮件通知</TableHead>
+                    <TableHead>图片上传</TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -251,7 +266,7 @@ export function DashboardBlogAdmin() {
                   {authors.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={8}
                         className="text-center text-muted-foreground"
                       >
                         暂无开通记录
@@ -286,6 +301,28 @@ export function DashboardBlogAdmin() {
                           {a.emailNotifyEnabled
                             ? a.emailNotifyStrategy || '已开'
                             : '关'}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={
+                              a.imageUploadEnabled ? 'secondary' : 'outline'
+                            }
+                            disabled={uploadBusyId === a.userId}
+                            onClick={() =>
+                              void toggleImageUpload(
+                                a.userId,
+                                !a.imageUploadEnabled,
+                              )
+                            }
+                          >
+                            {uploadBusyId === a.userId
+                              ? '…'
+                              : a.imageUploadEnabled
+                                ? '已开通'
+                                : '未开通'}
+                          </Button>
                         </TableCell>
                         <TableCell>
                           <Button variant="ghost" size="sm" asChild>

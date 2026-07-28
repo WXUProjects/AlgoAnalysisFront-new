@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import { getBlogImageUploadStatus } from '@/api/blog'
 import {
   createProblemSolution,
   getProblemSolution,
@@ -42,6 +43,14 @@ export function ProblemSolutionEdit() {
   const [sContent, setSContent] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [imageUploadEnabled, setImageUploadEnabled] = useState(false)
+
+  useEffect(() => {
+    if (!isLogin) return
+    void getBlogImageUploadStatus().then((res) => {
+      if (res.success && res.data) setImageUploadEnabled(res.data.enabled)
+    })
+  }, [isLogin])
 
   const problemId = Number(id || 0)
   const backTo =
@@ -231,9 +240,17 @@ export function ProblemSolutionEdit() {
         onChange={setSContent}
         disabled={saving}
         previewMode="markdown"
-        minHeight={640}
+        imageUploadEnabled={imageUploadEnabled}
+        minHeight={Math.min(
+          typeof window !== 'undefined'
+            ? Math.round(window.innerHeight * 0.72)
+            : 800,
+          900,
+        )}
         placeholder={
-          '用 Markdown 写博客…\n\n## 思路\n\n支持代码块与 $公式$\n\n可用 @username 提醒他人'
+          imageUploadEnabled
+            ? '用 Markdown 写博客…\n\n## 思路\n\n支持代码块与 $公式$\n可粘贴/上传图片；定宽 ![说明|550](url)\n工具栏「仅编辑」可隐藏右侧预览\n\n可用 @username 提醒他人'
+            : '用 Markdown 写博客…\n\n## 思路\n\n支持代码块与 $公式$\n定宽图 ![说明|550](url)；工具栏「仅编辑」可隐藏预览\n\n可用 @username 提醒他人'
         }
       />
     </PageShell>

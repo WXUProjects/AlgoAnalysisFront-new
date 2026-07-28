@@ -164,6 +164,10 @@ export const endpoints = {
       adminAuthors: `${API_PREFIX}/user/blog/admin/authors`,
       adminArticles: `${API_PREFIX}/user/blog/admin/articles`,
       adminModerate: `${API_PREFIX}/user/blog/admin/moderate`,
+      /** 站管：为作者开关图片上传 { userId, enabled } */
+      adminImageUpload: `${API_PREFIX}/user/blog/admin/image-upload`,
+      /** 当前用户图片上传能力 { configured, authorized, enabled } */
+      imageUploadStatus: `${API_PREFIX}/user/blog/image-upload/status`,
       report: `${API_PREFIX}/user/blog/report`,
       /** 举报处理台（content.report.handle）：博客举报列表 / 处理 */
       reportList: `${API_PREFIX}/user/blog/report/list`,
@@ -1505,10 +1509,22 @@ export interface BlogAdminAuthor {
   emailNotifyEnabled?: boolean
   emailNotifyStrategy?: string
   themeId?: string
+  /** 是否已授权博客/题解图片上传（又拍云） */
+  imageUploadEnabled?: boolean
   articleCount: number
   viewCount: number
   likeCount: number
   commentCount: number
+}
+
+/** 当前用户博客图片上传能力 */
+export interface BlogImageUploadStatus {
+  /** 站点又拍云已配置 */
+  configured: boolean
+  /** 站管已授权该用户 */
+  authorized: boolean
+  /** configured && authorized */
+  enabled: boolean
 }
 
 export interface BlogAdminArticle {

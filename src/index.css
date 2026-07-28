@@ -620,8 +620,10 @@
 }
 
 .markdown-body img {
+  /* 默认自适应；Obsidian |N 定宽通过 width/style 生效，勿强制 width:100% */
   max-width: 100%;
   height: auto;
+  width: auto;
 }
 
 .markdown-body .katex {
