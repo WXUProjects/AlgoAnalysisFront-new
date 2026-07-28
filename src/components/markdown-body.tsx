@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import 'katex/dist/katex.min.css'
 import { MarkdownImageLightbox } from '@/components/markdown-image-lightbox'
+import type { ImageLayoutPatch } from '@/lib/blog-image'
 import { cn } from '@/lib/utils'
 import { bindMarkdownCodeCopy } from '@/lib/markdown-code-copy'
 import {
@@ -30,9 +31,11 @@ type MarkdownBodyProps = {
   /** 点击图片放大（博客正文默认开） */
   enableLightbox?: boolean
   /**
-   * 预览区拖拽调整图片宽度（写入 Markdown `![alt|W](url)`）。
-   * 传入时启用右下角拖拽手柄。
+   * 预览区悬停工具条：对齐 / 百分比 / 拖拽改宽。
+   * 写入 Markdown `![alt|50%|center](url)` 等。
    */
+  onImageLayoutChange?: (src: string, patch: ImageLayoutPatch) => void
+  /** @deprecated 使用 onImageLayoutChange */
   onImageWidthChange?: (src: string, widthPx: number) => void
 }
 
@@ -46,6 +49,7 @@ export function MarkdownBody({
   className,
   emptyText = '暂无内容',
   enableLightbox = false,
+  onImageLayoutChange,
   onImageWidthChange,
 }: MarkdownBodyProps) {
   const rootRef = useRef<HTMLDivElement>(null)
@@ -54,6 +58,21 @@ export function MarkdownBody({
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [lightboxAlt, setLightboxAlt] = useState('')
   const [lightboxOpen, setLightboxOpen] = useState(false)
+
+  const handleLayout = useCallback(
+    (src: string, patch: ImageLayoutPatch) => {
+      if (onImageLayoutChange) {
+        onImageLayoutChange(src, patch)
+        return
+      }
+      if (onImageWidthChange && patch.widthPx != null && patch.widthPx > 0) {
+        onImageWidthChange(src, patch.widthPx)
+      }
+    },
+    [onImageLayoutChange, onImageWidthChange],
+  )
+
+  const layoutEnabled = Boolean(onImageLayoutChange || onImageWidthChange)
 
   useEffect(() => {
     if (!content) {
@@ -97,14 +116,14 @@ export function MarkdownBody({
     })
   }, [html, enableLightbox])
 
-  // 预览拖拽改宽
+  // 预览布局工具条
   useEffect(() => {
     const root = rootRef.current
-    if (!root || !html || !onImageWidthChange) return
+    if (!root || !html || !layoutEnabled) return
     return bindMarkdownImageResize(root, {
-      onWidthChange: onImageWidthChange,
+      onLayoutChange: handleLayout,
     })
-  }, [html, onImageWidthChange])
+  }, [html, layoutEnabled, handleLayout])
 
   if (!content?.trim()) {
     return (

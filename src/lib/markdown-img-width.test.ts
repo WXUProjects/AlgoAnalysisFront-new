@@ -1,5 +1,5 @@
 /**
- * Obsidian |width 图片定宽：解析 + 真实 renderMarkdown 路径。
+ * 图片尺寸 / 对齐：解析 + renderMarkdown。
  * Run: npx tsx --test src/lib/markdown-img-width.test.ts
  */
 import { describe, it } from 'node:test'
@@ -46,6 +46,22 @@ describe('parseObsidianImageAlt', () => {
     assert.equal(wh.height, 300)
   })
 
+  it('parses percent and align in any order', () => {
+    const a = md.parseObsidianImageAlt('说明|50%|center')
+    assert.equal(a.alt, '说明')
+    assert.equal(a.widthPercent, 50)
+    assert.equal(a.align, 'center')
+    assert.equal(a.width, undefined)
+
+    const b = md.parseObsidianImageAlt('图|center|75%')
+    assert.equal(b.widthPercent, 75)
+    assert.equal(b.align, 'center')
+
+    const c = md.parseObsidianImageAlt('图|居中')
+    assert.equal(c.align, 'center')
+    assert.equal(c.alt, '图')
+  })
+
   it('leaves normal alt alone', () => {
     assert.deepEqual(md.parseObsidianImageAlt('普通说明'), {
       alt: '普通说明',
@@ -54,9 +70,25 @@ describe('parseObsidianImageAlt', () => {
       alt: 'a|notanum',
     })
   })
+
+  it('formatObsidianImageAlt round-trips', () => {
+    assert.equal(
+      md.formatObsidianImageAlt({
+        alt: '图',
+        widthPercent: 50,
+        align: 'center',
+      }),
+      '图|50%|center',
+    )
+    assert.equal(
+      md.formatObsidianImageAlt({ alt: '图', width: 400 }),
+      '图|400',
+    )
+    assert.equal(md.formatObsidianImageAlt({ alt: '图', align: 'left' }), '图')
+  })
 })
 
-describe('renderMarkdown Obsidian image width', () => {
+describe('renderMarkdown image layout', () => {
   it('emits width attr and style for ![说明|550](url)', () => {
     const html = md.renderMarkdown(
       '![单调队列|550](https://example.com/a.webp)',
@@ -69,8 +101,22 @@ describe('renderMarkdown Obsidian image width', () => {
     assert.doesNotMatch(img.getAttribute('alt') || '', /\|550/)
     const style = img.getAttribute('style') || ''
     assert.match(style, /width:\s*550px/)
-    // max-width 由 .markdown-body img CSS 约束，sanitize 后 style 仅保留 width
     assert.equal(img.getAttribute('src'), 'https://example.com/a.webp')
+    const block = doc.querySelector('.md-img-block')
+    assert.ok(block)
+    assert.ok(block?.classList.contains('md-img-align-left'))
+  })
+
+  it('supports percent + center', () => {
+    const html = md.renderMarkdown(
+      '![图|50%|center](https://example.com/c.png)',
+    )
+    const doc = new JSDOM(html).window.document
+    const img = doc.querySelector('img')
+    assert.equal(img?.getAttribute('data-md-wpct'), '50')
+    assert.match(img?.getAttribute('style') || '', /50%/)
+    const block = doc.querySelector('.md-img-block')
+    assert.ok(block?.classList.contains('md-img-align-center'))
   })
 
   it('supports ![|550](url) and does not force width without |N', () => {
@@ -92,7 +138,6 @@ describe('renderMarkdown Obsidian image width', () => {
     const img = new JSDOM(html).window.document.querySelector('img')
     assert.equal(img?.getAttribute('width'), '400')
     assert.equal(img?.getAttribute('height'), '200')
-    // sanitize 允许 img style 中的 width/max-width/height
     assert.match(img?.getAttribute('style') || '', /400px/)
   })
 })

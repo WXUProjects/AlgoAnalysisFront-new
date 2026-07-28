@@ -25,7 +25,7 @@ describe('editor layout (blog + solution)', () => {
     assert.match(src, /onPaste/)
     assert.match(src, /purpose.*blog|uploadImage\(file, 'blog'\)/)
     assert.match(src, /multiple/)
-    assert.match(src, /resizableImages|setMarkdownImageWidth/)
+    assert.match(src, /resizableImages|updateMarkdownImageLayout|setMarkdownImageWidth/)
     assert.match(src, /全屏|fullscreen|Maximize2Icon/)
   })
 

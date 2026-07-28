@@ -3,11 +3,20 @@
  * Pure helpers — unit-tested, used by Markdown editor + cover field.
  */
 
+import {
+  formatObsidianImageAlt,
+  parseObsidianImageAlt,
+  type MarkdownImageAlign,
+  type MarkdownImageLayout,
+} from '@/lib/markdown'
+
+export type { MarkdownImageAlign, MarkdownImageLayout }
+
 export const BLOG_IMAGE_UPLOAD_HINT =
   '暂不支持上传图片，请插入图片链接，例如：![说明](https://example.com/pic.png)'
 
 export const BLOG_IMAGE_UPLOAD_ENABLED_HINT =
-  '可粘贴或点工具栏上传图片；也支持外链。定宽写法：![说明|550](url)'
+  '可粘贴或点工具栏上传图片；也支持外链。定宽/居中：![说明|50%|center](url) 或 ![说明|550](url)'
 
 /** Whether a cover/image value is an allowed external http(s) URL. */
 export function isAllowedBlogImageUrl(value: string): boolean {
@@ -62,18 +71,24 @@ export function rejectBlogImageUpload(
   return { ok: false, message: BLOG_IMAGE_UPLOAD_HINT }
 }
 
-/** Build markdown image line; optional Obsidian width. */
+/** Build markdown image line; optional pixel / percent / align. */
 export function markdownImageSnippet(
   url: string,
   alt = '图片',
-  width?: number,
+  widthOrLayout?: number | Partial<Omit<MarkdownImageLayout, 'alt'>>,
 ): string {
   const safeUrl = (url || '').trim()
   const safeAlt = (alt || '图片').replace(/[[\]]/g, '')
-  if (width && width > 0) {
-    return `![${safeAlt}|${Math.round(width)}](${safeUrl})`
+  if (widthOrLayout == null) {
+    return `![${safeAlt}](${safeUrl})`
   }
-  return `![${safeAlt}](${safeUrl})`
+  if (typeof widthOrLayout === 'number') {
+    if (widthOrLayout > 0) {
+      return `![${formatObsidianImageAlt({ alt: safeAlt, width: widthOrLayout })}](${safeUrl})`
+    }
+    return `![${safeAlt}](${safeUrl})`
+  }
+  return `![${formatObsidianImageAlt({ alt: safeAlt, ...widthOrLayout })}](${safeUrl})`
 }
 
 /** Markdown image token: ![alt|WxH?](url) — factory avoids global lastIndex bugs. */
@@ -123,14 +138,23 @@ export function isImageUsedInArticle(
   return (content || '').includes(u)
 }
 
+export type ImageLayoutPatch = {
+  /** 像素宽；null 清除像素与百分比 */
+  widthPx?: number | null
+  /** 百分比 1–100；设置后清除像素宽 */
+  widthPercent?: number | null
+  /** left 视为默认（不写修饰符） */
+  align?: MarkdownImageAlign | null
+}
+
 /**
- * Rewrite width for the first markdown image whose URL equals `url`.
- * Uses Obsidian `![alt|W](url)` form; clears width when width <= 0.
+ * 更新正文中第一个匹配 url 的图片修饰（宽/百分比/对齐）。
+ * patch 字段未传则保留原值。
  */
-export function setMarkdownImageWidth(
+export function updateMarkdownImageLayout(
   content: string,
   url: string,
-  width: number,
+  patch: ImageLayoutPatch,
 ): string {
   const target = (url || '').trim()
   if (!target || !content) return content
@@ -139,12 +163,47 @@ export function setMarkdownImageWidth(
     if (replaced) return full
     if ((href || '').trim() !== target) return full
     replaced = true
-    const altBase = String(altRaw ?? '').replace(/\|\d{1,5}(?:x\d{1,5})?\s*$/i, '')
-    const w = Math.round(width)
-    if (w > 0) {
-      return `![${altBase}|${w}](${href})`
+    const cur = parseObsidianImageAlt(String(altRaw ?? ''))
+    const next: MarkdownImageLayout = { alt: cur.alt }
+
+    if (patch.widthPercent !== undefined) {
+      if (patch.widthPercent != null && patch.widthPercent > 0) {
+        next.widthPercent = Math.min(100, Math.round(patch.widthPercent))
+      }
+      // null → clear size
+    } else if (patch.widthPx !== undefined) {
+      if (patch.widthPx != null && patch.widthPx > 0) {
+        next.width = Math.round(patch.widthPx)
+        if (cur.height) next.height = cur.height
+      }
+    } else {
+      if (cur.widthPercent != null) next.widthPercent = cur.widthPercent
+      else if (cur.width != null) {
+        next.width = cur.width
+        if (cur.height) next.height = cur.height
+      }
     }
-    return `![${altBase}](${href})`
+
+    if (patch.align !== undefined) {
+      if (patch.align && patch.align !== 'left') next.align = patch.align
+      // left / null → omit
+    } else if (cur.align && cur.align !== 'left') {
+      next.align = cur.align
+    }
+
+    const altStr = formatObsidianImageAlt(next)
+    return `![${altStr}](${href})`
+  })
+}
+
+/** @deprecated use updateMarkdownImageLayout */
+export function setMarkdownImageWidth(
+  content: string,
+  url: string,
+  width: number,
+): string {
+  return updateMarkdownImageLayout(content, url, {
+    widthPx: width > 0 ? width : null,
   })
 }
 

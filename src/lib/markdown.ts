@@ -21,30 +21,127 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
-/**
- * Obsidian 风格图片尺寸：`![说明|550](url)` / `![|550](url)` / `![说明|550x300](url)`。
- * 解析 alt 中的 `|width` 或 `|widthxheight`，返回干净 alt 与可选像素尺寸。
- */
-export function parseObsidianImageAlt(raw: string): {
+/** 图片对齐：默认 left（不写进 markdown）；center / right 可显式设置。 */
+export type MarkdownImageAlign = 'left' | 'center' | 'right'
+
+export type MarkdownImageLayout = {
   alt: string
+  /** 像素宽（与 widthPercent 互斥，优先 percent） */
   width?: number
   height?: number
-} {
+  /** 相对容器的宽度百分比 1–100 */
+  widthPercent?: number
+  /** 默认 left，不输出修饰符 */
+  align?: MarkdownImageAlign
+}
+
+const ALIGN_TOKENS: Record<string, MarkdownImageAlign> = {
+  left: 'left',
+  l: 'left',
+  左: 'left',
+  居左: 'left',
+  center: 'center',
+  c: 'center',
+  中: 'center',
+  居中: 'center',
+  middle: 'center',
+  right: 'right',
+  r: 'right',
+  右: 'right',
+  居右: 'right',
+}
+
+/**
+ * Obsidian 风格图片修饰：
+ * - `![说明|550](url)` / `![|550x300](url)` 像素
+ * - `![说明|50%](url)` 百分比
+ * - `![说明|center](url)` / `![说明|50%|center](url)` 对齐
+ * 多段 `|` 顺序不限；未知段保留进 alt 主体（兼容旧文）。
+ */
+export function parseObsidianImageAlt(raw: string): MarkdownImageLayout {
   const text = raw ?? ''
-  // 末尾 |W 或 |WxH（W/H 为正整数像素）
-  const m = /^(.*?)\|(\d{1,5})(?:x(\d{1,5}))?\s*$/i.exec(text)
-  if (!m) return { alt: text }
-  const width = Number(m[2])
-  if (!Number.isFinite(width) || width <= 0) return { alt: text }
-  const out: { alt: string; width?: number; height?: number } = {
-    alt: (m[1] ?? '').trimEnd(),
-    width,
+  if (!text.includes('|')) return { alt: text }
+
+  const parts = text.split('|').map((p) => p.trim())
+  // 第一段始终是说明文字（可为空）
+  const altParts: string[] = [parts[0] ?? '']
+  let width: number | undefined
+  let height: number | undefined
+  let widthPercent: number | undefined
+  let align: MarkdownImageAlign | undefined
+
+  for (let i = 1; i < parts.length; i++) {
+    const tok = parts[i] ?? ''
+    if (!tok) continue
+
+    const alignHit = ALIGN_TOKENS[tok.toLowerCase()]
+    if (alignHit) {
+      align = alignHit
+      continue
+    }
+
+    const pct = /^(\d{1,3})\s*%$/.exec(tok)
+    if (pct) {
+      const n = Number(pct[1])
+      if (Number.isFinite(n) && n > 0 && n <= 100) {
+        widthPercent = n
+        width = undefined
+        height = undefined
+      }
+      continue
+    }
+
+    const wh = /^(\d{1,5})(?:x(\d{1,5}))?$/i.exec(tok)
+    if (wh) {
+      const w = Number(wh[1])
+      if (Number.isFinite(w) && w > 0) {
+        width = w
+        widthPercent = undefined
+        if (wh[2]) {
+          const h = Number(wh[2])
+          if (Number.isFinite(h) && h > 0) height = h
+          else height = undefined
+        } else {
+          height = undefined
+        }
+      }
+      continue
+    }
+
+    // 无法识别的段并回 alt（少见）
+    altParts.push(tok)
   }
-  if (m[3]) {
-    const height = Number(m[3])
-    if (Number.isFinite(height) && height > 0) out.height = height
+
+  const out: MarkdownImageLayout = {
+    alt: altParts.join('|').trimEnd(),
   }
+  if (widthPercent != null) out.widthPercent = widthPercent
+  else if (width != null) {
+    out.width = width
+    if (height != null) out.height = height
+  }
+  if (align) out.align = align
   return out
+}
+
+/** 把 layout 写回 `alt|mods` 字符串（不含 ![]()）。 */
+export function formatObsidianImageAlt(layout: MarkdownImageLayout): string {
+  const base = (layout.alt || '').replace(/\|/g, ' ').trim()
+  const mods: string[] = []
+  if (layout.widthPercent != null && layout.widthPercent > 0) {
+    mods.push(`${Math.round(Math.min(100, layout.widthPercent))}%`)
+  } else if (layout.width != null && layout.width > 0) {
+    if (layout.height != null && layout.height > 0) {
+      mods.push(`${Math.round(layout.width)}x${Math.round(layout.height)}`)
+    } else {
+      mods.push(String(Math.round(layout.width)))
+    }
+  }
+  if (layout.align && layout.align !== 'left') {
+    mods.push(layout.align)
+  }
+  if (!mods.length) return base
+  return base ? `${base}|${mods.join('|')}` : `|${mods.join('|')}`
 }
 
 function extractMath(src: string): { text: string; pieces: MathPiece[] } {
@@ -179,11 +276,18 @@ export function sanitizeHtml(html: string): string {
           ['src', 'alt', 'width', 'height', 'loading', 'style'].includes(name)) ||
         (['td', 'th'].includes(tag) && ['colspan', 'rowspan', 'align'].includes(name)) ||
         (name === 'style' &&
-          (Boolean(el.closest('.katex')) || tag === 'img'))
+          (Boolean(el.closest('.katex')) ||
+            tag === 'img' ||
+            (tag === 'span' && /\bmd-img-block\b/.test(el.getAttribute('class') || '')))) ||
+        // 图片布局元数据（预览工具条读写）
+        (['img', 'span'].includes(tag) &&
+          ['data-md-align', 'data-md-w', 'data-md-wpct', 'data-md-img'].includes(name))
       if (
         !allowed ||
         name.startsWith('on') ||
-        (name.startsWith('data-') && name !== 'data-copy-text')
+        (name.startsWith('data-') &&
+          name !== 'data-copy-text' &&
+          !['data-md-align', 'data-md-w', 'data-md-wpct', 'data-md-img'].includes(name))
       ) {
         el.removeAttribute(attr.name)
       }
@@ -209,8 +313,10 @@ export function sanitizeHtml(html: string): string {
       const safeDeclarations = declarations.filter((declaration) => {
         const [property, ...rest] = declaration.split(':')
         const value = rest.join(':').trim().toLowerCase()
-        const safeProperty = /^(height|width|min-width|top|left|margin(?:-right)?|vertical-align|font-size|position)$/
-        const safeValue = /^-?(?:\d+|\d*\.\d+)(?:em|ex|rem|px|%)?$|^relative$/
+        const safeProperty =
+          /^(height|width|max-width|min-width|top|left|margin(?:-(?:left|right|top|bottom))?|vertical-align|font-size|position|display)$/
+        const safeValue =
+          /^-?(?:\d+|\d*\.\d+)(?:em|ex|rem|px|%)?$|^(?:relative|block|inline-block|flex)$/
         return safeProperty.test(property.trim().toLowerCase()) && safeValue.test(value)
       })
       if (safeDeclarations.length) el.setAttribute('style', safeDeclarations.join(';'))
@@ -416,13 +522,35 @@ function ensureRenderer() {
     const safeHref = (href || '').trim()
     if (/^\s*javascript:/i.test(safeHref)) return ''
     const t = title ? ` title="${escapeHtml(title)}"` : ''
-    // Obsidian 定宽：![说明|550](url) / ![|550x300](url)
-    const { alt, width, height } = parseObsidianImageAlt(text || '')
-    const w = width != null ? ` width="${width}"` : ''
-    const h = height != null ? ` height="${height}"` : ''
-    // 定宽写 width 属性 + style；容器 CSS 提供 max-width:100%，避免满宽拉伸
-    const style = width != null ? ` style="width:${width}px;height:auto"` : ''
-    return `<img src="${escapeHtml(safeHref)}" alt="${escapeHtml(alt)}"${t}${w}${h}${style} loading="lazy" />`
+    // ![说明|550] / ![说明|50%] / ![说明|50%|center]
+    const layout = parseObsidianImageAlt(text || '')
+    const { alt, width, height, widthPercent, align } = layout
+    const w = width != null && widthPercent == null ? ` width="${width}"` : ''
+    const h = height != null && widthPercent == null ? ` height="${height}"` : ''
+    const styleParts: string[] = []
+    if (widthPercent != null) {
+      styleParts.push(`width:${widthPercent}%`, 'height:auto', 'max-width:100%')
+    } else if (width != null) {
+      styleParts.push(`width:${width}px`, 'height:auto')
+    }
+    const style = styleParts.length
+      ? ` style="${styleParts.join(';')}"`
+      : ''
+    const dataAlign =
+      align && align !== 'left' ? ` data-md-align="${align}"` : ''
+    const dataW =
+      width != null && widthPercent == null ? ` data-md-w="${width}"` : ''
+    const dataPct =
+      widthPercent != null ? ` data-md-wpct="${widthPercent}"` : ''
+    const alignClass =
+      align === 'center'
+        ? ' md-img-align-center'
+        : align === 'right'
+          ? ' md-img-align-right'
+          : ' md-img-align-left'
+    const img = `<img src="${escapeHtml(safeHref)}" alt="${escapeHtml(alt)}"${t}${w}${h}${style}${dataAlign}${dataW}${dataPct} loading="lazy" />`
+    // 包一层便于对齐 + 预览工具条挂载（默认左对齐，不强制居中）
+    return `<span class="md-img-block${alignClass}" data-md-img="1">${img}</span>`
   }
 
   marked.use({ renderer })

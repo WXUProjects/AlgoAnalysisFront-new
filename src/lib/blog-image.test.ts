@@ -9,6 +9,7 @@ import {
   markdownImageSnippet,
   rejectBlogImageUpload,
   setMarkdownImageWidth,
+  updateMarkdownImageLayout,
 } from './blog-image.ts'
 
 describe('blog image policy', () => {
@@ -78,6 +79,19 @@ describe('blog image policy', () => {
       0,
     )
     assert.equal(cleared, '![图](https://x/a.webp)')
+  })
+
+  it('updateMarkdownImageLayout sets percent and center', () => {
+    const base = '![图|400](https://x/a.webp)'
+    const centered = updateMarkdownImageLayout(base, 'https://x/a.webp', {
+      align: 'center',
+      widthPercent: 50,
+    })
+    assert.equal(centered, '![图|50%|center](https://x/a.webp)')
+    const left = updateMarkdownImageLayout(centered, 'https://x/a.webp', {
+      align: 'left',
+    })
+    assert.equal(left, '![图|50%](https://x/a.webp)')
   })
 
   it('isImageUsedInArticle checks content and cover', () => {

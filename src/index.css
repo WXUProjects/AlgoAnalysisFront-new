@@ -620,13 +620,36 @@
 }
 
 .markdown-body img {
-  /* 默认居中自适应；Obsidian |N 定宽通过 width/style 生效，勿强制 width:100% */
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
+  /* 默认不居中；可用 |center 或预览工具条设置 */
   max-width: 100%;
   height: auto;
   width: auto;
+}
+
+/* 渲染器包一层：对齐 + 预览工具条宿主 */
+.markdown-body .md-img-block {
+  display: flex;
+  max-width: 100%;
+  margin: 0.5em 0;
+  position: relative;
+}
+
+.markdown-body .md-img-block > img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-body .md-img-align-left {
+  justify-content: flex-start;
+}
+
+.markdown-body .md-img-align-center {
+  justify-content: center;
+}
+
+.markdown-body .md-img-align-right {
+  justify-content: flex-end;
 }
 
 /* 正文图可点击放大 */
@@ -634,26 +657,18 @@
   cursor: zoom-in;
 }
 
-/* 预览区可拖拽改宽 */
+/* 预览区：悬停工具条 + 拖拽改宽 */
 .markdown-body .md-img-resize-wrap {
   position: relative;
-  display: block;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.markdown-body .md-img-resize-wrap > img {
-  margin-left: 0;
-  margin-right: 0;
 }
 
 .markdown-body .md-img-resize-handle {
   position: absolute;
   right: 0;
   bottom: 0;
-  z-index: 2;
+  z-index: 3;
   width: 14px;
   height: 14px;
   box-sizing: border-box;
@@ -662,22 +677,23 @@
   background: color-mix(in srgb, var(--background) 85%, var(--primary));
   cursor: nwse-resize;
   touch-action: none;
-  opacity: 0.85;
+  opacity: 0;
 }
 
 .markdown-body .md-img-resize-wrap:hover .md-img-resize-handle,
-.markdown-body .md-img-resize-wrap:focus-within .md-img-resize-handle {
+.markdown-body .md-img-resize-wrap:focus-within .md-img-resize-handle,
+.markdown-body .md-img-resize-wrap[data-resizing='true'] .md-img-resize-handle {
   opacity: 1;
 }
 
 .markdown-body .md-img-resize-badge {
   position: absolute;
   right: 0;
-  top: 0;
+  bottom: 18px;
   z-index: 2;
   padding: 1px 6px;
-  border-radius: 0 0 0 6px;
-  background: color-mix(in srgb, var(--background) 88%, transparent);
+  border-radius: 4px 0 0 0;
+  background: color-mix(in srgb, var(--background) 92%, transparent);
   color: var(--muted-foreground);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
@@ -689,6 +705,69 @@
 .markdown-body .md-img-resize-wrap:hover .md-img-resize-badge,
 .markdown-body .md-img-resize-wrap[data-resizing='true'] .md-img-resize-badge {
   opacity: 1;
+}
+
+.markdown-body .md-img-toolbar {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: calc(100% - 8px);
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--background) 94%, transparent);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--foreground) 12%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -110%);
+  transition: opacity 0.12s ease;
+}
+
+.markdown-body .md-img-resize-wrap:hover .md-img-toolbar,
+.markdown-body .md-img-resize-wrap:focus-within .md-img-toolbar,
+.markdown-body .md-img-resize-wrap[data-resizing='true'] .md-img-toolbar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.markdown-body .md-img-tb-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding-right: 4px;
+  border-right: 1px solid var(--border);
+}
+
+.markdown-body .md-img-tb-group:last-child {
+  padding-right: 0;
+  border-right: none;
+}
+
+.markdown-body .md-img-tb-btn {
+  height: 24px;
+  min-width: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.markdown-body .md-img-tb-btn:hover {
+  background: var(--muted);
+}
+
+.markdown-body .md-img-tb-btn.is-active {
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
 }
 
 .markdown-body .katex {

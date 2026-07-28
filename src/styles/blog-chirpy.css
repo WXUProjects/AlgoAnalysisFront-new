@@ -933,14 +933,29 @@
 }
 
 .chirpy-prose img {
-  /* 默认居中；勿 width:100%，否则 ![说明|550] 定宽会被拉满 */
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
+  /* 默认不居中；|center 或 md-img-align-* 控制；勿 width:100% */
   max-width: 100%;
   height: auto;
   width: auto;
   border-radius: 0.35rem;
+}
+
+.chirpy-prose .md-img-block {
+  display: flex;
+  max-width: 100%;
+  margin: 0.75rem 0;
+}
+
+.chirpy-prose .md-img-align-left {
+  justify-content: flex-start;
+}
+
+.chirpy-prose .md-img-align-center {
+  justify-content: center;
+}
+
+.chirpy-prose .md-img-align-right {
+  justify-content: flex-end;
 }
 
 .chirpy-prose pre {

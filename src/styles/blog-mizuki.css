@@ -783,13 +783,28 @@
 }
 
 .mz-prose img {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
   max-width: 100%;
   height: auto;
   width: auto;
   border-radius: 0.35rem;
+}
+
+.mz-prose .md-img-block {
+  display: flex;
+  max-width: 100%;
+  margin: 0.75rem 0;
+}
+
+.mz-prose .md-img-align-left {
+  justify-content: flex-start;
+}
+
+.mz-prose .md-img-align-center {
+  justify-content: center;
+}
+
+.mz-prose .md-img-align-right {
+  justify-content: flex-end;
 }
 
 .mz-section-card {

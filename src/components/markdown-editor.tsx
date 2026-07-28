@@ -47,8 +47,9 @@ import {
   blogImageToolbarAction,
   markdownImageSnippet,
   rejectBlogImageUpload,
-  setMarkdownImageWidth,
+  updateMarkdownImageLayout,
   type BlogSessionImage,
+  type ImageLayoutPatch,
 } from '@/lib/blog-image'
 import { cn } from '@/lib/utils'
 
@@ -273,9 +274,9 @@ export function MarkdownEditor({
     [disabled, uploadOne],
   )
 
-  const handleImageWidthChange = useCallback(
-    (src: string, widthPx: number) => {
-      const next = setMarkdownImageWidth(value, src, widthPx)
+  const handleImageLayoutChange = useCallback(
+    (src: string, patch: ImageLayoutPatch) => {
+      const next = updateMarkdownImageLayout(value, src, patch)
       if (next !== value) onChange(next)
     },
     [value, onChange],
@@ -726,8 +727,8 @@ export function MarkdownEditor({
                   emptyText="预览将显示在这里"
                   className="text-sm"
                   enableLightbox={previewLightbox}
-                  onImageWidthChange={
-                    resizableImages ? handleImageWidthChange : undefined
+                  onImageLayoutChange={
+                    resizableImages ? handleImageLayoutChange : undefined
                   }
                 />
               </div>
