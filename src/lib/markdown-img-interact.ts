@@ -1,5 +1,8 @@
 /**
- * Markdown image interactions: click-to-zoom + preview hover layout toolbar.
+ * Markdown image interactions: click-to-zoom + preview layout toolbar.
+ *
+ * 工具条叠在图片内侧（不悬空到框外），避免移入控件时丢失 hover。
+ * 布局变更先改 DOM，离开图片后再写回 Markdown，避免重渲染打断操作。
  */
 
 import type { ImageLayoutPatch } from '@/lib/blog-image'
@@ -54,11 +57,13 @@ export function bindMarkdownImageLightbox(
 }
 
 export type ImageLayoutBindOptions = {
-  /** 提交布局变更到 Markdown 源码 */
+  /** 提交布局变更到 Markdown 源码（建议在 pointer 离开后再触发） */
   onLayoutChange: (src: string, patch: ImageLayoutPatch) => void
   minWidth?: number
   maxWidth?: number
 }
+
+type SizeMode = 'percent' | 'px'
 
 type ReadLayout = {
   align: MarkdownImageAlign
@@ -132,14 +137,32 @@ function applyLiveSize(
     const w = Math.round(opts.widthPx)
     img.style.width = `${w}px`
     img.style.height = 'auto'
+    img.style.maxWidth = '100%'
     img.setAttribute('width', String(w))
     img.setAttribute('data-md-w', String(w))
     img.removeAttribute('data-md-wpct')
   }
 }
 
+function clearLiveSize(img: HTMLImageElement) {
+  img.style.width = ''
+  img.style.height = ''
+  img.style.maxWidth = ''
+  img.removeAttribute('width')
+  img.removeAttribute('height')
+  img.removeAttribute('data-md-w')
+  img.removeAttribute('data-md-wpct')
+}
+
+function mergePatch(
+  base: ImageLayoutPatch,
+  next: ImageLayoutPatch,
+): ImageLayoutPatch {
+  return { ...base, ...next }
+}
+
 /**
- * 预览区：悬停显示对齐 / 百分比 / 拖拽改宽工具条。
+ * 预览区：悬停显示对齐 / 百分比·定宽 / 拖拽改宽工具条。
  */
 export function bindMarkdownImageResize(
   root: HTMLElement,
@@ -154,10 +177,8 @@ export function bindMarkdownImageResize(
   )
 
   for (const img of imgs) {
-    // 已有工具条包装则跳过
     if (img.closest(`.${WRAP_CLASS}`)) continue
 
-    // 优先用渲染器输出的 md-img-block
     let host: HTMLElement
     const block = img.closest(`.${BLOCK_CLASS}`)
     if (block instanceof HTMLElement) {
@@ -175,6 +196,16 @@ export function bindMarkdownImageResize(
 
     const layout0 = readLayout(img, host)
     applyAlignClass(host, layout0.align)
+
+    let sizeMode: SizeMode =
+      layout0.widthPercent != null
+        ? 'percent'
+        : layout0.widthPx != null
+          ? 'px'
+          : 'percent'
+    let pending: ImageLayoutPatch = {}
+    let leaveTimer: number | null = null
+    let pinned = false
 
     const toolbar = document.createElement('div')
     toolbar.className = TOOLBAR_CLASS
@@ -204,21 +235,21 @@ export function bindMarkdownImageResize(
       mkBtn('右', '靠右', { 'data-act': 'align', 'data-val': 'right' }),
     )
 
-    const pctGroup = document.createElement('div')
-    pctGroup.className = 'md-img-tb-group'
-    for (const p of [25, 50, 75, 100]) {
-      pctGroup.append(
-        mkBtn(`${p}%`, `宽度 ${p}%`, {
-          'data-act': 'pct',
-          'data-val': String(p),
-        }),
-      )
-    }
+    const modeGroup = document.createElement('div')
+    modeGroup.className = 'md-img-tb-group'
+    modeGroup.append(
+      mkBtn('%', '按百分比缩放', { 'data-act': 'mode', 'data-val': 'percent' }),
+      mkBtn('px', '按定宽缩放', { 'data-act': 'mode', 'data-val': 'px' }),
+    )
+
+    const sizeGroup = document.createElement('div')
+    sizeGroup.className = 'md-img-tb-group'
+    sizeGroup.setAttribute('data-role', 'size-presets')
 
     const extraGroup = document.createElement('div')
     extraGroup.className = 'md-img-tb-group'
     extraGroup.append(
-      mkBtn('自定义%', '输入百分比宽度', { 'data-act': 'pct-custom' }),
+      mkBtn('自定义', '输入自定义宽度', { 'data-act': 'size-custom' }),
       mkBtn('原图', '清除尺寸（自适应）', { 'data-act': 'size-clear' }),
     )
 
@@ -226,7 +257,7 @@ export function bindMarkdownImageResize(
     badge.className = BADGE_CLASS
     badge.setAttribute('aria-hidden', 'true')
 
-    toolbar.append(alignGroup, pctGroup, extraGroup)
+    toolbar.append(alignGroup, modeGroup, sizeGroup, extraGroup)
     host.appendChild(toolbar)
     host.appendChild(badge)
 
@@ -236,6 +267,30 @@ export function bindMarkdownImageResize(
     handle.setAttribute('aria-label', '拖动调整图片宽度')
     handle.tabIndex = 0
     host.appendChild(handle)
+
+    const rebuildSizePresets = () => {
+      sizeGroup.replaceChildren()
+      if (sizeMode === 'percent') {
+        for (const p of [25, 50, 75, 100]) {
+          sizeGroup.append(
+            mkBtn(`${p}%`, `宽度 ${p}%`, {
+              'data-act': 'pct',
+              'data-val': String(p),
+            }),
+          )
+        }
+      } else {
+        for (const w of [300, 400, 550, 800]) {
+          sizeGroup.append(
+            mkBtn(`${w}`, `定宽 ${w}px`, {
+              'data-act': 'px',
+              'data-val': String(w),
+            }),
+          )
+        }
+      }
+    }
+    rebuildSizePresets()
 
     const syncBadge = () => {
       const L = readLayout(img, host)
@@ -248,23 +303,86 @@ export function bindMarkdownImageResize(
     const syncActive = () => {
       const L = readLayout(img, host)
       toolbar.querySelectorAll('[data-act="align"]').forEach((el) => {
-        const on = el.getAttribute('data-val') === L.align
-        el.classList.toggle('is-active', on)
+        el.classList.toggle('is-active', el.getAttribute('data-val') === L.align)
+      })
+      toolbar.querySelectorAll('[data-act="mode"]').forEach((el) => {
+        el.classList.toggle(
+          'is-active',
+          el.getAttribute('data-val') === sizeMode,
+        )
       })
       toolbar.querySelectorAll('[data-act="pct"]').forEach((el) => {
-        const on =
+        el.classList.toggle(
+          'is-active',
           L.widthPercent != null &&
-          String(L.widthPercent) === el.getAttribute('data-val')
-        el.classList.toggle('is-active', on)
+            String(L.widthPercent) === el.getAttribute('data-val'),
+        )
+      })
+      toolbar.querySelectorAll('[data-act="px"]').forEach((el) => {
+        el.classList.toggle(
+          'is-active',
+          L.widthPx != null && String(L.widthPx) === el.getAttribute('data-val'),
+        )
       })
     }
     syncActive()
 
-    const commit = (patch: ImageLayoutPatch) => {
+    const flushPending = () => {
+      const keys = Object.keys(pending)
+      if (!keys.length) return
       const src = (img.getAttribute('src') || img.src || '').trim()
-      if (!src) return
+      if (!src) {
+        pending = {}
+        return
+      }
+      const patch = pending
+      pending = {}
       opts.onLayoutChange(src, patch)
     }
+
+    const queuePatch = (patch: ImageLayoutPatch) => {
+      pending = mergePatch(pending, patch)
+      // 不立刻写回源码，避免 Markdown 重渲染拆掉工具条
+    }
+
+    const setPinned = (on: boolean) => {
+      pinned = on
+      host.classList.toggle('is-toolbar-pinned', on)
+      if (on) host.setAttribute('data-toolbar-open', 'true')
+      else if (!host.matches(':hover')) host.removeAttribute('data-toolbar-open')
+    }
+
+    const onPointerEnter = () => {
+      if (leaveTimer != null) {
+        window.clearTimeout(leaveTimer)
+        leaveTimer = null
+      }
+      host.setAttribute('data-toolbar-open', 'true')
+    }
+
+    const onPointerLeave = () => {
+      if (leaveTimer != null) window.clearTimeout(leaveTimer)
+      // 给一点缓冲，避免移到子按钮时误判离开
+      leaveTimer = window.setTimeout(() => {
+        leaveTimer = null
+        if (pinned) return
+        host.removeAttribute('data-toolbar-open')
+        flushPending()
+      }, 180)
+    }
+
+    host.addEventListener('pointerenter', onPointerEnter)
+    host.addEventListener('pointerleave', onPointerLeave)
+
+    // 点击图片：钉住/取消工具条（预览区不放大）
+    const onImgClick = (e: Event) => {
+      if ((e.target as Element).closest(`.${TOOLBAR_CLASS}`)) return
+      if ((e.target as Element).closest(`.${HANDLE_CLASS}`)) return
+      e.preventDefault()
+      e.stopPropagation()
+      setPinned(!pinned)
+    }
+    img.addEventListener('click', onImgClick)
 
     const onToolbarClick = (e: Event) => {
       const t = e.target
@@ -282,43 +400,66 @@ export function bindMarkdownImageResize(
         if (align !== 'left') img.setAttribute('data-md-align', align)
         else img.removeAttribute('data-md-align')
         syncActive()
-        commit({ align })
+        queuePatch({ align })
+        return
+      }
+      if (act === 'mode') {
+        sizeMode = val === 'px' ? 'px' : 'percent'
+        rebuildSizePresets()
+        syncActive()
         return
       }
       if (act === 'pct') {
         const p = Number(val)
         if (!Number.isFinite(p) || p <= 0) return
+        sizeMode = 'percent'
         applyLiveSize(img, { widthPercent: p })
+        rebuildSizePresets()
         syncBadge()
         syncActive()
-        commit({ widthPercent: p })
+        queuePatch({ widthPercent: p, widthPx: null })
         return
       }
-      if (act === 'pct-custom') {
-        const cur = readLayout(img, host).widthPercent ?? 50
-        const raw = window.prompt('图片宽度（相对正文，1–100%）', String(cur))
-        if (raw == null) return
-        const p = Math.round(Number(String(raw).replace(/%/g, '').trim()))
-        if (!Number.isFinite(p) || p < 1 || p > 100) {
-          return
-        }
-        applyLiveSize(img, { widthPercent: p })
+      if (act === 'px') {
+        const w = Number(val)
+        if (!Number.isFinite(w) || w <= 0) return
+        sizeMode = 'px'
+        applyLiveSize(img, { widthPx: w })
+        rebuildSizePresets()
         syncBadge()
         syncActive()
-        commit({ widthPercent: p })
+        queuePatch({ widthPx: w, widthPercent: null })
+        return
+      }
+      if (act === 'size-custom') {
+        if (sizeMode === 'percent') {
+          const cur = readLayout(img, host).widthPercent ?? 50
+          const raw = window.prompt('图片宽度（相对正文，1–100%）', String(cur))
+          if (raw == null) return
+          const p = Math.round(Number(String(raw).replace(/%/g, '').trim()))
+          if (!Number.isFinite(p) || p < 1 || p > 100) return
+          applyLiveSize(img, { widthPercent: p })
+          syncBadge()
+          syncActive()
+          queuePatch({ widthPercent: p, widthPx: null })
+        } else {
+          const cur = readLayout(img, host).widthPx ?? 400
+          const raw = window.prompt('图片定宽（像素，80–1600）', String(cur))
+          if (raw == null) return
+          const w = Math.round(Number(String(raw).replace(/px/gi, '').trim()))
+          if (!Number.isFinite(w) || w < minW || w > maxW) return
+          applyLiveSize(img, { widthPx: w })
+          syncBadge()
+          syncActive()
+          queuePatch({ widthPx: w, widthPercent: null })
+        }
         return
       }
       if (act === 'size-clear') {
-        img.style.width = ''
-        img.style.height = ''
-        img.style.maxWidth = ''
-        img.removeAttribute('width')
-        img.removeAttribute('height')
-        img.removeAttribute('data-md-w')
-        img.removeAttribute('data-md-wpct')
+        clearLiveSize(img)
         syncBadge()
         syncActive()
-        commit({ widthPx: null, widthPercent: null })
+        queuePatch({ widthPx: null, widthPercent: null })
       }
     }
     toolbar.addEventListener('click', onToolbarClick)
@@ -344,12 +485,11 @@ export function bindMarkdownImageResize(
       let next = Math.round(startW + dx)
       next = Math.max(minW, Math.min(maxW, next, containerW || maxW))
       lastW = next
-      // 拖拽时用百分比，便于响应式
-      const pct =
-        containerW > 0
-          ? Math.max(1, Math.min(100, Math.round((next / containerW) * 100)))
-          : 0
-      if (pct > 0) {
+      if (sizeMode === 'percent' && containerW > 0) {
+        const pct = Math.max(
+          1,
+          Math.min(100, Math.round((next / containerW) * 100)),
+        )
         applyLiveSize(img, { widthPercent: pct })
         badge.textContent = `${pct}%`
       } else {
@@ -370,16 +510,15 @@ export function bindMarkdownImageResize(
       window.removeEventListener('pointermove', onPointerMove)
       window.removeEventListener('pointerup', endDrag)
       window.removeEventListener('pointercancel', endDrag)
-      const src = (img.getAttribute('src') || img.src || '').trim()
-      if (!src || lastW <= 0) return
-      if (containerW > 0) {
+      if (lastW <= 0) return
+      if (sizeMode === 'percent' && containerW > 0) {
         const pct = Math.max(
           1,
           Math.min(100, Math.round((lastW / containerW) * 100)),
         )
-        commit({ widthPercent: pct })
+        queuePatch({ widthPercent: pct, widthPx: null })
       } else {
-        commit({ widthPx: lastW })
+        queuePatch({ widthPx: lastW, widthPercent: null })
       }
       syncActive()
     }
@@ -389,11 +528,12 @@ export function bindMarkdownImageResize(
       e.preventDefault()
       e.stopPropagation()
       dragging = true
-      containerW = host.parentElement?.clientWidth || root.clientWidth || 0
+      containerW = host.clientWidth || root.clientWidth || 0
       startX = e.clientX
       startW = naturalOrCurrent()
       lastW = startW
       host.setAttribute('data-resizing', 'true')
+      host.setAttribute('data-toolbar-open', 'true')
       handle.setPointerCapture(e.pointerId)
       window.addEventListener('pointermove', onPointerMove)
       window.addEventListener('pointerup', endDrag)
@@ -402,21 +542,19 @@ export function bindMarkdownImageResize(
 
     handle.addEventListener('pointerdown', onPointerDown)
     cleanups.push(() => {
+      if (leaveTimer != null) window.clearTimeout(leaveTimer)
+      flushPending()
       toolbar.removeEventListener('click', onToolbarClick)
       handle.removeEventListener('pointerdown', onPointerDown)
+      img.removeEventListener('click', onImgClick)
+      host.removeEventListener('pointerenter', onPointerEnter)
+      host.removeEventListener('pointerleave', onPointerLeave)
       toolbar.remove()
       badge.remove()
       handle.remove()
-      host.classList.remove(WRAP_CLASS)
-      // 若是我们新建的 host（无原 block），拆回
-      if (
-        host.parentNode &&
-        !host.classList.contains(BLOCK_CLASS) === false &&
-        host.getAttribute('data-md-img') === '1' &&
-        !img.getAttribute('data-from-render')
-      ) {
-        // keep md-img-block from renderer; only remove toolbar chrome
-      }
+      host.classList.remove(WRAP_CLASS, 'is-toolbar-pinned')
+      host.removeAttribute('data-toolbar-open')
+      host.removeAttribute('data-resizing')
     })
   }
 

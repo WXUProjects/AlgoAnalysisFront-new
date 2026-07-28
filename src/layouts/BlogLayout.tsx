@@ -167,6 +167,16 @@ export function BlogLayout() {
       setPanelExtra(null)
       return
     }
+    // 管理 / 写文章：隐藏侧栏，正文区更宽
+    if (path.startsWith(`${base}/manage`)) {
+      setBreadcrumb([
+        { label: '首页', to: base },
+        { label: '管理' },
+      ])
+      setShowPanel(false)
+      setPanelExtra(null)
+      return
+    }
     // article page — keep right panel; BlogArticle fills 文章内容 outline
     setShowPanel(true)
   }, [location.pathname, username, themeId])

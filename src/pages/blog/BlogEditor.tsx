@@ -248,6 +248,20 @@ export function BlogEditor() {
     navigate(`/blog/${username}/${res.data.slug}`)
   }
 
+  const imagePanel = (
+    <BlogImagePanel
+      images={sessionImages}
+      content={content}
+      coverUrl={coverUrl}
+      uploads={uploadProgress}
+      onInsert={handleInsertFromLibrary}
+      collapsible
+      defaultOpen={!fullscreen}
+      forceShow={imageUploadEnabled || fullscreen}
+      compact={fullscreen}
+    />
+  )
+
   const editorBlock = useMemo(
     () => (
       <MarkdownEditor
@@ -267,7 +281,7 @@ export function BlogEditor() {
         linkOnlyImages
         imageUploadEnabled={imageUploadEnabled}
         resizableImages
-        previewLightbox
+        previewLightbox={false}
         showFullscreenToggle
         fullscreen={fullscreen}
         onFullscreenChange={setFullscreen}
@@ -276,7 +290,7 @@ export function BlogEditor() {
         onRegisterInsert={handleRegisterInsert}
         placeholder={
           imageUploadEnabled
-            ? '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n可粘贴/多选上传图片；鼠标移到预览图可设居中/百分比\n工具栏可全屏编辑 · 未使用图片保存后自动清理'
+            ? '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n可粘贴/多选上传图片；鼠标移到预览图可设对齐/百分比/定宽\n工具栏可全屏编辑 · 未使用图片保存后自动清理'
             : '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n图片：![说明|50%|center](https://…)\n预览图悬停可调对齐与大小'
         }
       />
@@ -307,7 +321,7 @@ export function BlogEditor() {
               {title.trim() || (isNew ? '写文章' : '编辑文章')}
             </p>
             <p className="text-xs text-muted-foreground">
-              全屏编辑 · Esc 退出 · 预览可拖拽调图宽
+              全屏编辑 · Esc 退出 · 预览悬停调图 · 底部可展开图片库
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
@@ -330,13 +344,18 @@ export function BlogEditor() {
             </Button>
           </div>
         </div>
-        <div className="min-h-0 flex-1 p-2 sm:p-3">{editorBlock}</div>
+        <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 sm:p-3">
+          <div className="min-h-0 flex-1">{editorBlock}</div>
+          <div className="shrink-0 max-h-[40vh] overflow-y-auto">
+            {imagePanel}
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="blog-editor-wide flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">
@@ -504,15 +523,9 @@ export function BlogEditor() {
 
       <div className={cn('min-h-[min(72vh,880px)]')}>{editorBlock}</div>
 
-      {imageUploadEnabled || sessionImages.length > 0 ? (
-        <BlogImagePanel
-          images={sessionImages}
-          content={content}
-          coverUrl={coverUrl}
-          uploads={uploadProgress}
-          onInsert={handleInsertFromLibrary}
-        />
-      ) : null}
+      {imageUploadEnabled || sessionImages.length > 0 || uploadProgress.length > 0
+        ? imagePanel
+        : null}
 
       <div className="flex justify-end gap-2">
         <Button variant="outline" asChild>

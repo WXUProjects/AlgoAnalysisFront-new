@@ -1,12 +1,18 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   CheckIcon,
+  ChevronDownIcon,
   ClipboardCopyIcon,
   ImageIcon,
   PlusIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { Progress } from '@/components/ui/progress'
 import {
   isImageUsedInArticle,
@@ -30,6 +36,12 @@ type Props = {
   uploads?: UploadProgressItem[]
   onInsert: (markdown: string) => void
   className?: string
+  /** 可折叠；默认展开。全屏编辑建议 defaultOpen=false */
+  collapsible?: boolean
+  defaultOpen?: boolean
+  /** 无图时也显示外壳（便于全屏占位） */
+  forceShow?: boolean
+  compact?: boolean
 }
 
 /**
@@ -43,7 +55,12 @@ export function BlogImagePanel({
   uploads = [],
   onInsert,
   className,
+  collapsible = false,
+  defaultOpen = true,
+  forceShow = false,
+  compact = false,
 }: Props) {
+  const [open, setOpen] = useState(defaultOpen)
   const rows = useMemo(() => {
     return images.map((img) => ({
       ...img,
@@ -54,7 +71,7 @@ export function BlogImagePanel({
   const activeUploads = uploads.filter((u) => u.status === 'uploading')
   const hasContent = rows.length > 0 || uploads.length > 0
 
-  if (!hasContent) return null
+  if (!hasContent && !forceShow) return null
 
   async function copyMd(url: string, name: string) {
     const md = markdownImageSnippet(url, name || '图片')
@@ -66,25 +83,8 @@ export function BlogImagePanel({
     }
   }
 
-  return (
-    <div
-      className={cn(
-        'rounded-md border bg-card p-3 sm:p-4',
-        className,
-      )}
-    >
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="flex items-center gap-1.5 text-sm font-medium">
-            <ImageIcon data-icon="inline-start" className="size-4" />
-            文章图片
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            可预览、复制或插入正文。保存文章后，未使用的图片会自动清理。
-          </p>
-        </div>
-      </div>
-
+  const body = (
+    <>
       {uploads.length > 0 ? (
         <div className="mb-3 flex flex-col gap-2">
           {uploads.map((u) => (
@@ -119,7 +119,14 @@ export function BlogImagePanel({
       ) : null}
 
       {rows.length > 0 ? (
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <ul
+          className={cn(
+            'grid gap-2',
+            compact
+              ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8'
+              : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5',
+          )}
+        >
           {rows.map((img) => (
             <li
               key={img.id}
@@ -144,7 +151,10 @@ export function BlogImagePanel({
                 )}
               </div>
               <div className="flex flex-col gap-1 p-1.5">
-                <p className="truncate text-[11px] text-muted-foreground" title={img.name}>
+                <p
+                  className="truncate text-[11px] text-muted-foreground"
+                  title={img.name}
+                >
                   {img.name || '图片'}
                 </p>
                 <div className="flex gap-1">
@@ -175,7 +185,74 @@ export function BlogImagePanel({
             </li>
           ))}
         </ul>
-      ) : null}
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          还没有图片。上传或粘贴后会出现在这里。
+        </p>
+      )}
+    </>
+  )
+
+  const countLabel =
+    rows.length > 0
+      ? `${rows.length} 张`
+      : activeUploads.length > 0
+        ? `上传中 ${activeUploads.length}`
+        : '暂无'
+
+  if (collapsible) {
+    return (
+      <Collapsible
+        open={open}
+        onOpenChange={setOpen}
+        className={cn('rounded-md border bg-card', className)}
+      >
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-muted/40"
+          >
+            <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+              <ImageIcon className="size-4 shrink-0" />
+              <span className="truncate">文章图片</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                · {countLabel}
+              </span>
+            </span>
+            <ChevronDownIcon
+              className={cn(
+                'size-4 shrink-0 text-muted-foreground transition-transform',
+                open && 'rotate-180',
+              )}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t px-3 py-3">
+            <p className="mb-3 text-xs text-muted-foreground">
+              可预览、复制或插入正文。保存后未使用的图片会自动清理。
+            </p>
+            {body}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    )
+  }
+
+  return (
+    <div className={cn('rounded-md border bg-card p-3 sm:p-4', className)}>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="flex items-center gap-1.5 text-sm font-medium">
+            <ImageIcon className="size-4" />
+            文章图片
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            可预览、复制或插入正文。保存文章后，未使用的图片会自动清理。
+          </p>
+        </div>
+      </div>
+      {body}
     </div>
   )
 }

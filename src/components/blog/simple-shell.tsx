@@ -77,7 +77,9 @@ export function SimpleShell({
         </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 has-[.blog-editor-wide]:max-w-[96rem]">
+        {children}
+      </main>
 
       <BlogSiteFooter
         themeId="simple"

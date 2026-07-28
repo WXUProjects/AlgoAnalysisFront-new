@@ -166,16 +166,14 @@ export function updateMarkdownImageLayout(
     const cur = parseObsidianImageAlt(String(altRaw ?? ''))
     const next: MarkdownImageLayout = { alt: cur.alt }
 
-    if (patch.widthPercent !== undefined) {
-      if (patch.widthPercent != null && patch.widthPercent > 0) {
-        next.widthPercent = Math.min(100, Math.round(patch.widthPercent))
-      }
-      // null → clear size
-    } else if (patch.widthPx !== undefined) {
-      if (patch.widthPx != null && patch.widthPx > 0) {
-        next.width = Math.round(patch.widthPx)
-        if (cur.height) next.height = cur.height
-      }
+    // 尺寸：显式 percent / px 优先；null 表示清除；未传则保留
+    if (typeof patch.widthPercent === 'number' && patch.widthPercent > 0) {
+      next.widthPercent = Math.min(100, Math.round(patch.widthPercent))
+    } else if (typeof patch.widthPx === 'number' && patch.widthPx > 0) {
+      next.width = Math.round(patch.widthPx)
+      if (cur.height) next.height = cur.height
+    } else if (patch.widthPercent === null || patch.widthPx === null) {
+      // 清除尺寸
     } else {
       if (cur.widthPercent != null) next.widthPercent = cur.widthPercent
       else if (cur.width != null) {
