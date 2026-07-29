@@ -54,7 +54,7 @@ export function BlogSubsiteBar({
       </p>
       <div className="flex min-w-0 shrink-0 items-center gap-2.5">
         <span className="hidden max-w-[12rem] truncate opacity-80 sm:inline sm:max-w-none">
-          人人可一键开通博客
+          登录后可开通个人博客
         </span>
         <Link
           to="/"
