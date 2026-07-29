@@ -72,6 +72,9 @@ export function BlogLayout() {
   const [socialLinks, setSocialLinks] = useState<
     BlogThemeContext['socialLinks']
   >([])
+  const [aboutMd, setAboutMd] = useState('')
+  const [homeIntroMd, setHomeIntroMd] = useState('')
+  const [friendsMd, setFriendsMd] = useState('')
   const [categories, setCategories] = useState<BlogCategory[]>([])
   const [recentPosts, setRecentPosts] = useState<BlogArticle[]>([])
   const [loading, setLoading] = useState(true)
@@ -104,6 +107,9 @@ export function BlogLayout() {
     setColorScheme(res.data.colorScheme || 'system')
     setSubtitle(res.data.subtitle || '')
     setSocialLinks(res.data.socialLinks || [])
+    setAboutMd(res.data.aboutMd || '')
+    setHomeIntroMd(res.data.homeIntroMd || '')
+    setFriendsMd(res.data.friendsMd || '')
     setRecentPosts(res.data.list || [])
     // 未开通不拉分类，避免空壳噪声
     if (res.data.activated) {
@@ -167,6 +173,15 @@ export function BlogLayout() {
       setPanelExtra(null)
       return
     }
+    if (path.startsWith(`${base}/friends`)) {
+      setBreadcrumb([
+        { label: '首页', to: base },
+        { label: '友链' },
+      ])
+      setShowPanel(secondaryPanel)
+      setPanelExtra(null)
+      return
+    }
     // 写文章 / 编辑：与文章阅读页同宽（保留侧栏栅格）
     if (
       path.includes('/manage/new') ||
@@ -202,16 +217,28 @@ export function BlogLayout() {
         colorScheme,
         subtitle,
         socialLinks,
+        aboutMd,
+        homeIntroMd,
+        friendsMd,
         enabled: themeEnabled,
       }),
-    [themeId, colorScheme, subtitle, socialLinks, themeEnabled],
+    [
+      themeId,
+      colorScheme,
+      subtitle,
+      socialLinks,
+      aboutMd,
+      homeIntroMd,
+      friendsMd,
+      themeEnabled,
+    ],
   )
   const themeStyle = blogThemeStyle(theme)
   const displayName = author?.name || author?.username || username
   const pageTitle = resolvePageTitle(location.pathname) || '博客'
   const isArticleRoute =
     /^\/blog\/[^/]+\/[^/]+$/.test(location.pathname.replace(/\/+$/, '')) &&
-    !/\/(manage|categories|archives|about)$/.test(
+    !/\/(manage|categories|archives|about|friends)$/.test(
       location.pathname.replace(/\/+$/, ''),
     )
   // 文章页由 BlogArticle 写真实标题；壳层只处理博客首页/分类等
@@ -328,6 +355,7 @@ export function BlogLayout() {
                 displayName={displayName}
                 subtitle={theme.subtitle}
                 socialLinks={theme.socialLinks}
+                friendsMd={theme.friendsMd}
                 isOwner={isOwner}
                 breadcrumb={breadcrumb}
                 recentPosts={recentPosts}
@@ -344,6 +372,7 @@ export function BlogLayout() {
                 displayName={displayName}
                 subtitle={theme.subtitle}
                 socialLinks={theme.socialLinks}
+                friendsMd={theme.friendsMd}
                 isOwner={isOwner}
                 recentPosts={recentPosts}
                 categories={categories}
@@ -356,6 +385,7 @@ export function BlogLayout() {
               <SimpleShell
                 username={username}
                 displayName={displayName}
+                friendsMd={theme.friendsMd}
                 isOwner={isOwner}
               >
                 {body}

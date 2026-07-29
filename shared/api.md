@@ -377,18 +377,19 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| GET | `/user/blog/by-username` | 否* | query: `username`；可选 `page`/`pageSize`/`categoryId`/`keyword`；返回作者信息 + 文章列表 + `activated`（是否已开通）；未开通且非本人时 `list` 为空 |
+| GET | `/user/blog/by-username` | 否* | query: `username`；可选 `page`/`pageSize`/`categoryId`/`keyword`/`tag`（标签模糊）；返回作者信息 + 文章列表 + `activated` + 壳配置（`themeId`/`colorScheme`/`subtitle`/`socialLinks`/`aboutMd`/`homeIntroMd`/`friendsMd`）；未开通且非本人时 `list` 为空 |
 | GET | `/user/blog/article/get` | 否* | query: `id` 或 `username`+`slug`；可选 `password`/`unlockToken` |
 | POST | `/user/blog/article/unlock` | 否 | body: `{ id, password }`；成功返回正文 + `unlockToken` |
 | POST | `/user/blog/article/create` | 是 | body: `BlogArticleWriteReq` |
 | POST | `/user/blog/article/update` | 是 | body: 含 `id` 的 `BlogArticleWriteReq` |
 | POST | `/user/blog/article/delete` | 是 | body: `{ id }` |
 | GET | `/user/blog/article/mine` | 是 | 作者全部文章（含 private） |
-| GET | `/user/blog/recommend` | 否 | 主站/发现**精选**：仅 `recommend=true` 的公开已审文；query: `page`/`pageSize`/`orgId?`（私有域=仅该组织成员；公共域/缺省=全站）/`excludeSolutions=1`（排除题解镜像） |
-| GET | `/user/blog/plaza` | 否 | **博客广场**公开文流；query: `page`/`pageSize`/`keyword`/`sort=latest\|hot\|recommend`；`recommend` 仅精选；`orgId?`（私有域=仅该组织成员作者；公共域/缺省=全站）/`excludeSolutions=1`（排除题解镜像，发现页去重）；列表**不含 content** |
+| GET | `/user/blog/recommend` | 否 | 主站/发现**精选**：仅 `recommend=true` 且 `sync_to_main_profile=true` 的公开已审文；query: `page`/`pageSize`/`orgId?`（私有域=仅该组织成员；公共域/缺省=全站）/`excludeSolutions=1`（排除题解镜像） |
+| GET | `/user/blog/plaza` | 否 | **博客广场**公开文流（仅 `sync_to_main_profile=true`）；query: `page`/`pageSize`/`keyword`/`sort=latest\|hot\|recommend`；`recommend` 仅精选；`orgId?`（私有域=仅该组织成员作者；公共域/缺省=全站）/`excludeSolutions=1`（排除题解镜像，发现页去重）；列表**不含 content** |
 | GET | `/user/blog/authors` | 否 | 广场侧栏：最近有公开文的作者；query: `page`/`pageSize`/`keyword`；按最近发布时间排序 |
 | GET | `/user/blog/analytics` | 是 | 作者统计：阅读/点赞/评论汇总 + top 文章 |
 | GET | `/user/blog/categories` | 否 | query: `username`；公开分类列表（项含 `isDefault`）；**仅返回有公开文章的分类**（`articleCount > 0`，空分类对访客隐藏） |
+| GET | `/user/blog/tags` | 否 | query: `username`；作者公开文标签聚合 → `[{ name, count }]` |
 | GET | `/user/blog/category/mine` | 是 | 我的分类；**自动确保默认分类「默认」存在**；项含 `isDefault` |
 | POST | `/user/blog/category/create` | 是 | body: `{ name, sortOrder? }` |
 | POST | `/user/blog/category/update` | 是 | body: `{ id, name?, sortOrder? }`（默认可改名，仍 `isDefault`） |
@@ -399,7 +400,7 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 - 每用户至多一个 `isDefault=true` 的分类，名称初始为「默认」，可改名不可删除。
 - 主站发布/更新题解时，core 经 user 库写入 `blog_articles`：分类=默认、`visibility=public`、`sourceSolutionId=题解id`、`sourceProblemId`、`slug=solution-{题解id}`、同步资料与组织发现；**不**自动精选。
 - **默认摘要**：未填时服务端从正文生成简述（去代码块、约 280 字）；作者手填则保留。编辑时若当前为系统默认摘要，前端不回填输入框，保存空摘要则按正文重新生成。
-- **自动曝光**：`visibility=public` 自动进入广场与作者所属组织发现推荐；`private`/`password` 不曝光。编辑器不再提供「开放推荐 / 同步组织」勾选。
+- **自动曝光**：`visibility=public` **且** `syncToMainProfile=true`（默认）进入广场与作者所属组织发现；`syncToMainProfile=false` 仅个人站可见；`private`/`password` 不曝光。精选 `recommend` 仍由站管/审核员设置。
 - **题解镜像去重**：发现推荐只展示题解活动卡（打开主站题面题解页）；博客广场展示镜像文（打开博客页）。
 - **共享互动**：题解与镜像博客共享点赞/评论/UV 浏览量；迁移时历史浏览量清零。
 - 题解详情 get 会对未同步的旧题解做懒同步。
@@ -412,8 +413,8 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | POST | `/user/blog/report` | 是 | body: `{ articleId, reason }`；写 `blog_reports` + 站管站内信 + 邮件 |
 | GET | `/user/blog/report/list` | 是（`content.report.handle`） | query: `status?`=`pending`（默认）`\|resolved\|dismissed\|all`、`page`/`pageSize` → `BlogReportAdminItem` 列表（含举报人、文章预览；文章已删 `target.exists=false`） |
 | POST | `/user/blog/report/handle` | 是（`content.report.handle`） | body: `{ id, action: "resolve"\|"dismiss" }` → 标记已处理 / 驳回 |
-| GET | `/user/blog/theme/status` | 否 | query: `username?`；返回 `enabled`（遗留）、`themeId`（`mizuki` 默认 / `chirpy` / `simple`）、`colorScheme`（`light`/`dark`/`system`，默认 `system`）、`subtitle`、`socialLinks` |
-| POST | `/user/blog/theme/config` | 是（作者） | body: `{ themeId, colorScheme?, subtitle?, socialLinks? }`；保存博客壳主题、**默认明暗**与侧栏社交链接；`colorScheme` 缺省/`system`=跟随系统；**须已开通** |
+| GET | `/user/blog/theme/status` | 否 | query: `username?`；返回 `enabled`（遗留）、`themeId`（`mizuki` 默认 / `chirpy` / `simple`）、`colorScheme`（`light`/`dark`/`system`，默认 `system`）、`subtitle`、`socialLinks`、`aboutMd`、`homeIntroMd`、`friendsMd` |
+| POST | `/user/blog/theme/config` | 是（作者） | body: `{ themeId, colorScheme?, subtitle?, socialLinks?, aboutMd?, homeIntroMd?, friendsMd? }`；指针字段省略则保留原值；空字符串清空；`colorScheme` 缺省/`system`=跟随系统；**须已开通** |
 | POST | `/user/blog/theme/enable` | 站管 | body: `{ mode: user\|batch\|all, userId?, userIds?, enabled }`（遗留能力开关） |
 | GET | `/user/blog/agreement` | 否* | 协议正文 + 当前用户开通状态（`BlogActivationStatus` + `title`/`content`） |
 | GET | `/user/blog/activation/status` | 是 | 当前用户开通状态 |
@@ -434,7 +435,7 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 
 **互动通知**（写主站 `notifications`）：博客文章点赞 `blog_article_like`、博客评论 `blog_comment` / `blog_comment_reply`、博客评论点赞 `blog_comment_like`；题解/评论点赞 `solution_like` / `comment_like`；举报 `blog_report` / `community_report`（站管 + 邮件）。payload 可含 `blogUsername`+`blogSlug` 跳转。邮件通知偏好默认关。
 
-`GET /user/blog/by-username` 额外返回：`themeId`、`colorScheme`、`subtitle`、`socialLinks`（与 theme/status 一致）、`activated`（`agreement_accepted_at` 非空为已开通）。未开通用户的个人博客壳应提示「此用户未开通博客」；个人资料页不展示「访问博客」。
+`GET /user/blog/by-username` 额外返回：`themeId`、`colorScheme`、`subtitle`、`socialLinks`、`aboutMd`、`homeIntroMd`、`friendsMd`（与 theme/status 一致）、`activated`（`agreement_accepted_at` 非空为已开通）。未开通用户的个人博客壳应提示「此用户未开通博客」；个人资料页不展示「访问博客」。
 
 **主题说明**
 
@@ -506,17 +507,29 @@ nginx：**首版策略**——上述公开页 **一律** 反代 SEO HTML（不�
   "visibility": "public|private|password",
   "password": "仅 password 可见性",
   "clearPassword": false,
-  "categoryId": null
+  "categoryId": null,
+  "tags": ["可选标签"],
+  "syncToMainProfile": true
 }
 ```
 
 - 头图仅支持 **http(s) 外链**，不提供上传。
-- `recommend` 作者端不可写；仅站管/持博客审核权限者 `POST /user/blog/admin/moderate` `action=feature|unfeature` 设精选。`syncToMainProfile` / 组织发现对公开文仍自动。
+- `recommend` 作者端不可写；仅站管/持博客审核权限者 `POST /user/blog/admin/moderate` `action=feature|unfeature` 设精选。
+- `syncToMainProfile`：公开文默认 `true`（进广场 / 资料动态 / 组织发现）；显式 `false` = 仅个人博客壳可见。`private`/`password` 本就不曝光。
+- `tags`：自由字符串数组；`by-username?tag=` 模糊筛；`GET /user/blog/tags?username=` 聚合。
 - `summary` 可选；空则按正文生成默认简述。
+
+**站点 Markdown 槽位**（theme/status、by-username、theme/config）：
+
+| 字段 | 用途 |
+|------|------|
+| `aboutMd` | 关于页；空=默认紧凑 UI |
+| `homeIntroMd` | 首页列表上方介绍；空=不展示 |
+| `friendsMd` | 友链页；空=不展示导航入口 |
 
 前端路由：
 - 主站博客广场：`/blog-plaza`（AppLayout，聚合公开文 + 活跃作者）
-- 个人博客壳：`/blog/:username`；`/blog/:username/manage` 仅作者
+- 个人博客壳：`/blog/:username`；`/blog/:username/about`；`/blog/:username/friends`；`/blog/:username/manage` 仅作者
 - 登录走主站 `/login?redirect=…`
 
 **广场 sort**
@@ -693,6 +706,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | GET | `/user/rbac/roles/members` | 是 | `roleId`（+系统组织角色需 `orgId`）`page/pageSize/keyword` 分页模糊搜索 |
 | POST | `/user/rbac/roles/assign` | 是 | `{roleId,userIds[]}` 仅自定义角色；组织角色要求目标已是该组织成员；返回 `added/skipped` |
 | POST | `/user/rbac/roles/unassign` | 是 | `{roleId,userIds[]}` |
+| GET | `/user/rbac/user-roles` | 是 | `userId`；返回该用户站点级（`org_id=0`）自定义角色 id 列表 `{roleIds[]}`（需 `site.role.manage` 或 `site.user.list`） |
 | GET | `/user/rbac/my-permissions` | 是 | 当前用户实时有效权限（查库）：`{perms[],roles[],isSiteAdmin,orgId,orgRole}` |
 
 **存量迁移**：user 服务启动时自动执行（`schema_patches` key `rbac_bootstrap_v1`，幂等一次性）：`is_site_admin`/`is_resource_reviewer` 布尔位与 `org_members.role` 全部镜像进 `user_roles`；旧列保留并持续双写，可随时回滚。
@@ -1349,6 +1363,7 @@ POST   /api/user/rbac/roles/delete
 GET    /api/user/rbac/roles/members
 POST   /api/user/rbac/roles/assign
 POST   /api/user/rbac/roles/unassign
+GET    /api/user/rbac/user-roles
 GET    /api/user/rbac/my-permissions
 GET    /api/core/submit-log/get-by-id
 POST   /api/core/spider/set

@@ -6,7 +6,7 @@ import {
   useOutletContext,
   useParams,
 } from 'react-router-dom'
-import { ChevronDownIcon, Maximize2Icon, Minimize2Icon } from 'lucide-react'
+import { ChevronDownIcon, Maximize2Icon, Minimize2Icon, XIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   createBlogArticle,
@@ -22,7 +22,9 @@ import {
   type UploadProgressItem,
 } from '@/components/blog-image-panel'
 import { MarkdownEditor } from '@/components/markdown-editor'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Collapsible,
   CollapsibleContent,
@@ -73,12 +75,37 @@ export function BlogEditor() {
   const [password, setPassword] = useState('')
   const [categoryId, setCategoryId] = useState<string>('')
   const [categories, setCategories] = useState<BlogCategory[]>([])
+  const [tags, setTags] = useState<string[]>([])
+  const [tagDraft, setTagDraft] = useState('')
+  const [syncToMainProfile, setSyncToMainProfile] = useState(true)
   const [imageUploadEnabled, setImageUploadEnabled] = useState(false)
   const [coverUploading, setCoverUploading] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
   const [sessionImages, setSessionImages] = useState<BlogSessionImage[]>([])
   const [uploadProgress, setUploadProgress] = useState<UploadProgressItem[]>([])
   const insertFnRef = useRef<((text: string) => void) | null>(null)
+
+  function addTag(raw: string) {
+    const parts = raw
+      .split(/[,，]/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+    if (!parts.length) return
+    setTags((prev) => {
+      const next = [...prev]
+      for (const p of parts) {
+        if (next.some((t) => t.toLowerCase() === p.toLowerCase())) continue
+        if (next.length >= 20) break
+        next.push(p)
+      }
+      return next
+    })
+    setTagDraft('')
+  }
+
+  function removeTag(name: string) {
+    setTags((prev) => prev.filter((t) => t !== name))
+  }
 
   useEffect(() => {
     void listMyBlogCategories().then((res) => {
@@ -120,6 +147,12 @@ export function BlogEditor() {
       setCoverUrl(a.coverUrl || '')
       setVisibility((a.visibility as BlogVisibility) || 'public')
       setCategoryId(a.categoryId ? String(a.categoryId) : '')
+      setTags(Array.isArray(a.tags) ? a.tags.filter(Boolean) : [])
+      setSyncToMainProfile(
+        a.syncToMainProfile === undefined || a.syncToMainProfile === null
+          ? true
+          : Boolean(a.syncToMainProfile),
+      )
       // 种子：已有正文中的图
       const urls = extractMarkdownImageUrls(body, a.coverUrl || '')
       setSessionImages(
@@ -275,6 +308,8 @@ export function BlogEditor() {
       password: password.trim() || undefined,
       clearPassword: visibility !== 'password',
       categoryId: Number(categoryId) || null,
+      tags,
+      syncToMainProfile: visibility === 'public' ? syncToMainProfile : false,
     }
     const res = isNew
       ? await createBlogArticle(body)
@@ -520,11 +555,6 @@ export function BlogEditor() {
               <SelectItem value="password">需要密码</SelectItem>
             </SelectContent>
           </Select>
-          {visibility === 'public' ? (
-            <p className="mt-1 text-xs text-muted-foreground">
-              会出现在博客广场，并可能被推荐给同组织成员
-            </p>
-          ) : null}
         </Field>
         {visibility === 'password' ? (
           <Field>
@@ -539,6 +569,59 @@ export function BlogEditor() {
             />
           </Field>
         ) : null}
+        {visibility === 'public' ? (
+          <Field className="sm:col-span-2">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="blog-sync-main"
+                checked={syncToMainProfile}
+                onCheckedChange={(v) => setSyncToMainProfile(v === true)}
+              />
+              <FieldLabel htmlFor="blog-sync-main" className="!mt-0 font-normal">
+                同步到主站
+              </FieldLabel>
+            </div>
+          </Field>
+        ) : null}
+        <Field className="sm:col-span-2">
+          <FieldLabel>标签</FieldLabel>
+          <div className="flex flex-wrap items-center gap-2">
+            {tags.map((t) => (
+              <Badge key={t} variant="secondary" className="gap-1 pr-1">
+                {t}
+                <button
+                  type="button"
+                  className="rounded-sm p-0.5 hover:bg-muted"
+                  aria-label={`移除 ${t}`}
+                  onClick={() => removeTag(t)}
+                >
+                  <XIcon className="size-3" />
+                </button>
+              </Badge>
+            ))}
+            <Input
+              value={tagDraft}
+              onChange={(e) => setTagDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ',') {
+                  e.preventDefault()
+                  addTag(tagDraft)
+                } else if (
+                  e.key === 'Backspace' &&
+                  !tagDraft &&
+                  tags.length > 0
+                ) {
+                  removeTag(tags[tags.length - 1])
+                }
+              }}
+              onBlur={() => {
+                if (tagDraft.trim()) addTag(tagDraft)
+              }}
+              placeholder={tags.length ? '' : '输入后回车添加'}
+              className="h-8 min-w-[8rem] flex-1"
+            />
+          </div>
+        </Field>
       </FieldGroup>
 
       <div className={cn('min-h-[min(72vh,880px)]')}>{editorBlock}</div>

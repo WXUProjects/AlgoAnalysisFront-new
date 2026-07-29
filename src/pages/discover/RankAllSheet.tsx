@@ -105,7 +105,7 @@ export function RankAllSheet({
     }
   }, [open, scoreType, page, range.start, range.end])
 
-  const periodLabel = period === 'week' ? '本周榜' : '全部时间'
+  const periodLabel = period === 'week' ? '7日榜' : '全部时间'
   const emptyHint =
     period === 'week' ? '本周还没有排行数据' : '暂时还没有排行数据'
 
@@ -145,7 +145,7 @@ export function RankAllSheet({
                 }}
               >
                 <ToggleGroupItem value="week" className="px-2 text-xs">
-                  本周榜
+                  7日榜
                 </ToggleGroupItem>
                 <ToggleGroupItem value="all" className="px-2 text-xs">
                   全部时间

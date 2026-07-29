@@ -104,6 +104,9 @@ export function buildArticleOutline(
     if (inFence) continue
     const hm = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line)
     if (hm) {
+      const level = hm[1].length
+      // 文章页已有标题 h1，侧栏 TOC 跳过 level 1
+      if (level === 1) continue
       const text = hm[2]
         .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
         .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
@@ -114,7 +117,7 @@ export function buildArticleOutline(
         headings.push({
           id: assignId(text),
           text,
-          level: hm[1].length,
+          level,
           source: 'heading',
         })
       }
@@ -134,17 +137,14 @@ export function buildArticleOutline(
       }
     }
   }
-  const top: TocItem[] = fallbackTitle
-    ? [{ id: 'article-top', text: fallbackTitle, level: 1, source: 'title' }]
-    : []
-  if (headings.length > 0) {
-    // Keep page title as first jump target when body starts with h2+
-    return top.length && headings[0].level > 1
-      ? [...top, ...headings]
-      : headings
+  // 不把文章标题 h1 放进侧栏 TOC（页面已有标题）
+  if (headings.length > 0) return headings
+  if (bolds.length > 0) return bolds
+  // 无小节时用标题作唯一锚点（滚回文首）
+  if (fallbackTitle) {
+    return [{ id: 'article-top', text: fallbackTitle, level: 1, source: 'title' }]
   }
-  if (bolds.length > 0) return [...top, ...bolds]
-  return top
+  return []
 }
 
 /**

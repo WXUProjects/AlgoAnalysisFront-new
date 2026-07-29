@@ -10,6 +10,7 @@ import {
   BlogCategoriesPage,
   BlogCategoriesPublicPage,
   BlogEditor,
+  BlogFriendsPage,
   BlogHome,
   BlogLayout,
   BlogManage,
@@ -127,6 +128,14 @@ export const blogRoutes: RouteObject[] = [
             element: (
               <Lazy>
                 <BlogAboutPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'friends',
+            element: (
+              <Lazy>
+                <BlogFriendsPage />
               </Lazy>
             ),
           },

@@ -15,13 +15,20 @@ const BADGE_CLASS = 'md-img-resize-badge'
 const ZOOMABLE_CLASS = 'md-img-zoomable'
 const BLOCK_CLASS = 'md-img-block'
 
+export type MarkdownLightboxOpenPayload = {
+  src: string
+  alt: string
+  /** All zoomable images in the root (gallery) */
+  slides: Array<{ src: string; alt: string }>
+}
+
 /**
- * Mark images as zoomable and bind click → onOpen(src, alt).
+ * Mark images as zoomable and bind click → onOpen(src, alt, slides).
  * Skips clicks on resize handles / toolbar.
  */
 export function bindMarkdownImageLightbox(
   root: HTMLElement,
-  onOpen: (src: string, alt: string) => void,
+  onOpen: (payload: MarkdownLightboxOpenPayload) => void,
 ): () => void {
   const imgs = root.querySelectorAll('img')
   imgs.forEach((img) => {
@@ -32,6 +39,19 @@ export function bindMarkdownImageLightbox(
       img.setAttribute('title', '点击放大')
     }
   })
+
+  const collectSlides = () => {
+    const slides: Array<{ src: string; alt: string }> = []
+    const seen = new Set<string>()
+    root.querySelectorAll(`img.${ZOOMABLE_CLASS}`).forEach((el) => {
+      if (!(el instanceof HTMLImageElement)) return
+      const s = (el.currentSrc || el.src || '').trim()
+      if (!s || seen.has(s)) return
+      seen.add(s)
+      slides.push({ src: s, alt: el.alt || '' })
+    })
+    return slides
+  }
 
   const onClick = (event: Event) => {
     const target = event.target
@@ -44,7 +64,7 @@ export function bindMarkdownImageLightbox(
     if (!src) return
     event.preventDefault()
     event.stopPropagation()
-    onOpen(src, img.alt || '')
+    onOpen({ src, alt: img.alt || '', slides: collectSlides() })
   }
 
   root.addEventListener('click', onClick)

@@ -32,7 +32,7 @@
   --sidebar-btn-bg: #ffffff;
   --sidebar-btn-color: #8e8e8e;
   --avatar-border-color: #ffffff;
-  --topbar-bg: rgb(255, 255, 255, 0.7);
+  --topbar-bg: rgb(255, 255, 255, 0.92);
   --topbar-text-color: rgb(78, 78, 78);
   --search-border-color: rgb(240, 240, 240);
   --search-icon-color: #c2c6cc;
@@ -93,7 +93,7 @@
   --sidebar-btn-bg: #232328;
   --sidebar-btn-color: #787878;
   --avatar-border-color: rgb(206, 206, 206, 0.9);
-  --topbar-bg: rgb(27, 27, 30, 0.64);
+  --topbar-bg: rgb(27, 27, 30, 0.9);
   --topbar-text-color: var(--text-color);
   --search-border-color: rgb(55, 55, 55);
   --search-icon-color: rgb(100, 102, 105);
@@ -146,12 +146,16 @@
   align-items: flex-end;
   width: var(--chirpy-sidebar-width);
   height: calc(100svh - var(--chirpy-subsite-bar-h));
+  max-height: calc(100svh - var(--chirpy-subsite-bar-h));
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0;
   background: var(--sidebar-bg);
   border-right: 1px solid var(--sidebar-border-color);
   scrollbar-width: none;
   transition: transform 0.4s ease;
+  /* 与顶栏 sticky 一致：滚动时左侧导航始终钉住视口 */
+  will-change: transform;
 }
 
 .chirpy-sidebar::-webkit-scrollbar {
@@ -405,8 +409,16 @@
   top: 0;
   z-index: 30;
   background: var(--topbar-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .chirpy-topbar-wrapper {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--main-bg);
+  }
 }
 
 .chirpy-topbar {

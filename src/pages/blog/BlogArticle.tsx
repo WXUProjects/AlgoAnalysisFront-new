@@ -110,7 +110,7 @@ export function BlogArticlePage() {
       setRelated([])
       return
     }
-    setRelated(res.data.list.filter((x) => x.id !== a.id).slice(0, 4))
+    setRelated(res.data.list.filter((x) => x.id !== a.id).slice(0, 2))
   }
 
   useEffect(() => {
@@ -615,6 +615,19 @@ export function BlogArticlePage() {
               </span>
             )}
           </div>
+          {article.tags && article.tags.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {article.tags.map((t) => (
+                <Link
+                  key={t}
+                  to={`/blog/${username}?tag=${encodeURIComponent(t)}`}
+                  className="rounded-full border border-[var(--main-border-color)] px-2.5 py-0.5 text-xs text-[var(--text-muted-color)] no-underline hover:border-[var(--link-color)] hover:text-[var(--link-color)]"
+                >
+                  {t}
+                </Link>
+              ))}
+            </div>
+          ) : null}
         </header>
         {unlockBlock}
         {bodyBlock}
@@ -677,6 +690,19 @@ export function BlogArticlePage() {
                 </span>
               )}
             </div>
+            {article.tags && article.tags.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {article.tags.map((t) => (
+                  <Link
+                    key={t}
+                    to={`/blog/${username}?tag=${encodeURIComponent(t)}`}
+                    className="rounded-full bg-[var(--mz-btn-bg)] px-2.5 py-0.5 text-xs text-[var(--mz-text-50)] no-underline hover:text-[var(--mz-primary)]"
+                  >
+                    {t}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
           </header>
           {unlockBlock}
           {bodyBlock}
@@ -722,6 +748,19 @@ export function BlogArticlePage() {
             </Button>
           )}
         </div>
+        {article.tags && article.tags.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {article.tags.map((t) => (
+              <Link
+                key={t}
+                to={`/blog/${username}?tag=${encodeURIComponent(t)}`}
+                className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground hover:border-primary hover:text-foreground"
+              >
+                {t}
+              </Link>
+            ))}
+          </div>
+        ) : null}
         <h1
           className="text-3xl font-bold tracking-tight"
         >

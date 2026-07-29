@@ -18,6 +18,7 @@ import {
   NewspaperIcon,
   SearchIcon,
   SettingsIcon,
+  UsersIcon,
 } from 'lucide-react'
 import { listBlogByUsername } from '@/api/blog'
 import { SocialIcon, socialAriaLabel } from '@/components/blog/blog-social-icons'
@@ -37,6 +38,8 @@ type Props = {
   displayName: string
   subtitle: string
   socialLinks: BlogSocialLink[]
+  /** Non-empty → show 友链 nav */
+  friendsMd?: string
   isOwner: boolean
   breadcrumb: { label: string; to?: string }[]
   recentPosts?: BlogArticle[]
@@ -53,6 +56,7 @@ export function ChirpyShell({
   displayName,
   subtitle,
   socialLinks,
+  friendsMd = '',
   isOwner,
   breadcrumb,
   recentPosts = [],
@@ -124,14 +128,18 @@ export function ChirpyShell({
   }, [q, searchMode, username])
 
   const base = `/blog/${username}`
+  const showFriends = Boolean(friendsMd.trim())
   const navItems = useMemo(
     () => [
       { to: base, end: true, label: '首页', icon: HomeIcon },
       { to: `${base}/categories`, label: '分类', icon: FolderOpenIcon },
       { to: `${base}/archives`, label: '归档', icon: ArchiveIcon },
+      ...(showFriends
+        ? [{ to: `${base}/friends`, label: '友链', icon: UsersIcon }]
+        : []),
       { to: `${base}/about`, label: '关于', icon: InfoIcon },
     ],
-    [base],
+    [base, showFriends],
   )
 
   const manageHref = `${base}/manage`

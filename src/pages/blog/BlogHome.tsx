@@ -9,6 +9,7 @@ import {
   MessageCircleIcon,
 } from 'lucide-react'
 import { listBlogByUsername, listBlogCategories } from '@/api/blog'
+import { MarkdownBody } from '@/components/markdown-body'
 import { MarkdownSummary } from '@/components/markdown-summary'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,6 +43,7 @@ export function BlogHome() {
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryId = Number(searchParams.get('categoryId') || 0) || undefined
   const keyword = (searchParams.get('q') || '').trim()
+  const tag = (searchParams.get('tag') || '').trim()
   const page = Math.max(1, Number(searchParams.get('page') || 1))
 
   const [list, setList] = useState<BlogArticle[]>([])
@@ -70,6 +72,7 @@ export function BlogHome() {
                 : 12,
           categoryId,
           keyword: keyword || undefined,
+          tag: tag || undefined,
         }),
         listBlogCategories(username),
       ])
@@ -87,7 +90,7 @@ export function BlogHome() {
     return () => {
       cancelled = true
     }
-  }, [username, page, categoryId, keyword, theme.themeId])
+  }, [username, page, categoryId, keyword, tag, theme.themeId])
 
   const pageSize =
     theme.themeId === 'chirpy' ? 10 : theme.themeId === 'mizuki' ? 8 : 12
@@ -95,12 +98,31 @@ export function BlogHome() {
   const catName = (id?: number | null) =>
     categories.find((c) => c.id === id)?.name
 
+  const homeIntro = theme.homeIntroMd.trim()
+  const introBlock =
+    homeIntro && !keyword && !categoryId && !tag ? (
+      theme.themeId === 'chirpy' ? (
+        <div className="chirpy-prose mb-4 px-1 pt-4">
+          <MarkdownBody content={homeIntro} enableLightbox />
+        </div>
+      ) : theme.themeId === 'mizuki' ? (
+        <div className="mz-prose mb-4">
+          <MarkdownBody content={homeIntro} enableLightbox />
+        </div>
+      ) : (
+        <div className="mb-4 rounded-xl border bg-card p-4 shadow-sm">
+          <MarkdownBody content={homeIntro} enableLightbox />
+        </div>
+      )
+    ) : null
+
   if (theme.themeId === 'chirpy') {
     const activeCat = categoryId
       ? categories.find((c) => c.id === categoryId)?.name
       : undefined
     return (
       <div>
+        {introBlock}
         {(keyword || activeCat) && (
           <div className="mt-4 flex flex-wrap items-center gap-2 px-1 text-sm text-[var(--text-muted-color)]">
             {keyword ? <span>搜索：{keyword}</span> : null}
@@ -208,6 +230,7 @@ export function BlogHome() {
       : undefined
     return (
       <div>
+        {introBlock}
         {(keyword || activeCat) && (
           <div className="mz-filter-bar">
             {keyword ? (
@@ -324,7 +347,7 @@ export function BlogHome() {
 
   // ---------- simple (简约) ----------
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <section className="rounded-xl border bg-card p-6 shadow-sm">
         <div className="flex flex-wrap items-start gap-4">
           {author?.avatar ? (
@@ -349,6 +372,8 @@ export function BlogHome() {
           </div>
         </div>
       </section>
+
+      {introBlock}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <form

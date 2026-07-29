@@ -15,6 +15,7 @@ import {
   type BlogPlazaAuthor,
   type BlogPlazaSort,
   type BlogSocialLink,
+  type BlogTagCount,
   type BlogThemeId,
 } from '@shared/api'
 import { get, post, num, str, type ApiResult } from '@/lib/http'
@@ -36,6 +37,14 @@ function authorOf(raw: Record<string, unknown> | undefined): BlogAuthor | undefi
   }
 }
 
+function normalizeTags(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const tags = raw
+    .map((t) => String(t ?? '').trim())
+    .filter(Boolean)
+  return tags.length ? tags : []
+}
+
 function normalizeArticle(raw: Record<string, unknown>): BlogArticle {
   const cat = raw.categoryId
   const orgIdsRaw = raw.orgIds
@@ -48,7 +57,11 @@ function normalizeArticle(raw: Record<string, unknown>): BlogArticle {
     coverUrl: str(raw.coverUrl) || undefined,
     visibility: str(raw.visibility, 'public'),
     recommend: Boolean(raw.recommend),
-    syncToMainProfile: Boolean(raw.syncToMainProfile),
+    syncToMainProfile:
+      raw.syncToMainProfile === undefined || raw.syncToMainProfile === null
+        ? undefined
+        : Boolean(raw.syncToMainProfile),
+    tags: normalizeTags(raw.tags),
     categoryId:
       cat === null || cat === undefined || cat === '' ? null : num(cat as number),
     sourceSolutionId: num(raw.sourceSolutionId) || undefined,
@@ -117,6 +130,8 @@ export async function listBlogByUsername(params: {
   pageSize?: number
   categoryId?: number
   keyword?: string
+  /** 标签模糊筛选 */
+  tag?: string
 }): Promise<
   ApiResult<{
     author: BlogAuthor
@@ -130,6 +145,9 @@ export async function listBlogByUsername(params: {
     colorScheme: ColorSchemeMode
     subtitle: string
     socialLinks: BlogSocialLink[]
+    aboutMd: string
+    homeIntroMd: string
+    friendsMd: string
     isOwner: boolean
     /** 是否已签署协议开通个人博客 */
     activated: boolean
@@ -141,6 +159,7 @@ export async function listBlogByUsername(params: {
     pageSize: params.pageSize,
     categoryId: params.categoryId,
     keyword: params.keyword,
+    tag: params.tag,
   })
   return wrapData(res, (data) => {
     const listRaw = (Array.isArray(data.list) ? data.list : []) as Record<
@@ -160,6 +179,9 @@ export async function listBlogByUsername(params: {
       colorScheme: normalizeColorScheme(str(data.colorScheme)),
       subtitle: str(data.subtitle),
       socialLinks: normalizeSocialLinks(data.socialLinks),
+      aboutMd: str(data.aboutMd),
+      homeIntroMd: str(data.homeIntroMd),
+      friendsMd: str(data.friendsMd),
       isOwner: Boolean(data.isOwner),
       // 兼容旧接口：字段未下发时视为已开通，避免前后端滚动发布时误伤
       activated:
@@ -168,6 +190,38 @@ export async function listBlogByUsername(params: {
           : Boolean(data.activated),
     }
   })
+}
+
+/** 作者公开文标签聚合 */
+export async function listBlogTags(
+  username: string,
+): Promise<ApiResult<BlogTagCount[]>> {
+  const res = await get<Record<string, unknown>>(endpoints.user.blog.tags, {
+    username,
+  })
+  const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
+  const listRaw = (
+    Array.isArray(raw.list)
+      ? raw.list
+      : Array.isArray(raw.data)
+        ? raw.data
+        : Array.isArray(raw)
+          ? raw
+          : []
+  ) as Record<string, unknown>[]
+  if (!res.success && listRaw.length === 0) {
+    return { success: false, message: res.message || '加载失败', data: null }
+  }
+  return {
+    success: true,
+    message: 'ok',
+    data: listRaw
+      .map((t) => ({
+        name: str(t.name || t.tag),
+        count: num(t.count),
+      }))
+      .filter((t) => t.name),
+  }
 }
 
 export async function getBlogArticle(params: {
@@ -599,6 +653,9 @@ export async function getBlogThemeStatus(username?: string): Promise<
     colorScheme: ColorSchemeMode
     subtitle: string
     socialLinks: BlogSocialLink[]
+    aboutMd: string
+    homeIntroMd: string
+    friendsMd: string
     customTheme: unknown
   }>
 > {
@@ -611,23 +668,32 @@ export async function getBlogThemeStatus(username?: string): Promise<
     colorScheme: normalizeColorScheme(str(data.colorScheme)),
     subtitle: str(data.subtitle),
     socialLinks: normalizeSocialLinks(data.socialLinks),
+    aboutMd: str(data.aboutMd),
+    homeIntroMd: str(data.homeIntroMd),
+    friendsMd: str(data.friendsMd),
     customTheme: data.customTheme ?? null,
   }))
 }
 
-/** 作者保存博客壳主题、默认明暗与侧栏社交链接 */
+/** 作者保存博客壳主题、默认明暗、侧栏社交链接与站点 Markdown 槽位 */
 export async function saveBlogThemeConfig(body: {
   themeId: BlogThemeId | string
   /** light | dark | system；缺省按 system */
   colorScheme?: ColorSchemeMode | string
   subtitle?: string
   socialLinks?: BlogSocialLink[]
+  aboutMd?: string
+  homeIntroMd?: string
+  friendsMd?: string
 }): Promise<
   ApiResult<{
     themeId: BlogThemeId
     colorScheme: ColorSchemeMode
     subtitle: string
     socialLinks: BlogSocialLink[]
+    aboutMd: string
+    homeIntroMd: string
+    friendsMd: string
   }>
 > {
   const res = await post<Record<string, unknown>>(
@@ -639,6 +705,9 @@ export async function saveBlogThemeConfig(body: {
     colorScheme: normalizeColorScheme(str(data.colorScheme)),
     subtitle: str(data.subtitle),
     socialLinks: normalizeSocialLinks(data.socialLinks),
+    aboutMd: str(data.aboutMd),
+    homeIntroMd: str(data.homeIntroMd),
+    friendsMd: str(data.friendsMd),
   }))
 }
 

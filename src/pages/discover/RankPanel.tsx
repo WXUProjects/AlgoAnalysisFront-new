@@ -91,7 +91,7 @@ export function RankPanel() {
       <CardHeader className="border-b px-4 py-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <TrophyIcon className="size-4 text-muted-foreground" />
-          本周榜
+          7日榜
         </CardTitle>
         <CardDescription>
           {range.start} ~ {range.end} · 过题数

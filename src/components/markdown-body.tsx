@@ -60,6 +60,9 @@ export function MarkdownBody({
   const [html, setHtml] = useState('')
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [lightboxAlt, setLightboxAlt] = useState('')
+  const [lightboxSlides, setLightboxSlides] = useState<
+    Array<{ src: string; alt: string }>
+  >([])
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [sizePrompt, setSizePrompt] = useState<CustomSizePromptRequest | null>(
     null,
@@ -129,13 +132,14 @@ export function MarkdownBody({
     return bindMarkdownCodeCopy(root)
   }, [html])
 
-  // 点击放大
+  // 点击放大（多图画廊）
   useEffect(() => {
     const root = rootRef.current
     if (!root || !html || !enableLightbox) return
-    return bindMarkdownImageLightbox(root, (src, alt) => {
+    return bindMarkdownImageLightbox(root, ({ src, alt, slides }) => {
       setLightboxSrc(src)
       setLightboxAlt(alt)
+      setLightboxSlides(slides)
       setLightboxOpen(true)
     })
   }, [html, enableLightbox])
@@ -178,12 +182,16 @@ export function MarkdownBody({
       />
       {enableLightbox ? (
         <MarkdownImageLightbox
+          slides={lightboxSlides}
           src={lightboxSrc}
           alt={lightboxAlt}
           open={lightboxOpen}
           onOpenChange={(o) => {
             setLightboxOpen(o)
-            if (!o) setLightboxSrc(null)
+            if (!o) {
+              setLightboxSrc(null)
+              setLightboxSlides([])
+            }
           }}
         />
       ) : null}

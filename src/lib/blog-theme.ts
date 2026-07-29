@@ -70,6 +70,12 @@ export type BlogThemeContext = {
   subtitle: string
   /** Bottom-left / profile social links */
   socialLinks: BlogSocialLink[]
+  /** About page markdown; empty → default compact UI */
+  aboutMd: string
+  /** Home intro markdown; empty → no intro block */
+  homeIntroMd: string
+  /** Friends page markdown; empty → hide friends nav */
+  friendsMd: string
   /** Legacy admin flag for free-form custom CSS (unused by shells) */
   enabled: boolean
   /** Reserved free-form payload */
@@ -115,6 +121,9 @@ export function resolveBlogTheme(input: {
   colorScheme?: string | null
   subtitle?: string | null
   socialLinks?: BlogSocialLink[] | null
+  aboutMd?: string | null
+  homeIntroMd?: string | null
+  friendsMd?: string | null
   enabled?: boolean
   customTheme?: BlogThemeTokens | null
 }): BlogThemeContext {
@@ -127,6 +136,9 @@ export function resolveBlogTheme(input: {
     colorScheme: normalizeColorScheme(input.colorScheme),
     subtitle: (input.subtitle || '').trim(),
     socialLinks: normalizeSocialLinks(input.socialLinks ?? []),
+    aboutMd: input.aboutMd ?? '',
+    homeIntroMd: input.homeIntroMd ?? '',
+    friendsMd: input.friendsMd ?? '',
     enabled,
     customTheme,
     useMainSiteTokens: themeId === 'simple' && !customTheme,

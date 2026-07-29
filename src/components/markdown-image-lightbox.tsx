@@ -1,42 +1,70 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
+import Lightbox from 'yet-another-react-lightbox'
+import 'yet-another-react-lightbox/styles.css'
+
+export type MarkdownLightboxSlide = {
+  src: string
+  alt?: string
+}
 
 type Props = {
+  /** All article images for gallery navigation */
+  slides: MarkdownLightboxSlide[]
+  /** Currently focused image src */
   src: string | null
   alt?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-/** Full-viewport image viewer for blog / markdown bodies. */
+/**
+ * Portal-based multi-image lightbox so shell/sidebar stay mounted.
+ * Uses yet-another-react-lightbox.
+ */
 export function MarkdownImageLightbox({
+  slides,
   src,
   alt = '',
   open,
   onOpenChange,
 }: Props) {
-  return (
-    <Dialog open={open && !!src} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton
-        className="max-h-[min(96vh,56rem)] max-w-[min(96vw,72rem)] gap-0 overflow-hidden border-none bg-transparent p-0 shadow-none sm:max-w-[min(96vw,72rem)]"
-        aria-describedby={undefined}
-      >
-        <DialogTitle className="sr-only">{alt || '图片预览'}</DialogTitle>
-        {src ? (
-          <div className="flex max-h-[min(92vh,54rem)] items-center justify-center overflow-auto rounded-lg bg-black/90 p-2 sm:p-4">
-            <img
-              src={src}
-              alt={alt || '图片预览'}
-              className="max-h-[min(88vh,52rem)] max-w-full object-contain"
-              draggable={false}
-            />
-          </div>
-        ) : null}
-      </DialogContent>
-    </Dialog>
+  const [index, setIndex] = useState(0)
+
+  const resolvedSlides = useMemo(() => {
+    if (slides.length > 0) {
+      return slides.map((s) => ({
+        src: s.src,
+        alt: s.alt || '',
+        description: s.alt || undefined,
+      }))
+    }
+    if (src) {
+      return [{ src, alt: alt || '', description: alt || undefined }]
+    }
+    return []
+  }, [slides, src, alt])
+
+  useEffect(() => {
+    if (!open || !src) return
+    const i = resolvedSlides.findIndex((s) => s.src === src)
+    setIndex(i >= 0 ? i : 0)
+  }, [open, src, resolvedSlides])
+
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <Lightbox
+      open={open && resolvedSlides.length > 0}
+      close={() => onOpenChange(false)}
+      index={index}
+      slides={resolvedSlides}
+      on={{ view: ({ index: i }) => setIndex(i) }}
+      controller={{ closeOnBackdropClick: true }}
+      styles={{
+        container: { backgroundColor: 'rgba(0, 0, 0, 0.92)' },
+      }}
+    />,
+    document.body,
   )
 }

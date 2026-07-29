@@ -75,6 +75,9 @@ export function BlogAdminLayout() {
         colorScheme: res.data.colorScheme,
         subtitle: res.data.subtitle,
         socialLinks: res.data.socialLinks,
+        aboutMd: res.data.aboutMd,
+        homeIntroMd: res.data.homeIntroMd,
+        friendsMd: res.data.friendsMd,
         enabled: res.data.themeEnabled,
       }),
     )

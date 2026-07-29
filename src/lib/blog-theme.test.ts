@@ -29,6 +29,20 @@ describe('blog theme', () => {
     assert.equal(t.useMainSiteTokens, false)
     assert.equal(t.socialLinks.length, 1)
     assert.equal(t.socialLinks[0].type, 'github')
+    assert.equal(t.aboutMd, '')
+    assert.equal(t.homeIntroMd, '')
+    assert.equal(t.friendsMd, '')
+  })
+
+  it('keeps site markdown slots', () => {
+    const t = resolveBlogTheme({
+      aboutMd: '# hi',
+      homeIntroMd: 'intro',
+      friendsMd: 'friends',
+    })
+    assert.equal(t.aboutMd, '# hi')
+    assert.equal(t.homeIntroMd, 'intro')
+    assert.equal(t.friendsMd, 'friends')
   })
 
   it('keeps author colorScheme default', () => {

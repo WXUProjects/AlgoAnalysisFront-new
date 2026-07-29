@@ -70,6 +70,7 @@ export const endpoints = {
       roleMembers: `${API_PREFIX}/user/rbac/roles/members`,
       roleAssign: `${API_PREFIX}/user/rbac/roles/assign`,
       roleUnassign: `${API_PREFIX}/user/rbac/roles/unassign`,
+      /** 某用户持有的站点级自定义角色 id 列表（消 N+1） */
       userRoles: `${API_PREFIX}/user/rbac/user-roles`,
       myPermissions: `${API_PREFIX}/user/rbac/my-permissions`,
     },
@@ -145,6 +146,8 @@ export const endpoints = {
       authors: `${API_PREFIX}/user/blog/authors`,
       analytics: `${API_PREFIX}/user/blog/analytics`,
       categories: `${API_PREFIX}/user/blog/categories`,
+      /** 作者标签聚合 ?username= → { name, count }[] */
+      tags: `${API_PREFIX}/user/blog/tags`,
       categoryMine: `${API_PREFIX}/user/blog/category/mine`,
       categoryCreate: `${API_PREFIX}/user/blog/category/create`,
       categoryUpdate: `${API_PREFIX}/user/blog/category/update`,
@@ -1580,6 +1583,18 @@ export interface BlogSiteConfig {
   colorScheme?: BlogColorScheme | string
   subtitle?: string
   socialLinks: BlogSocialLink[]
+  /** 关于页 Markdown；空则用默认紧凑 UI */
+  aboutMd?: string
+  /** 首页介绍 Markdown；空则不展示介绍块 */
+  homeIntroMd?: string
+  /** 友链页 Markdown；空则不展示友链入口 */
+  friendsMd?: string
+}
+
+/** 博客文章标签聚合项 */
+export interface BlogTagCount {
+  name: string
+  count: number
 }
 
 /** 博客文章（列表可不含 content） */
@@ -1592,7 +1607,13 @@ export interface BlogArticle {
   coverUrl?: string
   visibility: BlogVisibility | string
   recommend?: boolean
+  /**
+   * 是否同步到主站曝光面（资料动态 / 广场 / 组织发现）。
+   * 公开文默认 true；显式 false = 仅个人站可见，不进广场。
+   */
   syncToMainProfile?: boolean
+  /** 自由标签 */
+  tags?: string[]
   categoryId?: number | null
   /** 由主站题解同步时的题解 id */
   sourceSolutionId?: number
@@ -1689,8 +1710,14 @@ export interface BlogArticleWriteReq {
   clearPassword?: boolean
   /** 广场精选：站管/资源审核员标记，非作者可写 */
   recommend?: boolean
-  /** @deprecated 服务端自动：公开文同步资料动态 */
+  /**
+   * 是否同步到主站（资料动态 / 广场 / 组织发现）。
+   * 公开文默认 true；false = 仅个人博客壳可见。
+   * private / password 文此字段无意义（本就不曝光）。
+   */
   syncToMainProfile?: boolean
+  /** 自由标签 */
+  tags?: string[]
   categoryId?: number | null
   /** @deprecated 服务端自动同步作者所属组织 */
   orgIds?: number[]

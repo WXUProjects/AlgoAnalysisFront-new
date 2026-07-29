@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import {
   BLOG_THEME_META,
   SOCIAL_LINK_PRESETS,
@@ -45,6 +46,9 @@ export function BlogSettingsPage() {
     theme.colorScheme,
   )
   const [subtitle, setSubtitle] = useState(theme.subtitle)
+  const [aboutMd, setAboutMd] = useState(theme.aboutMd || '')
+  const [homeIntroMd, setHomeIntroMd] = useState(theme.homeIntroMd || '')
+  const [friendsMd, setFriendsMd] = useState(theme.friendsMd || '')
   const [links, setLinks] = useState<BlogSocialLink[]>(
     theme.socialLinks.length
       ? theme.socialLinks.map((l) => ({ ...l }))
@@ -60,8 +64,19 @@ export function BlogSettingsPage() {
     setThemeId(theme.themeId)
     setColorScheme(theme.colorScheme)
     setSubtitle(theme.subtitle)
+    setAboutMd(theme.aboutMd || '')
+    setHomeIntroMd(theme.homeIntroMd || '')
+    setFriendsMd(theme.friendsMd || '')
     setLinks(theme.socialLinks.map((l) => ({ ...l })))
-  }, [theme.themeId, theme.colorScheme, theme.subtitle, theme.socialLinks])
+  }, [
+    theme.themeId,
+    theme.colorScheme,
+    theme.subtitle,
+    theme.aboutMd,
+    theme.homeIntroMd,
+    theme.friendsMd,
+    theme.socialLinks,
+  ])
 
   useEffect(() => {
     if (!isLogin || !isOwner) return
@@ -118,6 +133,9 @@ export function BlogSettingsPage() {
       colorScheme,
       subtitle: subtitle.trim(),
       socialLinks: cleaned,
+      aboutMd,
+      homeIntroMd,
+      friendsMd,
     })
     setSaving(false)
     if (!res.success || !res.data) {
@@ -130,8 +148,8 @@ export function BlogSettingsPage() {
 
   const cardClass =
     theme.themeId === 'chirpy'
-      ? 'space-y-6 rounded-[10px] bg-[var(--card-bg)] p-6 shadow-[var(--card-shadow)]'
-      : 'space-y-6 rounded-xl border bg-card p-6 shadow-sm'
+      ? 'flex flex-col gap-6 rounded-[10px] bg-[var(--card-bg)] p-6 shadow-[var(--card-shadow)]'
+      : 'flex flex-col gap-6 rounded-xl border bg-card p-6 shadow-sm'
 
   return (
     <form onSubmit={handleSave} className={cardClass}>
@@ -144,7 +162,7 @@ export function BlogSettingsPage() {
         </p>
       </div>
 
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <Label>主题</Label>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(Object.keys(BLOG_THEME_META) as BlogThemeId[]).map((id) => {
@@ -187,7 +205,7 @@ export function BlogSettingsPage() {
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <Label>默认明暗</Label>
         <p className="text-xs text-muted-foreground">
           读者第一次打开你的博客时使用的外观。选「跟随系统」则随对方设备自动切换。
@@ -221,7 +239,7 @@ export function BlogSettingsPage() {
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <Label htmlFor="blog-subtitle">副标题 / 简介</Label>
         <Input
           id="blog-subtitle"
@@ -230,12 +248,42 @@ export function BlogSettingsPage() {
           placeholder="一句话介绍你的博客（可选）"
           maxLength={200}
         />
-        <p className="text-xs text-muted-foreground">
-          Chirpy 显示在左侧栏，Mizuki 显示在横幅与资料卡。
-        </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="blog-home-intro">首页介绍</Label>
+        <Textarea
+          id="blog-home-intro"
+          value={homeIntroMd}
+          onChange={(e) => setHomeIntroMd(e.target.value)}
+          rows={4}
+          placeholder="显示在文章列表上方（支持 Markdown，可选）"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="blog-about-md">关于</Label>
+        <Textarea
+          id="blog-about-md"
+          value={aboutMd}
+          onChange={(e) => setAboutMd(e.target.value)}
+          rows={6}
+          placeholder="关于页内容（支持 Markdown，留空用默认）"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="blog-friends-md">友链</Label>
+        <Textarea
+          id="blog-friends-md"
+          value={friendsMd}
+          onChange={(e) => setFriendsMd(e.target.value)}
+          rows={6}
+          placeholder="友链页内容（支持 Markdown，留空不显示入口）"
+        />
+      </div>
+
+      <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <Label>外链图标</Label>
           <Button type="button" variant="outline" size="sm" onClick={addLink}>
@@ -251,7 +299,7 @@ export function BlogSettingsPage() {
             还没有添加外链
           </div>
         ) : (
-          <ul className="space-y-3">
+          <ul className="flex flex-col gap-3">
             {links.map((l, i) => (
               <li
                 key={i}
@@ -319,7 +367,7 @@ export function BlogSettingsPage() {
           />
         </div>
         {emailOn ? (
-          <div className="mt-3 max-w-xs space-y-2">
+          <div className="mt-3 flex max-w-xs flex-col gap-2">
             <Label>发送策略</Label>
             <Select
               value={emailStrategy === 'off' ? 'immediate' : emailStrategy}

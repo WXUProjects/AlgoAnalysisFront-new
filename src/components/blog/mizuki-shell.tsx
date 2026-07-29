@@ -17,6 +17,7 @@ import {
   NewspaperIcon,
   SearchIcon,
   SettingsIcon,
+  UsersIcon,
   XIcon,
 } from 'lucide-react'
 import { listBlogByUsername } from '@/api/blog'
@@ -37,6 +38,7 @@ type Props = {
   displayName: string
   subtitle: string
   socialLinks: BlogSocialLink[]
+  friendsMd?: string
   isOwner: boolean
   recentPosts?: BlogArticle[]
   categories?: BlogCategory[]
@@ -58,6 +60,7 @@ export function MizukiShell({
   displayName,
   subtitle,
   socialLinks,
+  friendsMd = '',
   isOwner,
   recentPosts = [],
   categories = [],
@@ -121,14 +124,18 @@ export function MizukiShell({
   }, [q, searchOpen, username])
 
   const base = `/blog/${username}`
+  const showFriends = Boolean(friendsMd.trim())
   const navItems = useMemo(
     () => [
       { to: base, end: true, label: '首页', icon: HomeIcon },
       { to: `${base}/categories`, label: '分类', icon: FolderOpenIcon },
       { to: `${base}/archives`, label: '归档', icon: ArchiveIcon },
+      ...(showFriends
+        ? [{ to: `${base}/friends`, label: '友链', icon: UsersIcon }]
+        : []),
       { to: `${base}/about`, label: '关于', icon: InfoIcon },
     ],
-    [base],
+    [base, showFriends],
   )
   const manageHref = `${base}/manage`
 

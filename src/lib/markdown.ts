@@ -623,11 +623,14 @@ export function extractMarkdownOutline(md: string): MarkdownOutlineItem[] {
     if (inFence) continue
     const m = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line)
     if (!m) continue
+    const level = m[1].length
+    // 侧栏 TOC：跳过 h1（页面标题已单独展示）
+    if (level === 1) continue
     const text = stripMdInline(m[2])
     if (!text) continue
     items.push({
       id: assignId(text),
-      level: m[1].length,
+      level,
       text,
     })
   }
@@ -643,7 +646,12 @@ function withHeadingIds(html: string): string {
   for (const el of Array.from(
     doc.body.querySelectorAll('h1,h2,h3,h4,h5,h6'),
   )) {
-    const text = (el.textContent || '').replace(/\s+/g, ' ').trim()
+    // 链接标题：id 用可见文案（去掉 a 的 URL 噪声）
+    const clone = el.cloneNode(true) as HTMLElement
+    for (const a of Array.from(clone.querySelectorAll('a'))) {
+      a.replaceWith(document.createTextNode(a.textContent || ''))
+    }
+    const text = (clone.textContent || '').replace(/\s+/g, ' ').trim()
     if (!text) continue
     el.id = assignId(text)
     el.classList.add('scroll-mt-24')

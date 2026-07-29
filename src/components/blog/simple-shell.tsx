@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 type Props = {
   username: string
   displayName: string
+  friendsMd?: string
   isOwner: boolean
   children: ReactNode
 }
@@ -24,15 +25,17 @@ type Props = {
 export function SimpleShell({
   username,
   displayName,
+  friendsMd = '',
   isOwner,
   children,
 }: Props) {
   const manageHref = `/blog/${username}/manage`
+  const showFriends = Boolean(friendsMd.trim())
 
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
       <BlogSubsiteBar username={username} variant="default" />
-      <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/90 [@media(prefers-reduced-transparency:reduce)]:bg-background [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
           <Link
             to={`/blog/${username}`}
@@ -62,6 +65,9 @@ export function SimpleShell({
           </SimpleTab>
           <SimpleTab to={`/blog/${username}/categories`}>分类</SimpleTab>
           <SimpleTab to={`/blog/${username}/archives`}>归档</SimpleTab>
+          {showFriends ? (
+            <SimpleTab to={`/blog/${username}/friends`}>友链</SimpleTab>
+          ) : null}
           <SimpleTab to={`/blog/${username}/about`}>关于</SimpleTab>
           {isOwner && (
             <a

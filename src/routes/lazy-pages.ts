@@ -235,3 +235,8 @@ export const BlogArchivesPage = lazy(() =>
 export const BlogAboutPage = lazy(() =>
   import('@/pages/blog/BlogAbout').then((m) => ({ default: m.BlogAboutPage })),
 )
+export const BlogFriendsPage = lazy(() =>
+  import('@/pages/blog/BlogFriends').then((m) => ({
+    default: m.BlogFriendsPage,
+  })),
+)

@@ -1,9 +1,42 @@
 import { Link, useOutletContext } from 'react-router-dom'
+import { MarkdownBody } from '@/components/markdown-body'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 
 export function BlogAboutPage() {
   const { username, author, theme } = useOutletContext<BlogOutletContext>()
   const name = author?.name || username
+  const custom = theme.aboutMd.trim()
+
+  if (custom) {
+    if (theme.themeId === 'chirpy') {
+      return (
+        <article className="chirpy-article px-1 pt-6">
+          <header>
+            <h1>关于</h1>
+          </header>
+          <div className="chirpy-prose">
+            <MarkdownBody content={custom} enableLightbox />
+          </div>
+        </article>
+      )
+    }
+    if (theme.themeId === 'mizuki') {
+      return (
+        <article className="mz-article">
+          <h1>关于</h1>
+          <div className="mz-prose">
+            <MarkdownBody content={custom} enableLightbox />
+          </div>
+        </article>
+      )
+    }
+    return (
+      <div className="mx-auto max-w-2xl rounded-xl border bg-card p-6 shadow-sm">
+        <h1 className="mb-4 text-xl font-semibold">关于</h1>
+        <MarkdownBody content={custom} enableLightbox />
+      </div>
+    )
+  }
 
   if (theme.themeId === 'chirpy') {
     return (
@@ -12,24 +45,26 @@ export function BlogAboutPage() {
           <h1>关于</h1>
         </header>
         <div className="chirpy-prose">
-          <div className="mb-6 flex items-center gap-4">
+          <div className="mb-4 flex items-center gap-3">
             {author?.avatar ? (
               <img
                 src={author.avatar}
                 alt=""
-                className="size-20 rounded-full"
+                className="size-12 rounded-full"
                 style={{ boxShadow: 'var(--avatar-border-color) 0 0 0 2px' }}
               />
             ) : (
-              <div className="flex size-20 items-center justify-center rounded-full bg-[var(--sidebar-bg)] text-2xl font-bold">
+              <div className="flex size-12 items-center justify-center rounded-full bg-[var(--sidebar-bg)] text-lg font-bold">
                 {name.slice(0, 1).toUpperCase()}
               </div>
             )}
             <div>
-              <p className="text-xl font-semibold text-[var(--heading-color)]">
+              <p className="text-lg font-semibold text-[var(--heading-color)]">
                 {name}
               </p>
-              <p className="text-[var(--text-muted-color)]">@{username}</p>
+              <p className="text-sm text-[var(--text-muted-color)]">
+                @{username}
+              </p>
             </div>
           </div>
           {theme.subtitle ? <p>{theme.subtitle}</p> : null}
@@ -40,11 +75,6 @@ export function BlogAboutPage() {
             <Link to="/blog-plaza">博客广场</Link>
             浏览其他作者。
           </p>
-          {theme.socialLinks.length > 0 ? (
-            <p>
-              侧栏底部可查看作者外链。
-            </p>
-          ) : null}
         </div>
       </article>
     )
@@ -55,24 +85,24 @@ export function BlogAboutPage() {
       <article className="mz-article">
         <h1>关于</h1>
         <div className="mz-prose">
-          <div className="mb-6 flex items-center gap-4">
+          <div className="mb-4 flex items-center gap-3">
             {author?.avatar ? (
               <img
                 src={author.avatar}
                 alt=""
-                className="size-20 rounded-[1.1rem] object-cover"
+                className="size-14 rounded-[1rem] object-cover"
                 style={{ boxShadow: '0 0 0 3px var(--mz-btn-bg)' }}
               />
             ) : (
-              <div className="flex size-20 items-center justify-center rounded-[1.1rem] bg-[var(--mz-btn-bg)] text-2xl font-bold text-[var(--mz-primary)]">
+              <div className="flex size-14 items-center justify-center rounded-[1rem] bg-[var(--mz-btn-bg)] text-lg font-bold text-[var(--mz-primary)]">
                 {name.slice(0, 1).toUpperCase()}
               </div>
             )}
             <div>
-              <p className="text-xl font-semibold text-[var(--mz-text-90)]">
+              <p className="text-lg font-semibold text-[var(--mz-text-90)]">
                 {name}
               </p>
-              <p className="text-[var(--mz-text-50)]">@{username}</p>
+              <p className="text-sm text-[var(--mz-text-50)]">@{username}</p>
             </div>
           </div>
           {theme.subtitle ? <p>{theme.subtitle}</p> : null}
@@ -83,26 +113,23 @@ export function BlogAboutPage() {
             <Link to="/blog-plaza">博客广场</Link>
             浏览其他作者。
           </p>
-          {theme.socialLinks.length > 0 ? (
-            <p>右侧资料卡可查看作者外链。</p>
-          ) : null}
         </div>
       </article>
     )
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+    <div className="mx-auto max-w-2xl flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-sm">
       <h1 className="text-xl font-semibold">关于</h1>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {author?.avatar ? (
           <img
             src={author.avatar}
             alt=""
-            className="size-16 rounded-full border object-cover"
+            className="size-12 rounded-full border object-cover"
           />
         ) : (
-          <div className="flex size-16 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
+          <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-base font-semibold text-primary">
             {name.slice(0, 1).toUpperCase()}
           </div>
         )}

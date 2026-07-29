@@ -142,7 +142,7 @@ export function RightSidebar() {
               }}
             >
               <ToggleGroupItem value="week" className="px-2 text-xs">
-                本周榜
+                7日榜
               </ToggleGroupItem>
               <ToggleGroupItem value="all" className="px-2 text-xs">
                 全部时间
