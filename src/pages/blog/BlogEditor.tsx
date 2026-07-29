@@ -265,7 +265,8 @@ export function BlogEditor() {
     setSaving(true)
     const body = {
       title: title.trim(),
-      slug: slug.trim() || undefined,
+      // 新建：可空由服务端按标题生成；更新：必须带原 slug，禁止随标题重算
+      slug: isNew ? slug.trim() || undefined : slug.trim() || undefined,
       // 空摘要 → 后端 / resolve 生成默认简述
       summary: resolveSummaryForSave(summary, content),
       content,
@@ -413,11 +414,13 @@ export function BlogEditor() {
           />
         </Field>
         <Field>
-          <FieldLabel>链接名（可选）</FieldLabel>
+          <FieldLabel>链接名{isNew ? '（可选）' : ''}</FieldLabel>
           <Input
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="不填则按标题生成"
+            placeholder={isNew ? '不填则按标题生成' : ''}
+            disabled={!isNew}
+            readOnly={!isNew}
           />
         </Field>
         <Field>
