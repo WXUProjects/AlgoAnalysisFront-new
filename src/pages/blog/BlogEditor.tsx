@@ -12,9 +12,11 @@ import {
   createBlogArticle,
   getBlogArticle,
   getBlogImageUploadStatus,
+  listBlogTags,
   listMyBlogCategories,
   updateBlogArticle,
 } from '@/api/blog'
+import type { BlogTagCount } from '@shared/api'
 import { uploadImage } from '@/api/upload'
 import { useAuth } from '@/auth/AuthContext'
 import {
@@ -77,6 +79,7 @@ export function BlogEditor() {
   const [categories, setCategories] = useState<BlogCategory[]>([])
   const [tags, setTags] = useState<string[]>([])
   const [tagDraft, setTagDraft] = useState('')
+  const [remoteTags, setRemoteTags] = useState<BlogTagCount[]>([])
   const [syncToMainProfile, setSyncToMainProfile] = useState(true)
   const [imageUploadEnabled, setImageUploadEnabled] = useState(false)
   const [coverUploading, setCoverUploading] = useState(false)
@@ -115,6 +118,23 @@ export function BlogEditor() {
       if (res.success && res.data) setImageUploadEnabled(res.data.enabled)
     })
   }, [])
+
+  useEffect(() => {
+    if (!username) return
+    void listBlogTags(username).then((res) => {
+      if (res.success && res.data) setRemoteTags(res.data)
+    })
+  }, [username])
+
+  const tagSuggestions = useMemo(() => {
+    const q = tagDraft.trim().toLowerCase()
+    if (!q) return [] as string[]
+    const selected = new Set(tags.map((t) => t.toLowerCase()))
+    return remoteTags
+      .map((t) => t.name)
+      .filter((n) => !selected.has(n.toLowerCase()) && n.toLowerCase().includes(q))
+      .slice(0, 8)
+  }, [tagDraft, tags, remoteTags])
 
   // 无分类时回落到「默认」分类
   useEffect(() => {
@@ -585,41 +605,73 @@ export function BlogEditor() {
         ) : null}
         <Field className="sm:col-span-2">
           <FieldLabel>标签</FieldLabel>
-          <div className="flex flex-wrap items-center gap-2">
-            {tags.map((t) => (
-              <Badge key={t} variant="secondary" className="gap-1 pr-1">
-                {t}
-                <button
-                  type="button"
-                  className="rounded-sm p-0.5 hover:bg-muted"
-                  aria-label={`移除 ${t}`}
-                  onClick={() => removeTag(t)}
-                >
-                  <XIcon className="size-3" />
-                </button>
-              </Badge>
-            ))}
-            <Input
-              value={tagDraft}
-              onChange={(e) => setTagDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ',') {
-                  e.preventDefault()
-                  addTag(tagDraft)
-                } else if (
-                  e.key === 'Backspace' &&
-                  !tagDraft &&
-                  tags.length > 0
-                ) {
-                  removeTag(tags[tags.length - 1])
-                }
-              }}
-              onBlur={() => {
-                if (tagDraft.trim()) addTag(tagDraft)
-              }}
-              placeholder={tags.length ? '' : '输入后回车添加'}
-              className="h-8 min-w-[8rem] flex-1"
-            />
+          <div className="relative flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {tags.map((t) => (
+                <Badge key={t} variant="secondary" className="gap-1 pr-1">
+                  {t}
+                  <button
+                    type="button"
+                    className="rounded-sm p-0.5 hover:bg-muted"
+                    aria-label={`移除 ${t}`}
+                    onClick={() => removeTag(t)}
+                  >
+                    <XIcon className="size-3" />
+                  </button>
+                </Badge>
+              ))}
+              <Input
+                value={tagDraft}
+                onChange={(e) => setTagDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault()
+                    if (tagSuggestions.length > 0) {
+                      const exact = tagSuggestions.find(
+                        (h) => h.toLowerCase() === tagDraft.trim().toLowerCase(),
+                      )
+                      addTag(exact || tagSuggestions[0])
+                    } else {
+                      addTag(tagDraft)
+                    }
+                  } else if (
+                    e.key === 'Backspace' &&
+                    !tagDraft &&
+                    tags.length > 0
+                  ) {
+                    removeTag(tags[tags.length - 1])
+                  } else if (e.key === 'Escape') {
+                    setTagDraft('')
+                  }
+                }}
+                onBlur={() => {
+                  // 延迟，便于点选建议
+                  window.setTimeout(() => {
+                    if (tagDraft.trim()) addTag(tagDraft)
+                  }, 120)
+                }}
+                placeholder={tags.length ? '搜索或添加' : '搜索已有标签或输入新标签'}
+                className="h-8 min-w-[8rem] flex-1"
+              />
+            </div>
+            {tagSuggestions.length > 0 ? (
+              <ul className="absolute top-full z-20 mt-1 max-h-40 w-full overflow-auto rounded-md border bg-popover p-1 text-sm shadow-md">
+                {tagSuggestions.map((name) => (
+                  <li key={name}>
+                    <button
+                      type="button"
+                      className="flex w-full rounded-sm px-2 py-1.5 text-left hover:bg-accent"
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        addTag(name)
+                      }}
+                    >
+                      {name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         </Field>
       </FieldGroup>
