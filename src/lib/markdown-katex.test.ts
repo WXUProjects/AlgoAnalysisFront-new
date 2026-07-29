@@ -95,3 +95,54 @@ describe('plain sample input-format LaTeX', () => {
     document.body.innerHTML = ''
   })
 })
+
+describe('Obsidian callouts and footnotes', () => {
+  it('renders the matrix note sample as a callout with markdown body', () => {
+    const html = md.renderMarkdown(
+      '> [!NOTE] 矩阵与行列式区别\n' +
+        '> ### 1. 矩阵 (Matrix)\n' +
+        '>* **本质**：一个由数字排列而成的 `二维数表`。\n' +
+        '>* **符号**：使用 **方括号 $[ ]$** 或 **圆括号 $( )$** 包围。',
+    )
+    assert.match(html, /obsidian-callout/)
+    assert.match(html, /obsidian-callout-type-note/)
+    assert.match(html, /矩阵与行列式区别/)
+    assert.match(html, /<h3[^>]*>1\. 矩阵 \(Matrix\)<\/h3>/)
+    assert.match(html, /class="katex"/)
+    assert.doesNotMatch(html, /\[!NOTE\]/)
+  })
+
+  it('supports foldable, nested and aliased callouts', () => {
+    const html = md.renderMarkdown(
+      '> [!question]- 外层问题\n' +
+        '> > [!important]+ 内层提示\n' +
+        '> > 完成',
+    )
+    assert.match(html, /<details[^>]*obsidian-callout/)
+    assert.match(html, /obsidian-callout-type-question/)
+    assert.match(html, /obsidian-callout-type-tip/)
+    assert.match(html, /<summary/)
+  })
+
+  it('renders named, multiline and inline footnotes with backlinks', () => {
+    const html = md.renderMarkdown(
+      '正文[^note] 和 ^[行内说明]。\n\n[^note]: 第一行\n  第二行',
+    )
+    assert.match(html, /class="obsidian-footnotes"/)
+    assert.match(html, /href="#fn-1"/)
+    assert.match(html, /id="fn-1"/)
+    assert.match(html, /第一行/)
+    assert.match(html, /第二行/)
+    assert.match(html, /行内说明/)
+    assert.doesNotMatch(html, /OBSIDIAN_FOOTNOTE_REF/)
+  })
+
+  it('keeps properties and comments out of the article outline', () => {
+    const outline = md.extractMarkdownOutline(
+      '---\ntitle: 私有标题\n---\n%%\n## 隐藏章节\n%%\n## 公开章节 ^public-section',
+    )
+    assert.deepEqual(outline, [
+      { id: '公开章节', level: 2, text: '公开章节' },
+    ])
+  })
+})

@@ -20,6 +20,24 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return
+          if (
+            id.includes('/mermaid/') ||
+            id.includes('/@mermaid-js/') ||
+            id.includes('/cytoscape') ||
+            id.includes('/dagre') ||
+            id.includes('/graphlib/') ||
+            id.includes('/elkjs/') ||
+            id.includes('/khroma/') ||
+            id.includes('/roughjs/') ||
+            id.includes('/stylis/') ||
+            id.includes('/lodash-es/') ||
+            id.includes('/dayjs/')
+          ) {
+            // Keep Mermaid's dependency graph under the dynamic import. Assigning
+            // it a manual chunk makes Rolldown hoist shared helpers into the
+            // entry graph and causes the browser to preload the entire renderer.
+            return
+          }
           if (id.includes('recharts') || id.includes('d3-')) return 'charts'
           if (
             id.includes('katex') ||

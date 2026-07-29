@@ -842,6 +842,165 @@
   font-style: italic;
 }
 
+/* Obsidian callouts：博客、题解、题面和编辑器预览共用 */
+.markdown-body .obsidian-callout {
+  --obsidian-callout-accent: var(--primary);
+  margin: 1em 0;
+  overflow: clip;
+  border: 1px solid color-mix(in srgb, var(--obsidian-callout-accent) 32%, var(--border));
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--obsidian-callout-accent) 8%, var(--background));
+}
+
+.markdown-body .obsidian-callout-type-danger,
+.markdown-body .obsidian-callout-type-failure,
+.markdown-body .obsidian-callout-type-bug {
+  --obsidian-callout-accent: var(--destructive);
+}
+
+.markdown-body .obsidian-callout-type-warning {
+  --obsidian-callout-accent: color-mix(in srgb, var(--destructive) 55%, var(--primary));
+}
+
+.markdown-body .obsidian-callout-type-quote,
+.markdown-body .obsidian-callout-type-abstract {
+  --obsidian-callout-accent: var(--muted-foreground);
+}
+
+.markdown-body .obsidian-callout-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 0.85rem;
+  color: var(--obsidian-callout-accent);
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.markdown-body summary.obsidian-callout-title {
+  cursor: pointer;
+  list-style: none;
+}
+
+.markdown-body summary.obsidian-callout-title::-webkit-details-marker {
+  display: none;
+}
+
+.markdown-body .obsidian-callout-icon {
+  flex: 0 0 auto;
+  inline-size: 0.65rem;
+  block-size: 0.65rem;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+}
+
+.markdown-body details.obsidian-callout > summary::after {
+  content: '›';
+  margin-left: auto;
+  transform: rotate(90deg);
+  transition: transform 160ms ease;
+}
+
+.markdown-body details.obsidian-callout:not([open]) > summary::after {
+  transform: rotate(0deg);
+}
+
+.markdown-body .obsidian-callout-content {
+  padding: 0 0.9rem 0.75rem;
+  color: var(--foreground);
+}
+
+.markdown-body .obsidian-callout-content > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body .obsidian-callout-content > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body .obsidian-callout .obsidian-callout {
+  margin: 0.75rem 0 0.15rem;
+}
+
+.markdown-body mark {
+  border-radius: calc(var(--radius) * 0.35);
+  padding: 0.04em 0.18em;
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  color: inherit;
+}
+
+.markdown-body .obsidian-embed {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.6);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.9em;
+}
+
+.markdown-body .obsidian-task-state {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 1rem;
+  block-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.35);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.72em;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.markdown-body .obsidian-block-anchor {
+  display: block;
+  position: relative;
+  scroll-margin-top: 6rem;
+}
+
+.markdown-body .obsidian-footnotes {
+  margin-top: 2rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 0.88em;
+}
+
+.markdown-body .obsidian-footnotes ol {
+  margin: 0;
+}
+
+.markdown-body .obsidian-footnote-ref {
+  margin-inline: 0.08em;
+  font-size: 0.75em;
+}
+
+.markdown-body .obsidian-footnote-backref {
+  margin-inline-start: 0.25rem;
+  text-decoration: none;
+}
+
+.markdown-body .obsidian-mermaid {
+  max-width: 100%;
+  margin: 1em 0;
+  padding: 0.75rem;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+}
+
+.markdown-body .obsidian-mermaid svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+
 /* 行内/块级内容在窄屏下不撑破容器 */
 .markdown-body p,
 .markdown-body li,
