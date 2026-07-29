@@ -126,11 +126,15 @@
   min-height: 100svh;
   background: var(--main-bg);
   color: var(--text-color);
-  /* 与 blog-subsite-bar h-8 对齐，避免 fixed 侧栏盖住顶部分站条 */
+  /* 分站条 h-8；顶栏 3rem —— 给 sticky 右侧栏等共用 */
   --chirpy-subsite-bar-h: 2rem;
+  --chirpy-topbar-h: 3rem;
 }
 
-/* 分站条在侧栏之上、全宽可读 */
+/*
+ * 分站条：全宽、压在左侧 fixed 栏之上。
+ * 不 sticky——随页滚走；左侧栏 top:0 时其顶缘会被本条盖住，不会露主区白底。
+ */
 .chirpy-shell > .blog-subsite-bar {
   position: relative;
   z-index: 60;
@@ -138,24 +142,30 @@
 
 .chirpy-sidebar {
   position: fixed;
-  top: var(--chirpy-subsite-bar-h);
+  /*
+   * 必须 top:0 + 满视口高：若 top 留分站条高度，滚动后条走了，
+   * 左上会露出主区白底，看起来像「白色盖住左侧导航」。
+   * 分站条 z-index 更高，页顶时仍压在侧栏上可读。
+   */
+  top: 0;
   left: 0;
   z-index: 50;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   width: var(--chirpy-sidebar-width);
-  height: calc(100svh - var(--chirpy-subsite-bar-h));
-  max-height: calc(100svh - var(--chirpy-subsite-bar-h));
+  height: 100svh;
+  max-height: 100svh;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0;
+  /* 页顶时给分站条让出视觉空间（滚动后不再出现白缝） */
+  padding-top: var(--chirpy-subsite-bar-h);
+  box-sizing: border-box;
   background: var(--sidebar-bg);
   border-right: 1px solid var(--sidebar-border-color);
   scrollbar-width: none;
   transition: transform 0.4s ease;
-  /* 与顶栏 sticky 一致：滚动时左侧导航始终钉住视口 */
-  will-change: transform;
 }
 
 .chirpy-sidebar::-webkit-scrollbar {
@@ -357,9 +367,14 @@
 /* main */
 .chirpy-main-wrapper {
   position: relative;
+  /* 把 sticky 顶栏的层叠关在主栏内，避免 backdrop/半透明顶栏「盖住」左侧 fixed 导航 */
+  z-index: 1;
+  isolation: isolate;
   min-height: 100svh;
   display: flex;
   justify-content: center;
+  /* 主区底与侧栏区分，滚动时左侧不透出主区白底 */
+  background: var(--main-bg);
 }
 
 @media (min-width: 850px) {
@@ -400,14 +415,15 @@
   }
 }
 
-/* topbar */
+/* topbar —— 仅主栏内 sticky，绝不延伸到左侧 fixed 导航 */
 .chirpy-topbar-wrapper {
   flex-shrink: 0;
-  height: 3rem;
+  height: var(--chirpy-topbar-h);
   position: sticky;
-  /* 分站条在文档流上方约 2rem，顶栏 sticky 时仍贴视口顶 */
   top: 0;
   z-index: 30;
+  width: 100%;
+  max-width: 100%;
   background: var(--topbar-bg);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
@@ -631,10 +647,15 @@
     display: block;
     position: sticky;
     /*
-     * 短侧栏：贴在顶栏下；长侧栏：top 为负，随页面滚动逐步露出底部。
-     * 无独立 overflow，避免双滚动；也不用滚完整篇文章才见侧栏底。
+     * 固定贴在顶栏下（勿再用 100svh-100%：top 的 % 相对包含块≈视口，
+     * 会算成恒为负的 -0.75rem，一滚「文章内容」就钻进顶栏）。
+     * 长大纲：限高 + 内部滚动。
      */
-    top: min(calc(3rem + 0.75rem), calc(100svh - 100% - 0.75rem));
+    top: calc(var(--chirpy-topbar-h) + 0.75rem);
+    max-height: calc(100svh - var(--chirpy-topbar-h) - 1.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
     align-self: flex-start;
     z-index: 10;
   }
@@ -1163,11 +1184,11 @@
   border-bottom: 1px solid var(--link-hover);
 }
 
-/* mask（侧栏打开时从分站条下缘起，不盖顶条） */
+/* mask（移动端侧栏打开；分站条 z-60 仍压在最上） */
 .chirpy-mask {
   display: none;
   position: fixed;
-  top: var(--chirpy-subsite-bar-h);
+  top: 0;
   right: 0;
   bottom: 0;
   left: 0;
