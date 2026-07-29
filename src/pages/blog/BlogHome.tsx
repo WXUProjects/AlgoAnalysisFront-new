@@ -38,18 +38,32 @@ function formatDateSlash(sec?: number) {
 }
 
 export function BlogHome() {
-  const { username, author, theme, categories: shellCats } =
-    useOutletContext<BlogOutletContext>()
+  const {
+    username,
+    author,
+    theme,
+    categories: shellCats,
+    recentPosts,
+  } = useOutletContext<BlogOutletContext>()
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryId = Number(searchParams.get('categoryId') || 0) || undefined
   const keyword = (searchParams.get('q') || '').trim()
   const tag = (searchParams.get('tag') || '').trim()
   const page = Math.max(1, Number(searchParams.get('page') || 1))
+  const unfilteredFirstPage =
+    page === 1 && !categoryId && !keyword && !tag
 
-  const [list, setList] = useState<BlogArticle[]>([])
-  const [total, setTotal] = useState(0)
+  // 壳层已拉过最近文章：首页首屏先用它，避免二次请求失败时空白
+  const [list, setList] = useState<BlogArticle[]>(() =>
+    unfilteredFirstPage ? recentPosts || [] : [],
+  )
+  const [total, setTotal] = useState(() =>
+    unfilteredFirstPage ? recentPosts?.length || 0 : 0,
+  )
   const [categories, setCategories] = useState<BlogCategory[]>(shellCats || [])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(
+    () => !(unfilteredFirstPage && (recentPosts?.length || 0) > 0),
+  )
   const [q, setQ] = useState(keyword)
 
   useEffect(() => {
@@ -59,7 +73,13 @@ export function BlogHome() {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      setLoading(true)
+      const hasSeed =
+        page === 1 &&
+        !categoryId &&
+        !keyword &&
+        !tag &&
+        (recentPosts?.length || 0) > 0
+      if (!hasSeed) setLoading(true)
       const [art, cats] = await Promise.all([
         listBlogByUsername({
           username,
@@ -80,16 +100,19 @@ export function BlogHome() {
       if (art.success && art.data) {
         setList(art.data.list)
         setTotal(art.data.total)
-      } else {
+      } else if (!hasSeed) {
         setList([])
         setTotal(0)
       }
-      setCategories(cats.data || [])
+      // 失败且有壳层种子时保留 list，不抹成空
+      if (cats.data) setCategories(cats.data)
       setLoading(false)
     })()
     return () => {
       cancelled = true
     }
+    // recentPosts 仅作首屏/失败回退，不进 deps 避免壳层刷新死循环
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username, page, categoryId, keyword, tag, theme.themeId])
 
   const pageSize =

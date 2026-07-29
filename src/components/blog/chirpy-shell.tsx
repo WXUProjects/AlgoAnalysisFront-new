@@ -320,10 +320,21 @@ export function ChirpyShell({
                     placeholder="搜索..."
                     value={q}
                     onChange={(e) => {
-                      setQ(e.target.value)
-                      setSearchMode(true)
+                      const v = e.target.value
+                      setQ(v)
+                      // 仅有输入时进入搜索结果态，避免 PC 顶栏常驻搜索框 focus 就卸掉首页
+                      if (v.trim()) {
+                        setSearchMode(true)
+                        setSearchOpen(true)
+                      }
                     }}
-                    onFocus={() => setSearchMode(true)}
+                    onFocus={() => {
+                      // 桌面端搜索框常驻：focus 不切换主内容；已有关键字时才展示结果
+                      if (q.trim()) {
+                        setSearchMode(true)
+                        setSearchOpen(true)
+                      }
+                    }}
                     aria-label="搜索文章"
                   />
                 </div>

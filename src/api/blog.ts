@@ -153,14 +153,18 @@ export async function listBlogByUsername(params: {
     activated: boolean
   }>
 > {
-  const res = await get<Record<string, unknown>>(endpoints.user.blog.byUsername, {
+  const query: Record<string, unknown> = {
     username: params.username,
     page: params.page,
     pageSize: params.pageSize,
-    categoryId: params.categoryId,
-    keyword: params.keyword,
-    tag: params.tag,
-  })
+  }
+  if (params.categoryId) query.categoryId = params.categoryId
+  if (params.keyword) query.keyword = params.keyword
+  if (params.tag) query.tag = params.tag
+  const res = await get<Record<string, unknown>>(
+    endpoints.user.blog.byUsername,
+    query,
+  )
   return wrapData(res, (data) => {
     const listRaw = (Array.isArray(data.list) ? data.list : []) as Record<
       string,
