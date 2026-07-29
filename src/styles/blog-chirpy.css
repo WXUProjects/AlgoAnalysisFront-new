@@ -618,13 +618,9 @@
   .chirpy-panel {
     display: block;
     position: sticky;
-    /* 贴在 sticky 顶栏下方（顶栏 3rem + 间距） */
+    /* 贴在 sticky 顶栏下方（顶栏 3rem + 间距）；与正文共用页面滚动，不另开侧栏滚动 */
     top: calc(3rem + 0.75rem);
     align-self: flex-start;
-    max-height: calc(100svh - 3rem - 1.5rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
     z-index: 10;
   }
 }
