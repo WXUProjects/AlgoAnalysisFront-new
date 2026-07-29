@@ -618,8 +618,11 @@
   .chirpy-panel {
     display: block;
     position: sticky;
-    /* 贴在 sticky 顶栏下方（顶栏 3rem + 间距）；与正文共用页面滚动，不另开侧栏滚动 */
-    top: calc(3rem + 0.75rem);
+    /*
+     * 短侧栏：贴在顶栏下；长侧栏：top 为负，随页面滚动逐步露出底部。
+     * 无独立 overflow，避免双滚动；也不用滚完整篇文章才见侧栏底。
+     */
+    top: min(calc(3rem + 0.75rem), calc(100svh - 100% - 0.75rem));
     align-self: flex-start;
     z-index: 10;
   }
