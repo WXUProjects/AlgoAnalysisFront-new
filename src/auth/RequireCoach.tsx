@@ -46,7 +46,7 @@ export function RequireCoach({ children }: { children: React.ReactNode }) {
           <CardHeader>
             <CardTitle>暂无管理权限</CardTitle>
             <CardDescription>
-              当前账号无法进入管理后台。如需使用，请联系组织管理员开通教练、队长或团队管理员权限，或请站点管理员为你分配相应的站点角色。
+              当前账号无法进入管理中心。如需使用，请联系组织管理员开通教练、队长或团队管理员权限，或请站点管理员为你分配相应的站点角色。
             </CardDescription>
           </CardHeader>
           <CardContent>

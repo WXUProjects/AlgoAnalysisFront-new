@@ -105,9 +105,9 @@ describe('buildMobileMoreSections（权限驱动）', () => {
     assert.ok(!manage.includes('组织设置'))
     assert.ok(!manage.includes('训练报告'))
     assert.ok(!manage.includes('组织训练报告'))
-    // 持 OrgReportView → 题库识别入口可见（与路由守卫一致），其余站点条目不可见
+    // 持 OrgReportView → 题面处理入口可见（与路由守卫一致），其余站点条目不可见
     const site = sectionLabels(sections, /^站点管理$/)
-    assert.deepEqual(site, ['题库识别'])
+    assert.deepEqual(site, ['题面处理'])
     assert.ok(!allLabels(sections).includes('站点数据'))
     assert.ok(!allLabels(sections).includes('站点设置'))
   })
@@ -178,7 +178,7 @@ describe('buildMobileMoreSections（权限驱动）', () => {
     assert.ok(site.includes('站点访问'))
     assert.ok(site.includes('全站用户'))
     assert.ok(site.includes('全站组织'))
-    assert.ok(site.includes('题库识别'))
+    assert.ok(site.includes('题面处理'))
     assert.ok(site.includes('题库审查'))
     assert.ok(site.includes('博客管理'))
     assert.ok(site.includes('角色权限'))

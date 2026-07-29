@@ -15,7 +15,7 @@ const Emergency = lazy(() =>
 )
 
 /**
- * 通知与公告：站点公告 + 紧急通知 融合页（全站触达统一入口）。
+ * 通知与公告：站点公告 + 重要通知 融合页（全站触达统一入口）。
  * 页签按权限过滤；旧路径 /admin/emergency 重定向到 ?tab=emergency。
  */
 export function DashboardSiteNotices() {
@@ -31,7 +31,7 @@ export function DashboardSiteNotices() {
         },
         {
           value: 'emergency',
-          label: '紧急通知',
+          label: '重要通知',
           show: can(Perm.SiteEmergency),
           content: <Emergency />,
         },

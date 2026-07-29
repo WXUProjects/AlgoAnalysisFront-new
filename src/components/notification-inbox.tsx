@@ -244,7 +244,7 @@ export function NotificationInbox({ enabled }: { enabled: boolean }) {
           <SheetHeader className="border-b px-4 py-3">
             <SheetTitle>站内通知</SheetTitle>
             <SheetDescription>
-              注册与账号状态、审核与举报、点赞回复等都会显示在这里，网站与站点后台共用同一列表
+              注册与账号状态、审核与举报、点赞回复等都会显示在这里，网站与管理中心共用同一列表
             </SheetDescription>
           </SheetHeader>
           <div className="flex items-center justify-between gap-2 border-b px-4 py-2">

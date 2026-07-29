@@ -439,7 +439,7 @@ export function Home() {
               <CardHeader className="px-4">
                 <div className="flex items-center gap-2">
                   <SparklesIcon className="size-4 text-muted-foreground" />
-                  <CardTitle className="text-base">算法画像</CardTitle>
+                  <CardTitle className="text-base">刷题画像</CardTitle>
                 </div>
                 <CardDescription>
                   根据你已通过的题目与标签生成

@@ -367,7 +367,7 @@ export function DashboardOrgMemberRoles() {
             <div className="space-y-3">
               <p>
                 将「{roleConfirm.name}」从「{orgRoleName(roleConfirm.from)}」改为「
-                {orgRoleName(roleConfirm.to)}」。对方的后台权限会立即变化。
+                {orgRoleName(roleConfirm.to)}」。对方的管理权限会立即变化。
               </p>
               {roleNeedsScope(roleConfirm.to) ? (
                 scopeLoading ? (

@@ -183,7 +183,7 @@ export function DashboardProblemProgress() {
 
   async function handleToggleFetch() {
     const next = !data?.fetchPaused
-    await run(next ? '暂停获取' : '恢复获取', () => toggleFetch(next))
+    await run(next ? '暂停抓取题面' : '恢复抓取题面', () => toggleFetch(next))
   }
 
   function hideRowsFromList(
@@ -257,10 +257,10 @@ export function DashboardProblemProgress() {
     <PageShell>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-semibold">题库识别</h3>
+          <h3 className="font-semibold">题面处理</h3>
           <p className="text-sm text-muted-foreground">
             每 5 秒自动刷新 · AI 分析
-            {data?.analyzePaused ? '已暂停' : '进行中'} · 题面获取
+            {data?.analyzePaused ? '已暂停' : '进行中'} · 抓取题面
             {data?.fetchPaused ? '已暂停' : '进行中'}
             <span className="mx-1">·</span>
             暂停不会丢失待处理任务
@@ -322,13 +322,13 @@ export function DashboardProblemProgress() {
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button type="button" size="sm" variant="outline" disabled={busy}>
-                    {data?.fetchPaused ? '恢复获取' : '暂停获取'}
+                    {data?.fetchPaused ? '恢复抓取题面' : '暂停抓取题面'}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>
-                      {data?.fetchPaused ? '恢复题面获取？' : '暂停题面获取？'}
+                      {data?.fetchPaused ? '恢复抓取题面？' : '暂停抓取题面？'}
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                       暂停后只是暂时不再获取新题面，已排队的任务会保留，恢复后继续。
@@ -454,7 +454,7 @@ export function DashboardProblemProgress() {
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {(['problem_fetch', 'problem_analyze'] as const).map((name) => {
           const q = queueMap[name]
-          const label = name === 'problem_fetch' ? '题面获取' : 'AI 分析'
+          const label = name === 'problem_fetch' ? '抓取题面' : 'AI 分析'
           return (
             <Card key={name} className="gap-1 py-3">
               <CardHeader className="px-3 py-0">
@@ -483,7 +483,7 @@ export function DashboardProblemProgress() {
           AI 分析 {data?.analyzePaused ? '已暂停' : '进行中'}
         </Badge>
         <Badge variant={data?.fetchPaused ? 'destructive' : 'secondary'}>
-          题面获取 {data?.fetchPaused ? '已暂停' : '进行中'}
+          抓取题面 {data?.fetchPaused ? '已暂停' : '进行中'}
         </Badge>
         <Badge variant="outline">新提交优先处理</Badge>
       </div>

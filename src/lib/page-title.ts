@@ -25,12 +25,12 @@ const APP_TITLES: Record<string, string> = {
 
 /** 后台路由 → 页面名 */
 const ADMIN_TITLES: Record<string, string> = {
-  '/admin': '后台',
+  '/admin': '管理',
   '/admin/statistics': '组织数据统计',
   '/admin/site-statistics': '站点数据',
   '/admin/bulletin': '组织公告',
   '/admin/site-bulletin': '通知与公告',
-  '/admin/problem-progress': '题库识别',
+  '/admin/problem-progress': '题面处理',
   '/admin/problem-edits': '题库审查',
   '/admin/reports': '用户举报',
   '/admin/user': '成员与分组',
@@ -88,7 +88,7 @@ export function resolvePageTitle(pathname: string): string {
     return '文章'
   }
 
-  if (path.startsWith('/admin')) return '后台'
+  if (path.startsWith('/admin')) return '管理'
 
   return ''
 }

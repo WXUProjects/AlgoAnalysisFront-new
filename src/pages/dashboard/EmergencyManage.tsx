@@ -88,7 +88,7 @@ export function DashboardEmergencyManage() {
     const res = await listEmergencies(1, LIST_PAGE_SIZE)
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '紧急通知加载失败，请稍后重试')
+      toast.error(res.message || '重要通知加载失败，请稍后重试')
       return
     }
     setList(res.data.list)
@@ -202,7 +202,7 @@ export function DashboardEmergencyManage() {
     return (
       <PageShell>
         <p className="text-sm text-muted-foreground">
-          你还没有管理紧急通知的权限。如有需要，请联系站点管理员开通。
+          你还没有管理重要通知的权限。如有需要，请联系站点管理员开通。
         </p>
       </PageShell>
     )
@@ -212,7 +212,7 @@ export function DashboardEmergencyManage() {
     <PageShell className="gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-semibold">紧急通知</h3>
+          <h3 className="font-semibold">重要通知</h3>
           <p className="text-sm text-muted-foreground">
             全站强制弹窗；拖动左侧手柄调整展示顺序。用户点「我知道了」后本地不再显示，新发布会再次弹出
           </p>
@@ -240,7 +240,7 @@ export function DashboardEmergencyManage() {
             </div>
           ) : !list.length ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-              还没有紧急通知
+              还没有重要通知
             </p>
           ) : (
             <ul className="divide-y">
@@ -299,7 +299,7 @@ export function DashboardEmergencyManage() {
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>确认删除这条紧急通知？</AlertDialogTitle>
+                          <AlertDialogTitle>确认删除这条重要通知？</AlertDialogTitle>
                           <AlertDialogDescription>
                             「{item.title}」将被删除。
                           </AlertDialogDescription>
@@ -326,7 +326,7 @@ export function DashboardEmergencyManage() {
         <DialogContent className="flex! h-[min(92vh,820px)] max-h-[92vh] w-full max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
           <DialogHeader className="shrink-0 border-b px-5 py-4">
             <DialogTitle>
-              {editing ? '编辑紧急通知' : '新建紧急通知'}
+              {editing ? '编辑重要通知' : '新建重要通知'}
             </DialogTitle>
           </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4">
@@ -347,9 +347,7 @@ export function DashboardEmergencyManage() {
                   previewMode="auto"
                   fullPage
                   className="min-h-0 flex-1"
-                  placeholder={
-                    '用 Markdown 编写通知…\n\n支持 **粗体**、列表、链接与 $公式$'
-                  }
+                  placeholder="开始编写通知…"
                 />
               </Field>
             </FieldGroup>

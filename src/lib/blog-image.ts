@@ -13,10 +13,10 @@ import {
 export type { MarkdownImageAlign, MarkdownImageLayout }
 
 export const BLOG_IMAGE_UPLOAD_HINT =
-  '暂不支持上传图片，请插入图片链接，例如：![说明](https://example.com/pic.png)'
+  '暂未开通图片上传，可粘贴图片链接'
 
 export const BLOG_IMAGE_UPLOAD_ENABLED_HINT =
-  '可粘贴或点工具栏上传图片；也支持外链。定宽/居中：![说明|50%|center](url) 或 ![说明|550](url)'
+  '可粘贴或上传图片；在预览图上可调整大小与对齐'
 
 /** Whether a cover/image value is an allowed external http(s) URL. */
 export function isAllowedBlogImageUrl(value: string): boolean {

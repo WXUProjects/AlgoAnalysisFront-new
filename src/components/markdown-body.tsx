@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import 'katex/dist/katex.min.css'
 import { MarkdownImageLightbox } from '@/components/markdown-image-lightbox'
+import { PromptDialog } from '@/components/prompt-dialog'
 import type { ImageLayoutPatch } from '@/lib/blog-image'
 import { cn } from '@/lib/utils'
 import { bindMarkdownCodeCopy } from '@/lib/markdown-code-copy'
 import {
   bindMarkdownImageLightbox,
   bindMarkdownImageResize,
+  type CustomSizePromptRequest,
 } from '@/lib/markdown-img-interact'
 import {
   prepareMarkdownHighlight,
@@ -58,6 +61,12 @@ export function MarkdownBody({
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [lightboxAlt, setLightboxAlt] = useState('')
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [sizePrompt, setSizePrompt] = useState<CustomSizePromptRequest | null>(
+    null,
+  )
+  const sizePromptResolveRef = useRef<
+    ((value: string | null) => void) | null
+  >(null)
 
   const handleLayout = useCallback(
     (src: string, patch: ImageLayoutPatch) => {
@@ -71,6 +80,21 @@ export function MarkdownBody({
     },
     [onImageLayoutChange, onImageWidthChange],
   )
+
+  const promptCustomSize = useCallback((req: CustomSizePromptRequest) => {
+    sizePromptResolveRef.current?.(null)
+    return new Promise<string | null>((resolve) => {
+      sizePromptResolveRef.current = resolve
+      setSizePrompt(req)
+    })
+  }, [])
+
+  const closeSizePrompt = useCallback((value: string | null) => {
+    const resolve = sizePromptResolveRef.current
+    sizePromptResolveRef.current = null
+    setSizePrompt(null)
+    resolve?.(value)
+  }, [])
 
   const layoutEnabled = Boolean(onImageLayoutChange || onImageWidthChange)
 
@@ -122,14 +146,25 @@ export function MarkdownBody({
     if (!root || !html || !layoutEnabled) return
     return bindMarkdownImageResize(root, {
       onLayoutChange: handleLayout,
+      promptCustomSize,
     })
-  }, [html, layoutEnabled, handleLayout])
+  }, [html, layoutEnabled, handleLayout, promptCustomSize])
+
+  useEffect(() => {
+    return () => {
+      sizePromptResolveRef.current?.(null)
+      sizePromptResolveRef.current = null
+    }
+  }, [])
 
   if (!content?.trim()) {
     return (
       <p className={cn('text-sm text-muted-foreground', className)}>{emptyText}</p>
     )
   }
+
+  const sizePromptOpen = sizePrompt != null
+  const sizeIsPercent = sizePrompt?.mode === 'percent'
 
   return (
     <>
@@ -152,6 +187,52 @@ export function MarkdownBody({
           }}
         />
       ) : null}
+      <PromptDialog
+        open={sizePromptOpen}
+        onOpenChange={(open) => {
+          if (!open) closeSizePrompt(null)
+        }}
+        title={sizeIsPercent ? '自定义图片宽度' : '自定义图片宽度'}
+        description={
+          sizeIsPercent
+            ? '相对正文宽度，范围 1–100%'
+            : `像素宽度，范围 ${sizePrompt?.minPx ?? 80}–${sizePrompt?.maxPx ?? 1600}`
+        }
+        label={sizeIsPercent ? '宽度（%）' : '宽度（px）'}
+        defaultValue={
+          sizePrompt != null ? String(sizePrompt.current) : ''
+        }
+        placeholder={sizeIsPercent ? '例如 50' : '例如 400'}
+        confirmLabel="应用"
+        onConfirm={(raw) => {
+          if (!sizePrompt) return false
+          if (sizePrompt.mode === 'percent') {
+            const p = Math.round(
+              Number(String(raw).replace(/%/g, '').trim()),
+            )
+            if (!Number.isFinite(p) || p < 1 || p > 100) {
+              toast.error('请输入 1–100 的百分比')
+              return false
+            }
+            closeSizePrompt(String(p))
+            return
+          }
+          const w = Math.round(
+            Number(String(raw).replace(/px/gi, '').trim()),
+          )
+          if (
+            !Number.isFinite(w) ||
+            w < sizePrompt.minPx ||
+            w > sizePrompt.maxPx
+          ) {
+            toast.error(
+              `请输入 ${sizePrompt.minPx}–${sizePrompt.maxPx} 的像素值`,
+            )
+            return false
+          }
+          closeSizePrompt(String(w))
+        }}
+      />
     </>
   )
 }

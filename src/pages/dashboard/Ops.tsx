@@ -105,7 +105,7 @@ export function DashboardOps() {
       <div className="mb-4 space-y-1">
         <h3 className="text-lg font-semibold tracking-tight">运维</h3>
         <p className="text-sm text-muted-foreground">
-          监测真实入库提交量，以及危险的数据维护操作；可见内容按你的权限显示。
+          查看提交数据规模，以及需要谨慎操作的数据维护；按你的权限显示可用功能。
         </p>
       </div>
 
@@ -115,7 +115,7 @@ export function DashboardOps() {
             <div>
               <CardTitle className="text-base">提交数据</CardTitle>
               <CardDescription>
-                直接统计数据库行数，不是今日增量
+                累计入库的提交条数（不是今天新增）
               </CardDescription>
             </div>
             <Button
@@ -174,7 +174,7 @@ export function DashboardOps() {
               OJ 账号重新全量同步。
               <br />
               <strong className="text-foreground">
-                保留：用户账号、OJ 绑定、题库、公告/紧急通知、比赛日历与订阅、站点配置。
+                保留：用户账号、OJ 绑定、题库、公告/重要通知、比赛日历与订阅、站点配置。
               </strong>
               同步期间数字会先归零再回升。
             </CardDescription>
@@ -182,7 +182,7 @@ export function DashboardOps() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="purge-confirm">
-                确认口令（请输入{' '}
+                安全确认码（请输入{' '}
                 <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                   {CONFIRM_TOKEN}
                 </code>
@@ -204,7 +204,7 @@ export function DashboardOps() {
                   variant="destructive"
                   disabled={purging || confirm !== CONFIRM_TOKEN}
                 >
-                  {purging ? '执行中…' : '清空全部提交并全量重爬'}
+                  {purging ? '执行中…' : '清空训练数据并重新同步'}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -212,7 +212,7 @@ export function DashboardOps() {
                   <AlertDialogTitle>确认清空全部训练数据？</AlertDialogTitle>
                   <AlertDialogDescription className="space-y-2">
                     <span className="block">
-                      将彻底删除提交、统计、比赛记录等（题库与 OJ 绑定保留），并在后台重新全量同步。此操作无法撤销。
+                      将彻底删除提交、统计、比赛记录等（题库与已关联的做题账号保留），并重新从各平台同步数据。此操作无法撤销。
                     </span>
                     <span className="block text-muted-foreground">
                       请确认已做好备份，且当前不在使用高峰期。

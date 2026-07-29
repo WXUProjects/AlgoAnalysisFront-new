@@ -223,7 +223,7 @@ export function DashboardOrgSettings() {
                 >
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto">识别码自动通过</SelectItem>
+                    <SelectItem value="auto">邀请码自动通过</SelectItem>
                     <SelectItem value="review">需管理员审批</SelectItem>
                   </SelectContent>
                 </Select>
@@ -288,12 +288,12 @@ export function DashboardOrgSettings() {
         <CardHeader>
           <CardTitle className="text-base">邀请加入</CardTitle>
           <CardDescription>
-            复制邀请链接发给队员；对方打开后会看到欢迎提示，注册后自动加入本组织。也可只发识别码。
+            复制邀请链接发给队员；对方打开后会看到欢迎提示，注册后自动加入本组织。也可只发邀请码。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm text-muted-foreground">识别码</span>
+            <span className="text-sm text-muted-foreground">邀请码</span>
             <code className="rounded bg-muted px-3 py-2 text-sm">{inviteCode || '—'}</code>
             <Button
               variant="secondary"
@@ -302,29 +302,29 @@ export function DashboardOrgSettings() {
               onClick={() => {
                 if (!inviteCode) return
                 void navigator.clipboard.writeText(inviteCode).then(
-                  () => toast.success('已复制识别码'),
+                  () => toast.success('已复制邀请码'),
                   () => toast.error('复制失败，请手动选择复制'),
                 )
               }}
             >
-              复制识别码
+              复制邀请码
             </Button>
             {canRotateInvite ? (
               <ConfirmDialog
-                title="更换团队识别码？"
-                description="更换后旧识别码与旧邀请链接立即失效。确定继续？"
+                title="更换团队邀请码？"
+                description="更换后旧邀请码与旧邀请链接立即失效。确定继续？"
                 confirmLabel="更换"
                 onConfirm={() =>
                   void rotateInvite(orgId).then((r) => {
                     if (r.success) {
                       setInviteCode(r.inviteCode || '')
-                      toast.success('已更换识别码')
+                      toast.success('已更换邀请码')
                     } else toast.error(r.message)
                   })
                 }
               >
                 <Button variant="outline" size="sm">
-                  更换识别码
+                  更换邀请码
                 </Button>
               </ConfirmDialog>
             ) : null}
@@ -385,10 +385,10 @@ export function DashboardOrgSettings() {
                   这不是邀请链接，不会把任何人拉进组织。
                 </p>
                 <p>
-                  已经加入「{currentOrg?.name || '本组织'}」的成员打开后，会默认切到本域（前台与后台都生效），直到对方自己换组织。
+                  已经加入「{currentOrg?.name || '本组织'}」的成员打开后，会默认切到本域（网站各处都会生效），直到对方自己换组织。
                 </p>
                 <p>
-                  还没加入的人打开后，只会留在公共域或自己原来的组织，不会自动成为成员。要加人请用上方的邀请链接或识别码。
+                  还没加入的人打开后，只会留在公共域或自己原来的组织，不会自动成为成员。要加人请用上方的邀请链接或邀请码。
                 </p>
               </div>
             </DialogDescription>

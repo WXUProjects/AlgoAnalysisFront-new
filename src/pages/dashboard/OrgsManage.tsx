@@ -290,7 +290,7 @@ export function DashboardOrgsManage() {
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {o.status === 'suspended' ? '停用' : '正常'} ·{' '}
-                      {o.joinMode === 'review' ? '需审批加入' : '识别码自动加入'} · 席位{' '}
+                      {o.joinMode === 'review' ? '需审批加入' : '邀请码自动加入'} · 席位{' '}
                       {o.memberCount ?? '—'}
                       {' / '}
                       {o.seatLimit && o.seatLimit > 0 ? o.seatLimit : 50}
@@ -383,7 +383,7 @@ export function DashboardOrgsManage() {
                     >
                       <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="auto">识别码自动通过</SelectItem>
+                        <SelectItem value="auto">邀请码自动通过</SelectItem>
                         <SelectItem value="review">需审批</SelectItem>
                       </SelectContent>
                     </Select>
@@ -436,7 +436,7 @@ export function DashboardOrgsManage() {
                         <div className="flex min-w-0 flex-col gap-0.5">
                           <Label>强制同步（不因长期未登录而暂停）</Label>
                           <span className="text-xs text-muted-foreground">
-                            集训/比赛期：本组织成员不因不活跃暂停后台同步
+                            集训/比赛期：本组织成员不因不活跃暂停自动同步
                           </span>
                         </div>
                         <Switch checked={forceSync} onCheckedChange={setForceSync} />
@@ -572,7 +572,7 @@ export function DashboardOrgsManage() {
               ? roleConfirm.to === 'captain' ||
                 roleConfirm.to === 'group_leader'
                 ? `任命「${orgRoleName(roleConfirm.to)}」须指定分组或分队。请到该组织的「成员与角色」页完成任命（需先切换到目标组织）。`
-                : `确定将「${roleConfirm.name}」从「${orgRoleName(roleConfirm.from)}」改为「${orgRoleName(roleConfirm.to)}」？对方的后台权限会立即变化。`
+                : `确定将「${roleConfirm.name}」从「${orgRoleName(roleConfirm.from)}」改为「${orgRoleName(roleConfirm.to)}」？对方的管理权限会立即变化。`
               : ''
           }
           confirmLabel={

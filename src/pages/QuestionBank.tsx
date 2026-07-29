@@ -317,7 +317,7 @@ export function QuestionBank() {
     // 5s 无结果：关窗，后台继续，结果用通知
     setAddOpen(false)
     resetAddDialog()
-    toast.message('后台识别中', {
+    toast.message('正在识别题目…', {
       description: '题面拉取较慢，识别成功或失败会再通知你',
     })
     bgWatchStop.current?.()

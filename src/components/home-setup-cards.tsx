@@ -178,7 +178,7 @@ export function HomeSetupCards() {
                 加入校队 / 组织
               </CardTitle>
               <CardDescription>
-                你目前只在公共域。向教练要团队识别码，加入后可看队内统计与公告。
+                你目前只在公共域。向教练要团队邀请码，加入后可看队内统计与公告。
               </CardDescription>
             </div>
             <Button
@@ -196,7 +196,7 @@ export function HomeSetupCards() {
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2 pt-0">
             <Button asChild size="sm">
-              <Link to="/org">输入识别码</Link>
+              <Link to="/org">输入邀请码</Link>
             </Button>
             <Button asChild size="sm" variant="outline">
               <Link to="/discover?tab=orgs">浏览组织</Link>

@@ -87,7 +87,7 @@ export function EmergencyDialogHost() {
             {current.title || '重要通知'}
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
-            {progress ? `紧急通知 · ${progress}` : '紧急通知'}
+            {progress ? `重要通知 · ${progress}` : '重要通知'}
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">

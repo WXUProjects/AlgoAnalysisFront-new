@@ -144,11 +144,11 @@ export function BlogAdminLayout() {
           data-blog-admin="1"
         >
           <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-            <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-4 sm:gap-3">
+            <div className="mx-auto flex h-14 w-full max-w-[min(90rem,88%)] items-center gap-2 px-4 sm:gap-3">
               <MobileNavBack />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">
-                  后台设置 · {displayName}
+                  博客管理 · {displayName}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
                   @{username}
@@ -164,7 +164,7 @@ export function BlogAdminLayout() {
                 <Link to={homeTo}>回主站</Link>
               </Button>
             </div>
-            <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 pb-2">
+            <nav className="mx-auto flex w-full max-w-[min(90rem,88%)] gap-1 overflow-x-auto px-4 pb-2">
               {tabs.map((t) => (
                 <NavLink
                   key={t.to}
@@ -186,7 +186,7 @@ export function BlogAdminLayout() {
             </nav>
           </header>
 
-          <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+          <main className="mx-auto w-full max-w-[min(90rem,88%)] flex-1 px-4 py-6">
             {loading ? (
               <div className="flex justify-center py-20">
                 <Spinner className="size-6" />

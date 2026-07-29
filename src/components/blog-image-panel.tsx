@@ -45,7 +45,7 @@ type Props = {
 }
 
 /**
- * 当前文章图片库：预览、复制 Markdown、插入正文；上传中显示进度。
+ * 当前文章图片库：预览、复制图片标记、插入正文；上传中显示进度。
  * 未写入正文/头图的图，保存文章后由后端 GC 永久删除。
  */
 export function BlogImagePanel({
@@ -77,7 +77,7 @@ export function BlogImagePanel({
     const md = markdownImageSnippet(url, name || '图片')
     try {
       await navigator.clipboard.writeText(md)
-      toast.success('已复制 Markdown')
+      toast.success('已复制图片标记')
     } catch {
       toast.error('复制失败，请手动复制')
     }
@@ -176,7 +176,7 @@ export function BlogImagePanel({
                     size="xs"
                     variant="ghost"
                     onClick={() => void copyMd(img.url, img.name)}
-                    aria-label="复制 Markdown"
+                    aria-label="复制图片标记"
                   >
                     <ClipboardCopyIcon />
                   </Button>
@@ -230,7 +230,7 @@ export function BlogImagePanel({
         <CollapsibleContent>
           <div className="border-t px-3 py-3">
             <p className="mb-3 text-xs text-muted-foreground">
-              可预览、复制或插入正文。保存后未使用的图片会自动清理。
+              可预览、复制或插入正文。保存后，不用的图会自动清理。
             </p>
             {body}
           </div>
@@ -248,7 +248,7 @@ export function BlogImagePanel({
             文章图片
           </h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            可预览、复制或插入正文。保存文章后，未使用的图片会自动清理。
+            可预览、复制或插入正文。保存文章后，不用的图会自动清理。
           </p>
         </div>
       </div>

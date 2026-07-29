@@ -98,7 +98,7 @@ export function OrgsPanel({
   async function handleJoin() {
     if (!joinTarget) return
     if (!inviteCode.trim()) {
-      toast.error('请输入团队识别码')
+      toast.error('请输入团队邀请码')
       return
     }
     if (!displayName.trim()) {
@@ -135,7 +135,7 @@ export function OrgsPanel({
             发现组织
           </CardTitle>
           <CardDescription>
-            浏览可加入的团队；加入需团队识别码
+            浏览可加入的团队；加入需团队邀请码
           </CardDescription>
           <CardAction>
             <form
@@ -272,17 +272,17 @@ export function OrgsPanel({
           <DialogHeader>
             <DialogTitle>加入「{joinTarget?.name}」</DialogTitle>
             <DialogDescription>
-              请输入该组织的团队识别码，并填写你在组织内的名称。
+              请输入该组织的团队邀请码，并填写你在组织内的名称。
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="join-code">团队识别码</Label>
+              <Label htmlFor="join-code">团队邀请码</Label>
               <Input
                 id="join-code"
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value)}
-                placeholder="识别码"
+                placeholder="邀请码"
               />
             </div>
             <div className="flex flex-col gap-1.5">

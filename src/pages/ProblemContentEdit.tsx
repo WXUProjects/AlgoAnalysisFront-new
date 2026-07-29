@@ -293,7 +293,7 @@ export function ProblemContentEdit() {
         previewMode="markdown"
         minHeight={640}
         placeholder={
-          '用 Markdown 编写题面…\n\n## 题目描述\n\n支持代码块、表格与 $LaTeX$ 公式'
+          '开始编写题面…'
         }
       />
     </PageShell>

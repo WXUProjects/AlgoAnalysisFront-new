@@ -2,14 +2,17 @@ import {
   useCallback,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
+  type ClipboardEvent,
   type KeyboardEvent,
   type ReactNode,
   type UIEvent,
 } from 'react'
 import {
   BoldIcon,
+  CheckSquareIcon,
   CodeIcon,
   Columns2Icon,
   EyeIcon,
@@ -24,11 +27,13 @@ import {
   Minimize2Icon,
   PanelLeftIcon,
   QuoteIcon,
+  Redo2Icon,
   SquareCodeIcon,
   SigmaIcon,
   StrikethroughIcon,
   TableIcon,
   MinusIcon,
+  Undo2Icon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { uploadImage } from '@/api/upload'
@@ -127,7 +132,7 @@ export function MarkdownEditor({
   className,
   disabled,
   fullPage,
-  placeholder = '在此编写 Markdown…\n\n支持标题、列表、代码块、表格与 $公式$',
+  placeholder = '开始写作…',
   previewMode = 'markdown',
   minHeight = 320,
   linkOnlyImages = false,
@@ -150,6 +155,91 @@ export function MarkdownEditor({
   const canUpload = imageUploadEnabled
   const uploading = uploads.some((u) => u.status === 'uploading')
 
+  const historyRef = useRef<{ stack: string[]; index: number }>({
+    stack: [value],
+    index: 0,
+  })
+  const applyingHistoryRef = useRef(false)
+  const historyTimerRef = useRef<number | null>(null)
+  const [historyTick, setHistoryTick] = useState(0)
+
+  const pushHistory = useCallback((next: string) => {
+    const hist = historyRef.current
+    if (hist.stack[hist.index] === next) return
+    hist.stack = hist.stack.slice(0, hist.index + 1)
+    hist.stack.push(next)
+    if (hist.stack.length > 100) hist.stack.shift()
+    hist.index = hist.stack.length - 1
+    setHistoryTick((t) => t + 1)
+  }, [])
+
+  /** 工具栏等结构化编辑：立即记入历史 */
+  const commitValue = useCallback(
+    (next: string) => {
+      if (!applyingHistoryRef.current) {
+        if (historyTimerRef.current != null) {
+          window.clearTimeout(historyTimerRef.current)
+          historyTimerRef.current = null
+        }
+        pushHistory(next)
+      }
+      onChange(next)
+    },
+    [onChange, pushHistory],
+  )
+
+  // 连续输入：防抖合并为一条历史
+  useEffect(() => {
+    if (applyingHistoryRef.current) {
+      applyingHistoryRef.current = false
+      return
+    }
+    const hist = historyRef.current
+    if (hist.stack[hist.index] === value) return
+    if (historyTimerRef.current != null) {
+      window.clearTimeout(historyTimerRef.current)
+    }
+    historyTimerRef.current = window.setTimeout(() => {
+      historyTimerRef.current = null
+      pushHistory(value)
+    }, 400)
+    return () => {
+      if (historyTimerRef.current != null) {
+        window.clearTimeout(historyTimerRef.current)
+        historyTimerRef.current = null
+      }
+    }
+  }, [value, pushHistory])
+
+  const canUndo = historyRef.current.index > 0
+  const canRedo =
+    historyRef.current.index < historyRef.current.stack.length - 1
+  void historyTick
+
+  const undo = useCallback(() => {
+    const hist = historyRef.current
+    if (historyTimerRef.current != null) {
+      window.clearTimeout(historyTimerRef.current)
+      historyTimerRef.current = null
+      // 先把未入库的当前值压入，再撤销
+      if (hist.stack[hist.index] !== value) pushHistory(value)
+    }
+    if (hist.index <= 0) return
+    hist.index -= 1
+    applyingHistoryRef.current = true
+    onChange(hist.stack[hist.index] ?? '')
+    setHistoryTick((t) => t + 1)
+  }, [onChange, pushHistory, value])
+
+  const redo = useCallback(() => {
+    const hist = historyRef.current
+    if (hist.index >= hist.stack.length - 1) return
+    hist.index += 1
+    applyingHistoryRef.current = true
+    onChange(hist.stack[hist.index] ?? '')
+    setHistoryTick((t) => t + 1)
+  }, [onChange])
+
   const patchUploads = useCallback(
     (updater: (prev: UploadProgressItem[]) => UploadProgressItem[]) => {
       setUploads((prev) => {
@@ -165,7 +255,7 @@ export function MarkdownEditor({
     (text: string) => {
       const el = taRef.current
       if (!el || disabled) {
-        onChange(value + text)
+        commitValue(value + text)
         return
       }
       const start = el.selectionStart
@@ -176,14 +266,14 @@ export function MarkdownEditor({
         before.length > 0 && !before.endsWith('\n') ? '\n' : ''
       const inserted = needNl + text
       const next = before + inserted + after
-      onChange(next)
+      commitValue(next)
       requestAnimationFrame(() => {
         el.focus()
         const pos = start + inserted.length
         el.setSelectionRange(pos, pos)
       })
     },
-    [value, onChange, disabled],
+    [value, commitValue, disabled],
   )
 
   useEffect(() => {
@@ -277,9 +367,9 @@ export function MarkdownEditor({
   const handleImageLayoutChange = useCallback(
     (src: string, patch: ImageLayoutPatch) => {
       const next = updateMarkdownImageLayout(value, src, patch)
-      if (next !== value) onChange(next)
+      if (next !== value) commitValue(next)
     },
-    [value, onChange],
+    [value, commitValue],
   )
 
   const wrapSelection = useCallback(
@@ -290,7 +380,7 @@ export function MarkdownEditor({
       const end = el.selectionEnd
       const selected = value.slice(start, end) || placeholderText
       const next = value.slice(0, start) + before + selected + after + value.slice(end)
-      onChange(next)
+      commitValue(next)
       requestAnimationFrame(() => {
         el.focus()
         const s = start + before.length
@@ -298,7 +388,7 @@ export function MarkdownEditor({
         el.setSelectionRange(s, e)
       })
     },
-    [value, onChange, disabled],
+    [value, commitValue, disabled],
   )
 
   const insertBlock = useCallback(
@@ -315,7 +405,7 @@ export function MarkdownEditor({
       const suffix = needNlAfter ? '\n\n' : ''
       const inserted = prefix + block + suffix
       const next = before + inserted + after
-      onChange(next)
+      commitValue(next)
       requestAnimationFrame(() => {
         el.focus()
         const base = start + prefix.length
@@ -324,7 +414,7 @@ export function MarkdownEditor({
         el.setSelectionRange(pos, pos)
       })
     },
-    [value, onChange, disabled],
+    [value, commitValue, disabled],
   )
 
   const prefixLines = useCallback(
@@ -343,23 +433,38 @@ export function MarkdownEditor({
           if (prefix === '1. ') {
             return /^\d+\.\s/.test(line) ? line : `${i + 1}. ${line}`
           }
+          if (prefix === '- [ ] ') {
+            if (/^-\s\[[ xX]\]\s/.test(line)) return line
+            if (line.startsWith('- ')) return `- [ ] ${line.slice(2)}`
+            return `- [ ] ${line}`
+          }
           return line.startsWith(prefix) ? line : prefix + line
         })
         .join('\n')
       const next = value.slice(0, lineStart) + nextBlock + value.slice(lineEnd)
-      onChange(next)
+      commitValue(next)
       requestAnimationFrame(() => {
         el.focus()
         el.setSelectionRange(lineStart, lineStart + nextBlock.length)
       })
     },
-    [value, onChange, disabled],
+    [value, commitValue, disabled],
   )
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (disabled) return
       const mod = e.metaKey || e.ctrlKey
+      if (mod && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+        return
+      }
+      if (mod && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault()
+        redo()
+        return
+      }
       if (mod && e.key === 'b') {
         e.preventDefault()
         wrapSelection('**')
@@ -391,14 +496,87 @@ export function MarkdownEditor({
         const start = el.selectionStart
         const end = el.selectionEnd
         const next = value.slice(0, start) + '  ' + value.slice(end)
-        onChange(next)
+        commitValue(next)
         requestAnimationFrame(() => {
           el.selectionStart = el.selectionEnd = start + 2
         })
       }
     },
-    [disabled, wrapSelection, value, onChange, fullscreen, onFullscreenChange],
+    [
+      disabled,
+      wrapSelection,
+      value,
+      commitValue,
+      fullscreen,
+      onFullscreenChange,
+      undo,
+      redo,
+    ],
   )
+
+  const onPaste = useCallback(
+    (e: ClipboardEvent<HTMLTextAreaElement>) => {
+      if (disabled) return
+
+      if (canUpload && !uploading) {
+        const items = e.clipboardData?.items
+        if (items) {
+          const files: File[] = []
+          for (const item of Array.from(items)) {
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
+              const file = item.getAsFile()
+              if (file) files.push(file)
+            }
+          }
+          if (files.length) {
+            e.preventDefault()
+            void uploadMany(files)
+            return
+          }
+        }
+      }
+
+      const el = taRef.current
+      if (!el) return
+      const start = el.selectionStart
+      const end = el.selectionEnd
+      if (start === end) return
+      const text = (e.clipboardData?.getData('text/plain') || '').trim()
+      if (!text || /\s/.test(text)) return
+      try {
+        const u = new URL(text)
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return
+      } catch {
+        return
+      }
+      e.preventDefault()
+      const selected = value.slice(start, end)
+      const next =
+        value.slice(0, start) + `[${selected}](${text})` + value.slice(end)
+      commitValue(next)
+      requestAnimationFrame(() => {
+        el.focus()
+        const pos = start + selected.length + text.length + 4
+        el.setSelectionRange(pos, pos)
+      })
+    },
+    [disabled, canUpload, uploading, uploadMany, value, commitValue],
+  )
+
+  const stats = useMemo(() => {
+    const text = value.replace(/\s+/g, '')
+    const chars = text.length
+    const words = value.trim()
+      ? value
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean).length
+      : 0
+    return { chars, words }
+  }, [value])
+
+  const paneLabel =
+    pane === 'edit' ? '仅编辑' : pane === 'preview' ? '仅预览' : '分栏'
 
   const showEdit = pane === 'split' || pane === 'edit'
   const showPreview = pane === 'split' || pane === 'preview'
@@ -454,8 +632,23 @@ export function MarkdownEditor({
         )}
         style={!fullPage ? { height: minHeight, maxHeight: minHeight } : undefined}
       >
-        {/* 工具栏 */}
+        {/* 工具栏：历史 · 文字 · 结构 · 插入 · 视图 */}
         <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-b bg-muted/30 px-1.5 py-1">
+          <ToolBtn
+            title="撤销 ⌘Z"
+            disabled={disabled || !canUndo}
+            onClick={undo}
+          >
+            <Undo2Icon />
+          </ToolBtn>
+          <ToolBtn
+            title="重做 ⌘⇧Z"
+            disabled={disabled || !canRedo}
+            onClick={redo}
+          >
+            <Redo2Icon />
+          </ToolBtn>
+          <ToolSep />
           <ToolBtn
             title="粗体 ⌘B"
             disabled={disabled}
@@ -492,7 +685,6 @@ export function MarkdownEditor({
           >
             <Heading3Icon />
           </ToolBtn>
-          <ToolSep />
           <ToolBtn
             title="无序列表"
             disabled={disabled}
@@ -506,6 +698,13 @@ export function MarkdownEditor({
             onClick={() => prefixLines('1. ')}
           >
             <ListOrderedIcon />
+          </ToolBtn>
+          <ToolBtn
+            title="任务列表"
+            disabled={disabled}
+            onClick={() => prefixLines('- [ ] ')}
+          >
+            <CheckSquareIcon />
           </ToolBtn>
           <ToolBtn
             title="引用"
@@ -525,9 +724,7 @@ export function MarkdownEditor({
           <ToolBtn
             title="代码块"
             disabled={disabled}
-            onClick={() =>
-              insertBlock('```\ncode\n```', 4)
-            }
+            onClick={() => insertBlock('```\ncode\n```', 4)}
           >
             <SquareCodeIcon />
           </ToolBtn>
@@ -543,9 +740,9 @@ export function MarkdownEditor({
               canUpload
                 ? uploading
                   ? '上传中…'
-                  : '上传图片（可多选）'
+                  : '上传图片'
                 : linkOnlyImages
-                  ? '插入图片链接（不支持上传）'
+                  ? '插入图片链接'
                   : '图片'
             }
             disabled={disabled || uploading}
@@ -594,10 +791,7 @@ export function MarkdownEditor({
             title="表格"
             disabled={disabled}
             onClick={() =>
-              insertBlock(
-                '| 列1 | 列2 |\n| --- | --- |\n|  |  |',
-                2,
-              )
+              insertBlock('| 列1 | 列2 |\n| --- | --- |\n|  |  |', 2)
             }
           >
             <TableIcon />
@@ -609,7 +803,6 @@ export function MarkdownEditor({
           >
             <MinusIcon />
           </ToolBtn>
-          <ToolSep />
           <div className="ml-auto flex items-center gap-0.5">
             <ToolBtn
               title="仅编辑"
@@ -671,7 +864,7 @@ export function MarkdownEditor({
                   'border-b md:border-b-0 md:border-r',
               )}
             >
-              <PaneLabel htmlFor={editorId}>Markdown</PaneLabel>
+              <PaneLabel htmlFor={editorId}>正文</PaneLabel>
               <textarea
                 id={editorId}
                 ref={taRef}
@@ -679,22 +872,7 @@ export function MarkdownEditor({
                 onChange={(e) => onChange(e.target.value)}
                 onKeyDown={onKeyDown}
                 onScroll={handleEditorScroll}
-                onPaste={(e) => {
-                  if (!canUpload || disabled || uploading) return
-                  const items = e.clipboardData?.items
-                  if (!items) return
-                  const files: File[] = []
-                  for (const item of Array.from(items)) {
-                    if (item.kind === 'file' && item.type.startsWith('image/')) {
-                      const file = item.getAsFile()
-                      if (file) files.push(file)
-                    }
-                  }
-                  if (files.length) {
-                    e.preventDefault()
-                    void uploadMany(files)
-                  }
-                }}
+                onPaste={onPaste}
                 disabled={disabled}
                 placeholder={placeholder}
                 spellCheck={false}
@@ -709,7 +887,7 @@ export function MarkdownEditor({
                   'outline-none focus-visible:outline-none',
                   'disabled:cursor-not-allowed disabled:opacity-60',
                 )}
-                aria-label="Markdown 源码"
+                aria-label="正文"
               />
             </div>
           )}
@@ -734,6 +912,15 @@ export function MarkdownEditor({
               </div>
             </div>
           )}
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-3 py-1 text-[11px] text-muted-foreground">
+          <span className="tabular-nums">
+            {stats.chars > 0
+              ? `${stats.chars} 字 · 约 ${stats.words} 词`
+              : '尚未输入'}
+          </span>
+          <span>{paneLabel}</span>
         </div>
       </div>
     </TooltipProvider>

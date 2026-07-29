@@ -6,7 +6,7 @@ import {
   useOutletContext,
   useParams,
 } from 'react-router-dom'
-import { Maximize2Icon, Minimize2Icon } from 'lucide-react'
+import { ChevronDownIcon, Maximize2Icon, Minimize2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   createBlogArticle,
@@ -23,6 +23,11 @@ import {
 } from '@/components/blog-image-panel'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { Button } from '@/components/ui/button'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import {
@@ -211,11 +216,7 @@ export function BlogEditor() {
         onImageUploaded={handleImageUploaded}
         onUploadProgressChange={setUploadProgress}
         onRegisterInsert={handleRegisterInsert}
-        placeholder={
-          imageUploadEnabled
-            ? '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n可粘贴/多选上传图片；鼠标移到预览图可设对齐/百分比/定宽\n工具栏可全屏编辑 · 未使用图片保存后自动清理'
-            : '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n图片：![说明|50%|center](https://…)\n预览图悬停可调对齐与大小'
-        }
+        placeholder="开始写作…"
       />
     ),
     [
@@ -258,7 +259,7 @@ export function BlogEditor() {
       return
     }
     if (visibility === 'password' && isNew && !password.trim()) {
-      toast.error('密码访问需要设置密码')
+      toast.error('请设置访问密码')
       return
     }
     setSaving(true)
@@ -282,11 +283,7 @@ export function BlogEditor() {
       toast.error(res.message || '保存失败')
       return
     }
-    toast.success(
-      isNew
-        ? '已发布'
-        : '已保存；未使用的图片将自动清理',
-    )
+    toast.success(isNew ? '已发布' : '已保存')
     setFullscreen(false)
     navigate(`/blog/${username}/${res.data.slug}`)
   }
@@ -321,9 +318,7 @@ export function BlogEditor() {
             <p className="truncate text-sm font-medium">
               {title.trim() || (isNew ? '写文章' : '编辑文章')}
             </p>
-            <p className="text-xs text-muted-foreground">
-              全屏编辑 · Esc 退出 · 预览悬停调图 · 底部可展开图片库
-            </p>
+            <p className="text-xs text-muted-foreground">按 Esc 退出全屏</p>
           </div>
           <div className="flex shrink-0 gap-2">
             <Button
@@ -362,12 +357,6 @@ export function BlogEditor() {
           <h1 className="text-xl font-semibold">
             {isNew ? '写文章' : '编辑文章'}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            支持 Markdown · 可全屏 · 预览可调图宽 ·{' '}
-            {imageUploadEnabled
-              ? '可上传/粘贴图片'
-              : '图片请用外链（未开通上传）'}
-          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -376,7 +365,7 @@ export function BlogEditor() {
             onClick={() => setFullscreen(true)}
           >
             <Maximize2Icon data-icon="inline-start" />
-            全屏编辑
+            全屏
           </Button>
           <Button variant="outline" asChild>
             <Link to={`/blog/${username}/manage`}>返回列表</Link>
@@ -386,6 +375,33 @@ export function BlogEditor() {
           </Button>
         </div>
       </div>
+
+      <Collapsible className="group/tips rounded-lg border bg-muted/20">
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <span>写作提示</span>
+            <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-[state=open]/tips:rotate-180" />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <ul className="flex flex-col gap-1.5 border-t px-3 py-2.5 text-sm text-muted-foreground">
+            <li>工具栏可插入标题、列表、代码、表格与公式</li>
+            <li>
+              快捷键：粗体 ⌘B · 斜体 ⌘I · 链接 ⌘K · 撤销 ⌘Z
+            </li>
+            <li>
+              {imageUploadEnabled
+                ? '可粘贴或上传图片；在预览图上可调整大小与对齐'
+                : '图片可插入外链；开通上传后可直接粘贴图片'}
+            </li>
+            <li>选中文字后粘贴网址，会自动变成链接</li>
+            <li>需要专注时可点「全屏」</li>
+          </ul>
+        </CollapsibleContent>
+      </Collapsible>
 
       <FieldGroup className="grid gap-4 sm:grid-cols-2">
         <Field className="sm:col-span-2">
@@ -397,11 +413,11 @@ export function BlogEditor() {
           />
         </Field>
         <Field>
-          <FieldLabel>短链（可选）</FieldLabel>
+          <FieldLabel>链接名（可选）</FieldLabel>
           <Input
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="自动根据标题生成"
+            placeholder="不填则按标题生成"
           />
         </Field>
         <Field>
@@ -429,16 +445,16 @@ export function BlogEditor() {
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
             rows={2}
-            placeholder="不填则保存时按正文自动生成列表简介"
+            placeholder="列表里显示的简介，不填会按正文生成"
           />
         </Field>
         <Field className="sm:col-span-2">
-          <FieldLabel>头图（可选）</FieldLabel>
+          <FieldLabel>封面（可选）</FieldLabel>
           <div className="flex flex-wrap items-center gap-2">
             <Input
               value={coverUrl}
               onChange={(e) => setCoverUrl(e.target.value)}
-              placeholder="https://…"
+              placeholder="图片链接"
               className="min-w-[12rem] flex-1"
             />
             {imageUploadEnabled ? (
@@ -450,7 +466,7 @@ export function BlogEditor() {
                 asChild
               >
                 <label className="cursor-pointer">
-                  {coverUploading ? '上传中…' : '上传头图'}
+                  {coverUploading ? '上传中…' : '上传封面'}
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/gif,image/webp"
@@ -463,17 +479,17 @@ export function BlogEditor() {
                       const res = await uploadImage(f, 'blog_cover')
                       setCoverUploading(false)
                       if (!res.success || !res.data?.url) {
-                        toast.error(res.message || '头图上传失败')
+                        toast.error(res.message || '封面上传失败')
                         return
                       }
                       setCoverUrl(res.data.url)
                       handleImageUploaded({
                         id: `cover-${Date.now()}`,
                         url: res.data.url,
-                        name: '头图',
+                        name: '封面',
                         fromUpload: true,
                       })
-                      toast.success('头图已上传')
+                      toast.success('封面已上传')
                     }}
                   />
                 </label>
@@ -487,7 +503,7 @@ export function BlogEditor() {
           </p>
         </Field>
         <Field>
-          <FieldLabel>可见性</FieldLabel>
+          <FieldLabel>谁可以看</FieldLabel>
           <Select
             value={visibility}
             onValueChange={(v) => setVisibility(v as BlogVisibility)}
@@ -497,20 +513,20 @@ export function BlogEditor() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="public">公开</SelectItem>
-              <SelectItem value="private">不公开（仅自己）</SelectItem>
-              <SelectItem value="password">密码访问</SelectItem>
+              <SelectItem value="private">仅自己</SelectItem>
+              <SelectItem value="password">需要密码</SelectItem>
             </SelectContent>
           </Select>
-          {visibility === 'public' && (
+          {visibility === 'public' ? (
             <p className="mt-1 text-xs text-muted-foreground">
-              公开文章会自动出现在博客广场与你所在组织的发现推荐中
+              会出现在博客广场，并可能被推荐给同组织成员
             </p>
-          )}
+          ) : null}
         </Field>
-        {visibility === 'password' && (
+        {visibility === 'password' ? (
           <Field>
             <FieldLabel>
-              {isNew ? '访问密码' : '访问密码（留空则保持原密码）'}
+              {isNew ? '访问密码' : '访问密码（不填则保持原密码）'}
             </FieldLabel>
             <Input
               type="password"
@@ -519,7 +535,7 @@ export function BlogEditor() {
               autoComplete="new-password"
             />
           </Field>
-        )}
+        ) : null}
       </FieldGroup>
 
       <div className={cn('min-h-[min(72vh,880px)]')}>{editorBlock}</div>

@@ -435,7 +435,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
       return
     }
     const n = res.data?.updated ?? ids.length
-    toast.success(res.data?.message || res.message || `已解除 ${n} 人的不活跃状态`)
+    toast.success(res.data?.message || res.message || `已恢复 ${n} 人的同步`)
     setSelectedIds((prev) => {
       const next = new Set(prev)
       for (const id of ids) next.delete(id)
@@ -487,13 +487,13 @@ function UserListPage({ scope }: { scope: UserScope }) {
     )
     setFreezingDormant(false)
     if (!res.success) {
-      toast.error(res.message || '冻结失败，请稍后重试')
+      toast.error(res.message || '暂停同步失败，请稍后重试')
       return
     }
     toast.success(
       res.data?.message ||
         res.message ||
-        `已冻结 ${res.data?.updated ?? 0} 人`,
+        `已暂停 ${res.data?.updated ?? 0} 人的同步`,
     )
     setFreezeDialogOpen(false)
     if (ids.length) {
@@ -746,8 +746,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
       ? `${currentOrg.name} · 成员`
       : '组织成员'
   const desc = isSite
-    ? '管理全站用户与所属组织。站管可冻结任意用户（不按组织约定跳过），也可禁用账号使其无法登录。'
-    : '当前组织成员。长期未登录会暂停自动同步；组织永不冻结或个人始终同步的成员不受自动暂停影响。'
+    ? '管理全站用户与所属组织。站管可暂停任意用户的自动同步（不按组织约定跳过），也可禁用账号使其无法登录。'
+    : '当前组织成员。长期未登录会暂停自动同步；组织「强制同步」或个人「始终同步」的成员不受自动暂停影响。'
 
   return (
     <PageShell className="gap-3">
@@ -803,7 +803,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部用户</SelectItem>
-                <SelectItem value="dormant">已冻结</SelectItem>
+                <SelectItem value="dormant">已暂停同步</SelectItem>
                 <SelectItem value="inactive">最近未登录</SelectItem>
               </SelectContent>
             </Select>
@@ -881,7 +881,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     setFreezeDialogOpen(true)
                   }}
                 >
-                  一键冻结不活跃
+                  一键暂停不活跃同步
                 </Button>
               )}
               {canSiteSync && selectedIds.size > 0 && (
@@ -896,16 +896,16 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       >
                         {clearingDormant
                           ? '处理中…'
-                          : `解除不活跃（${selectedIds.size}）`}
+                          : `恢复同步（${selectedIds.size}）`}
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>
-                          解除 {selectedIds.size} 人的不活跃状态？
+                          恢复 {selectedIds.size} 人的同步？
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          会把这些人的「最近活跃」更新为现在，后台同步会恢复。这只是一次性操作：之后如果长时间不再登录，仍会再次被标记为不活跃。不会设为「始终同步」。
+                          会把这些人的「最近活跃」更新为现在，自动同步会恢复。这只是一次性操作：之后如果长时间不再登录，仍可能再次暂停。不会设为「始终同步」。
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -930,16 +930,16 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       >
                         {freezingDormant
                           ? '处理中…'
-                          : `冻结（${selectedIds.size}）`}
+                          : `暂停同步（${selectedIds.size}）`}
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>
-                          冻结 {selectedIds.size} 人的自动同步？
+                          暂停 {selectedIds.size} 人的自动同步？
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          将暂停这些人的后台同步，不按组织约定或「始终同步」跳过。对方再次登录或你手动「解除不活跃」后会恢复。
+                          将暂停这些人的自动同步，不按组织约定或「始终同步」跳过。对方再次登录或你手动「恢复同步」后会继续。
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -951,7 +951,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                             })
                           }
                         >
-                          确认冻结
+                          确认暂停
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -973,9 +973,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 : inactiveDaysParam > 0
                   ? `最近 ${inactiveDaysParam} 天没有未登录用户`
                   : dormantOnly && keyword
-                    ? `没有找到与「${keyword}」相关的已冻结用户`
+                    ? `没有找到与「${keyword}」相关、已暂停同步的用户`
                     : dormantOnly
-                      ? '当前没有已冻结的用户'
+                      ? '当前没有已暂停同步的用户'
                       : keyword
                         ? `没有找到与「${keyword}」相关的用户`
                         : isSite
@@ -1078,9 +1078,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
                             <Badge
                               variant="outline"
                               className="text-[10px] border-destructive/40 text-destructive"
-                              title="后台已暂停自动同步"
+                              title="已暂停自动同步"
                             >
-                              已冻结
+                              已暂停同步
                             </Badge>
                           ) : !u.lastLoginAt ? (
                             <Badge
@@ -1349,9 +1349,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       <Badge
                         variant="outline"
                         className="text-[10px] border-destructive/40 text-destructive"
-                        title="后台已暂停自动同步"
+                        title="已暂停自动同步"
                       >
-                        已冻结
+                        已暂停同步
                       </Badge>
                     ) : !detailUser.lastLoginAt ? (
                       <Badge
@@ -1438,7 +1438,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <FieldLabel htmlFor="sync-exempt">始终同步</FieldLabel>
                       <FieldDescription>
-                        即使长时间未登录，也继续自动同步与后台任务
+                        即使长时间未登录，也继续自动同步
                       </FieldDescription>
                     </div>
                     <Switch
@@ -1456,15 +1456,15 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 {canSiteSync && (detailUser.dormant || !detailUser.lastLoginAt) && (
                   <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
                     <div className="flex flex-col gap-1">
-                      <p className="text-sm font-medium">解除不活跃</p>
+                      <p className="text-sm font-medium">恢复同步</p>
                       <p className="text-xs text-muted-foreground">
                         把最近活跃刷新为现在，同步会恢复。只解除这一次，之后长时间未登录仍会再次暂停。
                       </p>
                     </div>
                     <div>
                       <ConfirmDialog
-                        title="解除不活跃状态？"
-                        description={`确定解除「${detailUser.name || detailUser.username}」的不活跃状态？同步会恢复；之后若长时间未登录仍可能再次暂停。`}
+                        title="恢复同步？"
+                        description={`确定恢复「${detailUser.name || detailUser.username}」的同步？之后若长时间未登录仍可能再次暂停。`}
                         confirmLabel="立即解除"
                         loading={clearingDormant}
                         onConfirm={() =>
@@ -1486,16 +1486,16 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 {canSiteSync && !detailUser.dormant && (
                   <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
                     <div className="flex flex-col gap-1">
-                      <p className="text-sm font-medium">冻结自动同步</p>
+                      <p className="text-sm font-medium">暂停自动同步</p>
                       <p className="text-xs text-muted-foreground">
-                        暂停此人的后台同步，不按组织约定或「始终同步」跳过。对方再次登录或你手动解除后会恢复。
+                        暂停此人的自动同步，不按组织约定或「始终同步」跳过。对方再次登录或你手动恢复后会继续同步。
                       </p>
                     </div>
                     <div>
                       <ConfirmDialog
-                        title="冻结自动同步？"
-                        description={`确定冻结「${detailUser.name || detailUser.username}」的自动同步？对方再次登录或你手动解除后会恢复。`}
-                        confirmLabel="确认冻结"
+                        title="暂停自动同步？"
+                        description={`确定暂停「${detailUser.name || detailUser.username}」的自动同步？对方再次登录或你手动恢复后会继续同步。`}
+                        confirmLabel="确认暂停"
                         loading={freezingDormant}
                         onConfirm={() =>
                           void handleForceDormant({
@@ -1509,7 +1509,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                           variant="outline"
                           disabled={freezingDormant}
                         >
-                          {freezingDormant ? '处理中…' : '立即冻结'}
+                          {freezingDormant ? '处理中…' : '立即暂停同步'}
                         </Button>
                       </ConfirmDialog>
                     </div>
@@ -1523,8 +1523,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {detailUser.disabled
-                          ? '启用后对方可重新登录。若此前被冻结同步，仍可按规则恢复。'
-                          : '禁用后对方无法登录，后台同步也会暂停。可随时在此重新启用。'}
+                          ? '启用后对方可重新登录。若此前已暂停同步，仍可按规则恢复。'
+                          : '禁用后对方无法登录，自动同步也会暂停。可随时在此重新启用。'}
                       </p>
                     </div>
                     <div>
@@ -1844,7 +1844,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
         description={
           syncExemptConfirmUser
             ? syncExemptConfirmUser.syncExempt
-              ? `关闭后，「${syncExemptConfirmUser.name || syncExemptConfirmUser.username}」若长时间未登录，后台可能暂停自动同步。`
+              ? `关闭后，「${syncExemptConfirmUser.name || syncExemptConfirmUser.username}」若长时间未登录，可能暂停自动同步。`
               : `开启后，「${syncExemptConfirmUser.name || syncExemptConfirmUser.username}」即使长时间未登录也会继续自动同步。`
             : ''
         }
@@ -1906,9 +1906,9 @@ function UserListPage({ scope }: { scope: UserScope }) {
       <Dialog open={freezeDialogOpen} onOpenChange={setFreezeDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>一键冻结不活跃用户</DialogTitle>
+            <DialogTitle>一键暂停不活跃用户的同步</DialogTitle>
             <DialogDescription>
-              冻结最近若干天未登录的用户，不按组织约定或「始终同步」跳过。冻结后对方登录或你手动解除即可恢复。
+              暂停最近若干天未登录用户的自动同步（不按组织约定或「始终同步」跳过）。对方登录或你手动恢复后即可继续同步。
             </DialogDescription>
           </DialogHeader>
           <FieldGroup className="gap-3">
@@ -1925,7 +1925,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 onChange={(e) => setFreezeDaysDraft(e.target.value)}
               />
               <FieldDescription>
-                范围 1–365。可先用上方筛选预览名单，再在此一键冻结；也可勾选后点「冻结」。
+                范围 1–365。可先用上方筛选预览名单，再在此一键暂停；也可勾选后点「暂停同步」。
               </FieldDescription>
             </Field>
           </FieldGroup>
@@ -1951,7 +1951,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 void handleForceDormant({ inactiveDays: days })
               }}
             >
-              {freezingDormant ? '处理中…' : '确认冻结'}
+              {freezingDormant ? '处理中…' : '确认暂停'}
             </Button>
           </DialogFooter>
         </DialogContent>

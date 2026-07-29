@@ -216,8 +216,7 @@ export function ProblemSolutionEdit() {
             {isEdit ? '编辑博客' : '发布博客'}
           </CardTitle>
           <CardDescription>
-            左侧写 Markdown，右侧实时预览（公式与题面规格一致）。可用 @用户名
-            提醒他人；发布后会同步到你当前组织的发现页。
+            左侧编辑、右侧预览。可用 @用户名 提醒他人；发布后会出现在当前组织的发现页。
           </CardDescription>
         </CardHeader>
         <CardContent className="px-4 pt-1">
@@ -247,11 +246,7 @@ export function ProblemSolutionEdit() {
             : 800,
           900,
         )}
-        placeholder={
-          imageUploadEnabled
-            ? '用 Markdown 写博客…\n\n## 思路\n\n支持代码块与 $公式$\n可粘贴/上传图片；定宽 ![说明|550](url)\n工具栏「仅编辑」可隐藏右侧预览\n\n可用 @username 提醒他人'
-            : '用 Markdown 写博客…\n\n## 思路\n\n支持代码块与 $公式$\n定宽图 ![说明|550](url)；工具栏「仅编辑」可隐藏预览\n\n可用 @username 提醒他人'
-        }
+        placeholder="开始写作…"
       />
     </PageShell>
   )

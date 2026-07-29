@@ -167,7 +167,7 @@ export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[]
     },
     {
       to: '/admin/problem-progress',
-      label: '题库识别',
+      label: '题面处理',
       icon: WorkflowIcon,
       anyOf: [Perm.OrgReportView, Perm.SiteProblemOps],
       section: 'site',

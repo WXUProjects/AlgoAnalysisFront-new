@@ -36,7 +36,7 @@ const features: {
   },
   {
     title: '角色与权限',
-    desc: '支持站点管理员、教练、队长、成员；队员凭识别码申请，教练审批。',
+    desc: '支持站点管理员、教练、队长、成员；队员凭邀请码申请，教练审批。',
   },
   {
     title: '题库与提交',
@@ -221,7 +221,7 @@ export function About() {
               </li>
               <li>
                 <span className="text-foreground">成员与角色</span>
-                ：识别码加入与审批，教练、队长分工
+                ：邀请码加入与审批，教练、队长分工
               </li>
               <li>
                 <span className="text-foreground">多平台同步</span>
@@ -285,7 +285,7 @@ export function About() {
         </CardHeader>
         <CardContent className="flex flex-col gap-2 text-sm text-muted-foreground">
           <p>
-            当前为默认公共空间。已有校队识别码可在「我的组织」中加入；新组织由站点管理员创建与管理。
+            当前为默认公共空间。已有校队邀请码可在「我的组织」中加入；新组织由站点管理员创建与管理。
           </p>
           <Separator className="my-2" />
           <p>

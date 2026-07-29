@@ -315,9 +315,7 @@ export function DashboardBulletinManage({
                   previewMode="auto"
                   fullPage
                   className="min-h-0 flex-1"
-                  placeholder={
-                    '用 Markdown 编写公告…\n\n支持 **粗体**、列表、代码与链接'
-                  }
+                  placeholder="开始编写公告…"
                 />
               </Field>
             </FieldGroup>

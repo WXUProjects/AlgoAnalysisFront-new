@@ -27,6 +27,9 @@ describe('editor layout (blog + solution)', () => {
     assert.match(src, /multiple/)
     assert.match(src, /resizableImages|updateMarkdownImageLayout|setMarkdownImageWidth/)
     assert.match(src, /全屏|fullscreen|Maximize2Icon/)
+    assert.match(src, /Undo2Icon|undo/)
+    assert.match(src, /任务列表|- \[ \]/)
+    assert.match(src, /尚未输入|字 ·/)
   })
 
   it('BlogEditor default height is significantly above old 480', () => {
@@ -35,8 +38,9 @@ describe('editor layout (blog + solution)', () => {
     assert.doesNotMatch(src, /minHeight=\{480\}/)
     assert.match(src, /0\.72|880|720/)
     assert.match(src, /imageUploadEnabled/)
-    assert.match(src, /全屏编辑|setFullscreen/)
+    assert.match(src, /全屏|setFullscreen/)
     assert.match(src, /BlogImagePanel/)
+    assert.match(src, /写作提示/)
   })
 
   it('ProblemSolutionEdit default height is significantly above old 640', () => {

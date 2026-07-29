@@ -360,7 +360,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   let selfNote = ''
   if (isSite) {
     title = '站点数据统计'
-    desc = '查看全站用户的提交与通过情况。已冻结用户不会再自动同步做题数据。'
+    desc = '查看全站用户的提交与通过情况。已暂停同步的用户不会再自动同步做题数据。'
   } else if (roleForCopy === OrgRole.OrgAdmin) {
     title = `${orgName} · 组织管理`
     desc = '一眼掌握成员活跃、训练参与和待办审批，方便日常运营。'
@@ -393,7 +393,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   const kpiCards: KpiCard[] = isSite
     ? [
         { label: '全站用户', value: fmtStat(userCount), raw: userCount },
-        { label: '已冻结', value: fmtStat(frozenCount), raw: frozenCount, hint: '已暂停同步' },
+        { label: '已暂停同步', value: fmtStat(frozenCount), raw: frozenCount, hint: '已暂停同步' },
         {
           label: '未冻结',
           value: fmtStat(userCount - frozenCount),

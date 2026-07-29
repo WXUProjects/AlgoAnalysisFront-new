@@ -463,7 +463,7 @@ export function ProblemsetDetail() {
     }
     toast.success(
       res.data?.fetchTriggered
-        ? '已加入，正在后台拉取题面'
+        ? '已加入，正在拉取题面'
         : '已加入题单',
     )
     setAddOpen(false)
@@ -514,7 +514,7 @@ export function ProblemsetDetail() {
     // 5s 无结果：关窗，后台继续
     setAddOpen(false)
     resetUrlAdd()
-    toast.message('后台识别中', {
+    toast.message('正在识别题目…', {
       description: '题面拉取较慢，识别成功或失败会再通知你',
     })
     const setId = set.id

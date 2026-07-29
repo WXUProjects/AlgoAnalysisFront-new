@@ -906,7 +906,7 @@ export function Profile() {
 
           <Card className="gap-3 py-4">
             <CardHeader className="px-4">
-              <CardTitle className="text-base">算法画像</CardTitle>
+              <CardTitle className="text-base">刷题画像</CardTitle>
               <CardDescription>
                 根据你已通过的题目与标签生成
               </CardDescription>

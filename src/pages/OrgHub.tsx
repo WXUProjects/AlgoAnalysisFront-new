@@ -45,7 +45,7 @@ export function OrgHub() {
 
   async function handleJoin() {
     if (!code.trim()) {
-      toast.error('请输入团队识别码')
+      toast.error('请输入团队邀请码')
       return
     }
     if (!orgDisplayName.trim()) {
@@ -124,7 +124,7 @@ export function OrgHub() {
       <div>
         <h1 className="text-xl font-semibold">我的组织</h1>
         <p className="text-sm text-muted-foreground">
-          默认在公共域。可用团队识别码加入校队，并切换当前所在组织。
+          默认在公共域。可用团队邀请码加入校队，并切换当前所在组织。
           <strong className="font-medium text-foreground">站内昵称请在下方「修改称呼」中设置</strong>
           （改公共域称呼即改昵称）；加入其他校队后可单独设置队内名称。
         </p>
@@ -202,17 +202,17 @@ export function OrgHub() {
         <CardHeader>
           <CardTitle className="text-base">加入团队</CardTitle>
           <CardDescription>
-            向管理员索取团队识别码，并填写你在队内显示的名称（仅本队可见）。
+            向管理员索取团队邀请码，并填写你在队内显示的名称（仅本队可见）。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <div className="space-y-2">
-            <Label htmlFor="invite">团队识别码</Label>
+            <Label htmlFor="invite">团队邀请码</Label>
             <Input
               id="invite"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="输入识别码"
+              placeholder="输入邀请码"
             />
           </div>
           <div className="space-y-2">
@@ -244,7 +244,7 @@ export function OrgHub() {
           <AlertDialogHeader>
             <AlertDialogTitle>退出组织？</AlertDialogTitle>
             <AlertDialogDescription>
-              确定退出「{leaveTarget?.name}」？退出后需重新用识别码加入。
+              确定退出「{leaveTarget?.name}」？退出后需重新用邀请码加入。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

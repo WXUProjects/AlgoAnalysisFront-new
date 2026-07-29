@@ -56,14 +56,28 @@ export function bindMarkdownImageLightbox(
   }
 }
 
+type SizeMode = 'percent' | 'px'
+
+export type CustomSizePromptRequest = {
+  mode: SizeMode
+  current: number
+  minPx: number
+  maxPx: number
+}
+
 export type ImageLayoutBindOptions = {
   /** 提交布局变更到 Markdown 源码（建议在 pointer 离开后再触发） */
   onLayoutChange: (src: string, patch: ImageLayoutPatch) => void
   minWidth?: number
   maxWidth?: number
+  /**
+   * 自定义宽度输入（替代 window.prompt）。
+   * 返回数字字符串；null/undefined 表示取消。
+   */
+  promptCustomSize?: (
+    req: CustomSizePromptRequest,
+  ) => Promise<string | null | undefined>
 }
-
-type SizeMode = 'percent' | 'px'
 
 type ReadLayout = {
   align: MarkdownImageAlign
@@ -239,7 +253,7 @@ export function bindMarkdownImageResize(
     modeGroup.className = 'md-img-tb-group'
     modeGroup.append(
       mkBtn('%', '按百分比缩放', { 'data-act': 'mode', 'data-val': 'percent' }),
-      mkBtn('px', '按定宽缩放', { 'data-act': 'mode', 'data-val': 'px' }),
+      mkBtn('px', '按像素宽度', { 'data-act': 'mode', 'data-val': 'px' }),
     )
 
     const sizeGroup = document.createElement('div')
@@ -282,7 +296,7 @@ export function bindMarkdownImageResize(
       } else {
         for (const w of [300, 400, 550, 800]) {
           sizeGroup.append(
-            mkBtn(`${w}`, `定宽 ${w}px`, {
+            mkBtn(`${w}`, `宽度 ${w}px`, {
               'data-act': 'px',
               'data-val': String(w),
             }),
@@ -432,26 +446,52 @@ export function bindMarkdownImageResize(
         return
       }
       if (act === 'size-custom') {
+        const applyCustom = (raw: string | null | undefined) => {
+          if (raw == null) return
+          if (sizeMode === 'percent') {
+            const p = Math.round(Number(String(raw).replace(/%/g, '').trim()))
+            if (!Number.isFinite(p) || p < 1 || p > 100) return
+            applyLiveSize(img, { widthPercent: p })
+            syncBadge()
+            syncActive()
+            queuePatch({ widthPercent: p, widthPx: null })
+          } else {
+            const w = Math.round(Number(String(raw).replace(/px/gi, '').trim()))
+            if (!Number.isFinite(w) || w < minW || w > maxW) return
+            applyLiveSize(img, { widthPx: w })
+            syncBadge()
+            syncActive()
+            queuePatch({ widthPx: w, widthPercent: null })
+          }
+        }
         if (sizeMode === 'percent') {
           const cur = readLayout(img, host).widthPercent ?? 50
-          const raw = window.prompt('图片宽度（相对正文，1–100%）', String(cur))
-          if (raw == null) return
-          const p = Math.round(Number(String(raw).replace(/%/g, '').trim()))
-          if (!Number.isFinite(p) || p < 1 || p > 100) return
-          applyLiveSize(img, { widthPercent: p })
-          syncBadge()
-          syncActive()
-          queuePatch({ widthPercent: p, widthPx: null })
+          if (opts.promptCustomSize) {
+            void opts
+              .promptCustomSize({
+                mode: 'percent',
+                current: cur,
+                minPx: minW,
+                maxPx: maxW,
+              })
+              .then(applyCustom)
+          } else {
+            applyCustom(String(cur))
+          }
         } else {
           const cur = readLayout(img, host).widthPx ?? 400
-          const raw = window.prompt('图片定宽（像素，80–1600）', String(cur))
-          if (raw == null) return
-          const w = Math.round(Number(String(raw).replace(/px/gi, '').trim()))
-          if (!Number.isFinite(w) || w < minW || w > maxW) return
-          applyLiveSize(img, { widthPx: w })
-          syncBadge()
-          syncActive()
-          queuePatch({ widthPx: w, widthPercent: null })
+          if (opts.promptCustomSize) {
+            void opts
+              .promptCustomSize({
+                mode: 'px',
+                current: cur,
+                minPx: minW,
+                maxPx: maxW,
+              })
+              .then(applyCustom)
+          } else {
+            applyCustom(String(cur))
+          }
         }
         return
       }

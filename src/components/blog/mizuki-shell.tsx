@@ -191,7 +191,7 @@ export function MizukiShell({
                   className="mz-nav-link"
                 >
                   <SettingsIcon className="size-3.5 opacity-70" />
-                  后台
+                  管理
                   <ExternalLinkIcon className="size-3 opacity-50" />
                 </a>
               )}
@@ -265,7 +265,7 @@ export function MizukiShell({
                 onClick={() => setMenuOpen(false)}
               >
                 <SettingsIcon className="size-3.5 opacity-70" />
-                后台设置
+                博客管理
               </a>
             )}
             <Link

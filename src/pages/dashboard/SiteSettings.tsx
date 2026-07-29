@@ -361,7 +361,7 @@ export function DashboardSiteSettings() {
       toast.error(res.message || '导出任务创建失败，请稍后重试')
       return
     }
-    toast.success('导出已在后台开始，可稍后回来下载')
+    toast.success('导出已开始，可稍后回来下载')
     startPoll(res.data.jobId)
     const job = await getBackupJob(res.data.jobId)
     if (job.success && job.data) setActiveJob(job.data)
@@ -494,9 +494,9 @@ export function DashboardSiteSettings() {
 
         <Card className="gap-3 py-4">
           <CardHeader className="px-4 pb-0">
-            <CardTitle>长期未登录休眠</CardTitle>
+            <CardTitle>长期未登录暂停同步</CardTitle>
             <CardDescription>
-              超过指定天数未登录的用户，将暂停自动同步与邮件，以节省资源。再次登录后会自动全量同步。
+              超过指定天数未登录的用户，将暂停自动同步与邮件提醒。再次登录后会自动重新同步。
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4">
@@ -513,7 +513,7 @@ export function DashboardSiteSettings() {
                   placeholder="14"
                 />
                 <p className="text-xs text-muted-foreground">
-                  默认 14 天，范围 1–365。站点管理员、教练/队长、付费组织、强制同步组织，以及标记为「永不休眠」的用户不受影响。
+                  默认 14 天，范围 1–365。站点管理员、教练/队长、付费组织、强制同步组织，以及标记为「始终同步」的用户不受影响。
                 </p>
               </Field>
             </FieldGroup>
@@ -801,7 +801,7 @@ export function DashboardSiteSettings() {
           <CardHeader className="px-4 pb-0">
             <CardTitle>数据备份与恢复</CardTitle>
             <CardDescription>
-              导出站点数据（用户、组织、题库、提交与上传文件等），后台完成后可下载；
+              导出站点数据（用户、组织、题库、提交与上传文件等），完成后可下载；
               完成后请在 10 分钟内下载，超时将自动删除。导入将
               <span className="font-medium text-destructive">覆盖现有数据</span>
               ，恢复为备份时的状态。

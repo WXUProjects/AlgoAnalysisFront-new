@@ -12,6 +12,8 @@ import {
 } from '@/api/squad'
 import type { GroupInfo, OrgMemberInfo, SquadInfo } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+import { ConfirmDialog } from '@/components/confirm-dialog'
+import { PromptDialog } from '@/components/prompt-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -63,6 +65,10 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
   const [candidates, setCandidates] = useState<OrgMemberInfo[]>([])
   const [searching, setSearching] = useState(false)
   const [captainIds, setCaptainIds] = useState<Set<number>>(new Set())
+  const [renameOpen, setRenameOpen] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -166,34 +172,37 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
     if (res.data?.id) setSelectedId(res.data.id)
   }
 
-  async function onRename() {
-    if (!selected) return
-    const name = window.prompt('分队名称', selected.name)
-    if (!name?.trim()) return
-    const res = await updateSquad({ id: selected.id, name: name.trim() })
-    if (!res.success) toast.error(res.message || '保存失败')
-    else {
-      toast.success('已保存')
-      void load()
+  async function confirmRename(name: string) {
+    if (!selected) return false
+    const next = name.trim()
+    if (!next) {
+      toast.error('请填写分队名称')
+      return false
     }
+    setRenaming(true)
+    const res = await updateSquad({ id: selected.id, name: next })
+    setRenaming(false)
+    if (!res.success) {
+      toast.error(res.message || '保存失败')
+      return false
+    }
+    toast.success('已保存')
+    void load()
   }
 
-  async function onDelete() {
+  async function confirmDelete() {
     if (!selected) return
-    if (
-      !window.confirm(
-        `确定删除分队「${selected.name}」？队员会移出分队，不会退出组织；该分队队长职务会解除。`,
-      )
-    ) {
+    setDeleting(true)
+    const res = await deleteSquad(selected.id)
+    setDeleting(false)
+    if (!res.success) {
+      toast.error(res.message || '删除失败')
       return
     }
-    const res = await deleteSquad(selected.id)
-    if (!res.success) toast.error(res.message || '删除失败')
-    else {
-      toast.success('已删除')
-      setSelectedId(0)
-      void load()
-    }
+    toast.success('已删除')
+    setDeleteOpen(false)
+    setSelectedId(0)
+    void load()
   }
 
   async function onAddMember(userId: number) {
@@ -339,7 +348,7 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
                       type="button"
                       size="sm"
                       variant="outline"
-                      onClick={() => void onRename()}
+                      onClick={() => setRenameOpen(true)}
                     >
                       改名
                     </Button>
@@ -347,7 +356,7 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
                       type="button"
                       size="sm"
                       variant="destructive"
-                      onClick={() => void onDelete()}
+                      onClick={() => setDeleteOpen(true)}
                     >
                       删除
                     </Button>
@@ -454,6 +463,38 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
           )}
         </div>
       </CardContent>
+
+      <PromptDialog
+        open={renameOpen}
+        onOpenChange={(open) => {
+          if (!open && !renaming) setRenameOpen(false)
+        }}
+        title="修改分队名称"
+        description={selected ? `当前：${selected.name}` : undefined}
+        label="分队名称"
+        defaultValue={selected?.name || ''}
+        placeholder="例如：A 队"
+        confirmLabel="保存"
+        loading={renaming}
+        onConfirm={(value) => confirmRename(value)}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteOpen(false)
+        }}
+        title="删除分队？"
+        description={
+          selected
+            ? `确定删除分队「${selected.name}」？队员会移出分队，不会退出组织；该分队队长职务会解除。`
+            : '确定删除该分队？'
+        }
+        confirmLabel="删除"
+        destructive
+        loading={deleting}
+        onConfirm={() => void confirmDelete()}
+      />
     </Card>
   )
 }

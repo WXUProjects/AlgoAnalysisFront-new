@@ -223,7 +223,7 @@ export function ChirpyShell({
               >
                 <span className="chirpy-nav-link">
                   <SettingsIcon />
-                  <span>后台设置</span>
+                  <span>博客管理</span>
                   <ExternalLinkIcon className="ml-auto size-3 opacity-50" />
                 </span>
               </a>
