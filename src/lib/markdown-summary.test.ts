@@ -50,6 +50,13 @@ describe('plainTextFromMarkdown', () => {
     assert.match(text, /第一点/)
     assert.match(text, /第二点/)
   })
+
+  it('does not expose Obsidian properties, comments or block ids', () => {
+    const text = plainTextFromMarkdown(
+      '---\ntitle: 私有属性\ntags: [内部]\n---\n正文 %%内部评论%% ^block-id',
+    )
+    assert.equal(text, '正文')
+  })
 })
 
 describe('renderSummaryMarkdown (cards: KaTeX + plain text)', () => {
@@ -98,5 +105,13 @@ describe('renderSummaryMarkdown (cards: KaTeX + plain text)', () => {
     )
     assert.match(html, /class="katex"/)
     assert.doesNotMatch(html, /\$1/)
+  })
+
+  it('does not expose Obsidian properties or comments in cards', () => {
+    const html = renderSummaryMarkdown(
+      '---\ntitle: 私有属性\nauthor: someone\n---\n公开摘要 %%内部评论%%',
+    )
+    assert.doesNotMatch(html, /私有属性|someone|内部评论/)
+    assert.match(html, /公开摘要/)
   })
 })

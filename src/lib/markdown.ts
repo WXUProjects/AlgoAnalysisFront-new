@@ -2,6 +2,10 @@ import { marked, type Tokens } from 'marked'
 import katex from 'katex'
 import TurndownService from 'turndown'
 import { highlightWith, loadHljs, mapHljsLang } from '@/lib/code-hl'
+import {
+  preprocessObsidianMarkdown,
+  type ObsidianFootnote,
+} from '@/lib/obsidian-markdown'
 
 marked.setOptions({
   gfm: true,
@@ -213,11 +217,12 @@ export function sanitizeHtml(html: string): string {
   const allowedTags = new Set([
     'a', 'abbr', 'b', 'blockquote', 'br', 'button', 'code', 'del', 'details',
     'div', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'kbd',
-    'li', 'ol', 'p', 'pre', 's', 'span', 'strong', 'sub', 'summary', 'sup',
-    'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'u', 'ul',
+    'input', 'li', 'mark', 'ol', 'p', 'pre', 's', 'section', 'span', 'strong',
+    'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead',
+    'tr', 'u', 'ul',
   ])
   const dropWithContent = new Set([
-    'base', 'embed', 'form', 'iframe', 'input', 'link', 'math',
+    'base', 'embed', 'form', 'iframe', 'link', 'math',
     'meta', 'object', 'script', 'style', 'svg', 'template', 'textarea',
   ])
   const doc = document.implementation.createHTMLDocument('')
@@ -266,11 +271,15 @@ export function sanitizeHtml(html: string): string {
         name === 'class' ||
         name === 'aria-hidden' ||
         name === 'aria-label' ||
+        (name === 'id' &&
+          /^(?:fn|fnref|block)-[a-zA-Z0-9-]+$/.test(attr.value)) ||
         // 样例块 KaTeX 行：复制时用原文（含 \ldots）
         (name === 'data-copy-text' &&
           tag === 'span' &&
           /\bmd-code-src\b/.test(el.getAttribute('class') || '')) ||
         (tag === 'button' && name === 'type') ||
+        (tag === 'input' &&
+          ['type', 'checked', 'disabled'].includes(name)) ||
         (tag === 'a' && ['href', 'target', 'rel'].includes(name)) ||
         (tag === 'img' &&
           ['src', 'alt', 'width', 'height', 'loading', 'style'].includes(name)) ||
@@ -307,6 +316,13 @@ export function sanitizeHtml(html: string): string {
       const src = el.getAttribute('src') || ''
       if (!safeURL(src, true)) el.remove()
       else el.setAttribute('loading', 'lazy')
+    }
+    if (tag === 'input') {
+      if ((el.getAttribute('type') || '').toLowerCase() !== 'checkbox') {
+        el.remove()
+        continue
+      }
+      el.setAttribute('disabled', '')
     }
     if (el.hasAttribute('style')) {
       const declarations = (el.getAttribute('style') || '').split(';')
@@ -600,6 +616,7 @@ function stripMdInline(s: string): string {
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
     .replace(/`([^`]+)`/g, '$1')
     .replace(/[*_~]+/g, '')
+    .replace(/<[^>]+>/g, '')
     .replace(/\\([\\`*_{}[\]()#+\-.!])/g, '$1')
     .trim()
 }
@@ -610,7 +627,8 @@ function stripMdInline(s: string): string {
  */
 export function extractMarkdownOutline(md: string): MarkdownOutlineItem[] {
   if (!md?.trim()) return []
-  const lines = md.replace(/\r\n/g, '\n').split('\n')
+  const normalized = preprocessObsidianMarkdown(md).markdown
+  const lines = normalized.replace(/\r\n/g, '\n').split('\n')
   const items: MarkdownOutlineItem[] = []
   const assignId = makeHeadingIdAssigner()
   let inFence = false
@@ -659,6 +677,128 @@ function withHeadingIds(html: string): string {
   return doc.body.innerHTML
 }
 
+const CALLOUT_ALIASES: Record<string, string> = {
+  summary: 'abstract',
+  tldr: 'abstract',
+  hint: 'tip',
+  important: 'tip',
+  check: 'success',
+  done: 'success',
+  help: 'question',
+  faq: 'question',
+  caution: 'warning',
+  attention: 'warning',
+  fail: 'failure',
+  missing: 'failure',
+  error: 'danger',
+  cite: 'quote',
+}
+
+const CALLOUT_TYPES = new Set([
+  'note',
+  'abstract',
+  'info',
+  'todo',
+  'tip',
+  'success',
+  'question',
+  'warning',
+  'failure',
+  'danger',
+  'bug',
+  'example',
+  'quote',
+])
+
+function normalizeCalloutType(raw: string): string {
+  const value = raw.trim().toLocaleLowerCase()
+  const aliased = CALLOUT_ALIASES[value] || value
+  return CALLOUT_TYPES.has(aliased) ? aliased : 'note'
+}
+
+function defaultCalloutTitle(raw: string): string {
+  const value = raw.trim()
+  if (!value) return 'Note'
+  return value.charAt(0).toLocaleUpperCase() + value.slice(1)
+}
+
+/** Upgrade sanitized blockquotes whose first line is an Obsidian callout marker. */
+function enhanceObsidianCallouts(html: string): string {
+  if (!html || typeof document === 'undefined') return html
+  const doc = document.implementation.createHTMLDocument('')
+  doc.body.innerHTML = html
+  const blockquotes = Array.from(doc.body.querySelectorAll('blockquote')).reverse()
+
+  for (const blockquote of blockquotes) {
+    const first = blockquote.firstElementChild
+    if (!first || first.tagName.toLowerCase() !== 'p') continue
+    const parts = first.innerHTML.split(/<br\s*\/?\s*>/i)
+    const headerProbe = doc.createElement('span')
+    headerProbe.innerHTML = parts.shift() || ''
+    const headerText = (headerProbe.textContent || '').trim()
+    const match = /^\[!([^\]]+)\]([+-])?(?:[\t ]+(.+))?$/i.exec(headerText)
+    if (!match) continue
+
+    if (parts.length > 0) first.innerHTML = parts.join('<br>')
+    else first.remove()
+
+    const rawType = match[1]
+    const type = normalizeCalloutType(rawType)
+    const titleText = match[3]?.trim() || defaultCalloutTitle(rawType)
+    const fold = match[2] || ''
+    const container = doc.createElement(fold ? 'details' : 'div')
+    container.className = `obsidian-callout obsidian-callout-type-${type}`
+    if (fold === '+') container.setAttribute('open', '')
+
+    const title = doc.createElement(fold ? 'summary' : 'div')
+    title.className = 'obsidian-callout-title'
+    const icon = doc.createElement('span')
+    icon.className = 'obsidian-callout-icon'
+    icon.setAttribute('aria-hidden', 'true')
+    const label = doc.createElement('span')
+    label.className = 'obsidian-callout-title-text'
+    label.textContent = titleText
+    title.append(icon, label)
+
+    const body = doc.createElement('div')
+    body.className = 'obsidian-callout-content'
+    while (blockquote.firstChild) body.append(blockquote.firstChild)
+    container.append(title, body)
+    blockquote.replaceWith(container)
+  }
+  return doc.body.innerHTML
+}
+
+function renderObsidianFootnotes(
+  html: string,
+  footnotes: ObsidianFootnote[],
+): string {
+  if (footnotes.length === 0) return html
+  let output = html.replace(
+    /@@OBSIDIAN_FOOTNOTE_REF_(\d+)_(\d+)@@/g,
+    (_, index: string, referenceIndex: string) =>
+      `<sup class="obsidian-footnote-ref" id="fnref-${index}-${referenceIndex}">` +
+      `<a href="#fn-${index}" aria-label="脚注 ${index}">${index}</a></sup>`,
+  )
+  const items = footnotes
+    .map((footnote) => {
+      const prepared = extractMath(footnote.content)
+      const body = restoreMath(
+        marked.parseInline(prepared.text, { async: false }) as string,
+        prepared.pieces,
+      )
+      const backlinks = Array.from(
+        { length: footnote.references },
+        (_, refIndex) =>
+          `<a class="obsidian-footnote-backref" href="#fnref-${footnote.index}-${refIndex + 1}" aria-label="返回正文">↩</a>`,
+      ).join(' ')
+      return `<li id="fn-${footnote.index}">${body} ${backlinks}</li>`
+    })
+    .join('')
+  output += `<section class="obsidian-footnotes"><ol>${items}</ol></section>`
+  return output
+}
+
 /** 渲染结果小 LRU：同内容不重复解析（key 含 hljs 就绪态，避免缓存无高亮版本） */
 const RENDER_CACHE_MAX = 50
 const renderCache = new Map<string, string>()
@@ -695,10 +835,17 @@ export function renderMarkdown(md: string): string {
   ensureRenderer()
   let out: string
   try {
-    const raw = md.replace(/\$\$\$/g, '$')
+    const obsidian = preprocessObsidianMarkdown(md)
+    const raw = obsidian.markdown.replace(/\$\$\$/g, '$')
     const { text, pieces } = extractMath(raw)
     const html = marked.parse(text, { async: false }) as string
-    out = withHeadingIds(sanitizeHtml(restoreMath(html, pieces)))
+    const withFootnotes = renderObsidianFootnotes(
+      restoreMath(html, pieces),
+      obsidian.footnotes,
+    )
+    out = withHeadingIds(
+      enhanceObsidianCallouts(sanitizeHtml(withFootnotes)),
+    )
   } catch {
     out = withHeadingIds(
       sanitizeHtml(
@@ -811,7 +958,11 @@ export async function renderContentAsync(src: string): Promise<string> {
 export function renderSummaryMarkdown(md: string): string {
   if (!md) return ''
   try {
-    const raw = md.replace(/\$\$\$/g, '$').replace(/\r\n/g, '\n')
+    const obsidian = preprocessObsidianMarkdown(md)
+    const raw = obsidian.markdown
+      .replace(/@@OBSIDIAN_FOOTNOTE_REF_\d+_\d+@@/g, '')
+      .replace(/\$\$\$/g, '$')
+      .replace(/\r\n/g, '\n')
     const { text, pieces } = extractMath(raw)
     // 占位符保护：剥 MD 时勿弄坏 @@MATHn@@
     const plain = stripMarkdownKeepPlaceholders(text)
@@ -849,6 +1000,7 @@ function stripMarkdownKeepPlaceholders(src: string): string {
   // 标题 / 引用 / 列表标记
   s = s.replace(/^#{1,6}\s+/gm, '')
   s = s.replace(/^>\s?/gm, '')
+  s = s.replace(/^\s*\[![^\]]+\][+-]?\s*/gm, '')
   s = s.replace(/^\s*[-*+]\s+/gm, '')
   s = s.replace(/^\s*\d+\.\s+/gm, '')
 
@@ -875,7 +1027,11 @@ function stripMarkdownKeepPlaceholders(src: string): string {
  */
 export function plainTextFromMarkdown(md: string): string {
   if (!md) return ''
-  let s = md.replace(/\$\$\$/g, '$').replace(/\r\n/g, '\n')
+  const obsidian = preprocessObsidianMarkdown(md)
+  let s = obsidian.markdown
+    .replace(/@@OBSIDIAN_FOOTNOTE_REF_\d+_\d+@@/g, '')
+    .replace(/\$\$\$/g, '$')
+    .replace(/\r\n/g, '\n')
 
   // 若整段像 HTML，先粗剥标签
   if (looksLikeHtml(s)) {
@@ -903,6 +1059,7 @@ export function plainTextFromMarkdown(md: string): string {
   // 标题 / 引用 / 列表标记
   s = s.replace(/^#{1,6}\s+/gm, '')
   s = s.replace(/^>\s?/gm, '')
+  s = s.replace(/^\s*\[![^\]]+\][+-]?\s*/gm, '')
   s = s.replace(/^\s*[-*+]\s+/gm, '')
   s = s.replace(/^\s*\d+\.\s+/gm, '')
 

@@ -17,6 +17,7 @@ import {
   renderMarkdownAsync,
   sanitizeHtml,
 } from '@/lib/markdown'
+import { bindMarkdownMermaid } from '@/lib/markdown-mermaid'
 
 type Mode = 'markdown' | 'auto' | 'html'
 
@@ -130,6 +131,16 @@ export function MarkdownBody({
     const root = rootRef.current
     if (!root || !html) return
     return bindMarkdownCodeCopy(root)
+  }, [html])
+
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root || !html) return
+    let cancelled = false
+    void bindMarkdownMermaid(root, undefined, () => cancelled)
+    return () => {
+      cancelled = true
+    }
   }, [html])
 
   // 点击放大（多图画廊）
