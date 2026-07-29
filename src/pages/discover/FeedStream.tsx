@@ -58,10 +58,13 @@ export function FeedStream({
   const [reloadToken, setReloadToken] = useState(0)
   const loadingRef = useRef(false)
   const cursorRef = useRef<number | string>(-1)
+  /** 请求序号：reset（切范围）立即发新请求，旧响应按序号丢弃 */
+  const requestSeq = useRef(0)
 
   const loadMore = useCallback(
     async (reset = false) => {
-      if (loadingRef.current) return
+      // 仅「加载更多」用布尔锁；reset 不被在途请求拦住
+      if (!reset && loadingRef.current) return
 
       const gate = canLoadFeedStream({ followingOnly, isLogin })
       if (!gate.allow) {
@@ -74,6 +77,7 @@ export function FeedStream({
         return
       }
 
+      const seq = ++requestSeq.current
       loadingRef.current = true
       setLoading(true)
       if (reset) {
@@ -88,6 +92,7 @@ export function FeedStream({
           limit: FEED_LIMIT,
           followingOnly: !userMode && followingOnly,
         })
+        if (seq !== requestSeq.current) return
         if (!res.success) {
           toast.error(res.message || '动态加载失败，请稍后重试')
           if (reset) {
@@ -107,9 +112,11 @@ export function FeedStream({
         })
         setHasMore(reset && list.length === 0 ? false : more)
       } finally {
-        loadingRef.current = false
-        setLoading(false)
-        setInitialLoading(false)
+        if (seq === requestSeq.current) {
+          loadingRef.current = false
+          setLoading(false)
+          setInitialLoading(false)
+        }
       }
     },
     [followingOnly, isLogin, userId, userMode],

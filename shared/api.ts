@@ -70,6 +70,7 @@ export const endpoints = {
       roleMembers: `${API_PREFIX}/user/rbac/roles/members`,
       roleAssign: `${API_PREFIX}/user/rbac/roles/assign`,
       roleUnassign: `${API_PREFIX}/user/rbac/roles/unassign`,
+      userRoles: `${API_PREFIX}/user/rbac/user-roles`,
       myPermissions: `${API_PREFIX}/user/rbac/my-permissions`,
     },
     upload: `${API_PREFIX}/user/upload`,

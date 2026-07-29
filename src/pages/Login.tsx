@@ -16,8 +16,17 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 
+/** 仅允许站内相对路径，拒绝 //host、协议绝对 URL 等 */
+function safeRedirect(path: string | null | undefined): string {
+  if (!path) return '/'
+  const t = path.trim()
+  if (!t.startsWith('/') || t.startsWith('//')) return '/'
+  if (t.includes('://')) return '/'
+  return t
+}
+
 function postLoginPath(explicitRedirect: string | null): string {
-  return explicitRedirect || '/'
+  return safeRedirect(explicitRedirect)
 }
 
 function registerPathFromRedirect(redirect: string | null): string {

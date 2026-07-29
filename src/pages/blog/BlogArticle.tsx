@@ -44,7 +44,8 @@ import { safeSessionStorage } from '@/lib/safe-storage'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogArticle as BlogArticleType } from '@shared/api'
 
-const unlockKey = (id: number) => `blog-unlock-${id}`
+const unlockKey = (username: string, slug: string) =>
+  `blog-unlock-${username}-${slug}`
 
 export function BlogArticlePage() {
   const { username = '', slug = '' } = useParams()
@@ -73,11 +74,8 @@ export function BlogArticlePage() {
   const load = async (unlockToken?: string) => {
     const rid = ++loadRequestId.current
     setLoading(true)
-    const stored = unlockToken || safeSessionStorage.get(unlockKey(0))
-    void stored
-    const tokenFromStore = article?.id
-      ? safeSessionStorage.get(unlockKey(article.id)) || undefined
-      : undefined
+    const tokenFromStore =
+      safeSessionStorage.get(unlockKey(username, slug)) || undefined
     const res = await getBlogArticle({
       username,
       slug,
@@ -88,29 +86,6 @@ export function BlogArticlePage() {
       setArticle(null)
       setLoading(false)
       return
-    }
-    if (res.data.requiresPassword && !res.data.canSeeBody) {
-      const t = safeSessionStorage.get(unlockKey(res.data.id))
-      if (t && !unlockToken) {
-        const again = await getBlogArticle({
-          username,
-          slug,
-          unlockToken: t,
-        })
-        if (rid !== loadRequestId.current) return
-        if (again.success && again.data) {
-          setArticle(again.data)
-          setLoading(false)
-          if (again.data.canSeeBody) {
-            void loadRelated(again.data, rid)
-          }
-          setBreadcrumb([
-            { label: '首页', to: `/blog/${username}` },
-            { label: again.data.title },
-          ])
-          return
-        }
-      }
     }
     setArticle(res.data)
     setLoading(false)
@@ -240,7 +215,10 @@ export function BlogArticlePage() {
       return
     }
     if (res.data.unlockToken) {
-      safeSessionStorage.set(unlockKey(article.id), res.data.unlockToken)
+      safeSessionStorage.set(
+        unlockKey(username, slug),
+        res.data.unlockToken,
+      )
     }
     setArticle(res.data)
     toast.success('已解锁')

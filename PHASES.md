@@ -13,7 +13,7 @@
 | 块 | 状态 |
 |----|------|
 | 基建 | ✅ Tailwind v4 + shadcn components + light/dark + sonner |
-| 布局 | ✅ `AppLayout` Sidebar（Algo-CWUX）+ Header + 角色显隐 + 退出 |
+| 布局 | ✅ `AppLayout` Sidebar（GoAlgo）+ Header + 角色显隐 + 退出 |
 | 基础设施 | ✅ axios HTTP、JWT、SHA256、AuthContext、RequireAuth/RequireCoach |
 | 页面 | ✅ Login / Register / NotFound；其余 Placeholder |
 | 验收 | ✅ login 实测成功（roleId=1 Admin）；build 通过 |

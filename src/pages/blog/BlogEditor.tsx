@@ -184,6 +184,49 @@ export function BlogEditor() {
     })
   }, [])
 
+  // editorBlock 必须在所有 early return 之前计算，否则违反 Rules of Hooks
+  const editorBlock = useMemo(
+    () => (
+      <MarkdownEditor
+        value={content}
+        onChange={setContent}
+        fullPage={fullscreen}
+        minHeight={
+          fullscreen
+            ? undefined
+            : Math.min(
+                typeof window !== 'undefined'
+                  ? Math.round(window.innerHeight * 0.72)
+                  : 720,
+                880,
+              )
+        }
+        linkOnlyImages
+        imageUploadEnabled={imageUploadEnabled}
+        resizableImages
+        previewLightbox={false}
+        showFullscreenToggle
+        fullscreen={fullscreen}
+        onFullscreenChange={setFullscreen}
+        onImageUploaded={handleImageUploaded}
+        onUploadProgressChange={setUploadProgress}
+        onRegisterInsert={handleRegisterInsert}
+        placeholder={
+          imageUploadEnabled
+            ? '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n可粘贴/多选上传图片；鼠标移到预览图可设对齐/百分比/定宽\n工具栏可全屏编辑 · 未使用图片保存后自动清理'
+            : '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n图片：![说明|50%|center](https://…)\n预览图悬停可调对齐与大小'
+        }
+      />
+    ),
+    [
+      content,
+      fullscreen,
+      imageUploadEnabled,
+      handleImageUploaded,
+      handleRegisterInsert,
+    ],
+  )
+
   if (ready && !isLogin) {
     return (
       <Navigate
@@ -260,48 +303,6 @@ export function BlogEditor() {
       forceShow={imageUploadEnabled || fullscreen}
       compact={fullscreen}
     />
-  )
-
-  const editorBlock = useMemo(
-    () => (
-      <MarkdownEditor
-        value={content}
-        onChange={setContent}
-        fullPage={fullscreen}
-        minHeight={
-          fullscreen
-            ? undefined
-            : Math.min(
-                typeof window !== 'undefined'
-                  ? Math.round(window.innerHeight * 0.72)
-                  : 720,
-                880,
-              )
-        }
-        linkOnlyImages
-        imageUploadEnabled={imageUploadEnabled}
-        resizableImages
-        previewLightbox={false}
-        showFullscreenToggle
-        fullscreen={fullscreen}
-        onFullscreenChange={setFullscreen}
-        onImageUploaded={handleImageUploaded}
-        onUploadProgressChange={setUploadProgress}
-        onRegisterInsert={handleRegisterInsert}
-        placeholder={
-          imageUploadEnabled
-            ? '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n可粘贴/多选上传图片；鼠标移到预览图可设对齐/百分比/定宽\n工具栏可全屏编辑 · 未使用图片保存后自动清理'
-            : '开始写作…\n\n支持标题、列表、代码块、表格与 $公式$\n图片：![说明|50%|center](https://…)\n预览图悬停可调对齐与大小'
-        }
-      />
-    ),
-    [
-      content,
-      fullscreen,
-      imageUploadEnabled,
-      handleImageUploaded,
-      handleRegisterInsert,
-    ],
   )
 
   if (loading) {

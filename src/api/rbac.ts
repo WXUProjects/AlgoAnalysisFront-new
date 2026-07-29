@@ -105,6 +105,33 @@ export async function listRoleMembers(params: {
   }
 }
 
+/** 一次查询用户持有的角色 id（替代按角色 N+1 listRoleMembers） */
+export async function listUserRoles(params: {
+  userId: number
+  scope?: PermScope
+  orgId?: number
+}) {
+  const query: Record<string, string> = { userId: String(params.userId) }
+  if (params.scope) query.scope = params.scope
+  if (params.orgId) query.orgId = String(params.orgId)
+  const res = await get<Body>(endpoints.user.rbac.userRoles, query)
+  const { body, success, message } = unwrap(res)
+  const list = Array.isArray(body.list) ? body.list : Array.isArray(body.roleIds) ? body.roleIds : []
+  const roleIds: number[] = []
+  for (const item of list) {
+    if (typeof item === 'number') {
+      roleIds.push(item)
+      continue
+    }
+    if (item && typeof item === 'object') {
+      const r = item as Record<string, unknown>
+      const id = Number(r.roleId ?? r.id)
+      if (Number.isFinite(id) && id > 0) roleIds.push(id)
+    }
+  }
+  return { success, message, roleIds }
+}
+
 /** 把用户拉入自定义角色（内置角色请走成员管理/全站用户任命） */
 export async function assignRole(roleId: number, userIds: number[]) {
   const res = await post<Body>(endpoints.user.rbac.roleAssign, { roleId, userIds })

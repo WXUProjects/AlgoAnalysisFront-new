@@ -214,3 +214,43 @@ export function str(v: unknown, fallback = ''): string {
 export function bool(v: unknown): boolean {
   return v === true || v === 'true' || v === 1 || v === '1'
 }
+
+/** 统一解析列表响应：兼容 { list, total } / 顶层数组 / data 嵌套 */
+export function parseListResponse<T>(
+  raw: unknown,
+  mapItem: (r: Record<string, unknown>) => T,
+): { list: T[]; total: number; page?: number; pageSize?: number } {
+  const body = (raw ?? {}) as Record<string, unknown>
+  let listRaw: unknown[] = []
+  if (Array.isArray(body.list)) listRaw = body.list
+  else if (Array.isArray(body.data)) listRaw = body.data
+  else if (Array.isArray(raw)) listRaw = raw
+  else if (body.data && typeof body.data === 'object') {
+    const nested = body.data as Record<string, unknown>
+    if (Array.isArray(nested.list)) listRaw = nested.list
+  }
+  const list = listRaw
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')
+    .map(mapItem)
+  const totalSource =
+    body.total ??
+    (body.data && typeof body.data === 'object'
+      ? (body.data as Record<string, unknown>).total
+      : undefined)
+  const pageSource =
+    body.page ??
+    (body.data && typeof body.data === 'object'
+      ? (body.data as Record<string, unknown>).page
+      : undefined)
+  const pageSizeSource =
+    body.pageSize ??
+    (body.data && typeof body.data === 'object'
+      ? (body.data as Record<string, unknown>).pageSize
+      : undefined)
+  return {
+    list,
+    total: num(totalSource, list.length),
+    page: pageSource !== undefined ? num(pageSource) : undefined,
+    pageSize: pageSizeSource !== undefined ? num(pageSizeSource) : undefined,
+  }
+}

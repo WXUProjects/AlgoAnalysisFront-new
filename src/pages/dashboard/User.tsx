@@ -15,7 +15,7 @@ import {
   setSyncIntervals,
   setUserDisabled,
 } from '@/api/profile'
-import { assignRole, listRoles, listRoleMembers, unassignRole } from '@/api/rbac'
+import { assignRole, listRoles, listUserRoles, unassignRole } from '@/api/rbac'
 import { updateSpider } from '@/api/spider'
 import type { GroupInfo, RbacRole, UserListItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
@@ -242,7 +242,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     if (siteRolesLoadedForRef.current === detailUser.userId) return
     siteRolesLoadedForRef.current = detailUser.userId
     const rid = ++siteRolesRequestId.current
-    const { userId, username } = detailUser
+    const { userId } = detailUser
     setSiteRolesLoading(true)
     setHeldRoleIds(new Set())
     void (async () => {
@@ -267,19 +267,10 @@ function UserListPage({ scope }: { scope: UserScope }) {
         )
       setSiteRoles(custom)
       const held = new Set<number>()
-      await Promise.all(
-        custom.map(async (role) => {
-          const res = await listRoleMembers({
-            roleId: role.roleId,
-            keyword: username,
-            page: 1,
-            pageSize: 10,
-          })
-          if (res.success && res.list.some((m) => m.userId === userId)) {
-            held.add(role.roleId)
-          }
-        }),
-      )
+      const ur = await listUserRoles({ userId, scope: 'site' })
+      if (ur.success) {
+        for (const id of ur.roleIds) held.add(id)
+      }
       // 快速切换详情时丢弃旧响应
       if (rid !== siteRolesRequestId.current) return
       setHeldRoleIds(held)

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import {
   BookmarkIcon,
   HeartIcon,
@@ -164,6 +165,7 @@ export function ProblemsetHome() {
   const { isLogin, ready } = useAuth()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
+  const { patch, searchParams } = useListQueryState({ defaultPageSize: 12 })
   const tabParam = params.get('tab')
   const tab =
     tabParam === 'square'
@@ -171,6 +173,7 @@ export function ProblemsetHome() {
       : tabParam === 'favorites'
         ? 'favorites'
         : 'mine'
+  const keyword = searchParams.get('keyword') || ''
 
   const [mine, setMine] = useState<ProblemsetInfo[]>([])
   const [favorites, setFavorites] = useState<ProblemsetInfo[]>([])
@@ -179,8 +182,7 @@ export function ProblemsetHome() {
   const [square, setSquare] = useState<ProblemsetInfo[]>([])
   const [squareTotal, setSquareTotal] = useState(0)
   const [squarePage, setSquarePage] = useState(1)
-  const [keyword, setKeyword] = useState('')
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(keyword)
   const [loading, setLoading] = useState(true)
   /** 竞态守卫：三块列表各自丢弃过期响应 */
   const mineRequestId = useRef(0)
@@ -253,6 +255,10 @@ export function ProblemsetHome() {
   )
 
   useEffect(() => {
+    setQ(keyword)
+  }, [keyword])
+
+  useEffect(() => {
     if (!ready) return
     let cancelled = false
     setLoading(true)
@@ -266,7 +272,7 @@ export function ProblemsetHome() {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, tab, isLogin])
+  }, [ready, tab, isLogin, keyword])
 
   async function handleLike(id: number) {
     if (!isLogin) {
@@ -484,8 +490,9 @@ export function ProblemsetHome() {
             className="flex flex-wrap gap-2"
             onSubmit={(e) => {
               e.preventDefault()
-              setKeyword(q)
-              void loadSquare(1, q)
+              const next = q.trim()
+              patch({ keyword: next || null })
+              void loadSquare(1, next)
             }}
           >
             <div className="relative min-w-[12rem] flex-1">

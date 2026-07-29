@@ -253,7 +253,7 @@ export function Home() {
     return () => {
       cancelled = true
     }
-  }, [ready, isLogin, user])
+  }, [ready, isLogin, user?.userId])
 
   // 首屏后空闲预取 AC（勿把 acHeatLoading 放进 deps，否则 setLoading 会 cancel 请求）
   useEffect(() => {

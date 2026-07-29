@@ -1,5 +1,13 @@
 import { endpoints, type NotificationItem, type NotificationListRes } from '@shared/api'
-import { get, post, num, str, bool, type ApiResult } from '@/lib/http'
+import {
+  get,
+  post,
+  num,
+  str,
+  bool,
+  parseListResponse,
+  type ApiResult,
+} from '@/lib/http'
 
 function normalizeItem(raw: Record<string, unknown>): NotificationItem {
   return {
@@ -26,17 +34,15 @@ export async function listNotifications(params?: {
     pageSize: params?.pageSize ?? 20,
   })
   if (!res.success) return { ...res, data: null }
-  const raw = (res.raw ?? {}) as Record<string, unknown>
-  let listRaw: Record<string, unknown>[] = []
-  if (Array.isArray(raw.list)) listRaw = raw.list as Record<string, unknown>[]
-  else if (Array.isArray(res.data)) listRaw = res.data as Record<string, unknown>[]
+  const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
+  const parsed = parseListResponse(raw, normalizeItem)
   return {
     ...res,
     data: {
-      list: listRaw.map(normalizeItem),
-      total: num(raw.total),
-      page: num(raw.page) || (params?.page ?? 1),
-      pageSize: num(raw.pageSize) || (params?.pageSize ?? 20),
+      list: parsed.list,
+      total: parsed.total,
+      page: parsed.page || (params?.page ?? 1),
+      pageSize: parsed.pageSize || (params?.pageSize ?? 20),
       unreadCount: num(raw.unreadCount),
     },
   }

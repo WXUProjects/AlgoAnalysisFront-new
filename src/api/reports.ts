@@ -6,7 +6,7 @@ import {
   type ReportHandleAction,
   type ReportStatus,
 } from '@shared/api'
-import { get, post, num, str, type ApiResult } from '@/lib/http'
+import { get, post, num, str, parseListResponse, type ApiResult } from '@/lib/http'
 
 /** 举报处理台 API（需 content.report.handle）。 */
 
@@ -71,13 +71,10 @@ export async function listBlogReports(params: {
     params,
   )
   if (!res.success || !res.data) return { ...res, data: null }
-  const data = res.data as Record<string, unknown>
-  const listRaw = Array.isArray(data.list)
-    ? (data.list as Record<string, unknown>[])
-    : []
+  const parsed = parseListResponse(res.data, normBlogReport)
   return {
     ...res,
-    data: { list: listRaw.map(normBlogReport), total: num(data.total) },
+    data: { list: parsed.list, total: parsed.total },
   }
 }
 
@@ -104,13 +101,10 @@ export async function listCommunityReports(params: {
     params,
   )
   if (!res.success || !res.data) return { ...res, data: null }
-  const data = res.data as Record<string, unknown>
-  const listRaw = Array.isArray(data.list)
-    ? (data.list as Record<string, unknown>[])
-    : []
+  const parsed = parseListResponse(res.data, normCommunityReport)
   return {
     ...res,
-    data: { list: listRaw.map(normCommunityReport), total: num(data.total) },
+    data: { list: parsed.list, total: parsed.total },
   }
 }
 

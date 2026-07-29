@@ -20,9 +20,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Pagination } from '@/components/pagination'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
+import { useListQueryState } from '@/hooks/use-list-query-state'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogArticle } from '@shared/api'
 
@@ -32,36 +34,52 @@ const visLabel: Record<string, string> = {
   password: '密码',
 }
 
+const DEFAULT_PAGE_SIZE = 20
+
 export function BlogManage() {
   const { username, isOwner } = useOutletContext<BlogOutletContext>()
   const { isLogin, ready } = useAuth()
+  const { page, pageSize, setPage, setPageSize, patch, searchParams } =
+    useListQueryState({ defaultPageSize: DEFAULT_PAGE_SIZE })
+  const keyword = searchParams.get('keyword') || ''
   const [list, setList] = useState<BlogArticle[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [keyword, setKeyword] = useState('')
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(keyword)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; title: string } | null>(
     null,
   )
   const [deleting, setDeleting] = useState(false)
-
-  const load = async (kw = keyword) => {
-    setLoading(true)
-    const res = await listMyBlogArticles({ pageSize: 50, keyword: kw || undefined })
-    if (res.success && res.data) {
-      setList(res.data.list)
-      setTotal(res.data.total)
-    } else {
-      setList([])
-      toast.error(res.message || '加载失败')
-    }
-    setLoading(false)
-  }
+  const [reloadTick, setReloadTick] = useState(0)
 
   useEffect(() => {
-    if (isOwner) void load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOwner])
+    setQ(keyword)
+  }, [keyword])
+
+  useEffect(() => {
+    if (!isOwner) return
+    let cancelled = false
+    void (async () => {
+      setLoading(true)
+      const res = await listMyBlogArticles({
+        page,
+        pageSize,
+        keyword: keyword || undefined,
+      })
+      if (cancelled) return
+      if (res.success && res.data) {
+        setList(res.data.list)
+        setTotal(res.data.total)
+      } else {
+        setList([])
+        toast.error(res.message || '加载失败')
+      }
+      setLoading(false)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isOwner, page, pageSize, keyword, reloadTick])
 
   if (ready && !isLogin) {
     return (
@@ -96,7 +114,7 @@ export function BlogManage() {
     }
     toast.success('已删除')
     setDeleteTarget(null)
-    void load()
+    setReloadTick((n) => n + 1)
   }
 
   return (
@@ -118,8 +136,7 @@ export function BlogManage() {
         className="flex gap-2"
         onSubmit={(e) => {
           e.preventDefault()
-          setKeyword(q)
-          void load(q)
+          patch({ keyword: q.trim() || null })
         }}
       >
         <Input
@@ -193,6 +210,17 @@ export function BlogManage() {
           ))}
         </ul>
       )}
+
+      {total > 0 ? (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          onChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[10, 20, 50]}
+        />
+      ) : null}
 
       <AlertDialog
         open={!!deleteTarget}
