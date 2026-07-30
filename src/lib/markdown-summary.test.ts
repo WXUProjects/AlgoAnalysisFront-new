@@ -111,6 +111,19 @@ describe('renderSummaryMarkdown (cards: KaTeX + plain text)', () => {
     assert.match(html, /见 文档 与说明/)
   })
 
+  it('strips links whose label contains nested brackets (OJ title style)', () => {
+    // 常见题解标题：[[平台 题号] 题名](url) — 标签内含 ]，旧正则会整段原样留下
+    const raw =
+      '[[AtCoder abc465d] X to Y](https://vjudge.net/problem/AtCoder-abc465d#author=translator:1281309:zh) 涉及图论'
+    const html = renderSummaryMarkdown(raw)
+    const text = plainTextFromMarkdown(raw)
+    assert.doesNotMatch(html, /https?:\/\//)
+    assert.doesNotMatch(html, /\]\(/)
+    assert.match(html, /\[AtCoder abc465d\] X to Y/)
+    assert.match(html, /涉及图论/)
+    assert.equal(text, '[AtCoder abc465d] X to Y 涉及图论')
+  })
+
   it('does not render headings or bold tags', () => {
     const html = renderSummaryMarkdown('# 标题\n正文 **加粗**')
     assert.doesNotMatch(html, /<h[1-6]\b/)

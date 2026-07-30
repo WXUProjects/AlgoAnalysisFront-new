@@ -977,6 +977,53 @@ export function renderSummaryMarkdown(md: string): string {
 const MATH_PLACEHOLDER_RE = /@@MATH\d+@@/g
 
 /**
+ * 剥 `![alt](url)` / `[label](url)`，只留标签文字。
+ * 标签按括号深度匹配，支持 `[[平台 题号] 题名](url)` 这类内含 `]` 的写法；
+ * 非链接的 `[[wiki]]` 原样留下，交给后续 wiki 规则处理。
+ */
+function stripMdLinksAndImages(src: string): string {
+  let out = ''
+  let i = 0
+  const n = src.length
+  while (i < n) {
+    const isImage = src[i] === '!' && i + 1 < n && src[i + 1] === '['
+    const open = isImage ? i + 1 : i
+    if (src[open] === '[') {
+      let depth = 0
+      let close = -1
+      for (let j = open; j < n; j++) {
+        const c = src[j]
+        if (c === '[') depth++
+        else if (c === ']') {
+          depth--
+          if (depth === 0) {
+            close = j
+            break
+          }
+        }
+      }
+      if (close >= 0 && close + 1 < n && src[close + 1] === '(') {
+        let k = close + 2
+        let paren = 1
+        while (k < n && paren > 0) {
+          if (src[k] === '(') paren++
+          else if (src[k] === ')') paren--
+          k++
+        }
+        if (paren === 0) {
+          out += src.slice(open + 1, close)
+          i = k
+          continue
+        }
+      }
+    }
+    out += src[i]
+    i++
+  }
+  return out
+}
+
+/**
  * 剥 Markdown / 轻量 HTML 为可读纯文本。
  * - 不露出 `# - * []() --- $` 等语法
  * - `keepPlaceholders`：保留 `@@MATHn@@`（简述 KaTeX 路径）
@@ -1044,9 +1091,8 @@ export function stripMarkdownToPlain(
   // ATX 标题：# 可无空格（###标题）
   s = s.replace(/^#{1,6}\s*/gm, '')
 
-  // 图片 / 链接 / 引用式链接 / wiki
-  s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-  s = s.replace(/\[([^\]]*)]\([^)]*\)/g, '$1')
+  // 图片 / 链接（标签可含嵌套 []，如 [[AtCoder x] 题名](url)）/ 引用式 / wiki
+  s = stripMdLinksAndImages(s)
   s = s.replace(/\[([^\]]*)]\[[^\]]*]/g, '$1')
   s = s.replace(/!\[\[([^\]]+)\]\]/g, (_, raw: string) => {
     const pipe = raw.indexOf('|')
