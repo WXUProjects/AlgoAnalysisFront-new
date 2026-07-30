@@ -32,7 +32,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { clipMetaText } from '@/lib/document-meta'
-import { extractMarkdownOutline } from '@/lib/markdown'
+import { extractMarkdownOutline, plainTextFromMarkdown } from '@/lib/markdown'
 import { Perm } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import { formatTime } from '@/lib/format'
@@ -77,11 +77,13 @@ export function ProblemSolutionView() {
       ? {
           title: `${solTitle}${authorName ? ` · ${authorName}` : ''} - GoAlgo`,
           description: clipMetaText(
-            solution.contentMd ||
+            plainTextFromMarkdown(
               solution.excerpt ||
-              (problemTitle
-                ? `${authorName || '选手'} 分享的「${problemTitle}」博客`
-                : '博客分享'),
+                solution.contentMd ||
+                (problemTitle
+                  ? `${authorName || '选手'} 分享的「${problemTitle}」博客`
+                  : '博客分享'),
+            ),
           ),
           image: solution.avatar || undefined,
           url: `/question-bank/detail/${problemId || solution.problemId}/solution/${sid}`,

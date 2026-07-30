@@ -952,7 +952,7 @@ export async function renderContentAsync(src: string): Promise<string> {
  * 列表/卡片「文章简述」→ 安全 HTML。
  *
  * - **KaTeX 公式会渲染**（行内/块级；块级在 CSS 里压成行内以兼容 line-clamp）
- * - 其余 Markdown（加粗/链接/标题/代码）剥成纯文字，避免卡片排版被撑乱
+ * - 其余 Markdown（加粗/链接/标题/代码/列表/分隔线等）剥成纯文字，不露出语法符
  * - 输出已 escape + sanitize，可直接 dangerouslySetInnerHTML
  */
 export function renderSummaryMarkdown(md: string): string {
@@ -965,7 +965,7 @@ export function renderSummaryMarkdown(md: string): string {
       .replace(/\r\n/g, '\n')
     const { text, pieces } = extractMath(raw)
     // 占位符保护：剥 MD 时勿弄坏 @@MATHn@@
-    const plain = stripMarkdownKeepPlaceholders(text)
+    const plain = stripMarkdownToPlain(text, { keepPlaceholders: true })
     const escaped = escapeHtml(plain)
     return sanitizeHtml(restoreMath(escaped, pieces))
   } catch {
@@ -973,57 +973,131 @@ export function renderSummaryMarkdown(md: string): string {
   }
 }
 
-/**
- * 剥 Markdown 标记为可读纯文本，但保留 `@@MATHn@@` 公式占位符。
- * （与 plainTextFromMarkdown 类似，但不处理公式定界符——公式已在 extractMath 抽出）
- */
-function stripMarkdownKeepPlaceholders(src: string): string {
-  if (!src) return ''
-  let s = src
+const MATH_PLACEHOLDER_RE = /@@MATH\d+@@/g
 
-  if (looksLikeHtml(s)) {
-    s = s
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/p>/gi, '\n')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/gi, ' ')
-      .replace(/&lt;/gi, '<')
-      .replace(/&gt;/gi, '>')
-      .replace(/&amp;/gi, '&')
-      .replace(/&quot;/gi, '"')
+/**
+ * 剥 Markdown / 轻量 HTML 为可读纯文本。
+ * - 不露出 `# - * []() --- $` 等语法
+ * - `keepPlaceholders`：保留 `@@MATHn@@`（简述 KaTeX 路径）
+ */
+export function stripMarkdownToPlain(
+  src: string,
+  opts?: { keepPlaceholders?: boolean },
+): string {
+  if (!src) return ''
+  const keepPlaceholders = opts?.keepPlaceholders === true
+
+  // 先护住公式占位，避免后续替换误伤
+  const held: string[] = []
+  let s = src
+  if (keepPlaceholders) {
+    s = s.replace(MATH_PLACEHOLDER_RE, (m) => {
+      const i = held.length
+      held.push(m)
+      return `\uE100${i}\uE101`
+    })
   }
 
-  // 代码块 / 行内代码 → 内容
-  s = s.replace(/```[\w-]*\n?([\s\S]*?)```/g, ' $1 ')
+  // 始终剥标签：Obsidian 预处理会注入 <mark>/<span> 等
+  s = s
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:p|div|h[1-6]|li|tr)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+
+  // 围栏代码块整段丢弃（简述不宜塞源码）；行内代码只留文字
+  s = s.replace(/~~~[\w-]*\n?[\s\S]*?~~~/g, ' ')
+  s = s.replace(/```[\w-]*\n?[\s\S]*?```/g, ' ')
   s = s.replace(/`([^`]+)`/g, '$1')
 
-  // 标题 / 引用 / 列表标记
-  s = s.replace(/^#{1,6}\s+/gm, '')
-  s = s.replace(/^>\s?/gm, '')
-  s = s.replace(/^\s*\[![^\]]+\][+-]?\s*/gm, '')
-  s = s.replace(/^\s*[-*+]\s+/gm, '')
-  s = s.replace(/^\s*\d+\.\s+/gm, '')
+  // 水平线 / Setext 下划线（整行 --- *** ___ ===）
+  s = s.replace(/^\s*(?:-{3,}|\*{3,}|_{3,}|={3,})\s*$/gm, ' ')
 
-  // 图片 / 链接
+  // 表格分隔行
+  s = s.replace(/^\s*\|?(?:\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/gm, ' ')
+  // 表格行：去掉管道，留单元格文字
+  s = s.replace(/^\s*\|(.+)\|\s*$/gm, (_, cells: string) =>
+    cells
+      .split('|')
+      .map((c) => c.trim())
+      .filter(Boolean)
+      .join(' '),
+  )
+  s = s.replace(/\|/g, ' ')
+
+  // Callout / 引用 / 任务列表 / 无序·有序列表
+  s = s.replace(/^\s*\[![^\]]+\][+-]?(?:[\t ]+[^\n]*)?$/gm, (line) => {
+    const m = /^\s*\[![^\]]+\][+-]?[\t ]+(.*)$/.exec(line)
+    return m?.[1] ? m[1] : ' '
+  })
+  s = s.replace(/^\s{0,3}>\s?/gm, '')
+  s = s.replace(/^\s*[-*+]\s+\[[ xX]\]\s+/gm, '')
+  s = s.replace(/^\s*[-*+]\s+/gm, '')
+  s = s.replace(/^\s*\d+[.)]\s+/gm, '')
+
+  // ATX 标题：# 可无空格（###标题）
+  s = s.replace(/^#{1,6}\s*/gm, '')
+
+  // 图片 / 链接 / 引用式链接 / wiki
   s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-  s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-  s = s.replace(/\[\[([^\]]+)\]\]/g, '$1')
+  s = s.replace(/\[([^\]]*)]\([^)]*\)/g, '$1')
+  s = s.replace(/\[([^\]]*)]\[[^\]]*]/g, '$1')
+  s = s.replace(/!\[\[([^\]]+)\]\]/g, (_, raw: string) => {
+    const pipe = raw.indexOf('|')
+    return (pipe >= 0 ? raw.slice(pipe + 1) : raw).trim()
+  })
+  s = s.replace(/\[\[([^\]]+)\]\]/g, (_, raw: string) => {
+    const pipe = raw.indexOf('|')
+    return (pipe >= 0 ? raw.slice(pipe + 1) : raw).trim()
+  })
   s = s.replace(/<(https?:\/\/[^>\s]+)>/gi, '$1')
 
-  // 加粗 / 斜体 / 删除线
+  // 高亮 / 加粗 / 斜体 / 删除线（成对）
+  s = s.replace(/==([^=\n]+)==/g, '$1')
+  s = s.replace(/\*\*\*(.+?)\*\*\*/g, '$1')
   s = s.replace(/\*\*(.+?)\*\*/g, '$1')
   s = s.replace(/__(.+?)__/g, '$1')
   s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1')
   s = s.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, '$1')
   s = s.replace(/~~(.+?)~~/g, '$1')
 
-  s = s.replace(/\n+/g, ' ').replace(/[ \t]{2,}/g, ' ').trim()
+  // 残留未配对的公式定界符（$ 已抽出时偶发）
+  if (!keepPlaceholders) {
+    s = s.replace(/\$\$/g, ' ')
+    s = s.replace(/\$/g, ' ')
+    s = s.replace(/\\[\[\],()]/g, ' ')
+  } else {
+    // 占位路径：清掉漏网的裸 $
+    s = s.replace(/\$+/g, ' ')
+  }
+
+  // 残留整词 markdown 记号（避免误伤 C++、负数中间的 -）
+  s = s.replace(/(^|[\s，。；、])(?:#{1,6}|-{3,}|\*{2,}|_{2,})(?=[\s，。；、]|$)/g, '$1')
+  // 行首残余列表符 / 复选框
+  s = s.replace(/(^|\s)\[[ xX]?\](?=\s|$)/g, '$1')
+  // 空括号链
+  s = s.replace(/\[\s*\]|\(\s*\)/g, ' ')
+
+  // 反斜杠转义：\# \* 等 → 字符本身
+  s = s.replace(/\\([\\`*_{}[\]()#+\-.!|>])/g, '$1')
+
+  // 压成一段
+  s = s.replace(/\n+/g, ' ').replace(/[ \t\u00a0]{2,}/g, ' ').trim()
+
+  if (keepPlaceholders) {
+    s = s.replace(/\uE100(\d+)\uE101/g, (_, i: string) => held[Number(i)] ?? '')
+  }
   return s
 }
 
 /**
- * 从 Markdown/富文本草稿抽出单行纯文本（简述、列表副文案用）。
- * 保留可读文字，去掉标记与公式定界符。
+ * 从 Markdown/富文本草稿抽出单行纯文本（简述、列表副文案、SEO meta 用）。
+ * 保留可读文字，去掉全部标记与公式定界符。
  */
 export function plainTextFromMarkdown(md: string): string {
   if (!md) return ''
@@ -1033,50 +1107,35 @@ export function plainTextFromMarkdown(md: string): string {
     .replace(/\$\$\$/g, '$')
     .replace(/\r\n/g, '\n')
 
-  // 若整段像 HTML，先粗剥标签
-  if (looksLikeHtml(s)) {
-    s = s
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/p>/gi, '\n')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/gi, ' ')
-      .replace(/&lt;/gi, '<')
-      .replace(/&gt;/gi, '>')
-      .replace(/&amp;/gi, '&')
-      .replace(/&quot;/gi, '"')
-  }
-
-  // 公式：保留 tex 本体，去掉 $ / \( \)
+  // 公式：保留 tex 本体，去掉定界符
   s = s.replace(/\$\$([\s\S]+?)\$\$/g, ' $1 ')
   s = s.replace(/\$((?:\\.|[^$\\])+?)\$/g, ' $1 ')
   s = s.replace(/\\\(([\s\S]+?)\\\)/g, ' $1 ')
   s = s.replace(/\\\[([\s\S]+?)\\\]/g, ' $1 ')
 
-  // 代码块 / 行内代码 → 内容
-  s = s.replace(/```[\w-]*\n?([\s\S]*?)```/g, ' $1 ')
-  s = s.replace(/`([^`]+)`/g, '$1')
+  return stripMarkdownToPlain(s, { keepPlaceholders: false })
+}
 
-  // 标题 / 引用 / 列表标记
-  s = s.replace(/^#{1,6}\s+/gm, '')
-  s = s.replace(/^>\s?/gm, '')
-  s = s.replace(/^\s*\[![^\]]+\][+-]?\s*/gm, '')
-  s = s.replace(/^\s*[-*+]\s+/gm, '')
-  s = s.replace(/^\s*\d+\.\s+/gm, '')
+/**
+ * 生成「可再渲染公式」的简述底稿：剥 MD 语法，但保留 `$...$` / `$$...$$`。
+ * 供默认摘要落库；列表展示时再走 renderSummaryMarkdown → KaTeX。
+ */
+export function summarySourceFromMarkdown(md: string): string {
+  if (!md) return ''
+  const obsidian = preprocessObsidianMarkdown(md)
+  let s = obsidian.markdown
+    .replace(/@@OBSIDIAN_FOOTNOTE_REF_\d+_\d+@@/g, '')
+    .replace(/\$\$\$/g, '$')
+    .replace(/\r\n/g, '\n')
 
-  // 图片 / 链接 / wiki 链
-  s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-  s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-  s = s.replace(/\[\[([^\]]+)\]\]/g, '$1')
-  s = s.replace(/<(https?:\/\/[^>\s]+)>/gi, '$1')
-
-  // 加粗 / 斜体 / 删除线标记（只留文字）
-  s = s.replace(/\*\*(.+?)\*\*/g, '$1')
-  s = s.replace(/__(.+?)__/g, '$1')
-  s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1')
-  s = s.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, '$1')
-  s = s.replace(/~~(.+?)~~/g, '$1')
-
-  // 压成一段，方便 line-clamp
-  s = s.replace(/\n+/g, ' ').replace(/[ \t]{2,}/g, ' ').trim()
-  return s
+  const { text, pieces } = extractMath(s)
+  const plain = stripMarkdownToPlain(text, { keepPlaceholders: true })
+  return plain.replace(
+    new RegExp(`${PLACEHOLDER_PREFIX}(\\d+)${PLACEHOLDER_SUFFIX}`, 'g'),
+    (_, idx: string) => {
+      const p = pieces[Number(idx)]
+      if (!p) return ''
+      return p.display ? `$$${p.tex}$$` : `$${p.tex}$`
+    },
+  )
 }

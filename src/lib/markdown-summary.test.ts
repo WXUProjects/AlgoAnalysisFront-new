@@ -49,6 +49,7 @@ describe('plainTextFromMarkdown', () => {
     assert.match(text, /图/)
     assert.match(text, /第一点/)
     assert.match(text, /第二点/)
+    assert.doesNotMatch(text, /^-|^\s*-|\n-/)
   })
 
   it('does not expose Obsidian properties, comments or block ids', () => {
@@ -56,6 +57,33 @@ describe('plainTextFromMarkdown', () => {
       '---\ntitle: 私有属性\ntags: [内部]\n---\n正文 %%内部评论%% ^block-id',
     )
     assert.equal(text, '正文')
+  })
+
+  it('strips headings, hr, links, tables, tasks without leaking syntax', () => {
+    const text = plainTextFromMarkdown(
+      [
+        '# 标题',
+        '---',
+        '- [ ] 待办',
+        '- [x] 完成',
+        '见 [文档](https://example.com) 说明',
+        '| a | b |',
+        '|---|---|',
+        '| 1 | 2 |',
+        '###无空格',
+        '***',
+        '==高亮== 与 ~~删~~',
+      ].join('\n'),
+    )
+    assert.match(text, /标题/)
+    assert.match(text, /待办/)
+    assert.match(text, /完成/)
+    assert.match(text, /文档/)
+    assert.match(text, /说明/)
+    assert.match(text, /高亮/)
+    assert.match(text, /删/)
+    assert.match(text, /无空格/)
+    assert.doesNotMatch(text, /#|---|\[|\]|\(|\)|\||===|\*\*\*|==|~~|\$/)
   })
 })
 
@@ -113,5 +141,17 @@ describe('renderSummaryMarkdown (cards: KaTeX + plain text)', () => {
     )
     assert.doesNotMatch(html, /私有属性|someone|内部评论/)
     assert.match(html, /公开摘要/)
+  })
+
+  it('does not leak markdown syntax characters in card text', () => {
+    const html = renderSummaryMarkdown(
+      '# 题解\n---\n- 思路一\n见 [链接](https://x.test) 与 **重点**',
+    )
+    const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+    assert.match(text, /题解/)
+    assert.match(text, /思路一/)
+    assert.match(text, /链接/)
+    assert.match(text, /重点/)
+    assert.doesNotMatch(text, /(?<!&amp;)#|(?<!\w)---(?!\w)|^\s*- |\[|\]\(\)|(?<!\w)\*\*/)
   })
 })

@@ -1,17 +1,15 @@
 /**
- * Default 简述 for blog / solution articles.
- * Pure helpers — editor leaves field empty when summary is system default;
- * save regenerates when user leaves summary blank.
+ * 文章 / 题解简述：仅允许按正文自动生成，不允许用户手写。
  */
+
+import { summarySourceFromMarkdown } from '@/lib/markdown'
 
 export const DEFAULT_SUMMARY_MAX = 280
 const ELLIPSIS = '…'
 
-/** Strip fenced code + light markdown noise, collapse whitespace, truncate. */
+/** 从正文生成列表简述：剥 MD 语法，保留 `$公式$`，截断到上限。 */
 export function generateDefaultSummary(content: string): string {
-  let s = content.replace(/\r\n/g, '\n')
-  s = stripFencedCodeBlocks(s)
-  s = stripMarkdownNoise(s)
+  let s = summarySourceFromMarkdown(content.replace(/\r\n/g, '\n'))
   s = s
     .split(/\s+/)
     .filter(Boolean)
@@ -27,52 +25,4 @@ export function generateDefaultSummary(content: string): string {
     }
   }
   return window.join('') + ELLIPSIS
-}
-
-/** True when empty or equals regenerate(content). */
-export function isDefaultSummary(summary: string, content: string): boolean {
-  const sum = summary.trim()
-  if (!sum) return true
-  return sum === generateDefaultSummary(content)
-}
-
-/** Empty user input → regenerate; otherwise keep custom text. */
-export function resolveSummaryForSave(
-  userSummary: string,
-  content: string,
-): string {
-  if (!userSummary.trim()) return generateDefaultSummary(content)
-  return userSummary.trim()
-}
-
-function stripFencedCodeBlocks(s: string): string {
-  const lines = s.split('\n')
-  const out: string[] = []
-  let inFence = false
-  for (const line of lines) {
-    const trim = line.trim()
-    if (trim.startsWith('```')) {
-      inFence = !inFence
-      continue
-    }
-    if (inFence) continue
-    out.push(line)
-  }
-  return out.join('\n')
-}
-
-function stripMarkdownNoise(s: string): string {
-  let out = s
-  // images ![alt](url) → alt
-  out = out.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-  // links [label](url) → label
-  out = out.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-  return out
-    .split('\n')
-    .map((line) => {
-      let t = line.trim().replace(/^#+\s*/, '')
-      if (t.startsWith('- ') || t.startsWith('* ')) t = t.slice(2).trim()
-      return t
-    })
-    .join('\n')
 }

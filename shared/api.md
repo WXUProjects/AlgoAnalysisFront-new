@@ -399,7 +399,7 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 
 - 每用户至多一个 `isDefault=true` 的分类，名称初始为「默认」，可改名不可删除。
 - 主站发布/更新题解时，core 经 user 库写入 `blog_articles`：分类=默认、`visibility=public`、`sourceSolutionId=题解id`、`sourceProblemId`、`slug=solution-{题解id}`、同步资料与组织发现；**不**自动精选。
-- **默认摘要**：未填时服务端从正文生成简述（去代码块、约 280 字）；作者手填则保留。编辑时若当前为系统默认摘要，前端不回填输入框，保存空摘要则按正文重新生成。
+- **摘要**：一律按正文自动生成（去代码块 / MD 语法，约 280 字）；**不允许**作者手写。创建/更新时忽略客户端传入的 `summary`，前端编辑页也不提供摘要输入。
 - **自动曝光**：`visibility=public` **且** `syncToMainProfile=true`（默认）进入广场与作者所属组织发现；`syncToMainProfile=false` 仅个人站可见；`private`/`password` 不曝光。精选 `recommend` 仍由站管/审核员设置。
 - **题解镜像去重**：发现推荐只展示题解活动卡（打开主站题面题解页）；博客广场展示镜像文（打开博客页）。
 - **共享互动**：题解与镜像博客共享点赞/评论/UV 浏览量；迁移时历史浏览量清零。
@@ -517,7 +517,7 @@ nginx：**首版策略**——上述公开页 **一律** 反代 SEO HTML（不�
 - `recommend` 作者端不可写；仅站管/持博客审核权限者 `POST /user/blog/admin/moderate` `action=feature|unfeature` 设精选。
 - `syncToMainProfile`：公开文默认 `true`（进广场 / 资料动态 / 组织发现）；显式 `false` = 仅个人博客壳可见。`private`/`password` 本就不曝光。
 - `tags`：自由字符串数组；`by-username?tag=` 模糊筛；`GET /user/blog/tags?username=` 聚合。
-- `summary` 可选；空则按正文生成默认简述。
+- `summary` 字段可传但**服务端忽略**，始终按正文生成简述。
 
 **站点 Markdown 槽位**（theme/status、by-username、theme/config）：
 

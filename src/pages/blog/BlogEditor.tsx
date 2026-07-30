@@ -42,7 +42,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
-import { Textarea } from '@/components/ui/textarea'
 import {
   BLOG_IMAGE_UPLOAD_ENABLED_HINT,
   BLOG_IMAGE_UPLOAD_HINT,
@@ -50,10 +49,7 @@ import {
   isAllowedBlogImageUrl,
   type BlogSessionImage,
 } from '@/lib/blog-image'
-import {
-  isDefaultSummary,
-  resolveSummaryForSave,
-} from '@/lib/blog-summary'
+import { generateDefaultSummary } from '@/lib/blog-summary'
 import { cn } from '@/lib/utils'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogCategory, BlogVisibility } from '@shared/api'
@@ -70,7 +66,6 @@ export function BlogEditor() {
   const [saving, setSaving] = useState(false)
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
-  const [summary, setSummary] = useState('')
   const [content, setContent] = useState('')
   const [coverUrl, setCoverUrl] = useState('')
   const [visibility, setVisibility] = useState<BlogVisibility>('public')
@@ -159,10 +154,8 @@ export function BlogEditor() {
       const a = res.data
       setTitle(a.title)
       setSlug(a.slug)
-      // 系统默认摘要不回填编辑框；保存时会按正文重新生成
+      // 摘要仅按正文自动生成，编辑页不提供手写入口
       const body = a.content || ''
-      const sum = a.summary || ''
-      setSummary(isDefaultSummary(sum, body) ? '' : sum)
       setContent(body)
       setCoverUrl(a.coverUrl || '')
       setVisibility((a.visibility as BlogVisibility) || 'public')
@@ -320,8 +313,8 @@ export function BlogEditor() {
       title: title.trim(),
       // 新建：可空由服务端按标题生成；更新：必须带原 slug，禁止随标题重算
       slug: isNew ? slug.trim() || undefined : slug.trim() || undefined,
-      // 空摘要 → 后端 / resolve 生成默认简述
-      summary: resolveSummaryForSave(summary, content),
+      // 摘要一律按正文生成，不允许手写
+      summary: generateDefaultSummary(content),
       content,
       coverUrl: coverUrl.trim(),
       visibility,
@@ -496,15 +489,6 @@ export function BlogEditor() {
               ))}
             </SelectContent>
           </Select>
-        </Field>
-        <Field className="sm:col-span-2">
-          <FieldLabel>摘要（可选）</FieldLabel>
-          <Textarea
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            rows={2}
-            placeholder="列表里显示的简介，不填会按正文生成"
-          />
         </Field>
         <Field className="sm:col-span-2">
           <FieldLabel>封面（可选）</FieldLabel>

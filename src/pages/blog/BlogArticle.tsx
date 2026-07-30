@@ -40,6 +40,7 @@ import {
 } from '@/lib/blog-nav'
 import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { clipMetaText } from '@/lib/document-meta'
+import { plainTextFromMarkdown } from '@/lib/markdown'
 import { safeSessionStorage } from '@/lib/safe-storage'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogArticle as BlogArticleType } from '@shared/api'
@@ -132,9 +133,11 @@ export function BlogArticlePage() {
     : ''
   const articleMetaDesc = article
     ? clipMetaText(
-        article.summary ||
-          (article.canSeeBody ? article.content || '' : '') ||
-          `${authorName} 的文章`,
+        plainTextFromMarkdown(
+          article.summary ||
+            (article.canSeeBody ? article.content || '' : '') ||
+            `${authorName} 的文章`,
+        ),
       )
     : undefined
   // 博文分享图：优先博主头像；siteName 固定 GoAlgo 品牌

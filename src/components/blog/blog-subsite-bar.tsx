@@ -7,7 +7,9 @@ import { cn } from '@/lib/utils'
 type Variant = 'default' | 'chirpy' | 'mizuki'
 
 /**
- * 轻量分站提示：不 sticky、不抢顶栏，仅文档流一行，避免遮挡原有控件。
+ * 轻量分站提示：不 sticky。
+ * Chirpy：放在右侧主栏（.chirpy-main-wrapper）内，不横跨左侧 navbar。
+ * 其它主题：壳层顶部文档流一行即可。
  */
 export function BlogSubsiteBar({
   username,

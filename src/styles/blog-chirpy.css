@@ -126,27 +126,16 @@
   min-height: 100svh;
   background: var(--main-bg);
   color: var(--text-color);
-  /* 分站条 h-8；顶栏 3rem —— 给 sticky 右侧栏等共用 */
-  --chirpy-subsite-bar-h: 2rem;
+  /* 顶栏 3rem —— sticky 右侧栏偏移 */
   --chirpy-topbar-h: 3rem;
 }
 
 /*
- * 分站条：全宽、压在左侧 fixed 栏之上。
- * 不 sticky——随页滚走；左侧栏 top:0 时其顶缘会被本条盖住，不会露主区白底。
+ * 左侧导航：满视口固定，与主栏分站条互不重叠。
+ * 分站条已放进 .chirpy-main-wrapper，不再横跨 navbar。
  */
-.chirpy-shell > .blog-subsite-bar {
-  position: relative;
-  z-index: 60;
-}
-
 .chirpy-sidebar {
   position: fixed;
-  /*
-   * 必须 top:0 + 满视口高：若 top 留分站条高度，滚动后条走了，
-   * 左上会露出主区白底，看起来像「白色盖住左侧导航」。
-   * 分站条 z-index 更高，页顶时仍压在侧栏上可读。
-   */
   top: 0;
   left: 0;
   z-index: 50;
@@ -159,8 +148,6 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0;
-  /* 页顶时给分站条让出视觉空间（滚动后不再出现白缝） */
-  padding-top: var(--chirpy-subsite-bar-h);
   box-sizing: border-box;
   background: var(--sidebar-bg);
   border-right: 1px solid var(--sidebar-border-color);
@@ -364,16 +351,16 @@
   align-self: center;
 }
 
-/* main */
+/* main —— 分站条 + 顶栏 + 正文，全部只在侧栏右侧 */
 .chirpy-main-wrapper {
   position: relative;
-  /* 把 sticky 顶栏的层叠关在主栏内，避免 backdrop/半透明顶栏「盖住」左侧 fixed 导航 */
+  /* sticky 顶栏层叠关在主栏内，不盖左侧 fixed 导航 */
   z-index: 1;
   isolation: isolate;
   min-height: 100svh;
   display: flex;
-  justify-content: center;
-  /* 主区底与侧栏区分，滚动时左侧不透出主区白底 */
+  flex-direction: column;
+  align-items: center;
   background: var(--main-bg);
 }
 
@@ -381,6 +368,13 @@
   .chirpy-main-wrapper {
     margin-left: var(--chirpy-sidebar-width);
   }
+}
+
+/* 分站条：仅主栏全宽，随文档流滚走，不 sticky */
+.chirpy-main-wrapper > .blog-subsite-bar {
+  width: 100%;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .chirpy-container {

@@ -1619,7 +1619,7 @@ export interface BlogArticle {
   sourceSolutionId?: number
   /** 题解对应题目 id（共享评论/点赞用） */
   sourceProblemId?: number
-  /** 当前摘要是否为系统默认（编辑时勿回填） */
+  /** 摘要是否为系统生成（现已一律自动生成，恒为 true） */
   summaryIsDefault?: boolean
   viewCount?: number
   likeCount?: number

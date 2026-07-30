@@ -155,18 +155,16 @@ export function BlogPlaza() {
   }
 
   return (
-    <PageShell>
+    <PageShell className="min-w-0 overflow-x-clip">
       <section
         data-stagger-item
-        className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm sm:flex-row sm:items-start sm:justify-between"
+        className="flex min-w-0 flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:p-5"
       >
         <div className="min-w-0 space-y-1">
           <h1 className="text-xl font-semibold tracking-tight">博客广场</h1>
-          <p className="text-sm text-muted-foreground">
-            浏览大家的公开文章
-          </p>
+          <p className="text-sm text-muted-foreground">浏览大家的公开文章</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex min-w-0 flex-wrap gap-2">
           {isLogin && myUsername ? (
             blogActivated === null ? (
               <Button size="sm" disabled>
@@ -215,9 +213,13 @@ export function BlogPlaza() {
         }}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
+      {/*
+        移动端必须 minmax(0,1fr)：默认 auto 列会被卡片/表单 min-content 撑到 > 视口，
+        再被 main overflow-x-hidden 裁掉，表现为「内容全被截断」。
+      */}
+      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="min-w-0 space-y-4" data-stagger-item>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Tabs
               value={sort}
               onValueChange={(v) =>
@@ -226,21 +228,37 @@ export function BlogPlaza() {
                   page: null,
                 })
               }
+              className="min-w-0 w-full sm:w-auto"
             >
-              <TabsList>
-                <TabsTrigger value="latest">最新</TabsTrigger>
-                <TabsTrigger value="hot">热门</TabsTrigger>
-                <TabsTrigger value="recommend">精选</TabsTrigger>
+              <TabsList className="grid h-9 w-full grid-cols-3 sm:inline-flex sm:w-fit">
+                <TabsTrigger value="latest" className="px-2 sm:px-3">
+                  最新
+                </TabsTrigger>
+                <TabsTrigger value="hot" className="px-2 sm:px-3">
+                  热门
+                </TabsTrigger>
+                <TabsTrigger value="recommend" className="px-2 sm:px-3">
+                  精选
+                </TabsTrigger>
               </TabsList>
             </Tabs>
-            <form className="flex flex-1 gap-2 sm:max-w-sm sm:justify-end" onSubmit={handleSearch}>
+            <form
+              className="flex min-w-0 w-full gap-2 sm:max-w-sm sm:flex-1 sm:justify-end"
+              onSubmit={handleSearch}
+            >
               <Input
                 value={qInput}
                 onChange={(e) => setQInput(e.target.value)}
-                placeholder="搜索文章标题或摘要…"
-                className="min-w-0"
+                placeholder="搜索文章…"
+                className="min-w-0 flex-1"
               />
-              <Button type="submit" variant="secondary" size="icon" aria-label="搜索">
+              <Button
+                type="submit"
+                variant="secondary"
+                size="icon"
+                className="shrink-0"
+                aria-label="搜索"
+              >
                 <SearchIcon className="size-4" />
               </Button>
             </form>
@@ -253,7 +271,7 @@ export function BlogPlaza() {
           ) : null}
 
           {loading ? (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-52 rounded-xl" />
               ))}
@@ -294,7 +312,7 @@ export function BlogPlaza() {
               ) : null}
             </Empty>
           ) : (
-            <ul className="grid gap-4 sm:grid-cols-2">
+            <ul className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
               {list.map((a) => (
                 <PlazaArticleCard key={a.id} article={a} />
               ))}
@@ -302,24 +320,28 @@ export function BlogPlaza() {
           )}
 
           {!loading && total > 0 ? (
-            <Pagination
-              page={page}
-              total={total}
-              pageSize={PAGE_SIZE}
-              onChange={(p) => patchParams({ page: p <= 1 ? null : String(p) })}
-            />
+            <div className="min-w-0 overflow-x-auto">
+              <Pagination
+                page={page}
+                total={total}
+                pageSize={PAGE_SIZE}
+                onChange={(p) =>
+                  patchParams({ page: p <= 1 ? null : String(p) })
+                }
+              />
+            </div>
           ) : null}
         </div>
 
-        <aside className="space-y-3" data-stagger-item>
+        <aside className="min-w-0 space-y-3" data-stagger-item>
           <div className="rounded-xl border bg-card p-4 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold">最近更新</h2>
             {authorsLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <Skeleton className="size-9 rounded-full" />
-                    <div className="flex-1 space-y-1">
+                    <Skeleton className="size-9 shrink-0 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-1">
                       <Skeleton className="h-3.5 w-24" />
                       <Skeleton className="h-3 w-16" />
                     </div>
@@ -333,18 +355,20 @@ export function BlogPlaza() {
             ) : (
               <ul className="space-y-1">
                 {authors.map((a) => (
-                  <li key={a.id}>
+                  <li key={a.id} className="min-w-0">
                     <BlogLink
                       to={`/blog/${a.username}`}
                       className={cn(
-                        'flex items-center gap-2.5 rounded-lg px-1.5 py-2 transition',
+                        'flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-2 transition',
                         'hover:bg-muted/80',
                       )}
                     >
-                      <Avatar size="sm">
+                      <Avatar size="sm" className="shrink-0">
                         {a.avatar ? <AvatarImage src={a.avatar} alt="" /> : null}
                         <AvatarFallback>
-                          {(a.name || a.username || '?').slice(0, 1).toUpperCase()}
+                          {(a.name || a.username || '?')
+                            .slice(0, 1)
+                            .toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
@@ -379,8 +403,8 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
   const authorHref = username ? `/blog/${username}` : '#'
 
   return (
-    <li>
-      <article className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition hover:border-primary/40 hover:shadow-md">
+    <li className="min-w-0">
+      <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition hover:border-primary/40 hover:shadow-md">
         {a.coverUrl ? (
           <BlogLink
             to={articleHref}
@@ -394,14 +418,14 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
             />
           </BlogLink>
         ) : null}
-        <div className="flex flex-1 flex-col gap-2 p-4">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 p-3.5 sm:p-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
             <BlogLink
               to={authorHref}
-              className="inline-flex min-w-0 items-center gap-1.5 hover:text-foreground"
+              className="inline-flex min-w-0 max-w-full items-center gap-1.5 hover:text-foreground"
               onClick={(e) => e.stopPropagation()}
             >
-              <Avatar size="sm" className="size-5">
+              <Avatar size="sm" className="size-5 shrink-0">
                 {a.author?.avatar ? (
                   <AvatarImage src={a.author.avatar} alt="" />
                 ) : null}
@@ -411,39 +435,40 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
               </Avatar>
               <span className="truncate">{authorName}</span>
             </BlogLink>
-            <span>·</span>
-            <time>{formatDate(a.publishedAt || a.createdAt)}</time>
+            <span className="opacity-50" aria-hidden>
+              ·
+            </span>
+            <time className="shrink-0 tabular-nums">
+              {formatDate(a.publishedAt || a.createdAt)}
+            </time>
             {a.recommend ? (
-              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">
+              <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-primary">
                 精选
               </span>
             ) : null}
           </div>
-          <BlogLink
-            to={articleHref}
-            className="min-w-0 space-y-1"
-          >
-            <h2 className="line-clamp-2 text-base font-semibold leading-snug group-hover:text-primary">
+          <BlogLink to={articleHref} className="min-w-0 space-y-1">
+            <h2 className="line-clamp-2 break-words text-base font-semibold leading-snug group-hover:text-primary">
               {a.title}
             </h2>
             {a.summary ? (
               <MarkdownSummary
                 content={a.summary}
-                className="line-clamp-2 text-sm text-muted-foreground"
+                className="line-clamp-2 break-words text-sm text-muted-foreground"
               />
             ) : null}
           </BlogLink>
-          <div className="mt-auto flex items-center gap-3 pt-1 text-xs text-muted-foreground">
+          <div className="mt-auto flex flex-wrap items-center gap-3 pt-1 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1">
-              <EyeIcon className="size-3.5" />
+              <EyeIcon className="size-3.5 shrink-0" />
               {a.viewCount ?? 0}
             </span>
             <span className="inline-flex items-center gap-1">
-              <HeartIcon className="size-3.5" />
+              <HeartIcon className="size-3.5 shrink-0" />
               {a.likeCount ?? 0}
             </span>
             <span className="inline-flex items-center gap-1">
-              <MessageCircleIcon className="size-3.5" />
+              <MessageCircleIcon className="size-3.5 shrink-0" />
               {a.commentCount ?? 0}
             </span>
           </div>

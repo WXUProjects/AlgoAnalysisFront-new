@@ -166,7 +166,6 @@ export function ChirpyShell({
       data-sidebar-open={sidebarOpen ? '1' : '0'}
       data-search-mode={searchMode ? '1' : '0'}
     >
-      <BlogSubsiteBar username={username} variant="chirpy" />
       <button
         type="button"
         className="chirpy-mask"
@@ -261,6 +260,8 @@ export function ChirpyShell({
       </aside>
 
       <div className="chirpy-main-wrapper">
+        {/* 分站条只在右侧主栏，不盖左侧 navbar */}
+        <BlogSubsiteBar username={username} variant="chirpy" />
         <div className="chirpy-container">
           <header className="chirpy-topbar-wrapper" aria-label="顶栏">
             <div className="chirpy-topbar">
