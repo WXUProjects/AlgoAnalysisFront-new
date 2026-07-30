@@ -3,12 +3,18 @@ import { Link, Navigate, useOutletContext } from 'react-router-dom'
 import {
   EyeIcon,
   HeartIcon,
+  ImageOffIcon,
   MessageCircleIcon,
   PlusIcon,
   Trash2Icon,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { deleteBlogArticle, listMyBlogArticles } from '@/api/blog'
+import {
+  deleteBlogArticle,
+  imagesGc,
+  imagesOrphans,
+  listMyBlogArticles,
+} from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
 import {
   AlertDialog,
@@ -26,7 +32,7 @@ import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { useListQueryState } from '@/hooks/use-list-query-state'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
-import type { BlogArticle } from '@shared/api'
+import type { BlogArticle, BlogImageOrphan } from '@shared/api'
 
 const visLabel: Record<string, string> = {
   public: '公开',
@@ -50,6 +56,9 @@ export function BlogManage() {
     null,
   )
   const [deleting, setDeleting] = useState(false)
+  const [orphanImages, setOrphanImages] = useState<BlogImageOrphan[]>([])
+  const [gcOpen, setGcOpen] = useState(false)
+  const [gcLoading, setGcLoading] = useState(false)
   const [reloadTick, setReloadTick] = useState(0)
 
   useEffect(() => {
@@ -117,19 +126,64 @@ export function BlogManage() {
     setReloadTick((n) => n + 1)
   }
 
+  async function previewImageCleanup() {
+    setGcLoading(true)
+    const res = await imagesOrphans()
+    setGcLoading(false)
+    if (!res.success || !res.data) {
+      toast.error(res.message || '检查失败')
+      return
+    }
+    if (res.data.orphans.length === 0) {
+      toast.success('没有可清理的图片')
+      return
+    }
+    setOrphanImages(res.data.orphans)
+    setGcOpen(true)
+  }
+
+  async function confirmImageCleanup() {
+    setGcLoading(true)
+    const res = await imagesGc()
+    setGcLoading(false)
+    if (!res.success || !res.data) {
+      toast.error(res.message || '清理失败')
+      return
+    }
+    toast.success(`已清理 ${res.data.deleted} 张图片`)
+    setGcOpen(false)
+    setOrphanImages([])
+  }
+
+  const protectedOrphanCount = orphanImages.filter((image) => image.protected).length
+
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">文章管理</h1>
           <p className="text-sm text-muted-foreground">共 {total} 篇</p>
         </div>
-        <Button asChild className="gap-1.5">
-          <Link to={`/blog/${username}/manage/new`}>
-            <PlusIcon className="size-4" />
-            写文章
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            disabled={gcLoading}
+            onClick={() => void previewImageCleanup()}
+          >
+            {gcLoading && !gcOpen ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <ImageOffIcon data-icon="inline-start" />
+            )}
+            清理图片
+          </Button>
+          <Button asChild className="gap-1.5">
+            <Link to={`/blog/${username}/manage/new`}>
+              <PlusIcon className="size-4" />
+              写文章
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <form
@@ -245,6 +299,42 @@ export function BlogManage() {
               }}
             >
               {deleting ? '删除中…' : '确认删除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={gcOpen}
+        onOpenChange={(open) => {
+          if (!open && !gcLoading) {
+            setGcOpen(false)
+            setOrphanImages([])
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>清理未使用的图片？</AlertDialogTitle>
+            <AlertDialogDescription>
+              将永久删除 {orphanImages.length} 张未被文章或页面引用的图片
+              {protectedOrphanCount > 0
+                ? `，其中 ${protectedOrphanCount} 张刚上传不久`
+                : ''}
+              。此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={gcLoading}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={gcLoading}
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmImageCleanup()
+              }}
+            >
+              {gcLoading ? '清理中…' : '确认清理'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

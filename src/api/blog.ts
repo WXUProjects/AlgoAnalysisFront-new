@@ -6,6 +6,7 @@ import {
   type BlogAdminOverview,
   type BlogImageUploadRequestItem,
   type BlogImageUploadStatus,
+  type BlogImageOrphan,
   type BlogAnalytics,
   type BlogArticle,
   type BlogArticleWriteReq,
@@ -21,6 +22,7 @@ import {
 } from '@shared/api'
 import { get, post, num, str, type ApiResult } from '@/lib/http'
 import { normalizeBlogThemeId, normalizeSocialLinks } from '@/lib/blog-theme'
+import { normalizeBlogImageOrphans } from '@/lib/blog-image-gc'
 import {
   normalizeColorScheme,
   type ColorSchemeMode,
@@ -291,6 +293,24 @@ export async function updateBlogArticle(
 
 export async function deleteBlogArticle(id: number): Promise<ApiResult<unknown>> {
   return post(endpoints.user.blog.articleDelete, { id })
+}
+
+export async function imagesOrphans(): Promise<
+  ApiResult<{ orphans: BlogImageOrphan[]; total: number }>
+> {
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.blog.imagesOrphans,
+    {},
+  )
+  return wrapData(res, (data) => {
+    const orphans = normalizeBlogImageOrphans(data.orphans)
+    return { orphans, total: num(data.total, orphans.length) }
+  })
+}
+
+export async function imagesGc(): Promise<ApiResult<{ deleted: number }>> {
+  const res = await post<Record<string, unknown>>(endpoints.user.blog.imagesGc, {})
+  return wrapData(res, (data) => ({ deleted: num(data.deleted) }))
 }
 
 export async function listMyBlogArticles(params?: {

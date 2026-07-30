@@ -183,6 +183,10 @@ export const endpoints = {
       imageUploadApply: `${API_PREFIX}/user/blog/image-upload/apply`,
       /** 批量确认图床 URL/hash 是否仍在资产表 { urls?, hashes? } → { existing, missing, existingHashes, missingHashes } */
       imagesCheck: `${API_PREFIX}/user/blog/images/check`,
+      /** 预览当前作者未被文章或页面引用的图床资产 */
+      imagesOrphans: `${API_PREFIX}/user/blog/images/orphans`,
+      /** 强制删除当前作者全部未引用图床资产 */
+      imagesGc: `${API_PREFIX}/user/blog/images/gc`,
       report: `${API_PREFIX}/user/blog/report`,
       /** 举报处理台（content.report.handle）：博客举报列表 / 处理 */
       reportList: `${API_PREFIX}/user/blog/report/list`,
@@ -1559,6 +1563,17 @@ export interface BlogImageUploadStatus {
   /** 是否有待审的图片上传申请 */
   pendingRequest?: boolean
   pendingRequestId?: number
+}
+
+/** 当前作者未被文章或页面引用的图床资产 */
+export interface BlogImageOrphan {
+  id: number
+  objectKey: string
+  url: string
+  contentHash?: string
+  createdAt?: string | number
+  /** 仍在 24 小时上传保护期；手动强制清理仍会删除 */
+  protected: boolean
 }
 
 /** 图片上传权限申请（博客管理审核） */
