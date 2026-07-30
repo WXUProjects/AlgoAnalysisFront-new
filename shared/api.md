@@ -431,17 +431,17 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | POST | `/user/blog/admin/image-upload` | 站管/博客管理 | body: `{ userId, enabled }`；**默认全员关闭**图片上传，须在此按作者授权；开通时顺带通过该用户待审申请 |
 | GET | `/user/blog/admin/image-upload/requests` | 站管/博客管理 | 图片上传申请列表；query: `page`/`pageSize`/`status`=`pending`（默认）`\|approved\|rejected\|all` |
 | POST | `/user/blog/admin/image-upload/review` | 站管/博客管理 | body: `{ id, action: approve\|reject, note? }`；通过则开通该作者图片上传并通知；驳回通知申请人 |
+| GET | `/user/blog/admin/images` | 仅站点管理员 | 全站图片资产；query: `page`/`pageSize`/`mode=all\|cleanup`。`all` 返回全部图片及 `referenced`；`cleanup` 仅返回全站文章、普通页面和首页介绍/关于/友链固定页面均未引用且最近上传已满 12 小时的图片，并附完整 `candidateIds` 与 `snapshot` |
+| POST | `/user/blog/admin/images/delete` | 仅站点管理员 | body: `{ id }`；删除前重新检查全站引用和 12 小时保护，状态已变化返回 `409` |
+| POST | `/user/blog/admin/images/delete-batch` | 仅站点管理员 | body: `{ ids, snapshot }`；仅在候选集合快照完全一致时批量删除，状态已变化返回 `409` |
 | GET | `/user/blog/image-upload/status` | 是 | 当前用户：`{ configured, authorized, enabled, pendingRequest, pendingRequestId? }`（站点又拍云已配且已授权时 `enabled=true`） |
 | POST | `/user/blog/image-upload/apply` | 是 | body: `{ reason }`（必填，5–500 字）；提交图片上传权限申请，通知站管；已开通/已有待审幂等返回 |
 | POST | `/user/blog/images/check` | 是 | body `{ urls?: string[], hashes?: string[] }`（合计 ≤200）→ `{ existing, missing, existingHashes, missingHashes }`：批量确认 URL/object key 与 content hash 是否仍在本用户 `blog_image_assets`（插件/编辑器缓存复用；GC 以 hash 为主） |
-| GET | `/user/blog/images/orphans` | 是 | 预览当前作者未被文章或自定义页面引用的图床资产 → `{ orphans, total, candidateIds, snapshot }`；`candidateIds` 是升序完整候选 ID，`snapshot` 是候选 SHA-256；条目含 `id`、`objectKey`、`url`、`contentHash`、`createdAt`、`protected`（是否仍在 24 小时上传保护期） |
-| POST | `/user/blog/images/gc` | 是 | body `{ candidateIds: number[], snapshot: string }`，必须原样回传最近一次预览的完整候选与快照；执行前重查，候选或快照变化则 HTTP 409、`{ code: 1, message: "清理预览已变化，请重新预览", data: { stale: true } }` 且零删除；成功 → `{ deleted }`；首个远端/DB 删除失败即停止并返回 HTTP 502、`{ code: 1, message: "部分图片清理失败", data: { deleted } }`，失败及未处理对象保留登记 |
-
-**又拍云图床**：站点设置配置 `upyunBucket`（服务名）、`upyunOperator`、`upyunPassword`（脱敏存储）、`upyunDomain`（用户侧访问域，如 `zhiyuansofts.cn`）、`upyunScheme`（`http`/`https`）。上传走服务端代传；不再在保存/删文后自动 GC，作者可在文章管理页预览并手动清理未引用对象。正文支持 Obsidian 定宽 `![说明|550](url)`。
+**又拍云图床**：站点设置配置 `upyunBucket`（服务名）、`upyunOperator`、`upyunPassword`（脱敏存储）、`upyunDomain`（用户侧访问域，如 `zhiyuansofts.cn`）、`upyunScheme`（`http`/`https`）。上传走服务端代传；不再自动 GC，只有站点管理员可在博客管理的「图片管理」页签显式清理。正文支持 Obsidian 定宽 `![说明|550](url)`。
 
 **图床 URL 存储（path-only）**：本站又拍云对象在库内以 `/blog/{userId}/…` 路径存储（正文、封面、`blog_image_assets`、题解镜像）。`POST /user/upload`（`purpose=blog|blog_cover`）仍返回**当前**完整公网 `url` + `hash` 供编辑器/插件插入与缓存；文章/题解/页面 **读接口** 会按站点当前 `upyunDomain`+`upyunScheme` 展开为完整 URL。因此修改访问域名后，旧文无需改写即可用新域名出图；外链图不受影响。
 
-**图床 GC（content hash）**：上传登记 `blog_image_assets.content_hash`；文章/页面写入时解析正文图并落 `image_hashes`（JSON 数组）。GC 优先按 hash 判定引用（并扫描正文 key + 自定义页面），宽限期 24h；未再被任何文章/页面 hash 或正文引用的对象才删除。手动清理采用预览快照确认，防止预览后新引用的图片被误删。插件/编辑器应用 `hash` 做缓存校验，勿仅依赖易变 URL。
+**图床清理（content hash）**：上传登记 `blog_image_assets.content_hash`；文章/页面写入时解析正文图并落 `image_hashes`（JSON 数组）。站管手动清理时优先按 hash 判定引用，并扫描全站正文 key、普通自定义页面及首页介绍/关于/友链固定页面；最近上传不满 12 小时的对象始终排除，删除前再次校验。插件/编辑器应用 `hash` 做缓存校验，勿仅依赖易变 URL。
 
 **开通协议**：初次使用/发文/改外观前须签署；存量已有文章或主题配置用户启动时自动回填为已开通。
 

@@ -21,6 +21,7 @@ import {
   setBlogAuthorImageUpload,
 } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
+import { BlogAdminImageManager } from '@/components/blog-admin-image-manager'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -82,7 +83,7 @@ const visibilityLabel: Record<string, string> = {
 }
 
 export function DashboardBlogAdmin() {
-  const { can, ready } = useAuth()
+  const { can, ready, isSiteAdmin } = useAuth()
   const canBlogAdmin =
     can(Perm.ContentBlogModerate) || can(Perm.SiteBlogBoard)
   const [overview, setOverview] = useState<BlogAdminOverview | null>(null)
@@ -252,7 +253,7 @@ export function DashboardBlogAdmin() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">博客管理</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          开通情况、文章审核、图片上传申请与作者授权。
+          开通情况、文章审核、图片上传申请、全站图片与作者授权。
         </p>
       </div>
 
@@ -294,6 +295,9 @@ export function DashboardBlogAdmin() {
               ? ` (${uploadReqTotal})`
               : ''}
           </TabsTrigger>
+          {isSiteAdmin ? (
+            <TabsTrigger value="images">图片管理</TabsTrigger>
+          ) : null}
         </TabsList>
 
         <TabsContent value="authors" className="flex flex-col gap-3">
@@ -728,6 +732,12 @@ export function DashboardBlogAdmin() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isSiteAdmin ? (
+          <TabsContent value="images" className="flex flex-col gap-3">
+            <BlogAdminImageManager />
+          </TabsContent>
+        ) : null}
       </Tabs>
 
       <Dialog

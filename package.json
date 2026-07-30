@@ -10,9 +10,9 @@
     "preview": "vite preview",
     "test:discover": "tsx --test src/lib/discover-feed.test.ts",
     "test:motion": "tsx --test src/lib/motion.test.ts",
-    "test:blog": "tsx --test src/lib/blog-image.test.ts src/lib/blog-image-gc.test.ts src/lib/blog-ui-shadcn.test.ts src/lib/blog-theme.test.ts src/lib/obsidian-markdown.test.ts src/lib/markdown-summary.test.ts src/lib/markdown-katex.test.ts src/lib/markdown-code-copy.test.ts src/lib/markdown-img-width.test.ts src/lib/editor-layout.test.ts",
+    "test:blog": "tsx --test src/lib/blog-image.test.ts src/lib/blog-admin-images.test.ts src/lib/blog-ui-shadcn.test.ts src/lib/blog-theme.test.ts src/lib/obsidian-markdown.test.ts src/lib/markdown-summary.test.ts src/lib/markdown-katex.test.ts src/lib/markdown-code-copy.test.ts src/lib/markdown-img-width.test.ts src/lib/editor-layout.test.ts",
     "test:roles": "tsx --test src/lib/roles.test.ts",
-    "test": "tsx --test src/lib/discover-feed.test.ts src/lib/motion.test.ts src/lib/blog-image.test.ts src/lib/blog-image-gc.test.ts src/lib/blog-ui-shadcn.test.ts src/lib/blog-theme.test.ts src/lib/obsidian-markdown.test.ts src/lib/markdown-summary.test.ts src/lib/markdown-katex.test.ts src/lib/markdown-code-copy.test.ts src/lib/markdown-img-width.test.ts src/lib/editor-layout.test.ts src/lib/roles.test.ts src/components/mobile-org-switcher.test.ts src/lib/dashboard-metrics.test.ts"
+    "test": "tsx --test src/lib/discover-feed.test.ts src/lib/motion.test.ts src/lib/blog-image.test.ts src/lib/blog-admin-images.test.ts src/lib/blog-ui-shadcn.test.ts src/lib/blog-theme.test.ts src/lib/obsidian-markdown.test.ts src/lib/markdown-summary.test.ts src/lib/markdown-katex.test.ts src/lib/markdown-code-copy.test.ts src/lib/markdown-img-width.test.ts src/lib/editor-layout.test.ts src/lib/roles.test.ts src/components/mobile-org-switcher.test.ts src/lib/dashboard-metrics.test.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.2",

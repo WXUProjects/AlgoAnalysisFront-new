@@ -3,18 +3,12 @@ import { Link, Navigate, useOutletContext } from 'react-router-dom'
 import {
   EyeIcon,
   HeartIcon,
-  ImageOffIcon,
   MessageCircleIcon,
   PlusIcon,
   Trash2Icon,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import {
-  deleteBlogArticle,
-  imagesGc,
-  imagesOrphans,
-  listMyBlogArticles,
-} from '@/api/blog'
+import { deleteBlogArticle, listMyBlogArticles } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
 import {
   AlertDialog,
@@ -31,12 +25,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { useListQueryState } from '@/hooks/use-list-query-state'
-import {
-  createBlogImageCleanupController,
-  type BlogImageCleanupOutcome,
-} from '@/lib/blog-image-gc'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
-import type { BlogArticle, BlogImageCleanupPreview } from '@shared/api'
+import type { BlogArticle } from '@shared/api'
 
 const visLabel: Record<string, string> = {
   public: '公开',
@@ -60,17 +50,7 @@ export function BlogManage() {
     null,
   )
   const [deleting, setDeleting] = useState(false)
-  const [cleanupPreview, setCleanupPreview] =
-    useState<BlogImageCleanupPreview | null>(null)
-  const [gcOpen, setGcOpen] = useState(false)
-  const [gcLoading, setGcLoading] = useState(false)
   const [reloadTick, setReloadTick] = useState(0)
-  const [cleanupController] = useState(() =>
-    createBlogImageCleanupController({
-      preview: imagesOrphans,
-      confirm: imagesGc,
-    }),
-  )
 
   useEffect(() => {
     setQ(keyword)
@@ -137,73 +117,6 @@ export function BlogManage() {
     setReloadTick((n) => n + 1)
   }
 
-  function showRefreshedCleanup(outcome: Extract<
-    BlogImageCleanupOutcome,
-    { kind: 'refreshed' }
-  >) {
-    toast.error(
-      outcome.message ||
-        (outcome.reason === 'stale'
-          ? '清理预览已变化，请重新确认'
-          : '部分图片清理失败'),
-    )
-    setCleanupPreview(outcome.preview)
-    setGcOpen(Boolean(outcome.preview))
-  }
-
-  async function previewImageCleanup() {
-    setGcLoading(true)
-    const outcome = await cleanupController.loadPreview()
-    setGcLoading(false)
-    if (outcome.kind === 'preview-error') {
-      setCleanupPreview(null)
-      setGcOpen(false)
-      toast.error(outcome.message || '检查失败')
-      return
-    }
-    if (outcome.kind === 'empty') {
-      setCleanupPreview(null)
-      setGcOpen(false)
-      toast.success('没有可清理的图片')
-      return
-    }
-    if (outcome.kind === 'preview') {
-      setCleanupPreview(outcome.preview)
-      setGcOpen(true)
-    }
-  }
-
-  async function confirmImageCleanup() {
-    if (cleanupController.isConfirming()) return
-    setGcLoading(true)
-    const outcome = await cleanupController.confirmPreview()
-    setGcLoading(false)
-    if (outcome.kind === 'confirmed') {
-      toast.success(`已清理 ${outcome.deleted} 张图片`)
-      setGcOpen(false)
-      setCleanupPreview(null)
-      return
-    }
-    if (outcome.kind === 'refreshed') {
-      showRefreshedCleanup(outcome)
-      return
-    }
-    if (outcome.kind === 'refresh-error') {
-      setCleanupPreview(null)
-      setGcOpen(false)
-      toast.error(outcome.message || '清理失败')
-      toast.error(outcome.refreshMessage || '重新检查失败')
-      return
-    }
-    if (outcome.kind === 'confirm-error') {
-      setCleanupPreview(outcome.preview)
-      toast.error(outcome.message || '清理失败')
-    }
-  }
-
-  const orphanImages = cleanupPreview?.orphans ?? []
-  const protectedOrphanCount = orphanImages.filter((image) => image.protected).length
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -212,19 +125,7 @@ export function BlogManage() {
           <p className="text-sm text-muted-foreground">共 {total} 篇</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            disabled={gcLoading}
-            onClick={() => void previewImageCleanup()}
-          >
-            {gcLoading && !gcOpen ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <ImageOffIcon data-icon="inline-start" />
-            )}
-            清理图片
-          </Button>
-          <Button asChild>
+          <Button asChild className="gap-1.5">
             <Link to={`/blog/${username}/manage/new`}>
               <PlusIcon data-icon="inline-start" />
               写文章
@@ -346,43 +247,6 @@ export function BlogManage() {
               }}
             >
               {deleting ? '删除中…' : '确认删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={gcOpen}
-        onOpenChange={(open) => {
-          if (!open && !gcLoading) {
-            cleanupController.clear()
-            setGcOpen(false)
-            setCleanupPreview(null)
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>清理未使用的图片？</AlertDialogTitle>
-            <AlertDialogDescription>
-              将永久删除 {orphanImages.length} 张未被文章或页面引用的图片
-              {protectedOrphanCount > 0
-                ? `，其中 ${protectedOrphanCount} 张刚上传不久`
-                : ''}
-              。此操作无法撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={gcLoading}>取消</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={gcLoading || !cleanupPreview}
-              onClick={(event) => {
-                event.preventDefault()
-                void confirmImageCleanup()
-              }}
-            >
-              {gcLoading ? '清理中…' : '确认清理'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
