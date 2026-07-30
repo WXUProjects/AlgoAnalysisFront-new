@@ -4,6 +4,7 @@ import {
   type BlogAdminArticle,
   type BlogAdminAuthor,
   type BlogAdminOverview,
+  type BlogImageUploadRequestItem,
   type BlogImageUploadStatus,
   type BlogAnalytics,
   type BlogArticle,
@@ -875,6 +876,89 @@ export async function getBlogImageUploadStatus(): Promise<
     configured: Boolean(data.configured),
     authorized: Boolean(data.authorized),
     enabled: Boolean(data.enabled),
+    pendingRequest: Boolean(data.pendingRequest),
+    pendingRequestId: num(data.pendingRequestId) || undefined,
+  }))
+}
+
+/** 作者：申请图片上传权限（须填理由） */
+export async function applyBlogImageUpload(body: {
+  reason: string
+}): Promise<
+  ApiResult<{ id?: number; pendingRequest: boolean; status?: string }>
+> {
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.blog.imageUploadApply,
+    body,
+  )
+  return wrapData(res, (data) => ({
+    id: num(data.id) || undefined,
+    pendingRequest: Boolean(data.pendingRequest),
+    status: str(data.status) || undefined,
+  }))
+}
+
+/** 站管：图片上传申请列表 */
+export async function listBlogImageUploadRequests(params?: {
+  page?: number
+  pageSize?: number
+  status?: string
+}): Promise<
+  ApiResult<{
+    list: BlogImageUploadRequestItem[]
+    total: number
+    page: number
+    pageSize: number
+  }>
+> {
+  const res = await get<Record<string, unknown>>(
+    endpoints.user.blog.adminImageUploadRequests,
+    {
+      page: params?.page,
+      pageSize: params?.pageSize,
+      status: params?.status,
+    },
+  )
+  return wrapData(res, (data) => {
+    const rawList = Array.isArray(data.list) ? data.list : []
+    return {
+      list: rawList.map((item) => {
+        const r = (item || {}) as Record<string, unknown>
+        return {
+          id: num(r.id),
+          userId: num(r.userId),
+          username: str(r.username),
+          name: str(r.name) || undefined,
+          avatar: str(r.avatar) || undefined,
+          reason: str(r.reason),
+          status: str(r.status),
+          createdAt: num(r.createdAt),
+          reviewNote: str(r.reviewNote) || undefined,
+          reviewerId: num(r.reviewerId) || undefined,
+          reviewedAt: num(r.reviewedAt) || undefined,
+        }
+      }),
+      total: num(data.total),
+      page: num(data.page, 1),
+      pageSize: num(data.pageSize, 20),
+    }
+  })
+}
+
+/** 站管：审核图片上传申请 */
+export async function reviewBlogImageUpload(body: {
+  id: number
+  action: 'approve' | 'reject'
+  note?: string
+}): Promise<ApiResult<{ id: number; status: string; userId: number }>> {
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.blog.adminImageUploadReview,
+    body,
+  )
+  return wrapData(res, (data) => ({
+    id: num(data.id),
+    status: str(data.status),
+    userId: num(data.userId),
   }))
 }
 

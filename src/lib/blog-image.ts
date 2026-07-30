@@ -13,7 +13,7 @@ import {
 export type { MarkdownImageAlign, MarkdownImageLayout }
 
 export const BLOG_IMAGE_UPLOAD_HINT =
-  '暂未开通图片上传，可粘贴图片链接'
+  '暂未开通图片上传，可申请权限或粘贴图片链接'
 
 export const BLOG_IMAGE_UPLOAD_ENABLED_HINT =
   '可粘贴或上传图片；在预览图上可调整大小与对齐'
@@ -233,4 +233,6 @@ export type BlogSessionImage = {
   name: string
   /** Uploaded in this edit session (vs already in content). */
   fromUpload: boolean
+  /** 服务端落库 content hash（SHA-256），与 GC / images/check 对齐 */
+  hash?: string
 }

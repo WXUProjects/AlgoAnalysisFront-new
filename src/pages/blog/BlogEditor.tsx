@@ -23,6 +23,7 @@ import {
   BlogImagePanel,
   type UploadProgressItem,
 } from '@/components/blog-image-panel'
+import { ImageUploadApplyBanner } from '@/components/image-upload-apply-banner'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -81,6 +82,7 @@ export function BlogEditor() {
   const [remoteTags, setRemoteTags] = useState<BlogTagCount[]>([])
   const [syncToMainProfile, setSyncToMainProfile] = useState(true)
   const [imageUploadEnabled, setImageUploadEnabled] = useState(false)
+  const [imageUploadPending, setImageUploadPending] = useState(false)
   const [coverUploading, setCoverUploading] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
   const [sessionImages, setSessionImages] = useState<BlogSessionImage[]>([])
@@ -114,7 +116,10 @@ export function BlogEditor() {
       if (res.data) setCategories(res.data)
     })
     void getBlogImageUploadStatus().then((res) => {
-      if (res.success && res.data) setImageUploadEnabled(res.data.enabled)
+      if (res.success && res.data) {
+        setImageUploadEnabled(res.data.enabled)
+        setImageUploadPending(Boolean(res.data.pendingRequest))
+      }
     })
   }, [])
 
@@ -692,6 +697,12 @@ export function BlogEditor() {
           </div>
         </Field>
       </FieldGroup>
+
+      <ImageUploadApplyBanner
+        enabled={imageUploadEnabled}
+        pendingRequest={imageUploadPending}
+        onPendingChange={setImageUploadPending}
+      />
 
       <div className={cn('min-h-[min(72vh,880px)]')}>{editorBlock}</div>
 

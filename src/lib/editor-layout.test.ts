@@ -41,6 +41,7 @@ describe('editor layout (blog + solution)', () => {
     assert.match(src, /全屏|setFullscreen/)
     assert.match(src, /BlogImagePanel/)
     assert.match(src, /写作提示/)
+    assert.match(src, /ImageUploadApplyBanner/)
   })
 
   it('ProblemSolutionEdit default height is significantly above old 640', () => {
@@ -48,5 +49,13 @@ describe('editor layout (blog + solution)', () => {
     assert.doesNotMatch(src, /minHeight=\{640\}/)
     assert.match(src, /0\.72|900|800/)
     assert.match(src, /imageUploadEnabled/)
+    assert.match(src, /ImageUploadApplyBanner/)
+  })
+
+  it('BlogAdmin has image-upload request sub-tab', () => {
+    const src = read('pages/dashboard/BlogAdmin.tsx')
+    assert.match(src, /image-upload/)
+    assert.match(src, /listBlogImageUploadRequests|reviewBlogImageUpload/)
+    assert.match(src, /图片上传申请/)
   })
 })

@@ -15,7 +15,9 @@ import {
   getBlogAdminOverview,
   listBlogAdminArticles,
   listBlogAdminAuthors,
+  listBlogImageUploadRequests,
   moderateBlogArticle,
+  reviewBlogImageUpload,
   setBlogAuthorImageUpload,
 } from '@/api/blog'
 import { useAuth } from '@/auth/AuthContext'
@@ -29,6 +31,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -47,12 +58,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { formatTime } from '@/lib/format'
 import { Perm } from '@/lib/permissions'
 import type {
   BlogAdminArticle,
   BlogAdminAuthor,
   BlogAdminOverview,
+  BlogImageUploadRequestItem,
 } from '@shared/api'
 
 const statusLabel: Record<string, string> = {
@@ -82,6 +95,15 @@ export function DashboardBlogAdmin() {
   const [status, setStatus] = useState<string>('all')
   const [busyId, setBusyId] = useState(0)
   const [uploadBusyId, setUploadBusyId] = useState(0)
+  const [uploadReqs, setUploadReqs] = useState<BlogImageUploadRequestItem[]>(
+    [],
+  )
+  const [uploadReqTotal, setUploadReqTotal] = useState(0)
+  const [uploadReqStatus, setUploadReqStatus] = useState('pending')
+  const [uploadReviewBusyId, setUploadReviewBusyId] = useState(0)
+  const [rejectTarget, setRejectTarget] =
+    useState<BlogImageUploadRequestItem | null>(null)
+  const [rejectNote, setRejectNote] = useState('')
 
   const loadOverview = useCallback(async () => {
     const res = await getBlogAdminOverview()
@@ -117,6 +139,20 @@ export function DashboardBlogAdmin() {
     }
   }, [])
 
+  const loadUploadReqs = useCallback(async (st?: string) => {
+    const res = await listBlogImageUploadRequests({
+      page: 1,
+      pageSize: 30,
+      status: st || 'pending',
+    })
+    if (res.success && res.data) {
+      setUploadReqs(res.data.list)
+      setUploadReqTotal(res.data.total)
+    } else {
+      toast.error(res.message || '图片上传申请加载失败')
+    }
+  }, [])
+
   useEffect(() => {
     if (!ready || !canBlogAdmin) return
     setLoading(true)
@@ -124,8 +160,16 @@ export function DashboardBlogAdmin() {
       loadOverview(),
       loadAuthors(),
       loadArticles(undefined, 'all'),
+      loadUploadReqs('pending'),
     ]).finally(() => setLoading(false))
-  }, [ready, canBlogAdmin, loadOverview, loadAuthors, loadArticles])
+  }, [
+    ready,
+    canBlogAdmin,
+    loadOverview,
+    loadAuthors,
+    loadArticles,
+    loadUploadReqs,
+  ])
 
   async function toggleImageUpload(userId: number, enabled: boolean) {
     setUploadBusyId(userId)
@@ -136,6 +180,26 @@ export function DashboardBlogAdmin() {
       return
     }
     toast.success(enabled ? '已开通图片上传' : '已关闭图片上传')
+    void loadAuthors(authorKw.trim() || undefined)
+    void loadUploadReqs(uploadReqStatus)
+  }
+
+  async function reviewUploadReq(
+    id: number,
+    action: 'approve' | 'reject',
+    note?: string,
+  ) {
+    setUploadReviewBusyId(id)
+    const res = await reviewBlogImageUpload({ id, action, note })
+    setUploadReviewBusyId(0)
+    if (!res.success) {
+      toast.error(res.message || '操作失败')
+      return
+    }
+    toast.success(res.message || (action === 'approve' ? '已通过' : '已驳回'))
+    setRejectTarget(null)
+    setRejectNote('')
+    void loadUploadReqs(uploadReqStatus)
     void loadAuthors(authorKw.trim() || undefined)
   }
 
@@ -187,7 +251,7 @@ export function DashboardBlogAdmin() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">博客管理</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          开通情况、文章审核与作者图片上传授权。
+          开通情况、文章审核、图片上传申请与作者授权。
         </p>
       </div>
 
@@ -223,6 +287,12 @@ export function DashboardBlogAdmin() {
         <TabsList>
           <TabsTrigger value="authors">开通作者</TabsTrigger>
           <TabsTrigger value="articles">文章审查</TabsTrigger>
+          <TabsTrigger value="image-upload">
+            图片上传申请
+            {uploadReqStatus === 'pending' && uploadReqTotal > 0
+              ? ` (${uploadReqTotal})`
+              : ''}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="authors" className="flex flex-col gap-3">
@@ -518,7 +588,203 @@ export function DashboardBlogAdmin() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="image-upload" className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={uploadReqStatus}
+              onValueChange={(v) => {
+                const next = v || 'pending'
+                setUploadReqStatus(next)
+                void loadUploadReqs(next)
+              }}
+            >
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">待审核</SelectItem>
+                <SelectItem value="approved">已通过</SelectItem>
+                <SelectItem value="rejected">已驳回</SelectItem>
+                <SelectItem value="all">全部</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void loadUploadReqs(uploadReqStatus)}
+            >
+              刷新
+            </Button>
+          </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">图片上传申请</CardTitle>
+              <CardDescription>
+                共 {uploadReqTotal} 条。通过后作者可在博客与题解中上传图片。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>申请人</TableHead>
+                    <TableHead>理由</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead>时间</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {uploadReqs.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="text-center text-muted-foreground"
+                      >
+                        {uploadReqStatus === 'pending'
+                          ? '暂无待审申请'
+                          : '暂无记录'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    uploadReqs.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell>
+                          <div className="font-medium">
+                            {r.name || r.username}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            @{r.username}
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-xs whitespace-pre-wrap text-sm">
+                          {r.reason}
+                          {r.reviewNote ? (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              备注：{r.reviewNote}
+                            </p>
+                          ) : null}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              r.status === 'rejected'
+                                ? 'destructive'
+                                : r.status === 'pending'
+                                  ? 'outline'
+                                  : 'secondary'
+                            }
+                          >
+                            {statusLabel[r.status] || r.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {formatTime(r.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {r.status === 'pending' ? (
+                            <div className="inline-flex flex-wrap justify-end gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={uploadReviewBusyId === r.id}
+                                onClick={() =>
+                                  void reviewUploadReq(r.id, 'approve')
+                                }
+                              >
+                                <CheckIcon className="size-3.5" />
+                                通过
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={uploadReviewBusyId === r.id}
+                                onClick={() => {
+                                  setRejectTarget(r)
+                                  setRejectNote('')
+                                }}
+                              >
+                                <XIcon className="size-3.5" />
+                                驳回
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      <Dialog
+        open={!!rejectTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejectTarget(null)
+            setRejectNote('')
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>驳回图片上传申请</DialogTitle>
+            <DialogDescription>
+              {rejectTarget
+                ? `驳回 @${rejectTarget.username} 的申请。可填写备注说明原因。`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <Field>
+            <FieldLabel htmlFor="image-upload-reject-note">
+              备注（可选）
+            </FieldLabel>
+            <Textarea
+              id="image-upload-reject-note"
+              value={rejectNote}
+              onChange={(e) => setRejectNote(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="例如：请先开通博客后再申请"
+            />
+          </Field>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRejectTarget(null)
+                setRejectNote('')
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={!rejectTarget || uploadReviewBusyId === rejectTarget.id}
+              onClick={() => {
+                if (!rejectTarget) return
+                void reviewUploadReq(
+                  rejectTarget.id,
+                  'reject',
+                  rejectNote.trim() || undefined,
+                )
+              }}
+            >
+              确认驳回
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

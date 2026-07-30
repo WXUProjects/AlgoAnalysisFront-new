@@ -21,7 +21,7 @@ export type UploadImageOptions = {
 
 function parseUploadBody(
   body: Record<string, unknown> | null,
-): ApiResult<{ url: string }> {
+): ApiResult<{ url: string; hash?: string }> {
   if (!body || typeof body !== 'object') {
     return { success: false, message: UX_UPLOAD_FAILED, data: null }
   }
@@ -29,6 +29,7 @@ function parseUploadBody(
   const success = code === 0 || code === '0' || code === true
   const message = str(body.message, success ? 'ok' : UX_UPLOAD_FAILED)
   const url = str(body.url)
+  const hash = str(body.hash).toLowerCase() || undefined
   if (!success || !url) {
     return {
       success: false,
@@ -36,14 +37,19 @@ function parseUploadBody(
       data: null,
     }
   }
-  return { success: true, message, data: { url }, raw: body }
+  return {
+    success: true,
+    message,
+    data: hash ? { url, hash } : { url },
+    raw: body,
+  }
 }
 
 export async function uploadImage(
   file: File,
   purpose: UploadPurpose = 'misc',
   opts?: UploadImageOptions,
-): Promise<ApiResult<{ url: string }>> {
+): Promise<ApiResult<{ url: string; hash?: string }>> {
   const form = new FormData()
   form.append('file', file)
   form.append('purpose', purpose)

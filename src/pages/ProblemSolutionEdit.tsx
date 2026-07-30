@@ -9,6 +9,7 @@ import {
 } from '@/api/community'
 import { getProblem } from '@/api/problem'
 import { useAuth } from '@/auth/AuthContext'
+import { ImageUploadApplyBanner } from '@/components/image-upload-apply-banner'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { PageShell } from '@/components/page-shell'
 import { Button } from '@/components/ui/button'
@@ -44,11 +45,15 @@ export function ProblemSolutionEdit() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [imageUploadEnabled, setImageUploadEnabled] = useState(false)
+  const [imageUploadPending, setImageUploadPending] = useState(false)
 
   useEffect(() => {
     if (!isLogin) return
     void getBlogImageUploadStatus().then((res) => {
-      if (res.success && res.data) setImageUploadEnabled(res.data.enabled)
+      if (res.success && res.data) {
+        setImageUploadEnabled(res.data.enabled)
+        setImageUploadPending(Boolean(res.data.pendingRequest))
+      }
     })
   }, [isLogin])
 
@@ -233,6 +238,12 @@ export function ProblemSolutionEdit() {
           </Field>
         </CardContent>
       </Card>
+
+      <ImageUploadApplyBanner
+        enabled={imageUploadEnabled}
+        pendingRequest={imageUploadPending}
+        onPendingChange={setImageUploadPending}
+      />
 
       <MarkdownEditor
         value={sContent}

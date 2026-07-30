@@ -63,8 +63,16 @@ function notifLink(n: NotificationItem): string | null {
   }
   if (n.type === 'review_pending') {
     if (n.refType === 'problem_edit') return '/admin/problem-edits'
-    if (n.refType === 'blog_article') return '/admin/blog'
+    if (n.refType === 'blog_article' || n.refType === 'blog_image_upload') {
+      return '/admin/blog'
+    }
     return '/admin/problem-edits'
+  }
+  if (
+    n.type === 'image_upload_approved' ||
+    n.type === 'image_upload_rejected'
+  ) {
+    return null
   }
   // 举报通知统一落到举报处理台（后台 · 内容审核 · 用户举报），原文链接在处理台内提供
   if (n.type === 'blog_report') {

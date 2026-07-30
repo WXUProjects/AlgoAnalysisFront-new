@@ -170,9 +170,15 @@ export const endpoints = {
       adminModerate: `${API_PREFIX}/user/blog/admin/moderate`,
       /** 站管：为作者开关图片上传 { userId, enabled } */
       adminImageUpload: `${API_PREFIX}/user/blog/admin/image-upload`,
-      /** 当前用户图片上传能力 { configured, authorized, enabled } */
+      /** 站管：图片上传申请列表 */
+      adminImageUploadRequests: `${API_PREFIX}/user/blog/admin/image-upload/requests`,
+      /** 站管：审核图片上传申请 { id, action: approve|reject, note? } */
+      adminImageUploadReview: `${API_PREFIX}/user/blog/admin/image-upload/review`,
+      /** 当前用户图片上传能力 { configured, authorized, enabled, pendingRequest } */
       imageUploadStatus: `${API_PREFIX}/user/blog/image-upload/status`,
-      /** 批量确认图床 URL 是否仍在资产表 { urls } → { existing, missing } */
+      /** 作者申请图片上传 { reason } */
+      imageUploadApply: `${API_PREFIX}/user/blog/image-upload/apply`,
+      /** 批量确认图床 URL/hash 是否仍在资产表 { urls?, hashes? } → { existing, missing, existingHashes, missingHashes } */
       imagesCheck: `${API_PREFIX}/user/blog/images/check`,
       report: `${API_PREFIX}/user/blog/report`,
       /** 举报处理台（content.report.handle）：博客举报列表 / 处理 */
@@ -1288,6 +1294,8 @@ export type NotificationType =
   | 'review_pending'
   | 'resource_reviewer_appointed'
   | 'resource_reviewer_revoked'
+  | 'image_upload_approved'
+  | 'image_upload_rejected'
   | string
 
 export interface NotificationItem {
@@ -1533,6 +1541,29 @@ export interface BlogImageUploadStatus {
   authorized: boolean
   /** configured && authorized */
   enabled: boolean
+  /** 是否有待审的图片上传申请 */
+  pendingRequest?: boolean
+  pendingRequestId?: number
+}
+
+/** 图片上传权限申请（博客管理审核） */
+export type BlogImageUploadRequestStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+
+export interface BlogImageUploadRequestItem {
+  id: number
+  userId: number
+  username: string
+  name?: string
+  avatar?: string
+  reason: string
+  status: BlogImageUploadRequestStatus | string
+  createdAt: number
+  reviewNote?: string
+  reviewerId?: number
+  reviewedAt?: number
 }
 
 export interface BlogAdminArticle {

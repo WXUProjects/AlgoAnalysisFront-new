@@ -326,11 +326,13 @@ export function MarkdownEditor({
         ),
       )
       const url = res.data.url
+      const hash = res.data.hash
       onImageUploaded?.({
         id: `img-${uploadSeq}-${Date.now()}`,
         url,
         name: name.replace(/\.[^.]+$/, '') || '图片',
         fromUpload: true,
+        ...(hash ? { hash } : {}),
       })
       if (autoInsert) {
         insertAtCursor(markdownImageSnippet(url, '图片'))

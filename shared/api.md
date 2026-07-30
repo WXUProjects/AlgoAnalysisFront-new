@@ -185,11 +185,11 @@
 ```json
 {
   "id": 1,
-  "type": "mention|problem_edit_approved|problem_edit_rejected|org_join_approved|org_join_rejected|blog_article_like|blog_comment|blog_comment_reply|solution_like|comment_like|blog_moderation|blog_report|community_report|user_registered|user_frozen|user_unfrozen|review_pending",
+  "type": "mention|problem_edit_approved|problem_edit_rejected|org_join_approved|org_join_rejected|blog_article_like|blog_comment|blog_comment_reply|solution_like|comment_like|blog_moderation|blog_report|community_report|user_registered|user_frozen|user_unfrozen|review_pending|image_upload_approved|image_upload_rejected",
   "title": "有人提到了你",
   "body": "alice 在评论中 @ 了你",
   "actorId": 2,
-  "refType": "comment|solution|problem_edit|org_join|blog_article|user",
+  "refType": "comment|solution|problem_edit|org_join|blog_article|blog_image_upload|user",
   "refId": 10,
   "problemId": 3,
   "payload": "{}",
@@ -204,6 +204,8 @@
 - 题面/标签修改首次提交待审 → 通知站管（`review_pending`）+ **邮件**（见 `adminNotifyEmails`）
 - 题面/标签修改审核通过 → 站内信 + **邮件感谢信**（申请人 `users.email`，SMTP 未配或无邮箱则仅站内信）
 - 题面/标签修改审核驳回 → **仅站内信**，不发邮件
+- 图片上传权限申请 → 通知站管（`review_pending`，`refType=blog_image_upload`）
+- 图片上传申请通过/驳回 → 通知申请人（`image_upload_approved` / `image_upload_rejected`）
 - 组织加入申请通过或驳回 → 通知申请人
 - 评论/题解中 `@username` → 通知被 @ 用户
 - 博客/题解点赞、评论、回复 → 通知内容作者
@@ -220,7 +222,7 @@
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc\|blog\|blog_cover`。本地用途 ≤3MB（jpg/png/gif/webp/ico/**svg**；svg 拒脚本）。**`blog`/`blog_cover`**：走又拍云（需站点配置又拍云 + 站管在 `/admin/blog` 授权该用户），清晰度优先压缩，≤约 12MB 原图，返回公网 `{ url }`；未授权或未配置则 403。本地 url 带真实扩展名 |
+| POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc\|blog\|blog_cover`。本地用途 ≤3MB（jpg/png/gif/webp/ico/**svg**；svg 拒脚本）。**`blog`/`blog_cover`**：走又拍云（需站点配置又拍云 + 站管在 `/admin/blog` 授权该用户），清晰度优先压缩，≤约 12MB 原图，返回公网 `{ url, hash }`（`hash`=落库字节 SHA-256，内容寻址 key `/blog/{uid}/{hash}{ext}`）；未授权或未配置则 403。本地 url 带真实扩展名 |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
 | GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo） |
 | GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails`） |
@@ -424,11 +426,18 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | GET | `/user/blog/admin/authors` | 站管 | 已开通作者列表（含 `imageUploadEnabled`）；query: `page`/`pageSize`/`keyword`（模糊） |
 | GET | `/user/blog/admin/articles` | 站管 | 文章审查列表（**含 private/password**）；query: `page`/`pageSize`/`keyword`/`status`/`visibility` |
 | POST | `/user/blog/admin/moderate` | 站管/博客审核权限 | body: `{ id, action: approve\|reject\|pending\|feature\|unfeature, note? }`；`feature`/`unfeature` 设/取消广场精选（仅公开且已通过） |
-| POST | `/user/blog/admin/image-upload` | 站管/博客管理 | body: `{ userId, enabled }`；**默认全员关闭**图片上传，须在此按作者授权 |
-| GET | `/user/blog/image-upload/status` | 是 | 当前用户：`{ configured, authorized, enabled }`（站点又拍云已配且已授权时 `enabled=true`） |
-| POST | `/user/blog/images/check` | 是 | body `{ urls: string[] }`（≤200）→ `{ existing, missing }`：批量确认 URL/object key 是否仍在本用户 `blog_image_assets`（插件缓存复用，一次查询） |
+| POST | `/user/blog/admin/image-upload` | 站管/博客管理 | body: `{ userId, enabled }`；**默认全员关闭**图片上传，须在此按作者授权；开通时顺带通过该用户待审申请 |
+| GET | `/user/blog/admin/image-upload/requests` | 站管/博客管理 | 图片上传申请列表；query: `page`/`pageSize`/`status`=`pending`（默认）`\|approved\|rejected\|all` |
+| POST | `/user/blog/admin/image-upload/review` | 站管/博客管理 | body: `{ id, action: approve\|reject, note? }`；通过则开通该作者图片上传并通知；驳回通知申请人 |
+| GET | `/user/blog/image-upload/status` | 是 | 当前用户：`{ configured, authorized, enabled, pendingRequest, pendingRequestId? }`（站点又拍云已配且已授权时 `enabled=true`） |
+| POST | `/user/blog/image-upload/apply` | 是 | body: `{ reason }`（必填，5–500 字）；提交图片上传权限申请，通知站管；已开通/已有待审幂等返回 |
+| POST | `/user/blog/images/check` | 是 | body `{ urls?: string[], hashes?: string[] }`（合计 ≤200）→ `{ existing, missing, existingHashes, missingHashes }`：批量确认 URL/object key 与 content hash 是否仍在本用户 `blog_image_assets`（插件/编辑器缓存复用；GC 以 hash 为主） |
 
 **又拍云图床**：站点设置配置 `upyunBucket`（服务名）、`upyunOperator`、`upyunPassword`（脱敏存储）、`upyunDomain`（用户侧访问域，如 `zhiyuansofts.cn`）、`upyunScheme`（`http`/`https`）。上传走服务端代传；保存/删文后会 GC 未引用的本站又拍云对象。正文支持 Obsidian 定宽 `![说明|550](url)`。
+
+**图床 URL 存储（path-only）**：本站又拍云对象在库内以 `/blog/{userId}/…` 路径存储（正文、封面、`blog_image_assets`、题解镜像）。`POST /user/upload`（`purpose=blog|blog_cover`）仍返回**当前**完整公网 `url` + `hash` 供编辑器/插件插入与缓存；文章/题解/页面 **读接口** 会按站点当前 `upyunDomain`+`upyunScheme` 展开为完整 URL。因此修改访问域名后，旧文无需改写即可用新域名出图；外链图不受影响。
+
+**图床 GC（content hash）**：上传登记 `blog_image_assets.content_hash`；文章/页面写入时解析正文图并落 `image_hashes`（JSON 数组）。GC 优先按 hash 判定引用（并扫描正文 key + 自定义页面），宽限期 24h；未再被任何文章/页面 hash 或正文引用的对象才删除。插件/编辑器应用 `hash` 做缓存校验，勿仅依赖易变 URL。
 
 **开通协议**：初次使用/发文/改外观前须签署；存量已有文章或主题配置用户启动时自动回填为已开通。
 
