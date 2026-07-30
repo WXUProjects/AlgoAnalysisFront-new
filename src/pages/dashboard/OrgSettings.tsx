@@ -233,11 +233,11 @@ export function DashboardOrgSettings() {
           {canTogglePolicy && (
             <>
               <div className="flex items-center justify-between">
-                <Label>日报邮件（由组织开通）</Label>
+                <Label>日报邮件</Label>
                 <Switch checked={enableAiEmail} onCheckedChange={setEnableAiEmail} />
               </div>
               <div className="flex items-center justify-between">
-                <Label>周报邮件（教练 / 队长 / 管理员）</Label>
+                <Label>周报邮件</Label>
                 <Switch
                   checked={enableAiWeeklyEmail}
                   onCheckedChange={setEnableAiWeeklyEmail}
@@ -252,7 +252,7 @@ export function DashboardOrgSettings() {
           {canSitePolicy && (
             <>
               <div className="space-y-2">
-                <Label>数据同步间隔（分钟，仅站点管理员可改）</Label>
+                <Label>数据同步间隔（分钟）</Label>
                 <Input
                   type="number"
                   value={spiderInterval}
@@ -267,7 +267,7 @@ export function DashboardOrgSettings() {
                   placeholder="例如 30 7 * * *，表示每天 7:30"
                 />
                 <p className="text-xs text-muted-foreground">
-                  填写定时表达式。例如每天 7:30 写作 30 7 * * *
+                  例如每天 7:30 写作 30 7 * * *
                 </p>
               </div>
             </>
@@ -288,7 +288,7 @@ export function DashboardOrgSettings() {
         <CardHeader>
           <CardTitle className="text-base">邀请加入</CardTitle>
           <CardDescription>
-            复制邀请链接发给队员；对方打开后会看到欢迎提示，注册后自动加入本组织。也可只发邀请码。
+            复制邀请链接或邀请码发给队员。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -359,7 +359,7 @@ export function DashboardOrgSettings() {
           <div className="flex min-w-0 flex-col gap-1.5">
             <CardTitle className="text-base">本域入口</CardTitle>
             <CardDescription>
-              发给已经在本组织里的成员，打开后会自动切到本域。不能用来邀请新人。
+              发给本组织成员，打开后会切到本域；不能用来邀请新人。
             </CardDescription>
           </div>
           <Button

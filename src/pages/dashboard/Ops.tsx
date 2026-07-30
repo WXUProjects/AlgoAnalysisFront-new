@@ -94,7 +94,7 @@ export function DashboardOps() {
     const d = res.data
     toast.success(
       res.message ||
-        `已清空：明细 ${d?.deletedSubmitLogs ?? 0} · 已重新排队 ${d?.enqueuedUsers ?? 0} 人`,
+        `已清空 ${d?.deletedSubmitLogs ?? 0} 条提交，开始为 ${d?.enqueuedUsers ?? 0} 人重新同步`,
     )
     setConfirm('')
     void load()
@@ -105,7 +105,7 @@ export function DashboardOps() {
       <div className="mb-4 space-y-1">
         <h3 className="text-lg font-semibold tracking-tight">运维</h3>
         <p className="text-sm text-muted-foreground">
-          查看提交数据规模，以及需要谨慎操作的数据维护；按你的权限显示可用功能。
+          查看提交数据规模，以及需要谨慎操作的数据维护。
         </p>
       </div>
 
@@ -114,9 +114,7 @@ export function DashboardOps() {
           <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 space-y-0">
             <div>
               <CardTitle className="text-base">提交数据</CardTitle>
-              <CardDescription>
-                累计入库的提交条数（不是今天新增）
-              </CardDescription>
+              <CardDescription>全站累计提交规模</CardDescription>
             </div>
             <Button
               type="button"
@@ -138,22 +136,22 @@ export function DashboardOps() {
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <Metric
-                  label="提交明细总行数"
+                  label="全部提交"
                   value={inv?.submitLogsTotal}
-                  hint="提交明细（含力扣合成记录）"
+                  hint="含力扣补全记录"
                 />
                 <Metric
-                  label="计入提交统计"
+                  label="计入统计"
                   value={inv?.submitLogsRealTotal}
-                  hint="不含力扣占位记录"
+                  hint="仅真实提交"
                 />
                 <Metric
-                  label="明细时间范围"
+                  label="时间范围"
                   value={undefined}
                   hint={
                     inv && inv.oldestTime > 0
                       ? `${formatTime(inv.oldestTime)} → ${formatTime(inv.newestTime)}`
-                      : '暂无明细'
+                      : '暂无数据'
                   }
                 />
               </div>
@@ -169,24 +167,17 @@ export function DashboardOps() {
               <Badge variant="destructive">不可撤销</Badge>
             </div>
             <CardDescription className="leading-relaxed">
-              <strong className="text-foreground">彻底删除</strong>
-              全部训练相关数据：提交明细、统计、日汇总、刷题热力、比赛记录、提醒日志，并清空相关缓存。随后按已绑定
-              OJ 账号重新全量同步。
-              <br />
-              <strong className="text-foreground">
-                保留：用户账号、OJ 绑定、题库、公告/重要通知、比赛日历与订阅、站点配置。
-              </strong>
-              同步期间数字会先归零再回升。
+              彻底删除全站提交、统计、比赛与刷题热力等训练数据，再按已绑定的
+              OJ 账号重新同步。用户账号、OJ 绑定、题库与站点配置会保留。
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="purge-confirm">
-                安全确认码（请输入{' '}
+                请输入确认码{' '}
                 <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                   {CONFIRM_TOKEN}
                 </code>
-                ）
               </Label>
               <Input
                 id="purge-confirm"
@@ -210,13 +201,8 @@ export function DashboardOps() {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>确认清空全部训练数据？</AlertDialogTitle>
-                  <AlertDialogDescription className="space-y-2">
-                    <span className="block">
-                      将彻底删除提交、统计、比赛记录等（题库与已关联的做题账号保留），并重新从各平台同步数据。此操作无法撤销。
-                    </span>
-                    <span className="block text-muted-foreground">
-                      请确认已做好备份，且当前不在使用高峰期。
-                    </span>
+                  <AlertDialogDescription>
+                    将删除提交、统计与比赛记录，再重新同步。题库与做题账号保留。此操作无法撤销。
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

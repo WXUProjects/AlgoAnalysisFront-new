@@ -332,7 +332,7 @@ export function sanitizeHtml(html: string): string {
         const safeProperty =
           /^(height|width|max-width|min-width|top|left|margin(?:-(?:left|right|top|bottom))?|vertical-align|font-size|position|display)$/
         const safeValue =
-          /^-?(?:\d+|\d*\.\d+)(?:em|ex|rem|px|%)?$|^(?:relative|block|inline-block|flex)$/
+          /^-?(?:\d+|\d*\.\d+)(?:em|ex|rem|px|%)?$|^(?:relative|block|inline-block|flex|auto)$/
         return safeProperty.test(property.trim().toLowerCase()) && safeValue.test(value)
       })
       if (safeDeclarations.length) el.setAttribute('style', safeDeclarations.join(';'))
@@ -547,7 +547,8 @@ function ensureRenderer() {
     if (widthPercent != null) {
       styleParts.push(`width:${widthPercent}%`, 'height:auto', 'max-width:100%')
     } else if (width != null) {
-      styleParts.push(`width:${width}px`, 'height:auto')
+      // max-width:100% 防止定宽超出容器；height:auto 保比例（消毒器需放行 auto）
+      styleParts.push(`width:${width}px`, 'max-width:100%', 'height:auto')
     }
     const style = styleParts.length
       ? ` style="${styleParts.join(';')}"`

@@ -214,7 +214,7 @@ export function DashboardEmergencyManage() {
         <div>
           <h3 className="font-semibold">重要通知</h3>
           <p className="text-sm text-muted-foreground">
-            全站强制弹窗；拖动左侧手柄调整展示顺序。用户点「我知道了」后本地不再显示，新发布会再次弹出
+            全站弹窗通知；可拖动调整展示顺序。
           </p>
         </div>
         <Button type="button" size="sm" onClick={openCreate}>

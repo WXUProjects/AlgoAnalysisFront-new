@@ -202,7 +202,7 @@ export function OrgHub() {
         <CardHeader>
           <CardTitle className="text-base">加入团队</CardTitle>
           <CardDescription>
-            向管理员索取团队邀请码，并填写你在队内显示的名称（仅本队可见）。
+            向管理员索取团队邀请码，并填写你在队内显示的名称。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -224,9 +224,6 @@ export function OrgHub() {
               placeholder="在本团队里显示的名字"
               maxLength={32}
             />
-            <p className="text-xs text-muted-foreground">
-              仅在该团队内展示，与公共域昵称互不影响。加入后也可在上方列表中修改。
-            </p>
           </div>
           <Button disabled={loading} onClick={() => void handleJoin()} className="sm:w-fit">
             {loading ? '提交中…' : '加入'}
@@ -276,8 +273,8 @@ export function OrgHub() {
             <DialogDescription>
               {editOrg
                 ? editOrg.isSystem
-                  ? '公共域称呼会同步为站内昵称，在个人主页与公共空间展示。'
-                  : `在「${editOrg.name}」中展示的名称，仅该组织成员可见。`
+                  ? '在个人主页与公共空间展示。'
+                  : `在「${editOrg.name}」中展示的名称。`
                 : ''}
             </DialogDescription>
           </DialogHeader>
@@ -293,9 +290,6 @@ export function OrgHub() {
                 if (e.key === 'Enter') void handleSaveDisplayName()
               }}
             />
-            <p className="text-xs text-muted-foreground">
-              最多 32 字。修改公共域称呼会同步更新站内昵称；其他组织仅在该组织内生效。
-            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOrg(null)} disabled={savingName}>

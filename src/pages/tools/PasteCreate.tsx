@@ -140,7 +140,7 @@ export function PasteCreate() {
           <CardHeader>
             <CardTitle>粘贴板</CardTitle>
             <CardDescription>
-              把代码、报错日志或配置贴进来，生成链接分享。支持语法高亮，可设置有效期。
+              把代码或文本贴进来，生成链接分享。
             </CardDescription>
           </CardHeader>
           <CardContent>

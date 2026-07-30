@@ -211,7 +211,7 @@ export function DashboardReportsManage() {
         <div>
           <h3 className="font-semibold">用户举报</h3>
           <p className="text-sm text-muted-foreground">
-            处理大家对博客、题解与评论的举报；违规内容请先前往原文处置，再回来标记处理结果
+            处理对博客、题解与评论的举报。
           </p>
         </div>
       </div>

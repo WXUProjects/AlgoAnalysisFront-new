@@ -44,29 +44,32 @@ export function BlogAboutPage() {
         <header>
           <h1>关于</h1>
         </header>
-        <div className="chirpy-prose">
-          <div className="mb-4 flex items-center gap-3">
-            {author?.avatar ? (
-              <img
-                src={author.avatar}
-                alt=""
-                className="size-12 rounded-full"
-                style={{ boxShadow: 'var(--avatar-border-color) 0 0 0 2px' }}
-              />
-            ) : (
-              <div className="flex size-12 items-center justify-center rounded-full bg-[var(--sidebar-bg)] text-lg font-bold">
-                {name.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-            <div>
-              <p className="text-lg font-semibold text-[var(--heading-color)]">
-                {name}
-              </p>
-              <p className="text-sm text-[var(--text-muted-color)]">
-                @{username}
-              </p>
+        {/* 作者信息必须在 prose 外：.chirpy-prose img 的 width/height:auto 会盖掉 size-* */}
+        <div className="mb-4 flex items-center gap-3">
+          {author?.avatar ? (
+            <img
+              src={author.avatar}
+              alt=""
+              width={40}
+              height={40}
+              className="size-10 shrink-0 rounded-full object-cover"
+              style={{ boxShadow: 'var(--avatar-border-color) 0 0 0 2px' }}
+            />
+          ) : (
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--sidebar-bg)] text-sm font-bold">
+              {name.slice(0, 1).toUpperCase()}
             </div>
+          )}
+          <div className="min-w-0">
+            <p className="text-lg font-semibold text-[var(--heading-color)]">
+              {name}
+            </p>
+            <p className="text-sm text-[var(--text-muted-color)]">
+              @{username}
+            </p>
           </div>
+        </div>
+        <div className="chirpy-prose">
           {theme.subtitle ? <p>{theme.subtitle}</p> : null}
           <p>
             这是 <strong>{name}</strong> 在本站的个人博客。你可以在
@@ -84,27 +87,30 @@ export function BlogAboutPage() {
     return (
       <article className="mz-article">
         <h1>关于</h1>
-        <div className="mz-prose">
-          <div className="mb-4 flex items-center gap-3">
-            {author?.avatar ? (
-              <img
-                src={author.avatar}
-                alt=""
-                className="size-14 rounded-[1rem] object-cover"
-                style={{ boxShadow: '0 0 0 3px var(--mz-btn-bg)' }}
-              />
-            ) : (
-              <div className="flex size-14 items-center justify-center rounded-[1rem] bg-[var(--mz-btn-bg)] text-lg font-bold text-[var(--mz-primary)]">
-                {name.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-            <div>
-              <p className="text-lg font-semibold text-[var(--mz-text-90)]">
-                {name}
-              </p>
-              <p className="text-sm text-[var(--mz-text-50)]">@{username}</p>
+        {/* 作者信息必须在 prose 外：.mz-prose img 的 width/height:auto 会盖掉 size-* */}
+        <div className="mb-4 flex items-center gap-3">
+          {author?.avatar ? (
+            <img
+              src={author.avatar}
+              alt=""
+              width={40}
+              height={40}
+              className="size-10 shrink-0 rounded-[0.75rem] object-cover"
+              style={{ boxShadow: '0 0 0 2px var(--mz-btn-bg)' }}
+            />
+          ) : (
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-[0.75rem] bg-[var(--mz-btn-bg)] text-sm font-bold text-[var(--mz-primary)]">
+              {name.slice(0, 1).toUpperCase()}
             </div>
+          )}
+          <div className="min-w-0">
+            <p className="text-lg font-semibold text-[var(--mz-text-90)]">
+              {name}
+            </p>
+            <p className="text-sm text-[var(--mz-text-50)]">@{username}</p>
           </div>
+        </div>
+        <div className="mz-prose">
           {theme.subtitle ? <p>{theme.subtitle}</p> : null}
           <p>
             这是 <strong>{name}</strong> 在本站的个人博客。你可以在

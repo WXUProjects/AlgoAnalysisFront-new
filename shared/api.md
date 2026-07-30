@@ -504,6 +504,7 @@ nginx：**首版策略**——上述公开页 **一律** 反代 SEO HTML（不�
   "summary": "string",
   "content": "markdown",
   "coverUrl": "https://…",
+  "useFirstImageAsCover": true,
   "visibility": "public|private|password",
   "password": "仅 password 可见性",
   "clearPassword": false,
@@ -513,7 +514,8 @@ nginx：**首版策略**——上述公开页 **一律** 反代 SEO HTML（不�
 }
 ```
 
-- 头图仅支持 **http(s) 外链**，不提供上传。
+- 头图仅支持 **http(s) 外链**（Web 授权用户可上传又拍云）。
+- `useFirstImageAsCover`：可选，默认 `false`，**不入库**。当 `coverUrl` 为空且为 `true` 时，服务端取正文第一张 http(s) 图写入 `coverUrl`；手填/上传的 `coverUrl` 优先。
 - `recommend` 作者端不可写；仅站管/持博客审核权限者 `POST /user/blog/admin/moderate` `action=feature|unfeature` 设精选。
 - `syncToMainProfile`：公开文默认 `true`（进广场 / 资料动态 / 组织发现）；显式 `false` = 仅个人博客壳可见。`private`/`password` 本就不曝光。
 - `tags`：自由字符串数组；`by-username?tag=` 模糊筛；`GET /user/blog/tags?username=` 聚合。

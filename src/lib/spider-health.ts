@@ -38,14 +38,14 @@ export function spiderPlatformHealth(
     return {
       kind: 'never',
       label: '尚未同步',
-      detail: '已绑定，还没有成功拉取到做题数据，通常几分钟内会开始同步。',
+      detail: '已绑定，做题数据通常几分钟内开始同步。',
     }
   }
   if (nowSec - ok > SPIDER_STALE_SECONDS) {
     return {
       kind: 'stale',
       label: '同步偏旧',
-      detail: '距离上次成功同步已经较久，数据可能不是最新。',
+      detail: '数据可能不是最新，可稍后刷新或检查绑定。',
     }
   }
   return {
@@ -75,14 +75,14 @@ export function userSyncHealth(
     return {
       kind: 'never',
       label: '尚未同步',
-      detail: '已绑定 OJ，系统还在准备第一次同步，请稍后再看数据。',
+      detail: '已绑定 OJ，请稍后再看数据。',
     }
   }
   if (nowSec - ok > SPIDER_STALE_SECONDS) {
     return {
       kind: 'stale',
       label: '同步偏旧',
-      detail: '整体数据有一段时间没更新了，可到「编辑资料」检查绑定。',
+      detail: '数据有一段时间没更新了，可到「编辑资料」检查绑定。',
     }
   }
   return null

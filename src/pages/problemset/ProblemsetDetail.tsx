@@ -687,7 +687,7 @@ export function ProblemsetDetail() {
     set.description?.trim() ||
     (set.isSystem
       ? set.kind === 'todo'
-        ? '做对后会自动从这里移除，也可以手动剔除。'
+        ? '做对后会自动从这里移除。'
         : '你收藏的题目会集中在这里。'
       : '')
 
@@ -1186,9 +1186,7 @@ export function ProblemsetDetail() {
           <DialogHeader>
             <DialogTitle>编辑题单</DialogTitle>
             <DialogDescription>
-              {set.isSystem
-                ? '系统题单仅可修改描述。'
-                : '可改标题、描述与可见性。'}
+              {set.isSystem ? '可修改描述。' : '可改标题、描述与可见性。'}
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>

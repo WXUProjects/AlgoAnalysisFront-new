@@ -87,7 +87,7 @@ export function PrivacySetupDialog() {
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <FieldLabel htmlFor="privacy-profile">允许他人查看个人资料</FieldLabel>
               <FieldDescription>
-                关闭后，公共域中的其他人将无法打开你的资料页（默认允许）。
+                关闭后，公共域中的其他人将无法打开你的资料页。
               </FieldDescription>
             </div>
             <Switch
@@ -100,7 +100,7 @@ export function PrivacySetupDialog() {
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <FieldLabel htmlFor="privacy-feed">出现在公共域动态</FieldLabel>
               <FieldDescription>
-                关闭后，公共域动态里不会再出现你的提交（默认会出现）。
+                关闭后，公共域动态里不会再出现你的提交。
               </FieldDescription>
             </div>
             <Switch

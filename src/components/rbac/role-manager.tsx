@@ -556,8 +556,8 @@ export function RoleManager({
                   {selectedRole.description ||
                     (isSystemRole
                       ? canEditPerms
-                        ? '系统预设角色，名称固定、不能删除；权限可按本组织需要调整。'
-                        : '系统预设角色，权限组合固定，不能修改或删除。'
+                        ? '系统预设角色，不能删除；权限可按本组织需要调整。'
+                        : '系统预设角色，不能修改或删除。'
                       : '还没有填写角色说明。')}
                 </p>
               </div>
@@ -610,14 +610,14 @@ export function RoleManager({
                 {isSystemRole ? (
                   <p className="text-xs text-muted-foreground">
                     {canEditPerms
-                      ? `本组织可自行调整「${selectedRole.name}」的权限，点「调整权限」修改；只影响本组织。${
+                      ? `可调整「${selectedRole.name}」在本组织的权限。${
                           selectedRole.customized ? '当前已按本组织自定义。' : ''
                         }`
-                      : '这是基本角色，权限固定，不能修改也不能删除。'}
+                      : '基本角色，不能修改或删除。'}
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    以下为该角色当前拥有的权限，点「编辑」可调整。
+                    该角色当前拥有的权限。
                   </p>
                 )}
                 <PermMatrix
@@ -758,8 +758,8 @@ export function RoleManager({
             </DialogTitle>
             <DialogDescription>
               {editorRole?.isSystem
-                ? '这是内置角色，名称固定；这里勾选的权限只对本组织生效，保存后成员重新进入或刷新页面即可生效。'
-                : '为角色勾选权限；保存后，持有该角色的成员重新进入或刷新页面即可生效。'}
+                ? '勾选的权限只对本组织生效。'
+                : '为角色勾选权限。'}
             </DialogDescription>
           </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">

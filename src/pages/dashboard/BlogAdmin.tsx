@@ -187,7 +187,7 @@ export function DashboardBlogAdmin() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">博客管理</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          查看开通情况与文章审核；公开文可通过后设为「精选」出现在博客广场。图片上传默认关闭，可在作者列表中单独授权。
+          开通情况、文章审核与作者图片上传授权。
         </p>
       </div>
 

@@ -470,9 +470,7 @@ export function DashboardSiteSettings() {
         <Card className="gap-3 py-4">
           <CardHeader className="px-4 pb-0">
             <CardTitle>页脚</CardTitle>
-            <CardDescription>
-              备案号展示在全站页脚；版权与开发者信息由系统固定展示
-            </CardDescription>
+            <CardDescription>展示在全站页脚的备案号</CardDescription>
           </CardHeader>
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
@@ -484,9 +482,6 @@ export function DashboardSiteSettings() {
                   onChange={(e) => setFooterIcp(e.target.value)}
                   placeholder="苏ICP备2025217901号"
                 />
-                <p className="text-xs text-muted-foreground">
-                  留空则使用默认：苏ICP备2025217901号。链接至工信部备案查询。
-                </p>
               </Field>
             </FieldGroup>
           </CardContent>
@@ -496,7 +491,7 @@ export function DashboardSiteSettings() {
           <CardHeader className="px-4 pb-0">
             <CardTitle>长期未登录暂停同步</CardTitle>
             <CardDescription>
-              超过指定天数未登录的用户，将暂停自动同步与邮件提醒。再次登录后会自动重新同步。
+              超过指定天数未登录的用户，将暂停自动同步与邮件提醒；再次登录后会恢复。
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4">
@@ -513,7 +508,7 @@ export function DashboardSiteSettings() {
                   placeholder="14"
                 />
                 <p className="text-xs text-muted-foreground">
-                  默认 14 天，范围 1–365。站点管理员、教练/队长、付费组织、强制同步组织，以及标记为「始终同步」的用户不受影响。
+                  默认 14 天。管理员、教练/队长及标记为「始终同步」的用户不受影响。
                 </p>
               </Field>
             </FieldGroup>
@@ -524,7 +519,7 @@ export function DashboardSiteSettings() {
           <CardHeader className="px-4 pb-0">
             <CardTitle>邮件发送设置</CardTitle>
             <CardDescription>
-              用于验证码、找回密码、训练日报/周报，以及审核与举报提醒。保存后立即生效。
+              用于验证码、找回密码、训练日报/周报，以及审核与举报提醒。
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4">
@@ -631,7 +626,7 @@ export function DashboardSiteSettings() {
           <CardHeader className="px-4 pb-0">
             <CardTitle>又拍云图床</CardTitle>
             <CardDescription>
-              博客与题解图片上传。配置后仍须在「博客管理」按作者授权；默认全员关闭上传。
+              配置博客与题解的图片上传；还需在「博客管理」为作者开通。
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4">
@@ -672,7 +667,7 @@ export function DashboardSiteSettings() {
                   }}
                 />
                 <p className="text-xs text-muted-foreground">
-                  密码仅保存在服务器，不会出现在页面源码或公开仓库。
+                  密码只保存在服务器，不会明文回显。
                 </p>
               </Field>
               <Field className="gap-1.5">
@@ -695,8 +690,7 @@ export function DashboardSiteSettings() {
                   autoComplete="off"
                 />
                 <p className="text-xs text-muted-foreground">
-                  用户侧图片地址形如 http://域名/路径。若主站为 https 而图床为
-                  http，浏览器可能提示混合内容。
+                  图床建议与站点同为 https。
                 </p>
               </Field>
             </FieldGroup>
@@ -801,10 +795,9 @@ export function DashboardSiteSettings() {
           <CardHeader className="px-4 pb-0">
             <CardTitle>数据备份与恢复</CardTitle>
             <CardDescription>
-              导出站点数据（用户、组织、题库、提交与上传文件等），完成后可下载；
-              完成后请在 10 分钟内下载，超时将自动删除。导入将
+              导出后请尽快下载。导入将
               <span className="font-medium text-destructive">覆盖现有数据</span>
-              ，恢复为备份时的状态。
+              。
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4 px-4">

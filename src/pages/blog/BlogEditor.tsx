@@ -68,6 +68,8 @@ export function BlogEditor() {
   const [slug, setSlug] = useState('')
   const [content, setContent] = useState('')
   const [coverUrl, setCoverUrl] = useState('')
+  /** 头图为空时默认勾选：保存时由服务端取正文第一张图 */
+  const [useFirstImageAsCover, setUseFirstImageAsCover] = useState(true)
   const [visibility, setVisibility] = useState<BlogVisibility>('public')
   const [password, setPassword] = useState('')
   const [categoryId, setCategoryId] = useState<string>('')
@@ -157,7 +159,9 @@ export function BlogEditor() {
       // 摘要仅按正文自动生成，编辑页不提供手写入口
       const body = a.content || ''
       setContent(body)
-      setCoverUrl(a.coverUrl || '')
+      const nextCover = a.coverUrl || ''
+      setCoverUrl(nextCover)
+      setUseFirstImageAsCover(!nextCover.trim())
       setVisibility((a.visibility as BlogVisibility) || 'public')
       setCategoryId(a.categoryId ? String(a.categoryId) : '')
       setTags(Array.isArray(a.tags) ? a.tags.filter(Boolean) : [])
@@ -317,6 +321,7 @@ export function BlogEditor() {
       summary: generateDefaultSummary(content),
       content,
       coverUrl: coverUrl.trim(),
+      useFirstImageAsCover,
       visibility,
       password: password.trim() || undefined,
       clearPassword: visibility !== 'password',
@@ -495,7 +500,11 @@ export function BlogEditor() {
           <div className="flex flex-wrap items-center gap-2">
             <Input
               value={coverUrl}
-              onChange={(e) => setCoverUrl(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value
+                setCoverUrl(v)
+                if (!v.trim()) setUseFirstImageAsCover(true)
+              }}
               placeholder="图片链接"
               className="min-w-[12rem] flex-1"
             />
@@ -525,6 +534,7 @@ export function BlogEditor() {
                         return
                       }
                       setCoverUrl(res.data.url)
+                      setUseFirstImageAsCover(false)
                       handleImageUploaded({
                         id: `cover-${Date.now()}`,
                         url: res.data.url,
@@ -537,6 +547,19 @@ export function BlogEditor() {
                 </label>
               </Button>
             ) : null}
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <Checkbox
+              id="blog-use-first-image-cover"
+              checked={useFirstImageAsCover}
+              onCheckedChange={(v) => setUseFirstImageAsCover(v === true)}
+            />
+            <FieldLabel
+              htmlFor="blog-use-first-image-cover"
+              className="!mt-0 font-normal"
+            >
+              没有头图时，用正文第一张图
+            </FieldLabel>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             {imageUploadEnabled
@@ -665,15 +688,6 @@ export function BlogEditor() {
       {imageUploadEnabled || sessionImages.length > 0 || uploadProgress.length > 0
         ? imagePanel
         : null}
-
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" asChild>
-          <Link to={`/blog/${username}/manage`}>取消</Link>
-        </Button>
-        <Button onClick={() => void handleSave()} disabled={saving}>
-          {saving ? '保存中…' : isNew ? '发布' : '保存'}
-        </Button>
-      </div>
     </div>
   )
 }

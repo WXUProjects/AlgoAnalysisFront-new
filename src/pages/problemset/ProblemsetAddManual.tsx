@@ -127,8 +127,8 @@ export function ProblemsetAddManual() {
           <CardTitle className="text-base">手动加入题库</CardTitle>
           <CardDescription>
             {forBankOnly
-              ? '链接无法自动识别时，可填写标题后发布。题面与标签可选；发布后直接进入题库，无需审核。'
-              : '链接无法自动识别时，可填写标题后发布。题面与标签可选；发布后会直接加入当前题单，无需审核。'}
+              ? '链接无法自动识别时，可填写标题后发布。题面与标签可选。'
+              : '链接无法自动识别时，可填写标题后发布。题面与标签可选，发布后会加入当前题单。'}
             {sourceUrl ? (
               <>
                 {' '}
@@ -155,9 +155,6 @@ export function ProblemsetAddManual() {
               disabled={saving}
             />
           </Field>
-          <p className="text-xs text-muted-foreground">
-            若填写了题面但未写标签，且你具备 AI 权限，系统可能会自动分析标签。
-          </p>
         </CardContent>
       </Card>
 

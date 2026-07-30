@@ -43,11 +43,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { cleanProblemTitle, formatPipelineStage, formatTime } from '@/lib/format'
 import { num, str } from '@/lib/http'
 import { Perm } from '@/lib/permissions'
@@ -73,25 +68,6 @@ function readHiddenIds(key: string): Set<number> {
 
 function writeHiddenIds(key: string, ids: Set<number>) {
   safeLocalStorage.set(key, JSON.stringify([...ids]))
-}
-
-function ActionTip({
-  tip,
-  children,
-}: {
-  tip: string
-  children: React.ReactNode
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="inline-flex">{children}</span>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-xs text-left leading-relaxed">
-        {tip}
-      </TooltipContent>
-    </Tooltip>
-  )
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -229,7 +205,7 @@ export function DashboardProblemProgress() {
       HIDDEN_PERM_KEY,
       setHiddenPermIds,
       hiddenPermIds,
-      '已从列表隐藏这些永久失败记录（题目状态未变）',
+      '已从列表隐藏',
     )
   }
 
@@ -259,162 +235,124 @@ export function DashboardProblemProgress() {
         <div>
           <h3 className="font-semibold">题面处理</h3>
           <p className="text-sm text-muted-foreground">
-            每 5 秒自动刷新 · AI 分析
+            AI 分析
             {data?.analyzePaused ? '已暂停' : '进行中'} · 抓取题面
             {data?.fetchPaused ? '已暂停' : '进行中'}
-            <span className="mx-1">·</span>
-            暂停不会丢失待处理任务
           </p>
         </div>
         {canProblemOps && (
           <div className="flex flex-wrap gap-2">
-            <ActionTip tip="立即刷新当前进度（页面也会每 5 秒自动更新）">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                onClick={() => void load()}
-              >
-                刷新
-              </Button>
-            </ActionTip>
-
-            <ActionTip
-              tip={
-                data?.analyzePaused
-                  ? '继续处理待分析的题目，已排队任务会接着做'
-                  : '暂时停止 AI 分析，已排队的任务会保留，不会清空'
-              }
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={() => void load()}
             >
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" size="sm" variant="outline" disabled={busy}>
-                    {data?.analyzePaused ? '恢复分析' : '暂停分析'}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      {data?.analyzePaused ? '恢复 AI 分析？' : '暂停 AI 分析？'}
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      暂停后只是暂时不再处理新任务，已排队的题目会保留，恢复后继续。
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => void handleToggleAnalyze()}>
-                      确认
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </ActionTip>
+              刷新
+            </Button>
 
-            <ActionTip
-              tip={
-                data?.fetchPaused
-                  ? '继续获取待处理的题面，已排队任务会接着做'
-                  : '暂时停止获取题面，已排队的任务会保留，不会清空'
-              }
-            >
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" size="sm" variant="outline" disabled={busy}>
-                    {data?.fetchPaused ? '恢复抓取题面' : '暂停抓取题面'}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      {data?.fetchPaused ? '恢复抓取题面？' : '暂停抓取题面？'}
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      暂停后只是暂时不再获取新题面，已排队的任务会保留，恢复后继续。
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => void handleToggleFetch()}>
-                      确认
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </ActionTip>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" size="sm" variant="outline" disabled={busy}>
+                  {data?.analyzePaused ? '恢复分析' : '暂停分析'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {data?.analyzePaused ? '恢复 AI 分析？' : '暂停 AI 分析？'}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {data?.analyzePaused
+                      ? '将继续分析待处理的题目。'
+                      : '暂停后可随时恢复，待处理的题目不会丢失。'}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => void handleToggleAnalyze()}>
+                    确认
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
-            <ActionTip tip="检查近 6 个月的提交，把缺少题面或分析的题目加入处理列表（不会清空现有任务）">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" size="sm" variant="outline" disabled={busy}>
-                    补全近期
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>补全近 6 个月的提交？</AlertDialogTitle>
-                    <AlertDialogDescription asChild>
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <p>会检查近 6 个月的提交记录，并自动补上缺失项：</p>
-                        <ul className="list-disc pl-4 space-y-1">
-                          <li>尚未关联题目的提交 → 完成关联</li>
-                          <li>还没有题面 → 安排获取题面</li>
-                          <li>有题面但未分析 → 安排 AI 分析</li>
-                          <li>已经分析完成 → 跳过</li>
-                        </ul>
-                        <p>不会清空当前正在排队的任务，只做补充。</p>
-                      </div>
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => void run('补全近期', () => backfillProblems(0))}
-                    >
-                      确认
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </ActionTip>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" size="sm" variant="outline" disabled={busy}>
+                  {data?.fetchPaused ? '恢复抓取题面' : '暂停抓取题面'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {data?.fetchPaused ? '恢复抓取题面？' : '暂停抓取题面？'}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {data?.fetchPaused
+                      ? '将继续获取待处理的题面。'
+                      : '暂停后可随时恢复，待处理的题目不会丢失。'}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => void handleToggleFetch()}>
+                    确认
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
-            <ActionTip tip="清空当前排队后，按题目状态重新排队；不会改动已有标签">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" size="sm" variant="outline" disabled={busy}>
-                    重新排队
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>重新排队待处理题目？</AlertDialogTitle>
-                    <AlertDialogDescription asChild>
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <p>会清空当前排队，再按题目状态重新安排：</p>
-                        <ul className="list-disc pl-4 space-y-1">
-                          <li>待获取 / 获取卡住的题目 → 重新获取题面</li>
-                          <li>近 6 个月待分析的题目 → 重新 AI 分析</li>
-                        </ul>
-                        <p>
-                          不会扫描提交记录，也不会改动已有 AI 标签。新提交仍会优先处理。
-                        </p>
-                      </div>
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() =>
-                        void run('重新排队', () => resetProblemQueues())
-                      }
-                    >
-                      确认
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </ActionTip>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" size="sm" variant="outline" disabled={busy}>
+                  补全近期
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>补全近 6 个月的题目？</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    检查近 6 个月的提交，为缺少题面或分析的题目补上处理。
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => void run('补全近期', () => backfillProblems(0))}
+                  >
+                    确认
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" size="sm" variant="outline" disabled={busy}>
+                  重新排队
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>重新排队待处理题目？</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    按当前题目状态重新安排获取题面与 AI 分析。
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() =>
+                      void run('重新排队', () => resetProblemQueues())
+                    }
+                  >
+                    确认
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
       </div>
@@ -467,10 +405,7 @@ export function DashboardProblemProgress() {
                     {q ? num(q.messages) : '-'}
                   </span>
                   <span className="mx-2 text-muted-foreground">·</span>
-                  处理服务 {q ? num(q.consumers) : '-'}
-                  <span className="mx-2 text-muted-foreground">·</span>
-                  {name === 'problem_fetch' ? '同时获取' : '同时分析'}{' '}
-                  {q ? num(q.concurrency) : '-'}
+                  同时处理 {q ? num(q.concurrency) : '-'}
                 </p>
               </CardContent>
             </Card>
@@ -485,7 +420,6 @@ export function DashboardProblemProgress() {
         <Badge variant={data?.fetchPaused ? 'destructive' : 'secondary'}>
           抓取题面 {data?.fetchPaused ? '已暂停' : '进行中'}
         </Badge>
-        <Badge variant="outline">新提交优先处理</Badge>
       </div>
 
       <Card className="gap-0 py-0 overflow-hidden">
@@ -493,7 +427,7 @@ export function DashboardProblemProgress() {
           <CardTitle className="text-base">
             正在处理
             <span className="ml-2 text-sm font-normal text-muted-foreground">
-              当前 {data?.activeJobs?.length ?? 0} 题（最多同时 12 题）
+              当前 {data?.activeJobs?.length ?? 0} 题
             </span>
           </CardTitle>
         </CardHeader>
@@ -506,73 +440,69 @@ export function DashboardProblemProgress() {
         <CardHeader className="px-4 py-3 border-b">
           <CardTitle className="text-base">近期失败</CardTitle>
           <CardDescription className="text-xs">
-            可恢复的失败；「清空并停重试」会停止自动退避重试（标为永久失败，可再手动重试）
+            可再自动重试；也可手动重试或停止自动重试
           </CardDescription>
           {canProblemOps && (
             <CardAction>
               <div className="flex flex-wrap items-center gap-2">
-                <ActionTip tip="只重试近 6 个月内可恢复的失败题目；永久失败的不会重试">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={busy || !visibleRecentFailed.length}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={busy || !visibleRecentFailed.length}
+                    >
+                      重试
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>重试失败的题目？</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        将重新处理近 6 个月内可重试的失败题目。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>取消</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() =>
+                          void run('重试失败', () => retryFailedProblems(0))
+                        }
                       >
-                        重试
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>重试失败的题目？</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          仅重试近 6 个月内可恢复的失败项。有题面的会重新分析，没有题面的会先获取题面。永久失败不会纳入。
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>取消</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() =>
-                            void run('重试失败', () => retryFailedProblems(0))
-                          }
-                        >
-                          确认
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </ActionTip>
-                <ActionTip tip="将近 6 个月内所有可恢复失败标为永久失败，停止自动退避重试；之后可用「重试永久失败」手动再试">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={busy || !visibleRecentFailed.length}
+                        确认
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={busy || !visibleRecentFailed.length}
+                    >
+                      停止自动重试
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>停止近期失败的自动重试？</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        这些题目将不再自动重试，需要时可在「永久失败」中手动重试。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>取消</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => void handleClearFailedHistory()}
                       >
-                        清空并停重试
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>清空近期失败并停止自动重试？</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          近 6 个月内所有「可恢复失败」将停止自动重试（不再退避排队）。题目会进入永久失败列表，需要时再手动点「重试永久失败」。之后新出现的失败仍会显示在近期失败。
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>取消</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => void handleClearFailedHistory()}
-                        >
-                          确认停止
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </ActionTip>
+                        确认停止
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </CardAction>
           )}
@@ -587,70 +517,64 @@ export function DashboardProblemProgress() {
           <CardHeader className="px-4 py-3 border-b">
             <CardTitle className="text-base">永久失败</CardTitle>
             <CardDescription className="text-xs">
-              硬错误（付费题等）不再自动重试；WAF/暂无权限/未找到题面会先退避，满 24
-              小时才进此列。可点「重试永久失败」再排队
+              不再自动重试，可手动再试
             </CardDescription>
             {canProblemOps && (
               <CardAction>
                 <div className="flex flex-wrap items-center gap-2">
-                  <ActionTip tip="把近 6 个月内可恢复的永久失败重新排队（DOM/WAF/暂无权限等）；付费题、QOJ 无权限等硬错误不会纳入">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={busy || !visibleFailedPerm.length}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || !visibleFailedPerm.length}
+                      >
+                        重试永久失败
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>重试永久失败的题目？</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          将重新尝试获取这些题目的题面。付费题等无法获取的题目仍会失败。
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() =>
+                            void run('重试永久失败', () =>
+                              retryFailedProblems(0, true),
+                            )
+                          }
                         >
-                          重试永久失败
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>重试永久失败的题目？</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            将把近 6 个月内可恢复的永久失败重新排队获取题面。付费题、无稳定链接、QOJ
-                            无权限等硬错误不会纳入。
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>取消</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() =>
-                              void run('重试永久失败', () =>
-                                retryFailedProblems(0, true),
-                              )
-                            }
-                          >
-                            确认
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </ActionTip>
-                  <ActionTip tip="仅从本页列表隐藏这些永久失败记录，不改变题目状态，也不会重新排队">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button type="button" size="sm" variant="outline" disabled={busy}>
-                          清除历史
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>清除永久失败历史？</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            列表将不再显示当前这些永久失败题目，但它们在系统中仍是永久失败，不会被重试。之后新出现的永久失败仍会显示。
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>取消</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleClearPermHistory}>
-                            确认清除
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </ActionTip>
+                          确认
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button type="button" size="sm" variant="outline" disabled={busy}>
+                        从列表隐藏
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>从列表隐藏这些记录？</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          仅本页不再显示，题目状态不变。
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClearPermHistory}>
+                          确认
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardAction>
             )}
@@ -672,7 +596,7 @@ function JobTable({
   showError?: boolean
 }) {
   if (!rows.length) {
-    return <p className="p-4 text-sm text-muted-foreground">暂无</p>
+    return <p className="p-4 text-sm text-muted-foreground">暂时没有记录</p>
   }
   return (
     <Table>

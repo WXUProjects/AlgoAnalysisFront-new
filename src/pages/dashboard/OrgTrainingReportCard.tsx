@@ -218,8 +218,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
       <CardHeader>
         <CardTitle className="text-base">训练报告</CardTitle>
         <CardDescription>
-          汇总活跃排行与未提交名单；默认上周（{defaults.start} ~ {defaults.end}），也可自选日期与分组。生成后
-          24 小时内可下载，并会发邮件通知你。
+          汇总活跃排行与未提交名单。默认上周（{defaults.start} ~ {defaults.end}），也可自选日期与分组。
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -238,7 +237,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
             onClick={() => void onStart()}
             disabled={starting || !orgId}
           >
-            {busy && !starting ? '按下方日期生成（有任务进行中）' : '按下方日期生成'}
+            {busy && !starting ? '生成中…' : '按下方日期生成'}
           </Button>
         </div>
 
@@ -283,7 +282,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
               </SelectGroup>
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">默认整组织；选分组后只统计该组队员。</p>
+          <p className="text-xs text-muted-foreground">默认整组织，也可只统计某一分组。</p>
         </div>
 
         {/* AI 分析开关 */}
@@ -291,8 +290,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
           <div className="flex flex-col gap-0.5">
             <Label>启用 AI 分析</Label>
             <p className="text-xs text-muted-foreground">
-              关闭时用规则模板汇总（排行、标签、做题概览）。开启后会做更细的点评，最长约 8
-              个月，耗时更久。
+              开启后点评更细，耗时更久。
             </p>
           </div>
           <Switch checked={useAi} onCheckedChange={setUseAi} />

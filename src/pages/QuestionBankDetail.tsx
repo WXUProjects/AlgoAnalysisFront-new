@@ -886,7 +886,7 @@ export function QuestionBankDetail() {
         <Card className="gap-3 py-4">
           <CardHeader className="px-4">
             <CardTitle className="text-base">AI 参考解法</CardTitle>
-            <CardDescription>由 AI 生成，仅供参考（与用户博客栏无关）</CardDescription>
+            <CardDescription>由 AI 生成，仅供参考</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 px-4 sm:grid-cols-2">
             {problem.solutions.map((s, i) => (
@@ -909,9 +909,7 @@ export function QuestionBankDetail() {
               <ListTodoIcon className="size-4" />
               收录本题的公开题单
             </CardTitle>
-            <CardDescription>
-              仅展示公开的自建题单；收藏与待做不会出现在这里
-            </CardDescription>
+            <CardDescription>收录本题的公开题单</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2 px-4">
             {relatedSets.map((ps) => (
@@ -1166,8 +1164,8 @@ export function QuestionBankDetail() {
             <DialogTitle>{canReview ? '修改标签' : '建议修改标签'}</DialogTitle>
             <DialogDescription>
               {canReview
-                ? '点选已有标签，或输入后回车新建。保存后立即生效，并记入「已通过」审核记录；有标签后不再自动分析该题。'
-                : '点选已有标签，或输入后回车新建。提交后由具备题库审查权限的管理员审核才会更新。'}
+                ? '点选已有标签，或输入后回车新建。保存后立即生效。'
+                : '点选已有标签，或输入后回车新建。提交后需管理员审核才会更新。'}
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>

@@ -665,8 +665,8 @@ export function ContestCalendar() {
                   <CardTitle>暂时还没有赛程</CardTitle>
                   <CardDescription>
                     {hasFilters
-                      ? '当前筛选下没有比赛，试试放宽条件。赛程约每 12 小时自动更新一次。'
-                      : '暂时没有可展示的赛程，稍后再来看看。赛程约每 12 小时自动更新一次。'}
+                      ? '当前筛选下没有比赛，试试放宽条件。'
+                      : '暂时没有可展示的赛程，稍后再来看看。'}
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -939,7 +939,7 @@ export function ContestCalendar() {
         title="取消平台订阅？"
         description={
           platOffTarget
-            ? `确定取消「${platOffTarget.platformName}」的全部比赛提醒？之后该平台新比赛将不再自动提醒。`
+            ? `确定取消「${platOffTarget.platformName}」的全部比赛提醒？`
             : ''
         }
         confirmLabel="取消订阅"

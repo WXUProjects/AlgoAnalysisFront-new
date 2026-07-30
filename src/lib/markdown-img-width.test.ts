@@ -140,4 +140,20 @@ describe('renderMarkdown image layout', () => {
     assert.equal(img?.getAttribute('height'), '200')
     assert.match(img?.getAttribute('style') || '', /400px/)
   })
+
+  it('keeps height:auto + max-width after sanitize for bare |N (plugin wikilink form)', () => {
+    // 插件把 ![[Pasted image xxx.png|114]] 转成 ![|114](url)
+    const html = md.renderMarkdown(
+      '![|114](https://cdn.example.com/pasted.png)',
+    )
+    const img = new JSDOM(html).window.document.querySelector('img')
+    assert.ok(img)
+    assert.equal(img?.getAttribute('width'), '114')
+    assert.equal(img?.getAttribute('data-md-w'), '114')
+    const style = img?.getAttribute('style') || ''
+    assert.match(style, /width:\s*114px/)
+    assert.match(style, /height:\s*auto/)
+    assert.match(style, /max-width:\s*100%/)
+    assert.equal(img?.getAttribute('alt'), '')
+  })
 })

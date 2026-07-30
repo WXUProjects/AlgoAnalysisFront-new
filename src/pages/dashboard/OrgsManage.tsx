@@ -204,7 +204,7 @@ export function DashboardOrgsManage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">创建组织</CardTitle>
-            <CardDescription>不用切换当前组织，也能直接创建校队。</CardDescription>
+            <CardDescription>创建新的校队组织。</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-2">
@@ -259,7 +259,7 @@ export function DashboardOrgsManage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">全部组织</CardTitle>
-              <CardDescription>点选一行即可编辑设置与成员。</CardDescription>
+              <CardDescription>点选一行进行管理。</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               {loading && (
@@ -308,9 +308,9 @@ export function DashboardOrgsManage() {
                   {selected ? `编辑：${selected.name}` : '选择左侧组织'}
                 </CardTitle>
                 {selected?.isSystem ? (
-                  <CardDescription>公共域是默认组织，不能删除。</CardDescription>
+                  <CardDescription>公共域不能删除。</CardDescription>
                 ) : selected ? (
-                  <CardDescription>改完设置后点保存；需要删除时用右侧按钮。</CardDescription>
+                  <CardDescription>修改后请保存。</CardDescription>
                 ) : null}
               </div>
               {selected && !selected.isSystem && canDeleteOrg && (
@@ -324,7 +324,7 @@ export function DashboardOrgsManage() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>确认删除组织「{selected.name}」？</AlertDialogTitle>
                       <AlertDialogDescription>
-                        删除后成员将回到公共域，组织内分组与加入申请一并清除。此操作不可在本页撤销。
+                        删除后成员将回到公共域，此操作无法撤销。
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -398,16 +398,13 @@ export function DashboardOrgsManage() {
                         onChange={(e) => setSeatLimit(Number(e.target.value) || 50)}
                       />
                       <p className="text-xs text-muted-foreground">
-                        当前占用 {selected.memberCount ?? '—'} /{' '}
+                        当前 {selected.memberCount ?? '—'} /{' '}
                         {seatLimit && seatLimit > 0 ? seatLimit : 50}
-                        {selected.isSystem
-                          ? '。公共域只统计「未加入其它组织」的用户。'
-                          : '。达上限后无法再加入成员。'}
                       </p>
                     </div>
                   )}
                   <div className="flex items-center justify-between">
-                    <Label>日报邮件（由组织开通）</Label>
+                    <Label>日报邮件</Label>
                     <Switch
                       checked={enableAiEmail}
                       disabled={!canOrgPolicy}
@@ -415,7 +412,7 @@ export function DashboardOrgsManage() {
                     />
                   </div>
                   <div className="flex items-center justify-between">
-                    <Label>周报邮件（教练 / 队长 / 管理员）</Label>
+                    <Label>周报邮件</Label>
                     <Switch
                       checked={enableAiWeeklyEmail}
                       disabled={!canOrgPolicy}

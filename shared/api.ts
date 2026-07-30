@@ -1705,6 +1705,11 @@ export interface BlogArticleWriteReq {
   summary?: string
   content: string
   coverUrl?: string
+  /**
+   * 当 coverUrl 为空且为 true 时，服务端将正文第一张 http(s) 图写入 coverUrl。
+   * 不入库；缺省 false（旧客户端行为不变）。
+   */
+  useFirstImageAsCover?: boolean
   visibility?: BlogVisibility | string
   password?: string
   clearPassword?: boolean

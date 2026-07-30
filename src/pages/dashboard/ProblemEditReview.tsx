@@ -131,7 +131,7 @@ export function DashboardProblemEditReview() {
         <CardHeader className="px-4">
           <CardTitle className="text-base">题库审查</CardTitle>
           <CardDescription>
-            审核用户提交的标签与题面修改。通过后立即生效；已有标签的题目将不再自动分析。
+            审核用户提交的标签与题面修改。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3 px-4">

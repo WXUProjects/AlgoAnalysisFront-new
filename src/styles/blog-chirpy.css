@@ -970,10 +970,10 @@
 }
 
 .chirpy-prose img {
-  /* 默认不居中；|center 或 md-img-align-* 控制；勿 width:100% */
+  /* 默认不居中；|center 或 md-img-align-* 控制；勿 width:100% / width:auto
+   * （width:auto 会盖掉 HTML width，Obsidian |N 定宽失效） */
   max-width: 100%;
   height: auto;
-  width: auto;
   border-radius: 0.35rem;
 }
 

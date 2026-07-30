@@ -156,9 +156,7 @@ export function BlogSettingsPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">外观设置</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          选择布局主题和读者默认明暗。未指定明暗时跟随设备自动切换；
-          读者仍可在博客里自己改，只影响本机。外链图标在 Chirpy、Mizuki
-          会显示。页脚备案与主站一致，无需在此填写。
+          选择布局主题和读者默认明暗。
         </p>
       </div>
 
@@ -208,7 +206,7 @@ export function BlogSettingsPage() {
       <div className="flex flex-col gap-2">
         <Label>默认明暗</Label>
         <p className="text-xs text-muted-foreground">
-          读者第一次打开你的博客时使用的外观。选「跟随系统」则随对方设备自动切换。
+          读者第一次打开时的外观；选「跟随系统」则随对方设备。
         </p>
         <div className="grid gap-2 sm:grid-cols-3">
           {COLOR_SCHEME_OPTIONS.map((opt) => {

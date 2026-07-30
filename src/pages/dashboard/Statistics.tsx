@@ -52,7 +52,7 @@ import {
   WEEKDAY_LABELS,
 } from '@/lib/dashboard-metrics'
 import { Perm } from '@/lib/permissions'
-import { OrgRole, orgRoleName } from '@/lib/roles'
+import { OrgRole } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import {
   daysAgoYmd,
@@ -357,29 +357,24 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   const hasOrgManagePerm = Array.from(perms).some((c) => c.startsWith('org.'))
   let title: string
   let desc: string
-  let selfNote = ''
   if (isSite) {
     title = '站点数据统计'
-    desc = '查看全站用户的提交与通过情况。已暂停同步的用户不会再自动同步做题数据。'
+    desc = '查看全站用户的提交与通过情况。'
   } else if (roleForCopy === OrgRole.OrgAdmin) {
     title = `${orgName} · 组织管理`
-    desc = '一眼掌握成员活跃、训练参与和待办审批，方便日常运营。'
-    selfNote = `你是${orgRoleName(OrgRole.OrgAdmin)}：可查看运营数据、处理申请，并生成训练报告。`
+    desc = '成员活跃、训练参与与待办审批。'
   } else if (roleForCopy === OrgRole.Coach) {
     title = `${orgName} · 教练工作台`
-    desc = '按时间范围查看训练参与与成员排行，及时了解队伍状态。'
-    selfNote = `你是${orgRoleName(OrgRole.Coach)}：可查看训练参与与排行，并管理分组与成员。`
+    desc = '按时间范围查看训练参与与成员排行。'
   } else if (roleForCopy === OrgRole.Captain) {
     title = `${orgName} · 队长工作台`
     desc = '按时间范围查看训练参与与成员排行。'
-    selfNote = `你是${orgRoleName(OrgRole.Captain)}：可查看训练参与与排行，并协助管理分组。`
   } else if (hasOrgManagePerm) {
     title = `${orgName} · 管理中心`
-    desc = '常用管理入口按你的权限显示，也可查看组织训练数据。'
-    selfNote = '你拥有本组织的部分管理权限，可用入口已按权限显示。'
+    desc = '常用管理入口与组织训练数据。'
   } else {
     title = `${orgName} · 数据统计`
-    desc = '按当前组织成员汇总提交与通过情况；切换组织后数据会随之更新。'
+    desc = '按当前组织成员汇总提交与通过情况。'
   }
 
   const hasQuickAction =
@@ -393,13 +388,13 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
   const kpiCards: KpiCard[] = isSite
     ? [
         { label: '全站用户', value: fmtStat(userCount), raw: userCount },
-        { label: '已暂停同步', value: fmtStat(frozenCount), raw: frozenCount, hint: '已暂停同步' },
+        { label: '已暂停同步', value: fmtStat(frozenCount), raw: frozenCount },
         {
-          label: '未冻结',
+          label: '正常同步',
           value: fmtStat(userCount - frozenCount),
           raw: userCount - frozenCount,
         },
-        { label: '累计通过', value: fmtStat(metrics.careerAc), raw: metrics.careerAc, hint: '生涯 AC' },
+        { label: '累计通过', value: fmtStat(metrics.careerAc), raw: metrics.careerAc },
         {
           label: '累计提交',
           value: fmtStat(metrics.careerSubmit),
@@ -626,7 +621,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       <Card className="gap-3 py-4 shadow-none">
         <CardHeader className="px-4">
           <CardTitle className="text-base">近 {days} 日趋势</CardTitle>
-          <CardDescription>提交次数与通过次数的每日对比</CardDescription>
+          <CardDescription>提交与通过的每日对比</CardDescription>
         </CardHeader>
         <CardContent className="px-2">
           {showSkeleton ? (
@@ -791,7 +786,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
         <Card className="gap-3 py-4 shadow-none">
           <CardHeader className="px-4">
             <CardTitle className="text-base">按星期分布</CardTitle>
-            <CardDescription>近 {days} 天提交量按星期汇总，方便安排训练日</CardDescription>
+            <CardDescription>近 {days} 天提交量按星期汇总</CardDescription>
           </CardHeader>
           <CardContent className="px-4">
             {showSkeleton ? (
@@ -828,7 +823,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
         <Card className="gap-3 py-4 shadow-none">
           <CardHeader className="px-4">
             <CardTitle className="text-base">组织运营</CardTitle>
-            <CardDescription>{currentOrg.name} 的席位与通知开关</CardDescription>
+            <CardDescription>{currentOrg.name} 的通知开关</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2.5 px-4 text-sm">
             <div className="flex items-center justify-between gap-2">
@@ -911,10 +906,6 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             )}
           </CardContent>
         </Card>
-      )}
-
-      {!isSite && selfNote && (
-        <p className="text-xs text-muted-foreground">{selfNote}</p>
       )}
 
     </PageShell>

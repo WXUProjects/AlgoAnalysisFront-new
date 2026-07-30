@@ -41,21 +41,21 @@ const tools: LinkItem[] = [
     kind: 'internal',
     to: '/tools/paste',
     title: '粘贴板',
-    desc: '生成链接分享代码或文本，支持语法高亮，并可设置有效期。',
+    desc: '生成链接分享代码或文本。',
     icon: ClipboardPasteIcon,
   },
   {
     kind: 'internal',
     to: '/tools/code-image',
     title: '代码转图片',
-    desc: '将代码导出为图片，可调主题、字体、行号，并识别语言。',
+    desc: '将代码导出为图片。',
     icon: CameraIcon,
   },
   {
     kind: 'external',
     href: 'https://guadart.fun/',
     title: 'Guadart 生图站',
-    desc: '作者维护的绘图站，支持多种模型。',
+    desc: '绘图站，支持多种模型。',
     icon: ImageIcon,
     badge: '外链',
   },
@@ -66,14 +66,14 @@ const friendLinks: LinkItem[] = [
     kind: 'external',
     href: 'https://xcpc.link/',
     title: 'XCPC Link',
-    desc: '算法竞赛资源导航：OJ、赛程、榜单、模板与社区，适合选手、教练与出题人。',
+    desc: '算法竞赛资源导航。',
     icon: CompassIcon,
   },
   {
     kind: 'external',
     href: 'https://acmer.info/',
     title: 'ACMer.info',
-    desc: '面向竞赛选手的导航站，整理群组、博客、资料与比赛信息，持续更新。',
+    desc: '竞赛选手导航站。',
     icon: BookOpenIcon,
   },
 ]
@@ -210,7 +210,7 @@ export function ToolsHub() {
       />
       <Section
         title="友情链接"
-        subtitle="竞赛相关导航与资源站，将在新窗口打开。"
+        subtitle="竞赛相关导航与资源站"
         items={friendLinks}
         isLogin={isLogin}
       />

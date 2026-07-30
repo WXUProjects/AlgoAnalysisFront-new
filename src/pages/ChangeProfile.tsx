@@ -249,7 +249,7 @@ export function ChangeProfile() {
       <Card className="gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>编辑资料</CardTitle>
-          <CardDescription>管理头像、邮箱与邮件通知。要改昵称，请到「我的组织」。</CardDescription>
+          <CardDescription>管理头像、邮箱与邮件通知。改昵称请到「我的组织」。</CardDescription>
         </CardHeader>
         <form onSubmit={handleSaveProfile}>
           <CardContent className="px-4">
@@ -388,11 +388,11 @@ export function ChangeProfile() {
                 </div>
                 {profile?.emailAllowedByOrg === false ? (
                   <p className="text-xs text-muted-foreground">
-                    当前没有组织开通日报邮件，无法开启；组织关闭权限后会自动关掉。
+                    当前没有组织开通日报邮件，暂无法开启。
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    默认关闭。开启后，你会按所在组织的安排收到训练日报。
+                    开启后，你会按所在组织的安排收到训练日报。
                   </p>
                 )}
               </Field>
@@ -411,11 +411,11 @@ export function ChangeProfile() {
                 </div>
                 {profile?.emailWeeklyAllowedByOrg === false ? (
                   <p className="text-xs text-muted-foreground">
-                    需具备教练、队长或管理员身份，且组织已开启周报，才能接收。
+                    需教练、队长或管理员身份，且组织已开启周报。
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    与日报分开设置。开启后，每周一发送本队训练周报（面向教练、队长与管理员）。
+                    开启后，每周一发送本队训练周报。
                   </p>
                 )}
               </Field>
@@ -508,7 +508,7 @@ export function ChangeProfile() {
                   autoComplete="off"
                 />
                 <FieldDescription>
-                  请按上方示例从个人主页复制；填错将无法同步做题数据。
+                  请按上方示例从个人主页复制。
                 </FieldDescription>
               </Field>
             </FieldGroup>

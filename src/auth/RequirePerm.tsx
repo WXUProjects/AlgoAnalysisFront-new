@@ -4,7 +4,6 @@ import { PageShell } from '@/components/page-shell'
 import { Button } from '@/components/ui/button'
 import {
   Card,
-  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -58,14 +57,9 @@ export function RequirePerm({
           <CardHeader>
             <CardTitle>暂无访问权限</CardTitle>
             <CardDescription>
-              当前账号没有访问此页面所需的权限。如需使用，请联系组织管理员或站点管理员为你分配相应角色。
+              当前账号没有访问此页面的权限，请联系管理员。
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              权限调整后刷新页面即可生效。
-            </p>
-          </CardContent>
           <CardFooter className="justify-center gap-2">
             <Button asChild>
               <Link to={homeTo}>返回首页</Link>

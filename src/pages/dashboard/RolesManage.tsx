@@ -15,14 +15,14 @@ export function DashboardRolesManage() {
       <div>
         <h3 className="font-semibold">角色与权限</h3>
         <p className="text-sm text-muted-foreground">
-          管理全站的角色：内置角色权限固定；也可以新建角色、自由勾选权限，并把用户加进来。
+          管理全站角色，或新建角色并勾选权限。
         </p>
       </div>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">站点角色</CardTitle>
           <CardDescription>
-            这里的角色对全站生效。改动权限后，对方重新进入或刷新页面即可生效。
+            这里的角色对全站生效。
           </CardDescription>
         </CardHeader>
         <CardContent>

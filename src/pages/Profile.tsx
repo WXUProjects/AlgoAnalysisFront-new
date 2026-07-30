@@ -601,7 +601,7 @@ export function Profile() {
                   </div>
                   <p
                     className="mt-1.5 text-[11px] text-muted-foreground tabular-nums sm:text-xs lg:text-center"
-                    title="系统最近一次从各平台拉取提交与比赛记录的时间"
+                    title="上次同步做题数据的时间"
                   >
                     上次同步：
                     {profile.lastSyncAt

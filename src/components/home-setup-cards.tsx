@@ -124,7 +124,7 @@ export function HomeSetupCards() {
                 绑定 OJ 账号
               </CardTitle>
               <CardDescription>
-                绑定后才会自动同步提交与比赛记录，首页数据才会「活」起来。
+                绑定后才会同步提交与比赛记录。
               </CardDescription>
             </div>
             <Button
@@ -178,7 +178,7 @@ export function HomeSetupCards() {
                 加入校队 / 组织
               </CardTitle>
               <CardDescription>
-                你目前只在公共域。向教练要团队邀请码，加入后可看队内统计与公告。
+                向教练要团队邀请码，加入后可看队内统计与公告。
               </CardDescription>
             </div>
             <Button

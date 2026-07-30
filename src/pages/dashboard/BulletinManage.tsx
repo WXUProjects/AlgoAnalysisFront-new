@@ -177,8 +177,8 @@ export function DashboardBulletinManage({
 
   const pageTitle = isSite ? '站点公告' : '组织公告'
   const pageDesc = isSite
-    ? '发给全站所有人；会在公告列表最上方显示，并标注「站点公告」'
-    : '仅当前组织成员可见；与站点公告分开管理'
+    ? '发给全站所有人'
+    : '仅当前组织成员可见'
   const emptyText = isSite ? '还没有站点公告' : '还没有组织公告'
   const createLabel = isSite ? '新建站点公告' : '新建组织公告'
 

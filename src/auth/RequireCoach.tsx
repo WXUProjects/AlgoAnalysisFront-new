@@ -4,7 +4,6 @@ import { PageShell } from '@/components/page-shell'
 import { Button } from '@/components/ui/button'
 import {
   Card,
-  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -46,14 +45,9 @@ export function RequireCoach({ children }: { children: React.ReactNode }) {
           <CardHeader>
             <CardTitle>暂无管理权限</CardTitle>
             <CardDescription>
-              当前账号无法进入管理中心。如需使用，请联系组织管理员开通教练、队长或团队管理员权限，或请站点管理员为你分配相应的站点角色。
+              当前账号无法进入管理中心，请联系管理员开通权限。
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              你仍可使用前台功能查看题库、比赛与个人数据。
-            </p>
-          </CardContent>
           <CardFooter className="justify-center gap-2">
             <Button asChild>
               <Link to={homeTo}>返回首页</Link>

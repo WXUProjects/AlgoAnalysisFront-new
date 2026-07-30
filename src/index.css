@@ -620,10 +620,11 @@
 }
 
 .markdown-body img {
-  /* 默认不居中；可用 |center 或预览工具条设置 */
+  /* 默认不居中；可用 |center 或预览工具条设置。
+   * 不要写 width:auto —— 会盖掉 HTML width 属性，导致 ![|114](url) 定宽失效。
+   * 有 inline style / width 属性时按指定尺寸；否则随图原始宽度，且不超过容器。 */
   max-width: 100%;
   height: auto;
-  width: auto;
 }
 
 /* 渲染器包一层：对齐 + 预览工具条宿主 */

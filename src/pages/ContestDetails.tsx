@@ -553,12 +553,10 @@ export function ContestDetails() {
             <CardHeader className="border-b px-4 py-3">
               <CardTitle className="text-base">站内榜</CardTitle>
               <CardDescription>
-                {scoring === 'leetcode'
-                  ? hasCellDetail
-                    ? '绿色是赛时通过，蓝色是补题通过，橙色是补题未过，红色是赛时未过。补题不计分；仅补题用户名次为 —'
-                    : '本场暂无逐题明细，只显示得分'
-                  : hasCellDetail
-                    ? '绿色是赛时通过，蓝色是补题通过，橙色是补题未过，红色是赛时未过。补题不计入 AC/罚时；仅补题用户名次为 —'
+                {hasCellDetail
+                  ? '颜色含义见下方图例'
+                  : scoring === 'leetcode'
+                    ? '本场暂无逐题明细，只显示得分'
                     : '本场暂无逐题明细，只显示通过题数'}
                 {followingOnly ? ' · 仅看关注' : ''}
               </CardDescription>

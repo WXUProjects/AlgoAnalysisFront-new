@@ -191,7 +191,7 @@ export function About() {
           </ul>
           <Separator />
           <p className="text-sm leading-relaxed text-muted-foreground">
-            当前为默认公共域。加入校队后可切换组织查看队内数据；账号与提交记录跨组织保留。
+            当前为默认公共域。加入校队后可切换组织查看队内数据。
           </p>
         </CardContent>
       </Card>

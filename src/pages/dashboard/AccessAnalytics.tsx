@@ -267,7 +267,7 @@ export function DashboardAccessAnalytics() {
       label: '今日独立 IP',
       value: t?.uniqueIp,
       delta: delta(t?.uniqueIp, y?.uniqueIp),
-      hint: data?.clientIpAvailable ? '已解析访客 IP' : '未能解析真实 IP 时可能不准',
+      hint: data?.clientIpAvailable ? '已解析访客 IP' : '访客 IP 可能不准',
     },
     {
       label: `近 ${days} 日 PV`,
@@ -278,9 +278,9 @@ export function DashboardAccessAnalytics() {
 
   const techCards: MetricCard[] = [
     {
-      label: '今日 API 请求',
+      label: '今日接口访问',
       value: data?.apiRequestsToday,
-      hint: '今日接口访问合计',
+      hint: '今日合计',
     },
     {
       label: '并发峰值',
@@ -295,10 +295,10 @@ export function DashboardAccessAnalytics() {
     {
       label: '同步任务次数',
       value: data?.spiderEnqueuedToday,
-      hint: '今日安排的数据同步次数',
+      hint: '今日安排的数据同步',
     },
     {
-      label: '爬虫成功 / 失败',
+      label: '同步成功 / 失败',
       value: undefined,
       hint:
         data != null
@@ -306,15 +306,15 @@ export function DashboardAccessAnalytics() {
           : undefined,
     },
     {
-      label: '抓取数据量',
+      label: '新同步提交',
       value: data?.spiderRowsToday,
-      hint: '今日新写入提交记录',
+      hint: '今日新写入',
     },
   ]
 
   // 成功/失败用自定义展示
   const techCardsFixed: MetricCard[] = techCards.map((c) => {
-    if (c.label === '爬虫成功 / 失败') {
+    if (c.label === '同步成功 / 失败') {
       return {
         ...c,
         value: data ? data.spiderOkToday : undefined,
@@ -332,7 +332,7 @@ export function DashboardAccessAnalytics() {
         <div>
           <h3 className="text-lg font-semibold tracking-tight">访问统计</h3>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            用户量 · 页面流量 · API 与爬虫技术指标（大数以 k/M 约显）
+            用户量、页面流量与数据同步概况
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -371,21 +371,21 @@ export function DashboardAccessAnalytics() {
       </section>
 
       <section className="space-y-2">
-        <h4 className="text-sm font-medium">服务指标</h4>
+        <h4 className="text-sm font-medium">同步与请求</h4>
         <MetricGrid items={techCardsFixed} loading={loading} />
       </section>
 
       <Card className="gap-3 py-4">
         <CardHeader className="px-4">
-          <CardTitle className="text-base">趋势：浏览量 / 日活 / 访客 / 独立 IP</CardTitle>
-          <CardDescription>近 {days} 日访问汇总</CardDescription>
+          <CardTitle className="text-base">访问趋势</CardTitle>
+          <CardDescription>近 {days} 日浏览量、日活与访客</CardDescription>
         </CardHeader>
         <CardContent className="px-2">
           {loading ? (
             <Skeleton className="h-72 w-full" />
           ) : trendData.length === 0 ? (
             <p className="px-2 text-sm text-muted-foreground">
-              暂时还没有数据。站点上线后，用户浏览会自动累计。
+              暂时还没有访问数据。
             </p>
           ) : (
             <div className="h-72 w-full">

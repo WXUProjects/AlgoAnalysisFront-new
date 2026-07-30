@@ -203,7 +203,7 @@ export function OrgInvite() {
               </div>
               <CardTitle className="text-xl">你已加入{orgName}</CardTitle>
               <CardDescription>
-                无需再次加入。可切换到该组织，或直接进入。
+                可切换到该组织，或直接进入。
               </CardDescription>
             </>
           ) : (
@@ -236,11 +236,11 @@ export function OrgInvite() {
           alreadyMember ? (
             <>
               <CardContent className="px-4">
-                <p className="text-center text-sm text-muted-foreground">
-                  {isCurrentOrg
-                    ? '当前正在使用该组织，可直接进入。'
-                    : '切换后，页面将按该组织的内容与权限展示。'}
-                </p>
+                {isCurrentOrg ? null : (
+                  <p className="text-center text-sm text-muted-foreground">
+                    切换后将按该组织的内容展示。
+                  </p>
+                )}
               </CardContent>
               <CardFooter className="flex flex-col gap-2 px-4">
                 {!isCurrentOrg ? (
@@ -284,14 +284,11 @@ export function OrgInvite() {
                         maxLength={32}
                         disabled={joining}
                       />
-                      <p className="text-xs text-muted-foreground">
-                        仅在本组织展示，可与站内昵称不同
-                      </p>
                     </Field>
                   </FieldGroup>
                 ) : (
                   <p className="text-center text-sm text-muted-foreground">
-                    还没有账号？注册时会自动带上本邀请；已有账号请登录后加入。
+                    还没有账号？注册时会带上本邀请；已有账号请登录后加入。
                   </p>
                 )}
               </CardContent>
