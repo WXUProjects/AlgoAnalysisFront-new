@@ -58,4 +58,17 @@ describe('editor layout (blog + solution)', () => {
     assert.match(src, /listBlogImageUploadRequests|reviewBlogImageUpload/)
     assert.match(src, /图片上传申请/)
   })
+
+  it('moves image cleanup from personal blog management to site administration', () => {
+    const admin = read('pages/dashboard/BlogAdmin.tsx')
+    const manager = read('components/blog-admin-image-manager.tsx')
+    const personal = read('pages/blog/BlogManage.tsx')
+
+    assert.match(admin, /TabsTrigger value="images"/)
+    assert.match(admin, /图片管理/)
+    assert.match(admin, /BlogAdminImageManager/)
+    assert.match(manager, /清理图片/)
+    assert.match(manager, /删除全部/)
+    assert.doesNotMatch(personal, /imagesOrphans|imagesGc|清理图片/)
+  })
 })

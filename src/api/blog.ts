@@ -3,10 +3,12 @@ import {
   type BlogActivationStatus,
   type BlogAdminArticle,
   type BlogAdminAuthor,
+  type BlogAdminImageDeleteResult,
+  type BlogAdminImageListResult,
+  type BlogAdminImageMode,
   type BlogAdminOverview,
   type BlogImageUploadRequestItem,
   type BlogImageUploadStatus,
-  type BlogImageOrphan,
   type BlogAnalytics,
   type BlogArticle,
   type BlogArticleWriteReq,
@@ -22,7 +24,7 @@ import {
 } from '@shared/api'
 import { get, post, num, str, type ApiResult } from '@/lib/http'
 import { normalizeBlogThemeId, normalizeSocialLinks } from '@/lib/blog-theme'
-import { normalizeBlogImageOrphans } from '@/lib/blog-image-gc'
+import { normalizeBlogAdminImages } from '@/lib/blog-admin-images'
 import {
   normalizeColorScheme,
   type ColorSchemeMode,
@@ -293,24 +295,6 @@ export async function updateBlogArticle(
 
 export async function deleteBlogArticle(id: number): Promise<ApiResult<unknown>> {
   return post(endpoints.user.blog.articleDelete, { id })
-}
-
-export async function imagesOrphans(): Promise<
-  ApiResult<{ orphans: BlogImageOrphan[]; total: number }>
-> {
-  const res = await post<Record<string, unknown>>(
-    endpoints.user.blog.imagesOrphans,
-    {},
-  )
-  return wrapData(res, (data) => {
-    const orphans = normalizeBlogImageOrphans(data.orphans)
-    return { orphans, total: num(data.total, orphans.length) }
-  })
-}
-
-export async function imagesGc(): Promise<ApiResult<{ deleted: number }>> {
-  const res = await post<Record<string, unknown>>(endpoints.user.blog.imagesGc, {})
-  return wrapData(res, (data) => ({ deleted: num(data.deleted) }))
 }
 
 export async function listMyBlogArticles(params?: {
@@ -817,6 +801,39 @@ export async function getBlogAdminOverview(): Promise<
     pendingReview: num(data.pendingReview),
     rejected: num(data.rejected),
   }))
+}
+
+export async function listBlogAdminImages(params: {
+  page: number
+  pageSize: number
+  mode: BlogAdminImageMode
+}): Promise<ApiResult<BlogAdminImageListResult>> {
+  const res = await get<Record<string, unknown>>(
+    endpoints.user.blog.adminImages,
+    params,
+  )
+  return wrapData(res, normalizeBlogAdminImages)
+}
+
+export async function deleteBlogAdminImage(
+  id: number,
+): Promise<ApiResult<BlogAdminImageDeleteResult>> {
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.blog.adminImageDelete,
+    { id },
+  )
+  return wrapData(res, (data) => ({ deleted: num(data.deleted) }))
+}
+
+export async function deleteBlogAdminImages(body: {
+  ids: number[]
+  snapshot: string
+}): Promise<ApiResult<BlogAdminImageDeleteResult>> {
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.blog.adminImagesDeleteBatch,
+    body,
+  )
+  return wrapData(res, (data) => ({ deleted: num(data.deleted) }))
 }
 
 export async function listBlogAdminAuthors(params?: {
