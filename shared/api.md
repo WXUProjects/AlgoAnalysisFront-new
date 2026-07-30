@@ -419,6 +419,8 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | POST | `/user/blog/theme/config` | 是（作者） | body: `{ themeId, colorScheme?, subtitle?, socialLinks?, aboutMd?, homeIntroMd?, friendsMd? }`；指针字段省略则保留原值；空字符串清空；`colorScheme` 缺省/`system`=跟随系统；**须已开通** |
 | POST | `/user/blog/theme/enable` | 站管 | body: `{ mode: user\|batch\|all, userId?, userIds?, enabled }`（遗留能力开关） |
 | GET | `/user/blog/agreement` | 否* | 协议正文 + 当前用户开通状态（`BlogActivationStatus` + `title`/`content`） |
+| GET | `/user/blog/obsidian-plugin/latest` | 否 | GoAlgo Blog Obsidian 插件当前版本元信息；`downloadBase` 为云存储具体版本目录 |
+| POST | `/user/blog/obsidian-plugin/publish` | 发布令牌或站管 | 登记当前插件版本（发布脚本用） |
 | GET | `/user/blog/activation/status` | 是 | 当前用户开通状态 |
 | POST | `/user/blog/activate` | 是 | body: `{ accept: true, agreementVersion?, emailNotifyEnabled?, emailNotifyStrategy? }`；**不同意不可开通** |
 | POST | `/user/blog/notify-pref` | 是 | body: `{ emailNotifyEnabled?, emailNotifyStrategy? }`；互动邮件偏好，**默认关**；`off\|immediate\|digest_daily\|random` |

@@ -161,6 +161,9 @@ export const endpoints = {
       themeConfig: `${API_PREFIX}/user/blog/theme/config`,
       themeEnable: `${API_PREFIX}/user/blog/theme/enable`,
       agreement: `${API_PREFIX}/user/blog/agreement`,
+      /** Obsidian 插件当前版本（公开）；downloadBase 指向云存储具体版本目录 */
+      obsidianPluginLatest: `${API_PREFIX}/user/blog/obsidian-plugin/latest`,
+      obsidianPluginPublish: `${API_PREFIX}/user/blog/obsidian-plugin/publish`,
       activationStatus: `${API_PREFIX}/user/blog/activation/status`,
       activate: `${API_PREFIX}/user/blog/activate`,
       notifyPref: `${API_PREFIX}/user/blog/notify-pref`,
@@ -1486,6 +1489,18 @@ export type BlogEmailNotifyStrategy =
   | 'random'
 
 /** 博客开通 / 协议状态 */
+/** Obsidian 插件当前版本（GET /user/blog/obsidian-plugin/latest） */
+export interface ObsidianPluginUpdateInfo {
+  id?: string
+  name?: string
+  version: string
+  minAppVersion?: string
+  notes?: string
+  releasedAt?: number
+  /** 云存储该版本目录，无尾 / */
+  downloadBase: string
+}
+
 export interface BlogActivationStatus {
   activated: boolean
   needAgreement: boolean
