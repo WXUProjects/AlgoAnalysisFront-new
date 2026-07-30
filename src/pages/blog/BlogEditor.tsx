@@ -38,6 +38,7 @@ import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -46,13 +47,14 @@ import { Spinner } from '@/components/ui/spinner'
 import {
   BLOG_IMAGE_UPLOAD_ENABLED_HINT,
   BLOG_IMAGE_UPLOAD_HINT,
+  applyBlogCoverInput,
+  buildBlogArticleWriteRequest,
   extractMarkdownImageUrls,
   firstContentImageUrl,
   isAllowedBlogImageUrl,
   isBlogHostedUploadUrl,
   type BlogSessionImage,
 } from '@/lib/blog-image'
-import { generateDefaultSummary } from '@/lib/blog-summary'
 import { cn } from '@/lib/utils'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
 import type { BlogCategory, BlogVisibility } from '@shared/api'
@@ -327,23 +329,18 @@ export function BlogEditor() {
       return
     }
     setSaving(true)
-    const body = {
-      title: title.trim(),
-      // 新建：可空由服务端按标题生成；更新：必须带原 slug，禁止随标题重算
-      slug: isNew ? slug.trim() || undefined : slug.trim() || undefined,
-      // 摘要一律按正文生成，不允许手写
-      summary: generateDefaultSummary(content),
+    const body = buildBlogArticleWriteRequest({
+      title,
+      slug,
       content,
-      // 自动头图：不传 cover，由服务端每次按正文第一张重算
-      coverUrl: useFirstImageAsCover ? '' : coverUrl.trim(),
+      coverUrl,
       useFirstImageAsCover,
       visibility,
-      password: password.trim() || undefined,
-      clearPassword: visibility !== 'password',
-      categoryId: Number(categoryId) || null,
+      password,
+      categoryId,
       tags,
-      syncToMainProfile: visibility === 'public' ? syncToMainProfile : false,
-    }
+      syncToMainProfile,
+    })
     const res = isNew
       ? await createBlogArticle(body)
       : await updateBlogArticle({ ...body, id: editId })
@@ -501,12 +498,14 @@ export function BlogEditor() {
               <SelectValue placeholder="选择分类" />
             </SelectTrigger>
             <SelectContent>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>
-                  {c.name}
-                  {c.isDefault ? '（默认）' : ''}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.name}
+                    {c.isDefault ? '（默认）' : ''}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
         </Field>
@@ -516,9 +515,12 @@ export function BlogEditor() {
             <Input
               value={coverUrl}
               onChange={(e) => {
-                const v = e.target.value
-                setCoverUrl(v)
-                if (!v.trim()) setUseFirstImageAsCover(true)
+                const next = applyBlogCoverInput(
+                  { coverUrl, useFirstImageAsCover },
+                  e.target.value,
+                )
+                setCoverUrl(next.coverUrl)
+                setUseFirstImageAsCover(next.useFirstImageAsCover)
               }}
               placeholder="图片链接"
               className="min-w-[12rem] flex-1"
@@ -548,8 +550,12 @@ export function BlogEditor() {
                         toast.error(res.message || '封面上传失败')
                         return
                       }
-                      setCoverUrl(res.data.url)
-                      setUseFirstImageAsCover(false)
+                      const next = applyBlogCoverInput(
+                        { coverUrl, useFirstImageAsCover },
+                        res.data.url,
+                      )
+                      setCoverUrl(next.coverUrl)
+                      setUseFirstImageAsCover(next.useFirstImageAsCover)
                       handleImageUploaded({
                         id: `cover-${Date.now()}`,
                         url: res.data.url,
@@ -592,9 +598,11 @@ export function BlogEditor() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="public">公开</SelectItem>
-              <SelectItem value="private">仅自己</SelectItem>
-              <SelectItem value="password">需要密码</SelectItem>
+              <SelectGroup>
+                <SelectItem value="public">公开</SelectItem>
+                <SelectItem value="private">仅自己</SelectItem>
+                <SelectItem value="password">需要密码</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </Field>

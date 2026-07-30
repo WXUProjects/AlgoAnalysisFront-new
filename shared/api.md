@@ -419,8 +419,8 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | POST | `/user/blog/theme/config` | 是（作者） | body: `{ themeId, colorScheme?, subtitle?, socialLinks?, aboutMd?, homeIntroMd?, friendsMd? }`；指针字段省略则保留原值；空字符串清空；`colorScheme` 缺省/`system`=跟随系统；**须已开通** |
 | POST | `/user/blog/theme/enable` | 站管 | body: `{ mode: user\|batch\|all, userId?, userIds?, enabled }`（遗留能力开关） |
 | GET | `/user/blog/agreement` | 否* | 协议正文 + 当前用户开通状态（`BlogActivationStatus` + `title`/`content`） |
-| GET | `/user/blog/obsidian-plugin/latest` | 否 | GoAlgo Blog Obsidian 插件当前版本元信息；`downloadBase` 为云存储具体版本目录 |
-| POST | `/user/blog/obsidian-plugin/publish` | 发布令牌或站管 | 登记当前插件版本（发布脚本用） |
+| GET | `/user/blog/obsidian-plugin/latest` | 否 | GoAlgo Blog **Obsidian 插件**当前版本元信息：`{ id, name, version, minAppVersion, notes, releasedAt, downloadBase }`。`downloadBase` 为云存储**具体版本目录**（无尾 `/`，如 `https://zhiyuansofts.cn/obsidian/goalgo-blog/0.1.2`），客户端据此拉 `main.js` / `manifest.json` / `styles.css`；**不使用 latest/** |
+| POST | `/user/blog/obsidian-plugin/publish` | 发布令牌或站管 | body: `{ version, minAppVersion?, notes?, releasedAt?, downloadBase? }`；Header `X-Plugin-Publish-Token`（或站管 JWT）。发布脚本上传云存储后登记；库表仅保留当前一行 |
 | GET | `/user/blog/activation/status` | 是 | 当前用户开通状态 |
 | POST | `/user/blog/activate` | 是 | body: `{ accept: true, agreementVersion?, emailNotifyEnabled?, emailNotifyStrategy? }`；**不同意不可开通** |
 | POST | `/user/blog/notify-pref` | 是 | body: `{ emailNotifyEnabled?, emailNotifyStrategy? }`；互动邮件偏好，**默认关**；`off\|immediate\|digest_daily\|random` |
@@ -434,12 +434,14 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | GET | `/user/blog/image-upload/status` | 是 | 当前用户：`{ configured, authorized, enabled, pendingRequest, pendingRequestId? }`（站点又拍云已配且已授权时 `enabled=true`） |
 | POST | `/user/blog/image-upload/apply` | 是 | body: `{ reason }`（必填，5–500 字）；提交图片上传权限申请，通知站管；已开通/已有待审幂等返回 |
 | POST | `/user/blog/images/check` | 是 | body `{ urls?: string[], hashes?: string[] }`（合计 ≤200）→ `{ existing, missing, existingHashes, missingHashes }`：批量确认 URL/object key 与 content hash 是否仍在本用户 `blog_image_assets`（插件/编辑器缓存复用；GC 以 hash 为主） |
+| GET | `/user/blog/images/orphans` | 是 | 预览当前作者未被文章或自定义页面引用的图床资产 → `{ orphans, total, candidateIds, snapshot }`；`candidateIds` 是升序完整候选 ID，`snapshot` 是候选 SHA-256；条目含 `id`、`objectKey`、`url`、`contentHash`、`createdAt`、`protected`（是否仍在 24 小时上传保护期） |
+| POST | `/user/blog/images/gc` | 是 | body `{ candidateIds: number[], snapshot: string }`，必须原样回传最近一次预览的完整候选与快照；执行前重查，候选或快照变化则 HTTP 409、`{ code: 1, message: "清理预览已变化，请重新预览", data: { stale: true } }` 且零删除；成功 → `{ deleted }`；首个远端/DB 删除失败即停止并返回 HTTP 502、`{ code: 1, message: "部分图片清理失败", data: { deleted } }`，失败及未处理对象保留登记 |
 
-**又拍云图床**：站点设置配置 `upyunBucket`（服务名）、`upyunOperator`、`upyunPassword`（脱敏存储）、`upyunDomain`（用户侧访问域，如 `zhiyuansofts.cn`）、`upyunScheme`（`http`/`https`）。上传走服务端代传；保存/删文后会 GC 未引用的本站又拍云对象。正文支持 Obsidian 定宽 `![说明|550](url)`。
+**又拍云图床**：站点设置配置 `upyunBucket`（服务名）、`upyunOperator`、`upyunPassword`（脱敏存储）、`upyunDomain`（用户侧访问域，如 `zhiyuansofts.cn`）、`upyunScheme`（`http`/`https`）。上传走服务端代传；不再在保存/删文后自动 GC，作者可在文章管理页预览并手动清理未引用对象。正文支持 Obsidian 定宽 `![说明|550](url)`。
 
 **图床 URL 存储（path-only）**：本站又拍云对象在库内以 `/blog/{userId}/…` 路径存储（正文、封面、`blog_image_assets`、题解镜像）。`POST /user/upload`（`purpose=blog|blog_cover`）仍返回**当前**完整公网 `url` + `hash` 供编辑器/插件插入与缓存；文章/题解/页面 **读接口** 会按站点当前 `upyunDomain`+`upyunScheme` 展开为完整 URL。因此修改访问域名后，旧文无需改写即可用新域名出图；外链图不受影响。
 
-**图床 GC（content hash）**：上传登记 `blog_image_assets.content_hash`；文章/页面写入时解析正文图并落 `image_hashes`（JSON 数组）。GC 优先按 hash 判定引用（并扫描正文 key + 自定义页面），宽限期 24h；未再被任何文章/页面 hash 或正文引用的对象才删除。插件/编辑器应用 `hash` 做缓存校验，勿仅依赖易变 URL。
+**图床 GC（content hash）**：上传登记 `blog_image_assets.content_hash`；文章/页面写入时解析正文图并落 `image_hashes`（JSON 数组）。GC 优先按 hash 判定引用（并扫描正文 key + 自定义页面），宽限期 24h；未再被任何文章/页面 hash 或正文引用的对象才删除。手动清理采用预览快照确认，防止预览后新引用的图片被误删。插件/编辑器应用 `hash` 做缓存校验，勿仅依赖易变 URL。
 
 **开通协议**：初次使用/发文/改外观前须签署；存量已有文章或主题配置用户启动时自动回填为已开通。
 

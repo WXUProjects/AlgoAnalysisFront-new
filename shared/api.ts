@@ -183,9 +183,9 @@ export const endpoints = {
       imageUploadApply: `${API_PREFIX}/user/blog/image-upload/apply`,
       /** 批量确认图床 URL/hash 是否仍在资产表 { urls?, hashes? } → { existing, missing, existingHashes, missingHashes } */
       imagesCheck: `${API_PREFIX}/user/blog/images/check`,
-      /** 预览当前作者未被文章或页面引用的图床资产 */
+      /** GET：预览未引用图床资产 → { orphans, total, candidateIds, snapshot } */
       imagesOrphans: `${API_PREFIX}/user/blog/images/orphans`,
-      /** 强制删除当前作者全部未引用图床资产 */
+      /** POST：按预览快照确认清理 { candidateIds, snapshot } */
       imagesGc: `${API_PREFIX}/user/blog/images/gc`,
       report: `${API_PREFIX}/user/blog/report`,
       /** 举报处理台（content.report.handle）：博客举报列表 / 处理 */
@@ -1574,6 +1574,25 @@ export interface BlogImageOrphan {
   createdAt?: string | number
   /** 仍在 24 小时上传保护期；手动强制清理仍会删除 */
   protected: boolean
+}
+
+/** 手动清理图片的只读预览；candidateIds + snapshot 必须原样用于确认。 */
+export interface BlogImageCleanupPreview {
+  orphans: BlogImageOrphan[]
+  total: number
+  /** 本次预览的完整候选 ID，服务端按升序返回。 */
+  candidateIds: number[]
+  /** 候选快照 SHA-256；确认前候选变化会返回 409。 */
+  snapshot: string
+}
+
+export interface BlogImageGcRequest {
+  candidateIds: number[]
+  snapshot: string
+}
+
+export interface BlogImageGcResult {
+  deleted: number
 }
 
 /** 图片上传权限申请（博客管理审核） */

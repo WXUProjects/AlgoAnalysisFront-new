@@ -6,7 +6,9 @@ import {
   type BlogAdminOverview,
   type BlogImageUploadRequestItem,
   type BlogImageUploadStatus,
-  type BlogImageOrphan,
+  type BlogImageCleanupPreview,
+  type BlogImageGcRequest,
+  type BlogImageGcResult,
   type BlogAnalytics,
   type BlogArticle,
   type BlogArticleWriteReq,
@@ -22,7 +24,7 @@ import {
 } from '@shared/api'
 import { get, post, num, str, type ApiResult } from '@/lib/http'
 import { normalizeBlogThemeId, normalizeSocialLinks } from '@/lib/blog-theme'
-import { normalizeBlogImageOrphans } from '@/lib/blog-image-gc'
+import { normalizeBlogImageCleanupPreview } from '@/lib/blog-image-gc'
 import {
   normalizeColorScheme,
   type ColorSchemeMode,
@@ -296,20 +298,16 @@ export async function deleteBlogArticle(id: number): Promise<ApiResult<unknown>>
 }
 
 export async function imagesOrphans(): Promise<
-  ApiResult<{ orphans: BlogImageOrphan[]; total: number }>
+  ApiResult<BlogImageCleanupPreview>
 > {
-  const res = await post<Record<string, unknown>>(
-    endpoints.user.blog.imagesOrphans,
-    {},
-  )
-  return wrapData(res, (data) => {
-    const orphans = normalizeBlogImageOrphans(data.orphans)
-    return { orphans, total: num(data.total, orphans.length) }
-  })
+  const res = await get<Record<string, unknown>>(endpoints.user.blog.imagesOrphans)
+  return wrapData(res, normalizeBlogImageCleanupPreview)
 }
 
-export async function imagesGc(): Promise<ApiResult<{ deleted: number }>> {
-  const res = await post<Record<string, unknown>>(endpoints.user.blog.imagesGc, {})
+export async function imagesGc(
+  body: BlogImageGcRequest,
+): Promise<ApiResult<BlogImageGcResult>> {
+  const res = await post<Record<string, unknown>>(endpoints.user.blog.imagesGc, body)
   return wrapData(res, (data) => ({ deleted: num(data.deleted) }))
 }
 

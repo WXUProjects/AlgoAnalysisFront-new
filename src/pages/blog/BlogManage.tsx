@@ -31,8 +31,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { useListQueryState } from '@/hooks/use-list-query-state'
+import {
+  createBlogImageCleanupController,
+  type BlogImageCleanupOutcome,
+} from '@/lib/blog-image-gc'
 import type { BlogOutletContext } from '@/layouts/BlogLayout'
-import type { BlogArticle, BlogImageOrphan } from '@shared/api'
+import type { BlogArticle, BlogImageCleanupPreview } from '@shared/api'
 
 const visLabel: Record<string, string> = {
   public: '公开',
@@ -56,10 +60,17 @@ export function BlogManage() {
     null,
   )
   const [deleting, setDeleting] = useState(false)
-  const [orphanImages, setOrphanImages] = useState<BlogImageOrphan[]>([])
+  const [cleanupPreview, setCleanupPreview] =
+    useState<BlogImageCleanupPreview | null>(null)
   const [gcOpen, setGcOpen] = useState(false)
   const [gcLoading, setGcLoading] = useState(false)
   const [reloadTick, setReloadTick] = useState(0)
+  const [cleanupController] = useState(() =>
+    createBlogImageCleanupController({
+      preview: imagesOrphans,
+      confirm: imagesGc,
+    }),
+  )
 
   useEffect(() => {
     setQ(keyword)
@@ -126,35 +137,71 @@ export function BlogManage() {
     setReloadTick((n) => n + 1)
   }
 
+  function showRefreshedCleanup(outcome: Extract<
+    BlogImageCleanupOutcome,
+    { kind: 'refreshed' }
+  >) {
+    toast.error(
+      outcome.message ||
+        (outcome.reason === 'stale'
+          ? '清理预览已变化，请重新确认'
+          : '部分图片清理失败'),
+    )
+    setCleanupPreview(outcome.preview)
+    setGcOpen(Boolean(outcome.preview))
+  }
+
   async function previewImageCleanup() {
     setGcLoading(true)
-    const res = await imagesOrphans()
+    const outcome = await cleanupController.loadPreview()
     setGcLoading(false)
-    if (!res.success || !res.data) {
-      toast.error(res.message || '检查失败')
+    if (outcome.kind === 'preview-error') {
+      setCleanupPreview(null)
+      setGcOpen(false)
+      toast.error(outcome.message || '检查失败')
       return
     }
-    if (res.data.orphans.length === 0) {
+    if (outcome.kind === 'empty') {
+      setCleanupPreview(null)
+      setGcOpen(false)
       toast.success('没有可清理的图片')
       return
     }
-    setOrphanImages(res.data.orphans)
-    setGcOpen(true)
+    if (outcome.kind === 'preview') {
+      setCleanupPreview(outcome.preview)
+      setGcOpen(true)
+    }
   }
 
   async function confirmImageCleanup() {
+    if (cleanupController.isConfirming()) return
     setGcLoading(true)
-    const res = await imagesGc()
+    const outcome = await cleanupController.confirmPreview()
     setGcLoading(false)
-    if (!res.success || !res.data) {
-      toast.error(res.message || '清理失败')
+    if (outcome.kind === 'confirmed') {
+      toast.success(`已清理 ${outcome.deleted} 张图片`)
+      setGcOpen(false)
+      setCleanupPreview(null)
       return
     }
-    toast.success(`已清理 ${res.data.deleted} 张图片`)
-    setGcOpen(false)
-    setOrphanImages([])
+    if (outcome.kind === 'refreshed') {
+      showRefreshedCleanup(outcome)
+      return
+    }
+    if (outcome.kind === 'refresh-error') {
+      setCleanupPreview(null)
+      setGcOpen(false)
+      toast.error(outcome.message || '清理失败')
+      toast.error(outcome.refreshMessage || '重新检查失败')
+      return
+    }
+    if (outcome.kind === 'confirm-error') {
+      setCleanupPreview(outcome.preview)
+      toast.error(outcome.message || '清理失败')
+    }
   }
 
+  const orphanImages = cleanupPreview?.orphans ?? []
   const protectedOrphanCount = orphanImages.filter((image) => image.protected).length
 
   return (
@@ -177,9 +224,9 @@ export function BlogManage() {
             )}
             清理图片
           </Button>
-          <Button asChild className="gap-1.5">
+          <Button asChild>
             <Link to={`/blog/${username}/manage/new`}>
-              <PlusIcon className="size-4" />
+              <PlusIcon data-icon="inline-start" />
               写文章
             </Link>
           </Button>
@@ -257,7 +304,7 @@ export function BlogManage() {
                   onClick={() => setDeleteTarget({ id: a.id, title: a.title })}
                   aria-label="删除"
                 >
-                  <Trash2Icon className="size-3.5" />
+                  <Trash2Icon />
                 </Button>
               </div>
             </li>
@@ -308,8 +355,9 @@ export function BlogManage() {
         open={gcOpen}
         onOpenChange={(open) => {
           if (!open && !gcLoading) {
+            cleanupController.clear()
             setGcOpen(false)
-            setOrphanImages([])
+            setCleanupPreview(null)
           }
         }}
       >
@@ -328,7 +376,7 @@ export function BlogManage() {
             <AlertDialogCancel disabled={gcLoading}>取消</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={gcLoading}
+              disabled={gcLoading || !cleanupPreview}
               onClick={(event) => {
                 event.preventDefault()
                 void confirmImageCleanup()

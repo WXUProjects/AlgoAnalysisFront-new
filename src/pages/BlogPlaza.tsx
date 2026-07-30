@@ -160,7 +160,7 @@ export function BlogPlaza() {
         data-stagger-item
         className="flex min-w-0 flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:p-5"
       >
-        <div className="min-w-0 space-y-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <h1 className="text-xl font-semibold tracking-tight">博客广场</h1>
           <p className="text-sm text-muted-foreground">浏览大家的公开文章</p>
         </div>
@@ -178,9 +178,9 @@ export function BlogPlaza() {
                   </Button>
                 ) : null}
                 {writeHref ? (
-                  <Button size="sm" className="gap-1.5" asChild>
+                  <Button size="sm" asChild>
                     <BlogLink to={writeHref}>
-                      <PenLineIcon className="size-3.5" />
+                      <PenLineIcon data-icon="inline-start" />
                       写文章
                     </BlogLink>
                   </Button>
@@ -189,10 +189,9 @@ export function BlogPlaza() {
             ) : (
               <Button
                 size="sm"
-                className="gap-1.5"
                 onClick={() => setActivateOpen(true)}
               >
-                <PenLineIcon className="size-3.5" />
+                <PenLineIcon data-icon="inline-start" />
                 开通博客
               </Button>
             )
@@ -218,7 +217,7 @@ export function BlogPlaza() {
         再被 main overflow-x-hidden 裁掉，表现为「内容全被截断」。
       */}
       <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
-        <div className="min-w-0 space-y-4" data-stagger-item>
+        <div className="flex min-w-0 flex-col gap-4" data-stagger-item>
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Tabs
               value={sort}
@@ -259,7 +258,7 @@ export function BlogPlaza() {
                 className="shrink-0"
                 aria-label="搜索"
               >
-                <SearchIcon className="size-4" />
+                <SearchIcon />
               </Button>
             </form>
           </div>
@@ -333,15 +332,15 @@ export function BlogPlaza() {
           ) : null}
         </div>
 
-        <aside className="min-w-0 space-y-3" data-stagger-item>
+        <aside className="flex min-w-0 flex-col gap-3" data-stagger-item>
           <div className="rounded-xl border bg-card p-4 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold">最近更新</h2>
             {authorsLoading ? (
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <Skeleton className="size-9 shrink-0 rounded-full" />
-                    <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <Skeleton className="h-3.5 w-24" />
                       <Skeleton className="h-3 w-16" />
                     </div>
@@ -353,7 +352,7 @@ export function BlogPlaza() {
                 暂无活跃博主
               </p>
             ) : (
-              <ul className="space-y-1">
+              <ul className="flex flex-col gap-1">
                 {authors.map((a) => (
                   <li key={a.id} className="min-w-0">
                     <BlogLink
@@ -436,7 +435,7 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
               </span>
             ) : null}
           </div>
-          <BlogLink to={articleHref} className="min-w-0 space-y-1">
+          <BlogLink to={articleHref} className="flex min-w-0 flex-col gap-1">
             <h2 className="line-clamp-2 break-words text-sm font-semibold leading-snug group-hover:text-primary sm:text-base">
               {a.title}
             </h2>

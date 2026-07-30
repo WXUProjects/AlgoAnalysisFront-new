@@ -1117,7 +1117,7 @@ export function stripMarkdownToPlain(
   if (!keepPlaceholders) {
     s = s.replace(/\$\$/g, ' ')
     s = s.replace(/\$/g, ' ')
-    s = s.replace(/\\[\[\],()]/g, ' ')
+    s = s.replace(/\\[[\],()]/g, ' ')
   } else {
     // 占位路径：清掉漏网的裸 $
     s = s.replace(/\$+/g, ' ')

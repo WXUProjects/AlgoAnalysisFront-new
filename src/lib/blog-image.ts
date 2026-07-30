@@ -9,6 +9,8 @@ import {
   type MarkdownImageAlign,
   type MarkdownImageLayout,
 } from '@/lib/markdown'
+import { generateDefaultSummary } from '@/lib/blog-summary'
+import type { BlogArticleWriteReq, BlogVisibility } from '@shared/api'
 
 export type { MarkdownImageAlign, MarkdownImageLayout }
 
@@ -17,6 +19,69 @@ export const BLOG_IMAGE_UPLOAD_HINT =
 
 export const BLOG_IMAGE_UPLOAD_ENABLED_HINT =
   '可粘贴或上传图片；在预览图上可调整大小与对齐'
+
+/** 非空封面值代表用户明确选择手动封面；清空后恢复正文首图模式。 */
+export function shouldUseFirstImageAsCover(value: string): boolean {
+  return !(value || '').trim()
+}
+
+/** 把封面模式收敛为写接口字段，避免自动模式覆盖手填 URL。 */
+export function blogCoverWriteFields(
+  coverUrl: string,
+  useFirstImageAsCover: boolean,
+): { coverUrl: string; useFirstImageAsCover: boolean } {
+  return {
+    coverUrl: useFirstImageAsCover ? '' : (coverUrl || '').trim(),
+    useFirstImageAsCover,
+  }
+}
+
+/** BlogEditor 封面输入状态；泛型确保正文等其余草稿字段原样保留。 */
+export function applyBlogCoverInput<
+  T extends { coverUrl: string; useFirstImageAsCover: boolean },
+>(draft: T, value: string): T {
+  return {
+    ...draft,
+    coverUrl: value,
+    useFirstImageAsCover: shouldUseFirstImageAsCover(value),
+  }
+}
+
+export type BlogArticleWriteDraft = {
+  title: string
+  slug: string
+  content: string
+  coverUrl: string
+  useFirstImageAsCover: boolean
+  visibility: BlogVisibility
+  password: string
+  categoryId: string | number | null
+  tags: string[]
+  syncToMainProfile: boolean
+}
+
+/** BlogEditor 唯一写请求构造入口。 */
+export function buildBlogArticleWriteRequest(
+  draft: BlogArticleWriteDraft,
+): BlogArticleWriteReq {
+  return {
+    title: draft.title.trim(),
+    slug: draft.slug.trim() || undefined,
+    summary: generateDefaultSummary(draft.content),
+    content: draft.content,
+    ...blogCoverWriteFields(
+      draft.coverUrl,
+      draft.useFirstImageAsCover,
+    ),
+    visibility: draft.visibility,
+    password: draft.password.trim() || undefined,
+    clearPassword: draft.visibility !== 'password',
+    categoryId: Number(draft.categoryId) || null,
+    tags: draft.tags,
+    syncToMainProfile:
+      draft.visibility === 'public' ? draft.syncToMainProfile : false,
+  }
+}
 
 /** Whether a cover/image value is an allowed external http(s) URL. */
 export function isAllowedBlogImageUrl(value: string): boolean {

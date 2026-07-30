@@ -44,6 +44,7 @@ import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -436,10 +437,12 @@ export function DashboardBlogAdmin() {
                 <SelectValue placeholder="审核状态" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全部状态</SelectItem>
-                <SelectItem value="pending">待审核</SelectItem>
-                <SelectItem value="approved">已通过</SelectItem>
-                <SelectItem value="rejected">已驳回</SelectItem>
+                <SelectGroup>
+                  <SelectItem value="all">全部状态</SelectItem>
+                  <SelectItem value="pending">待审核</SelectItem>
+                  <SelectItem value="approved">已通过</SelectItem>
+                  <SelectItem value="rejected">已驳回</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Button type="submit" variant="secondary">
@@ -541,7 +544,7 @@ export function DashboardBlogAdmin() {
                               disabled={busyId === a.id}
                               onClick={() => void moderate(a.id, 'approve')}
                             >
-                              <CheckIcon className="size-3.5" />
+                              <CheckIcon data-icon="inline-start" />
                               通过
                             </Button>
                             <ConfirmDialog
@@ -557,7 +560,7 @@ export function DashboardBlogAdmin() {
                                 variant="outline"
                                 disabled={busyId === a.id}
                               >
-                                <XIcon className="size-3.5" />
+                                <XIcon data-icon="inline-start" />
                                 驳回
                               </Button>
                             </ConfirmDialog>
@@ -574,7 +577,7 @@ export function DashboardBlogAdmin() {
                                   )
                                 }
                               >
-                                <StarIcon className="size-3.5" />
+                                <StarIcon data-icon="inline-start" />
                                 {a.recommend ? '取消精选' : '设为精选'}
                               </Button>
                             ) : null}
@@ -603,10 +606,12 @@ export function DashboardBlogAdmin() {
                 <SelectValue placeholder="状态" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">待审核</SelectItem>
-                <SelectItem value="approved">已通过</SelectItem>
-                <SelectItem value="rejected">已驳回</SelectItem>
-                <SelectItem value="all">全部</SelectItem>
+                <SelectGroup>
+                  <SelectItem value="pending">待审核</SelectItem>
+                  <SelectItem value="approved">已通过</SelectItem>
+                  <SelectItem value="rejected">已驳回</SelectItem>
+                  <SelectItem value="all">全部</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Button
@@ -693,7 +698,7 @@ export function DashboardBlogAdmin() {
                                   void reviewUploadReq(r.id, 'approve')
                                 }
                               >
-                                <CheckIcon className="size-3.5" />
+                                <CheckIcon data-icon="inline-start" />
                                 通过
                               </Button>
                               <Button
@@ -705,7 +710,7 @@ export function DashboardBlogAdmin() {
                                   setRejectNote('')
                                 }}
                               >
-                                <XIcon className="size-3.5" />
+                                <XIcon data-icon="inline-start" />
                                 驳回
                               </Button>
                             </div>

@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import {
   BLOG_IMAGE_UPLOAD_HINT,
+  applyBlogCoverInput,
+  blogCoverWriteFields,
   blogImageToolbarAction,
+  buildBlogArticleWriteRequest,
   extractMarkdownImageUrls,
   firstContentImageUrl,
   isAllowedBlogImageUrl,
@@ -11,10 +17,68 @@ import {
   markdownImageSnippet,
   rejectBlogImageUpload,
   setMarkdownImageWidth,
+  shouldUseFirstImageAsCover,
   updateMarkdownImageLayout,
 } from './blog-image.ts'
 
 describe('blog image policy', () => {
+  it('switches a non-empty cover input to manual mode and empty input back to automatic', () => {
+    assert.equal(
+      shouldUseFirstImageAsCover('https://cdn.example.com/manual.png'),
+      false,
+    )
+    assert.equal(shouldUseFirstImageAsCover('  '), true)
+  })
+
+  it('keeps a manual cover URL in the article write fields', () => {
+    assert.deepEqual(
+      blogCoverWriteFields(
+        '  https://cdn.example.com/manual.png  ',
+        false,
+      ),
+      {
+        coverUrl: 'https://cdn.example.com/manual.png',
+        useFirstImageAsCover: false,
+      },
+    )
+    assert.deepEqual(
+      blogCoverWriteFields('https://cdn.example.com/ignored.png', true),
+      { coverUrl: '', useFirstImageAsCover: true },
+    )
+  })
+
+  it('runs cover onChange through the submit-body path without changing content', () => {
+    const changed = applyBlogCoverInput(
+      {
+        title: '  标题  ',
+        slug: '',
+        content: '正文保持原样',
+        coverUrl: '',
+        useFirstImageAsCover: true,
+        visibility: 'public',
+        password: '',
+        categoryId: '3',
+        tags: ['测试'],
+        syncToMainProfile: true,
+      },
+      '  https://cdn.example.com/manual.png  ',
+    )
+    assert.equal(changed.content, '正文保持原样')
+    assert.equal(changed.useFirstImageAsCover, false)
+
+    const body = buildBlogArticleWriteRequest(changed)
+    assert.equal(body.content, '正文保持原样')
+    assert.equal(body.coverUrl, 'https://cdn.example.com/manual.png')
+    assert.equal(body.useFirstImageAsCover, false)
+  })
+
+  it('BlogEditor wires both cover changes and save body through tested helpers', () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+    const source = readFileSync(join(root, 'pages/blog/BlogEditor.tsx'), 'utf8')
+    assert.match(source, /applyBlogCoverInput\(/)
+    assert.match(source, /buildBlogArticleWriteRequest\(/)
+  })
+
   it('allows empty and http(s) cover urls', () => {
     assert.equal(isAllowedBlogImageUrl(''), true)
     assert.equal(isAllowedBlogImageUrl('https://cdn.example.com/a.png'), true)

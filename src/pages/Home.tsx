@@ -194,6 +194,7 @@ function StatCard({
 
 export function Home() {
   const { isLogin, ready, user } = useAuth()
+  const userId = user?.userId
   const [period, setPeriod] = useState<PeriodData | null>(null)
   const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
@@ -212,8 +213,8 @@ export function Home() {
     async function load() {
       setLoading(true)
       // 登录：个人；未登录：全站公开聚合 userId=-2
-      const periodUid = isLogin && user ? user.userId : -2
-      const heatUid = isLogin && user ? user.userId : -2
+      const periodUid = isLogin && userId ? userId : -2
+      const heatUid = isLogin && userId ? userId : -2
       const end = todayYmd()
       const start = heatmapStartForUser(heatUid, end)
       setAcHeat([])
@@ -237,9 +238,9 @@ export function Home() {
           if (!cancelled && res.success && res.data) setBulletins(res.data.list)
         }),
       ]
-      if (isLogin && user) {
+      if (isLogin && userId) {
         tasks.push(
-          getProblemUserProfile(user.userId).then((res) => {
+          getProblemUserProfile(userId).then((res) => {
             if (!cancelled && res.success) setAlgo(res.data)
           }),
         )
@@ -253,13 +254,13 @@ export function Home() {
     return () => {
       cancelled = true
     }
-  }, [ready, isLogin, user?.userId])
+  }, [ready, isLogin, userId])
 
   // 首屏后空闲预取 AC（勿把 acHeatLoading 放进 deps，否则 setLoading 会 cancel 请求）
   useEffect(() => {
     if (loading || acHeatLoaded) return
     let cancelled = false
-    const heatUid = isLogin && user ? user.userId : -2
+    const heatUid = isLogin && userId ? userId : -2
     const end = todayYmd()
     const t = window.setTimeout(() => {
       setAcHeatLoading(true)
@@ -280,7 +281,7 @@ export function Home() {
       cancelled = true
       window.clearTimeout(t)
     }
-  }, [loading, acHeatLoaded, isLogin, user])
+  }, [loading, acHeatLoaded, isLogin, userId])
 
   const stats: PeriodItem | null = mode === 'ac' ? period?.ac ?? null : period?.submit ?? null
   const modeLabel = mode === 'ac' ? 'AC' : '提交'
