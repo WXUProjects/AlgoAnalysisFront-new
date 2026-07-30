@@ -271,9 +271,9 @@ export function BlogPlaza() {
           ) : null}
 
           {loading ? (
-            <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-52 rounded-xl" />
+                <Skeleton key={i} className="h-28 rounded-xl" />
               ))}
             </div>
           ) : list.length === 0 ? (
@@ -312,7 +312,7 @@ export function BlogPlaza() {
               ) : null}
             </Empty>
           ) : (
-            <ul className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+            <ul className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
               {list.map((a) => (
                 <PlazaArticleCard key={a.id} article={a} />
               ))}
@@ -401,24 +401,13 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
   const articleHref =
     username && a.slug ? `/blog/${username}/${a.slug}` : username ? `/blog/${username}` : '#'
   const authorHref = username ? `/blog/${username}` : '#'
+  const cover = (a.coverUrl || '').trim()
 
   return (
     <li className="min-w-0">
-      <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition hover:border-primary/40 hover:shadow-md">
-        {a.coverUrl ? (
-          <BlogLink
-            to={articleHref}
-            className="aspect-[16/9] overflow-hidden bg-muted"
-          >
-            <img
-              src={a.coverUrl}
-              alt=""
-              className="size-full object-cover transition-transform duration-200 ease-out motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-[1.02]"
-              loading="lazy"
-            />
-          </BlogLink>
-        ) : null}
-        <div className="flex min-w-0 flex-1 flex-col gap-2 p-3.5 sm:p-4">
+      {/* 统一左文右小图：有无封面同一行高，避免大图/无图混排错落 */}
+      <article className="group flex h-full min-h-[7.25rem] min-w-0 items-stretch overflow-hidden rounded-xl border bg-card shadow-sm transition hover:border-primary/40 hover:shadow-md">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3 sm:p-3.5">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
             <BlogLink
               to={authorHref}
@@ -448,17 +437,17 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
             ) : null}
           </div>
           <BlogLink to={articleHref} className="min-w-0 space-y-1">
-            <h2 className="line-clamp-2 break-words text-base font-semibold leading-snug group-hover:text-primary">
+            <h2 className="line-clamp-2 break-words text-sm font-semibold leading-snug group-hover:text-primary sm:text-base">
               {a.title}
             </h2>
             {a.summary ? (
               <MarkdownSummary
                 content={a.summary}
-                className="line-clamp-2 break-words text-sm text-muted-foreground"
+                className="line-clamp-2 break-words text-xs text-muted-foreground sm:text-sm"
               />
             ) : null}
           </BlogLink>
-          <div className="mt-auto flex flex-wrap items-center gap-3 pt-1 text-xs text-muted-foreground">
+          <div className="mt-auto flex flex-wrap items-center gap-3 pt-0.5 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <EyeIcon className="size-3.5 shrink-0" />
               {a.viewCount ?? 0}
@@ -473,6 +462,21 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
             </span>
           </div>
         </div>
+        {cover ? (
+          <BlogLink
+            to={articleHref}
+            className="m-2.5 ml-0 aspect-square w-[4.75rem] shrink-0 self-center overflow-hidden rounded-lg bg-muted sm:w-24"
+            aria-hidden
+            tabIndex={-1}
+          >
+            <img
+              src={cover}
+              alt=""
+              className="size-full object-cover transition-transform duration-200 ease-out motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-[1.03]"
+              loading="lazy"
+            />
+          </BlogLink>
+        ) : null}
       </article>
     </li>
   )

@@ -570,17 +570,6 @@ export function BlogArticlePage() {
   if (isChirpy) {
     return (
       <article className="chirpy-article px-1 pt-4">
-        {article.coverUrl ? (
-          <div
-            className="mb-6 overflow-hidden rounded-[10px]"
-          >
-            <img
-              src={article.coverUrl}
-              alt=""
-              className="aspect-[21/9] w-full object-cover"
-            />
-          </div>
-        ) : null}
         <header>
           <h1>
             {article.title}
@@ -646,17 +635,6 @@ export function BlogArticlePage() {
     return (
       <div className="space-y-4">
         <article className="mz-article">
-          {article.coverUrl ? (
-            <div
-              className="mb-6 overflow-hidden rounded-[var(--mz-radius-sm)]"
-            >
-              <img
-                src={article.coverUrl}
-                alt=""
-                className="aspect-[21/9] w-full object-cover"
-              />
-            </div>
-          ) : null}
           <header>
             <h1>
               {article.title}
@@ -720,18 +698,6 @@ export function BlogArticlePage() {
 
   return (
     <article className="mx-auto max-w-3xl space-y-6">
-      {article.coverUrl ? (
-        <div
-          className="overflow-hidden rounded-xl border"
-        >
-          <img
-            src={article.coverUrl}
-            alt=""
-            className="aspect-[21/9] w-full object-cover"
-          />
-        </div>
-      ) : null}
-
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <Link to={`/blog/${username}`} className="hover:text-foreground">
