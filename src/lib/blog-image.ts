@@ -126,6 +126,28 @@ export function extractMarkdownImageUrls(
   return out
 }
 
+/**
+ * 本站又拍云上传路径：/blog/{userId}/filename.ext（任意 host）。
+ * 外链（题图床、图床外链等）返回 false，不进「文章图片」栏。
+ */
+export function isBlogHostedUploadUrl(url: string): boolean {
+  const u = (url || '').trim()
+  if (!u) return false
+  try {
+    const parsed = new URL(u)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+    return /\/blog\/\d+\/[^/?#]+$/i.test(parsed.pathname)
+  } catch {
+    return /\/blog\/\d+\/[^/?#\s]+/i.test(u)
+  }
+}
+
+/** 正文第一张 http(s) 图（不含 cover 参数）。 */
+export function firstContentImageUrl(content: string): string {
+  const urls = extractMarkdownImageUrls(content, '')
+  return urls[0] || ''
+}
+
 /** True if url appears in content or cover (substring match on image src). */
 export function isImageUsedInArticle(
   url: string,

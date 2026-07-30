@@ -426,6 +426,7 @@ HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共�
 | POST | `/user/blog/admin/moderate` | 站管/博客审核权限 | body: `{ id, action: approve\|reject\|pending\|feature\|unfeature, note? }`；`feature`/`unfeature` 设/取消广场精选（仅公开且已通过） |
 | POST | `/user/blog/admin/image-upload` | 站管/博客管理 | body: `{ userId, enabled }`；**默认全员关闭**图片上传，须在此按作者授权 |
 | GET | `/user/blog/image-upload/status` | 是 | 当前用户：`{ configured, authorized, enabled }`（站点又拍云已配且已授权时 `enabled=true`） |
+| POST | `/user/blog/images/check` | 是 | body `{ urls: string[] }`（≤200）→ `{ existing, missing }`：批量确认 URL/object key 是否仍在本用户 `blog_image_assets`（插件缓存复用，一次查询） |
 
 **又拍云图床**：站点设置配置 `upyunBucket`（服务名）、`upyunOperator`、`upyunPassword`（脱敏存储）、`upyunDomain`（用户侧访问域，如 `zhiyuansofts.cn`）、`upyunScheme`（`http`/`https`）。上传走服务端代传；保存/删文后会 GC 未引用的本站又拍云对象。正文支持 Obsidian 定宽 `![说明|550](url)`。
 
@@ -515,7 +516,7 @@ nginx：**首版策略**——上述公开页 **一律** 反代 SEO HTML（不�
 ```
 
 - 头图仅支持 **http(s) 外链**（Web 授权用户可上传又拍云）。
-- `useFirstImageAsCover`：可选，默认 `false`，**不入库**。当 `coverUrl` 为空且为 `true` 时，服务端取正文第一张 http(s) 图写入 `coverUrl`；手填/上传的 `coverUrl` 优先。
+- `useFirstImageAsCover`：可选，默认 `false`，**不入库**。为 `true` 时**每次保存**按正文第一张 http(s) 图重写 `coverUrl`（忽略请求里旧的 cover）。为 `false` 时使用手填/上传的 `coverUrl`（可空=无头图）。
 - `recommend` 作者端不可写；仅站管/持博客审核权限者 `POST /user/blog/admin/moderate` `action=feature|unfeature` 设精选。
 - `syncToMainProfile`：公开文默认 `true`（进广场 / 资料动态 / 组织发现）；显式 `false` = 仅个人博客壳可见。`private`/`password` 本就不曝光。
 - `tags`：自由字符串数组；`by-username?tag=` 模糊筛；`GET /user/blog/tags?username=` 聚合。

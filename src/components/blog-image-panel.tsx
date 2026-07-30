@@ -62,10 +62,13 @@ export function BlogImagePanel({
 }: Props) {
   const [open, setOpen] = useState(defaultOpen)
   const rows = useMemo(() => {
-    return images.map((img) => ({
-      ...img,
-      used: isImageUsedInArticle(img.url, content, coverUrl),
-    }))
+    // 仅本站上传图（fromUpload）；过滤误入的外链
+    return images
+      .filter((img) => img.fromUpload)
+      .map((img) => ({
+        ...img,
+        used: isImageUsedInArticle(img.url, content, coverUrl),
+      }))
   }, [images, content, coverUrl])
 
   const activeUploads = uploads.filter((u) => u.status === 'uploading')

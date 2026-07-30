@@ -46,7 +46,9 @@ import {
   BLOG_IMAGE_UPLOAD_ENABLED_HINT,
   BLOG_IMAGE_UPLOAD_HINT,
   extractMarkdownImageUrls,
+  firstContentImageUrl,
   isAllowedBlogImageUrl,
+  isBlogHostedUploadUrl,
   type BlogSessionImage,
 } from '@/lib/blog-image'
 import { generateDefaultSummary } from '@/lib/blog-summary'
@@ -159,9 +161,12 @@ export function BlogEditor() {
       // 摘要仅按正文自动生成，编辑页不提供手写入口
       const body = a.content || ''
       setContent(body)
-      const nextCover = a.coverUrl || ''
-      setCoverUrl(nextCover)
-      setUseFirstImageAsCover(!nextCover.trim())
+      const nextCover = (a.coverUrl || '').trim()
+      const firstInBody = firstContentImageUrl(body)
+      // 空头图，或头图就是正文第一张 → 自动模式（每次保存重识别）
+      const autoCover = !nextCover || (Boolean(firstInBody) && nextCover === firstInBody)
+      setUseFirstImageAsCover(autoCover)
+      setCoverUrl(autoCover ? '' : nextCover)
       setVisibility((a.visibility as BlogVisibility) || 'public')
       setCategoryId(a.categoryId ? String(a.categoryId) : '')
       setTags(Array.isArray(a.tags) ? a.tags.filter(Boolean) : [])
@@ -170,14 +175,16 @@ export function BlogEditor() {
           ? true
           : Boolean(a.syncToMainProfile),
       )
-      // 种子：已有正文中的图
-      const urls = extractMarkdownImageUrls(body, a.coverUrl || '')
+      // 图片栏只展示本站上传图，不展示外链
+      const urls = extractMarkdownImageUrls(body, a.coverUrl || '').filter(
+        isBlogHostedUploadUrl,
+      )
       setSessionImages(
         urls.map((url, i) => ({
           id: `seed-${i}-${url.slice(-24)}`,
           url,
           name: `图片 ${i + 1}`,
-          fromUpload: false,
+          fromUpload: true,
         })),
       )
       setLoading(false)
@@ -187,9 +194,11 @@ export function BlogEditor() {
     }
   }, [editId, isNew, isOwner])
 
-  // 正文里新出现的外链图也并入图片库
+  // 正文里新出现的本站上传图并入图片栏（外链不进栏）
   useEffect(() => {
-    const urls = extractMarkdownImageUrls(content, coverUrl)
+    const urls = extractMarkdownImageUrls(content, coverUrl).filter(
+      isBlogHostedUploadUrl,
+    )
     if (!urls.length) return
     setSessionImages((prev) => {
       const have = new Set(prev.map((p) => p.url))
@@ -200,7 +209,7 @@ export function BlogEditor() {
           id: `auto-${url.slice(-32)}-${extra.length}`,
           url,
           name: '图片',
-          fromUpload: false,
+          fromUpload: true,
         })
       }
       return extra.length ? [...prev, ...extra] : prev
@@ -304,7 +313,7 @@ export function BlogEditor() {
       toast.error('请填写正文')
       return
     }
-    if (coverUrl && !isAllowedBlogImageUrl(coverUrl)) {
+    if (!useFirstImageAsCover && coverUrl && !isAllowedBlogImageUrl(coverUrl)) {
       toast.error(BLOG_IMAGE_UPLOAD_HINT)
       return
     }
@@ -320,7 +329,8 @@ export function BlogEditor() {
       // 摘要一律按正文生成，不允许手写
       summary: generateDefaultSummary(content),
       content,
-      coverUrl: coverUrl.trim(),
+      // 自动头图：不传 cover，由服务端每次按正文第一张重算
+      coverUrl: useFirstImageAsCover ? '' : coverUrl.trim(),
       useFirstImageAsCover,
       visibility,
       password: password.trim() || undefined,

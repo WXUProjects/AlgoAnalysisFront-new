@@ -4,7 +4,9 @@ import {
   BLOG_IMAGE_UPLOAD_HINT,
   blogImageToolbarAction,
   extractMarkdownImageUrls,
+  firstContentImageUrl,
   isAllowedBlogImageUrl,
+  isBlogHostedUploadUrl,
   isImageUsedInArticle,
   markdownImageSnippet,
   rejectBlogImageUpload,
@@ -67,6 +69,34 @@ describe('blog image policy', () => {
       'https://cdn.example.com/a.png',
       'https://cdn.example.com/b.jpg',
     ])
+  })
+
+  it('isBlogHostedUploadUrl only matches /blog/{id}/file paths', () => {
+    assert.equal(
+      isBlogHostedUploadUrl(
+        'https://zhiyuansofts.cn/blog/27/20260730_abc.webp',
+      ),
+      true,
+    )
+    assert.equal(
+      isBlogHostedUploadUrl('https://cdn.example.com/blog/1/x.png'),
+      true,
+    )
+    assert.equal(
+      isBlogHostedUploadUrl('https://free.picui.cn/external.webp'),
+      false,
+    )
+    assert.equal(isBlogHostedUploadUrl('https://example.com/img.png'), false)
+  })
+
+  it('firstContentImageUrl skips cover-only and returns first body image', () => {
+    assert.equal(
+      firstContentImageUrl(
+        't ![a](https://zhiyuansofts.cn/blog/1/a.webp) ![b](https://x/b.png)',
+      ),
+      'https://zhiyuansofts.cn/blog/1/a.webp',
+    )
+    assert.equal(firstContentImageUrl('no images'), '')
   })
 
   it('setMarkdownImageWidth rewrites first matching image', () => {

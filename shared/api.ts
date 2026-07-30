@@ -172,6 +172,8 @@ export const endpoints = {
       adminImageUpload: `${API_PREFIX}/user/blog/admin/image-upload`,
       /** 当前用户图片上传能力 { configured, authorized, enabled } */
       imageUploadStatus: `${API_PREFIX}/user/blog/image-upload/status`,
+      /** 批量确认图床 URL 是否仍在资产表 { urls } → { existing, missing } */
+      imagesCheck: `${API_PREFIX}/user/blog/images/check`,
       report: `${API_PREFIX}/user/blog/report`,
       /** 举报处理台（content.report.handle）：博客举报列表 / 处理 */
       reportList: `${API_PREFIX}/user/blog/report/list`,
