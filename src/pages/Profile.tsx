@@ -161,6 +161,7 @@ export function Profile() {
     const m = new Map<
       string,
       {
+        platform: string
         username: string
         rating?: number
         hasRating?: boolean
@@ -171,6 +172,7 @@ export function Profile() {
     >()
     profile?.spiders?.forEach((s) =>
       m.set(s.platform, {
+        platform: s.platform,
         username: s.username,
         rating: s.rating,
         hasRating: s.hasRating,

@@ -185,7 +185,9 @@ export function explainSpiderError(raw: string, platform?: string): {
  * 成功过久 → 偏旧；否则正常。
  */
 export function spiderPlatformHealth(
-  s: Pick<SpiderBinding, 'platform' | 'lastSyncAt' | 'lastFailAt' | 'lastError'>,
+  s: Pick<SpiderBinding, 'lastSyncAt' | 'lastFailAt' | 'lastError'> & {
+    platform?: string
+  },
   nowSec = Math.floor(Date.now() / 1000),
 ): SpiderHealth {
   const ok = Number(s.lastSyncAt) || 0
