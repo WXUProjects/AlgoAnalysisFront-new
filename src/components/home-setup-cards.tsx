@@ -51,7 +51,12 @@ export function HomeSetupCards() {
   const [spidersLen, setSpidersLen] = useState<number | null>(null)
   const [lastSyncAt, setLastSyncAt] = useState<number | undefined>(undefined)
   const [spiders, setSpiders] = useState<
-    Array<{ lastSyncAt?: number; lastFailAt?: number; lastError?: string }>
+    Array<{
+      platform?: string
+      lastSyncAt?: number
+      lastFailAt?: number
+      lastError?: string
+    }>
   >([])
   const [tick, setTick] = useState(0)
 
@@ -162,9 +167,17 @@ export function HomeSetupCards() {
             <CardDescription>{syncHint.detail}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2 pt-0">
-            <Button asChild size="sm" variant="secondary">
-              <Link to="/change-profile?focus=oj">检查绑定</Link>
-            </Button>
+            {syncHint.kind === 'failed' && syncHint.fault === 'system' ? (
+              <Button asChild size="sm" variant="secondary">
+                <Link to="/change-profile?focus=oj">查看绑定</Link>
+              </Button>
+            ) : (
+              <Button asChild size="sm" variant="secondary">
+                <Link to="/change-profile?focus=oj">
+                  {syncHint.fault === 'user' ? '检查用户名' : '检查绑定'}
+                </Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : null}
