@@ -56,7 +56,7 @@ export function DashboardOrgMemberRoles() {
   const canViewMembers = canSetMemberRole || canRemoveMember
   const isSystemOrg = Boolean(currentOrg?.isSystem)
   const myUserId = user?.userId || 0
-  // 站管视为组织管理员等级，可任命全部
+  // 站管 / 组织管理员可任命全部五档（含 org_admin）；其余严格低于自己
   const actorRole = isSiteAdmin
     ? OrgRole.OrgAdmin
     : user?.orgRole || OrgRole.Member
@@ -301,6 +301,7 @@ export function DashboardOrgMemberRoles() {
                           <OrgRoleSelect
                             value={m.role || 'member'}
                             actorRole={actorRole}
+                            isSiteAdmin={isSiteAdmin}
                             triggerClassName="w-36"
                             ariaLabel={`设置「${label}」的角色`}
                             onRoleChange={(role) =>

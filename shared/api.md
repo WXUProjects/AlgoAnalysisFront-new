@@ -586,7 +586,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/user/org/join` | 是 | `{ inviteCode, orgDisplayName }` 团队识别码 + **组织内名称（必填）**；**不改**默认组织 |
 | POST | `/user/org/leave` | 是 | `{ orgId }`；**公共域不可退出**；若离开的是默认组织则回落公共域 |
 | GET | `/user/org/members` | 成员 | query: `orgId`、`page`（默认 1）、`pageSize`（默认 20，最大 100）、`keyword` 模糊；排序 **组织管理员 > 教练 > 组长 > 队长 > 成员**；返回 `name`、`orgDisplayName`、`scopes?`（组长/队长管理范围）、`total`/`page`/`pageSize` |
-| POST | `/user/org/members/set-role` | 持 `org.member.role` 且等级足够 | `{ orgId, userId, role: member\|captain\|group_leader\|coach\|org_admin, scopeType?, scopeId? }`；**任命队长必填** `scopeType=squad`+`scopeId`；**任命组长必填** `scopeType=group`+`scopeId`；只能任命**严格低于自己**的角色；教练/组织管理员清空 scope；若不在组织则加入并 **设为默认组织** |
+| POST | `/user/org/members/set-role` | 持 `org.member.role` 且等级足够 | `{ orgId, userId, role: member\|captain\|group_leader\|coach\|org_admin, scopeType?, scopeId? }`；**任命队长必填** `scopeType=squad`+`scopeId`；**任命组长必填** `scopeType=group`+`scopeId`；**站管 / 组织管理员**可任命全部五档（含 `org_admin`）；其余只能任命**严格低于自己**的角色；教练/组织管理员清空 scope；若不在组织则加入并 **设为默认组织** |
 | GET/POST | `/user/org/squads*` | staff | 分队 CRUD 与成员；写权限：组织管理员/教练全组织，组长限本组，队长仅本分队成员调整 |
 | GET/POST | `/user/org/scopes*` | 组织管理员/站管 | 手动改管理范围；**禁止**给教练写入限制；组长/队长范围以任命为准 |
 | POST | `/user/org/members/remove` | 组织/站点管理员 | `{ orgId, userId }`；不可移出公共域；若移出默认组织则回落公共域 |

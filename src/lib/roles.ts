@@ -36,18 +36,29 @@ export function orgRoleRank(role?: string | null): number {
   return OrgRoleRank[role] ?? 0
 }
 
-/** 操作者可任命的角色列表（严格低于自己；队长及以下无任命权） */
-export function appointableRoles(actorRole?: string | null): OrgRoleValue[] {
+const ALL_ORG_ROLES: OrgRoleValue[] = [
+  OrgRole.Member,
+  OrgRole.Captain,
+  OrgRole.GroupLeader,
+  OrgRole.Coach,
+  OrgRole.OrgAdmin,
+]
+
+/**
+ * 操作者可任命的角色列表。
+ * - 站管 / 组织管理员：本组织全部五档（含组织管理员）
+ * - 其余：严格低于自己；队长及以下无任命权
+ */
+export function appointableRoles(
+  actorRole?: string | null,
+  opts?: { isSiteAdmin?: boolean },
+): OrgRoleValue[] {
+  if (opts?.isSiteAdmin || actorRole === OrgRole.OrgAdmin) {
+    return [...ALL_ORG_ROLES]
+  }
   const ar = orgRoleRank(actorRole)
   if (ar < OrgRoleRank.group_leader) return []
-  const all: OrgRoleValue[] = [
-    OrgRole.Member,
-    OrgRole.Captain,
-    OrgRole.GroupLeader,
-    OrgRole.Coach,
-    OrgRole.OrgAdmin,
-  ]
-  return all.filter((r) => orgRoleRank(r) < ar)
+  return ALL_ORG_ROLES.filter((r) => orgRoleRank(r) < ar)
 }
 
 /** 该角色任命时是否需要绑定范围 */

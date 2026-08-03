@@ -523,6 +523,7 @@ export function DashboardOrgsManage() {
                           <OrgRoleSelect
                             value={m.role || 'member'}
                             actorRole="org_admin"
+                            isSiteAdmin
                             triggerClassName="w-36 shrink-0"
                             ariaLabel={`设置「${m.name || m.username}」的角色`}
                             onRoleChange={(role) =>

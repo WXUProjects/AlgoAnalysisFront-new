@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  appointableRoles,
   bottomNavStaffLabel,
   canAccessAdminFromPayload,
   isSiteAdminFromPayload,
@@ -137,5 +138,47 @@ describe('orgRoleName', () => {
     assert.equal(orgRoleName(OrgRole.OrgAdmin), '组织管理员')
     assert.equal(orgRoleName(null), '成员')
     assert.equal(orgRoleName('custom_x'), 'custom_x')
+  })
+})
+
+describe('appointableRoles', () => {
+  it('组织管理员可任命全部五档（含 org_admin）', () => {
+    assert.deepEqual(appointableRoles(OrgRole.OrgAdmin), [
+      OrgRole.Member,
+      OrgRole.Captain,
+      OrgRole.GroupLeader,
+      OrgRole.Coach,
+      OrgRole.OrgAdmin,
+    ])
+  })
+
+  it('站管可任命全部五档', () => {
+    assert.deepEqual(appointableRoles(OrgRole.Member, { isSiteAdmin: true }), [
+      OrgRole.Member,
+      OrgRole.Captain,
+      OrgRole.GroupLeader,
+      OrgRole.Coach,
+      OrgRole.OrgAdmin,
+    ])
+  })
+
+  it('教练只能任命严格低于自己的角色', () => {
+    assert.deepEqual(appointableRoles(OrgRole.Coach), [
+      OrgRole.Member,
+      OrgRole.Captain,
+      OrgRole.GroupLeader,
+    ])
+  })
+
+  it('组长只能任命队长与成员', () => {
+    assert.deepEqual(appointableRoles(OrgRole.GroupLeader), [
+      OrgRole.Member,
+      OrgRole.Captain,
+    ])
+  })
+
+  it('队长及以下无任命权', () => {
+    assert.deepEqual(appointableRoles(OrgRole.Captain), [])
+    assert.deepEqual(appointableRoles(OrgRole.Member), [])
   })
 })

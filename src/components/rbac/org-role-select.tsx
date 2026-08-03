@@ -35,6 +35,7 @@ export function OrgRoleSelect({
   ariaLabel,
   allowedRoles,
   actorRole,
+  isSiteAdmin,
 }: {
   value?: string
   onRoleChange: (next: string) => void
@@ -43,15 +44,17 @@ export function OrgRoleSelect({
   ariaLabel?: string
   /** 显式可选项；优先于 actorRole */
   allowedRoles?: readonly string[]
-  /** 按操作者等级过滤可任命角色（站管/组织管理员传 org_admin） */
+  /** 按操作者等级过滤可任命角色（站管/组织管理员可含 org_admin） */
   actorRole?: string | null
+  /** 站管可任命全部五档（含组织管理员） */
+  isSiteAdmin?: boolean
 }) {
   const current = value || OrgRole.Member
   let options: string[] = [...ORG_ROLE_ORDER]
   if (allowedRoles && allowedRoles.length > 0) {
     options = ORG_ROLE_ORDER.filter((r) => allowedRoles.includes(r))
-  } else if (actorRole) {
-    const can = new Set(appointableRoles(actorRole))
+  } else if (isSiteAdmin || actorRole) {
+    const can = new Set(appointableRoles(actorRole, { isSiteAdmin }))
     // 始终展示当前角色（便于看现状），但若当前不在可任命列表仍显示
     options = ORG_ROLE_ORDER.filter((r) => can.has(r) || r === current)
   }
