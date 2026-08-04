@@ -40,4 +40,10 @@ describe('getSubmitLink', () => {
       'https://uoj.ac/problem/1',
     )
   })
+  it('builds poj showsource link', () => {
+    assert.equal(
+      getSubmitLink('POJ', '', '25194151'),
+      'http://poj.org/showsource?solution_id=25194151',
+    )
+  })
 })

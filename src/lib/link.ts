@@ -20,6 +20,8 @@ export function getPlatformHomeLink(platform: string, username: string): string 
       return `https://loj.ac/u/${username}`
     case 'UOJ':
       return `https://uoj.ac/user/profile/${username}`
+    case 'POJ':
+      return `http://poj.org/userstatus?user_id=${encodeURIComponent(username)}`
     default:
       return ''
   }
@@ -45,7 +47,7 @@ export function normalizeSubmitId(
     if (id.startsWith(pref)) return id.slice(pref.length).trim()
   }
   const m = id.match(
-    /^(LuoGu|Luogu|CodeForces|Codeforces|CF|AtCoder|Atcoder|NowCoder|Nowcoder|LeetCode|Leetcode|QOJ|Qoj|LOJ|Loj|UOJ|Uoj):(.+)$/i,
+    /^(LuoGu|Luogu|CodeForces|Codeforces|CF|AtCoder|Atcoder|NowCoder|Nowcoder|LeetCode|Leetcode|QOJ|Qoj|LOJ|Loj|UOJ|Uoj|POJ|Poj):(.+)$/i,
   )
   if (m) return m[2].trim()
   return id
@@ -83,6 +85,11 @@ export function getSubmitLink(
       if (/^\d+$/.test(sid)) return `https://uoj.ac/submission/${sid}`
       return ''
     }
+    case 'POJ':
+      // 源码页（他人源码可能需登录；Run ID 为数字）
+      return /^\d+$/.test(sid)
+        ? `http://poj.org/showsource?solution_id=${sid}`
+        : ''
     case 'LeetCode':
       // 力扣公开「最近通过」无提交代码页，不提供查看源码链接
       return ''
@@ -101,6 +108,7 @@ export const OJ_PLATFORMS: { value: OjPlatform; label: string }[] = [
   { value: 'QOJ', label: 'QOJ' },
   { value: 'LOJ', label: 'LOJ' },
   { value: 'UOJ', label: 'UOJ' },
+  { value: 'POJ', label: 'POJ' },
 ]
 
 /** 绑定 OJ 时的填写引导（按平台） */
@@ -149,6 +157,12 @@ export const OJ_BIND_GUIDES: Record<
     placeholder: '例如 lgvc',
     tip: '填写 UOJ 主页链接最后一段用户名。目前只同步已通过题目与评分。',
     example: 'https://uoj.ac/user/profile/lgvc → lgvc',
+  },
+  POJ: {
+    fieldLabel: 'User ID',
+    placeholder: '例如 sanenchen',
+    tip: '填写 POJ 的 User ID（注册时的用户名，区分大小写）。',
+    example: 'http://poj.org/userstatus?user_id=sanenchen → sanenchen',
   },
   LeetCode: {
     fieldLabel: '用户名',

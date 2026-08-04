@@ -31,6 +31,7 @@ const PLATFORM_LABEL: Record<string, string> = {
   QOJ: 'QOJ',
   LOJ: 'LOJ',
   UOJ: 'UOJ',
+  POJ: 'POJ',
 }
 
 export function spiderPlatformLabel(platform?: string): string {

@@ -37,6 +37,7 @@ const PLATFORM_LABEL: Record<string, string> = {
   QOJ: 'QOJ',
   LOJ: 'LOJ',
   UOJ: 'UOJ',
+  POJ: 'POJ',
 }
 
 function platformLabel(p: string): string {

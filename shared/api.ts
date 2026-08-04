@@ -409,6 +409,7 @@ export type Platform =
   | 'QOJ'
   | 'LOJ'
   | 'UOJ'
+  | 'POJ'
 
 /** 题单系统类型 */
 export type ProblemsetKind = 'favorites' | 'todo' | 'custom' | string
