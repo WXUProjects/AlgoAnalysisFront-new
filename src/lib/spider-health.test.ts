@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   explainSpiderError,
+  formatSyncAge,
   spiderPlatformHealth,
   userSyncHealth,
 } from './spider-health'
@@ -104,5 +105,29 @@ describe('spiderPlatformHealth / userSyncHealth', () => {
     assert.match(h!.detail, /Codeforces/)
     assert.match(h!.detail, /牛客/)
     assert.equal(h!.fault, 'system')
+  })
+
+  it('stale health includes relative age', () => {
+    const h = spiderPlatformHealth(
+      {
+        platform: 'AtCoder',
+        lastSyncAt: now - 5 * 3600,
+        lastFailAt: 0,
+      },
+      now,
+    )
+    assert.equal(h.kind, 'stale')
+    assert.match(h.detail, /5 小时前/)
+  })
+})
+
+describe('formatSyncAge', () => {
+  const now = 1_700_000_000
+
+  it('formats hours and empty for never', () => {
+    assert.equal(formatSyncAge(0, now), '')
+    assert.equal(formatSyncAge(now - 90, now), '1 分钟前')
+    assert.equal(formatSyncAge(now - 3 * 3600, now), '3 小时前')
+    assert.equal(formatSyncAge(now - 15 * 3600, now), '15 小时前')
   })
 })

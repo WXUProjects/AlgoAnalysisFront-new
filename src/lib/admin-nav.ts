@@ -78,6 +78,7 @@ export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[]
         Perm.OrgMemberRole,
         Perm.OrgMemberRemove,
         Perm.OrgRoleManage,
+        Perm.OrgJoinReview,
       ],
       section: 'org',
       isActive: (p) => pathActive(p, '/admin/user'),

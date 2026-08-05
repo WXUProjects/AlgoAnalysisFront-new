@@ -364,10 +364,16 @@ export async function rotateInvite(orgId: number) {
 }
 
 export async function listJoinRequests(orgId?: number) {
-  const res = await get(endpoints.user.org.joinRequests, orgId ? { orgId } : undefined)
+  const res = await get<{ list?: unknown[] } | unknown[]>(
+    endpoints.user.org.joinRequests,
+    orgId ? { orgId } : undefined,
+  )
+  // 后端 { code, message, list }：无 data 包装时 list 在 data 顶层
+  const raw = (res.raw ?? res.data ?? {}) as { list?: unknown[]; message?: string }
   return {
     success: res.success,
-    list: asList((res.data as { list?: unknown[] }) ?? res.data),
+    message: res.message || raw.message,
+    list: asList(raw.list ?? res.data),
   }
 }
 

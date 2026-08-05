@@ -40,6 +40,13 @@ export type SiteAdminConfig = SiteConfig & {
   upyunDomain: string
   /** http | https */
   upyunScheme: string
+  /** OJ 爬虫账号 */
+  ojLuoguUsername: string
+  ojLuoguPasswordMasked: string
+  ojLuoguPasswordSet: boolean
+  ojQojUsername: string
+  ojQojPasswordMasked: string
+  ojQojPasswordSet: boolean
 }
 
 function normalizeBrand(raw: Record<string, unknown> | null | undefined): SiteConfig {
@@ -77,6 +84,12 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     upyunPasswordSet: Boolean(d.upyunPasswordSet),
     upyunDomain: str(d.upyunDomain),
     upyunScheme: str(d.upyunScheme) || 'http',
+    ojLuoguUsername: str(d.ojLuoguUsername),
+    ojLuoguPasswordMasked: str(d.ojLuoguPasswordMasked),
+    ojLuoguPasswordSet: Boolean(d.ojLuoguPasswordSet),
+    ojQojUsername: str(d.ojQojUsername),
+    ojQojPasswordMasked: str(d.ojQojPasswordMasked),
+    ojQojPasswordSet: Boolean(d.ojQojPasswordSet),
   }
 }
 
@@ -140,8 +153,17 @@ export async function updateSiteConfig(body: {
   clearUpyunPassword?: boolean
   upyunDomain?: string
   upyunScheme?: string
+  ojLuoguUsername?: string
+  ojLuoguPassword?: string
+  clearOjLuoguPassword?: boolean
+  ojQojUsername?: string
+  ojQojPassword?: string
+  clearOjQojPassword?: boolean
 }): Promise<ApiResult<SiteConfig>> {
-  const res = await post<Record<string, unknown>>(endpoints.user.site.config, body)
+  // 保存时后端会实测洛谷/QOJ 登录（含验证码），可能超过默认 30s
+  const res = await post<Record<string, unknown>>(endpoints.user.site.config, body, {
+    timeout: 120_000,
+  })
   if (!res.success) return { ...res, data: null }
   const raw = pickRaw(res)
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {

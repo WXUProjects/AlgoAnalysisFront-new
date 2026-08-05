@@ -535,7 +535,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
 
           {!isSite && canJoinReview && pendingJoinCount !== null && pendingJoinCount > 0 && (
             <Button asChild size="sm" variant="destructive">
-              <Link to="/admin/user">待审批 {pendingJoinCount}</Link>
+              <Link to="/admin/user?tab=join">待审批 {pendingJoinCount}</Link>
             </Button>
           )}
 
@@ -835,7 +835,18 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             {pendingJoinCount !== null && pendingJoinCount > 0 && (
               <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">待审批申请</span>
-                <Badge variant="destructive">{pendingJoinCount} 人</Badge>
+                {canJoinReview ? (
+                  <Link
+                    to="/admin/user?tab=join"
+                    className="inline-flex"
+                  >
+                    <Badge variant="destructive" className="cursor-pointer">
+                      {pendingJoinCount} 人
+                    </Badge>
+                  </Link>
+                ) : (
+                  <Badge variant="destructive">{pendingJoinCount} 人</Badge>
+                )}
               </div>
             )}
             <div className="flex items-center justify-between gap-2">
@@ -871,15 +882,15 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
           <CardContent className="flex flex-wrap gap-2 px-4">
             {canJoinReview && (
               <Button asChild size="sm" variant="outline">
-                <Link to="/admin/user">
-                  成员与审批
+                <Link to="/admin/user?tab=join">
+                  加入审批
                   {pendingJoinCount !== null && pendingJoinCount > 0
                     ? `（${pendingJoinCount}）`
                     : ''}
                 </Link>
               </Button>
             )}
-            {!canJoinReview && can(Perm.OrgMemberRole) && (
+            {can(Perm.OrgMemberRole) && (
               <Button asChild size="sm" variant="outline">
                 <Link to="/admin/user">成员管理</Link>
               </Button>

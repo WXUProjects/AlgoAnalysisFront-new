@@ -38,10 +38,12 @@ const ADMIN_INDEX_CANDIDATES: { path: string; anyOf: string[] }[] = [
   {
     path: 'user',
     anyOf: [
+      Perm.OrgReportView,
       Perm.OrgGroupManage,
       Perm.OrgMemberRole,
       Perm.OrgMemberRemove,
       Perm.OrgRoleManage,
+      Perm.OrgJoinReview,
     ],
   },
   { path: 'bulletin', anyOf: [Perm.OrgBulletinManage] },
@@ -112,6 +114,7 @@ export const adminRoutes: RouteObject = {
             Perm.OrgMemberRole,
             Perm.OrgMemberRemove,
             Perm.OrgRoleManage,
+            Perm.OrgJoinReview,
           ]}
         >
           <Lazy>

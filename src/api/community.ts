@@ -10,6 +10,7 @@ import {
   type UserRecentSolutionItem,
 } from '@shared/api'
 import { get, post, num, str, type ApiResult } from '@/lib/http'
+import { cleanProblemTitle } from '@/lib/format'
 
 function normComment(raw: Record<string, unknown>): ProblemCommentItem {
   const repliesRaw = Array.isArray(raw.replies)
@@ -240,7 +241,7 @@ export async function listActivityFeed(params?: {
     type: str(r.type),
     refId: num(r.refId),
     problemId: num(r.problemId),
-    problemTitle: str(r.problemTitle),
+    problemTitle: cleanProblemTitle(str(r.problemTitle)),
     platform: str(r.platform),
     title: str(r.title),
     excerpt: str(r.excerpt),
@@ -271,7 +272,7 @@ export async function listUserRecentComments(params: {
     data: listFrom(res).map((r) => ({
       id: num(r.id),
       problemId: num(r.problemId),
-      problemTitle: str(r.problemTitle),
+      problemTitle: cleanProblemTitle(str(r.problemTitle)),
       platform: str(r.platform),
       content: str(r.content),
       createdAt: num(r.createdAt),
@@ -293,7 +294,7 @@ export async function listUserRecentSolutions(params: {
     data: listFrom(res).map((r) => ({
       id: num(r.id),
       problemId: num(r.problemId),
-      problemTitle: str(r.problemTitle),
+      problemTitle: cleanProblemTitle(str(r.problemTitle)),
       platform: str(r.platform),
       title: str(r.title),
       excerpt: str(r.excerpt),

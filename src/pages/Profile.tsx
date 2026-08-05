@@ -77,13 +77,18 @@ import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { formatActivityProblemTitle } from '@/lib/activity-title'
 import { difficultyBadgeClass } from '@/lib/difficulty'
 import {
+  cleanProblemTitle,
   formatContestTimeRange,
   formatTime,
   heatmapStartForUser,
   todayYmd,
 } from '@/lib/format'
 import { getPlatformHomeLink, getSubmitLink, OJ_PLATFORMS } from '@/lib/link'
-import { spiderPlatformHealth } from '@/lib/spider-health'
+import {
+  formatSyncAge,
+  spiderPlatformHealth,
+  userSyncHealth,
+} from '@/lib/spider-health'
 import { cn } from '@/lib/utils'
 import {
   contestSeedFromItem,
@@ -234,19 +239,9 @@ export function Profile() {
     setPeriod(null)
     const uid = pf.userId
     const end = todayYmd()
-    const [
-      hSubmit,
-      acts,
-      cont,
-      algoRes,
-      periodRes,
-      countsRes,
-      relRes,
-      rcRes,
-      rsRes,
-      idRes,
-      blogRes,
-    ] = await Promise.all([
+    // 首屏：热力 / 动态 / 社交 / 身份（用户立刻能看到主体）
+    // 次屏：画像、比赛、题解评论、博客开通（延后，缩短 TTI）
+    const [hSubmit, acts, countsRes, relRes, idRes] = await Promise.all([
       getHeatmap({
         startDate: heatmapStartForUser(uid, end),
         endDate: end,
@@ -254,27 +249,15 @@ export function Profile() {
         userId: uid,
       }),
       getSubmitLogs({ userId: uid, cursor: -1, limit: 10 }),
-      listContests({ userId: uid, limit: 5, offset: 0 }),
-      getProblemUserProfile(uid),
-      getPeriod(uid),
       getSocialCounts(uid),
       isLogin ? getSocialRelation(uid) : Promise.resolve(null),
-      listUserRecentComments({ userId: uid, limit: 8 }),
-      listUserRecentSolutions({ userId: uid, limit: 8 }),
       getSocialIdentity(uid),
-      pf.username
-        ? listBlogByUsername({ username: pf.username, page: 1, pageSize: 1 })
-        : Promise.resolve(null),
     ])
     if (signal?.cancelled) return
     setLoading(false)
 
     if (hSubmit.success) setSubmitHeat(hSubmit.data || [])
     if (acts.success) setActivities(acts.data || [])
-    if (cont.success) setContests(cont.data?.list || [])
-    if (algoRes.success) setAlgo(algoRes.data)
-    if (periodRes.success && periodRes.data) setPeriod(periodRes.data)
-    else setPeriod(null)
     if (countsRes.success && countsRes.data) {
       setFollowingCount(countsRes.data.followingCount)
       setFollowerCount(countsRes.data.followerCount)
@@ -282,8 +265,6 @@ export function Profile() {
     if (relRes && relRes.success && relRes.data) {
       setIsFollowing(relRes.data.isFollowing)
     }
-    if (rcRes.success) setRecentComments(rcRes.data || [])
-    if (rsRes.success) setRecentSolutions(rsRes.data || [])
     if (idRes.success && idRes.data) {
       setIdentity(idRes.data)
       // 主展示名以 identity 为准（当前域 / 公共域）
@@ -293,7 +274,27 @@ export function Profile() {
           : prev,
       )
     }
-    setBlogActivated(Boolean(blogRes?.success && blogRes.data?.activated))
+
+    // 次要块：不阻塞首屏
+    void Promise.all([
+      listContests({ userId: uid, limit: 5, offset: 0 }),
+      getProblemUserProfile(uid),
+      getPeriod(uid),
+      listUserRecentComments({ userId: uid, limit: 8 }),
+      listUserRecentSolutions({ userId: uid, limit: 8 }),
+      pf.username
+        ? listBlogByUsername({ username: pf.username, page: 1, pageSize: 1 })
+        : Promise.resolve(null),
+    ]).then(([cont, algoRes, periodRes, rcRes, rsRes, blogRes]) => {
+      if (signal?.cancelled) return
+      if (cont.success) setContests(cont.data?.list || [])
+      if (algoRes.success) setAlgo(algoRes.data)
+      if (periodRes.success && periodRes.data) setPeriod(periodRes.data)
+      else setPeriod(null)
+      if (rcRes.success) setRecentComments(rcRes.data || [])
+      if (rsRes.success) setRecentSolutions(rsRes.data || [])
+      setBlogActivated(Boolean(blogRes?.success && blogRes.data?.activated))
+    })
   }, [routeUsername, queryId, user?.userId, isLogin, navigate])
 
   useEffect(() => {
@@ -601,20 +602,46 @@ export function Profile() {
                       <span className="text-muted-foreground">粉丝</span>
                     </Link>
                   </div>
-                  <p
-                    className="mt-1.5 text-[11px] text-muted-foreground tabular-nums sm:text-xs lg:text-center"
-                    title="上次同步做题数据的时间"
-                  >
-                    上次同步：
-                    {profile.lastSyncAt
+                  {(() => {
+                    const syncHealth = userSyncHealth(
+                      profile.spiders,
+                      profile.lastSyncAt,
+                    )
+                    const age = formatSyncAge(profile.lastSyncAt)
+                    const abs = profile.lastSyncAt
                       ? formatTime(profile.lastSyncAt)
-                      : '尚未同步'}
-                    {profile.spiders?.some(
-                      (s) => spiderPlatformHealth(s).kind === 'failed',
-                    ) ? (
-                      <span className="ml-1 text-destructive">· 有平台异常</span>
-                    ) : null}
-                  </p>
+                      : ''
+                    const primary = profile.lastSyncAt
+                      ? age
+                        ? `上次同步：${age}`
+                        : `上次同步：${abs}`
+                      : '上次同步：尚未同步'
+                    return (
+                      <p
+                        className="mt-1.5 text-[11px] text-muted-foreground tabular-nums sm:text-xs lg:text-center"
+                        title={
+                          abs
+                            ? `上次成功同步：${abs}${syncHealth?.detail ? ` · ${syncHealth.detail}` : ''}`
+                            : '尚无成功同步记录'
+                        }
+                      >
+                        {primary}
+                        {syncHealth?.kind === 'stale' ? (
+                          <span className="ml-1 text-amber-600 dark:text-amber-400">
+                            · 偏旧
+                          </span>
+                        ) : null}
+                        {syncHealth?.kind === 'failed' ||
+                        profile.spiders?.some(
+                          (s) => spiderPlatformHealth(s).kind === 'failed',
+                        ) ? (
+                          <span className="ml-1 text-destructive">
+                            · 有平台异常
+                          </span>
+                        ) : null}
+                      </p>
+                    )
+                  })()}
                   {/* 移动端：博客 / 关注 / 编辑 贴在身份旁，避免滚到页底才看到 */}
                   <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
                     {blogActivated && profile?.username ? (
@@ -847,8 +874,8 @@ export function Profile() {
 
           <Card className="gap-3 py-4">
             <CardHeader className="px-4">
-              <CardTitle className="text-base">近期评论与博客</CardTitle>
-              <CardDescription>在题目下发表的讨论内容</CardDescription>
+              <CardTitle className="text-base">近期评论与题解</CardTitle>
+              <CardDescription>题目讨论与题解</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4 px-4">
               <div>
@@ -863,7 +890,7 @@ export function Profile() {
                           to={`/question-bank/detail/${c.problemId}?tab=comments`}
                           className="font-medium text-sky-600 hover:underline dark:text-sky-400"
                         >
-                          {c.problemTitle || `题目 #${c.problemId}`}
+                          {cleanProblemTitle(c.problemTitle, `题目 #${c.problemId}`)}
                         </Link>
                         <p className="mt-0.5 line-clamp-2 text-muted-foreground">
                           {c.content}
@@ -880,7 +907,7 @@ export function Profile() {
               </div>
               <div>
                 <p className="mb-2 text-xs font-medium text-muted-foreground">
-                  博客
+                  题解
                 </p>
                 {recentSolutions.length ? (
                   <ul className="divide-y rounded-lg border">
@@ -893,14 +920,17 @@ export function Profile() {
                           {s.title}
                         </Link>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {s.problemTitle || `题目 #${s.problemId}`} ·{' '}
-                          {formatTime(s.createdAt)}
+                          {cleanProblemTitle(
+                            s.problemTitle,
+                            `题目 #${s.problemId}`,
+                          )}{' '}
+                          · {formatTime(s.createdAt)}
                         </p>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted-foreground">暂无博客</p>
+                  <p className="text-sm text-muted-foreground">暂无题解</p>
                 )}
               </div>
             </CardContent>

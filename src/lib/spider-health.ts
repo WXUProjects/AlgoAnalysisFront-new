@@ -3,6 +3,21 @@ import type { SpiderBinding } from '@shared/api'
 /** 默认同步间隔约 60 分钟；超过 2× 视为偏旧 */
 export const SPIDER_STALE_SECONDS = 2 * 60 * 60
 
+/** 同步时间相对文案（「3 小时前」）；过旧时便于理解，避免只看绝对时钟 */
+export function formatSyncAge(
+  lastSyncAt: number | undefined | null,
+  nowSec = Math.floor(Date.now() / 1000),
+): string {
+  const ok = Number(lastSyncAt) || 0
+  if (ok <= 0) return ''
+  const diff = Math.max(0, nowSec - ok)
+  if (diff < 60) return '刚刚'
+  if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`
+  if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`
+  if (diff < 86400 * 30) return `${Math.floor(diff / 86400)} 天前`
+  return `${Math.floor(diff / (86400 * 30))} 个月前`
+}
+
 export type SpiderHealthKind = 'ok' | 'never' | 'failed' | 'stale'
 
 /** 失败归因：用户可修（用户名） vs 系统/站点侧 */
@@ -215,10 +230,13 @@ export function spiderPlatformHealth(
     }
   }
   if (nowSec - ok > SPIDER_STALE_SECONDS) {
+    const age = formatSyncAge(ok, nowSec)
     return {
       kind: 'stale',
       label: '同步偏旧',
-      detail: '数据可能不是最新，可稍后刷新或检查绑定。',
+      detail: age
+        ? `上次成功同步在${age}，数据可能不是最新。`
+        : '数据可能不是最新，可稍后刷新或检查绑定。',
       platforms: [name],
     }
   }
@@ -288,10 +306,13 @@ export function userSyncHealth(
     }
   }
   if (nowSec - ok > SPIDER_STALE_SECONDS) {
+    const age = formatSyncAge(ok, nowSec)
     return {
       kind: 'stale',
       label: '同步偏旧',
-      detail: '数据有一段时间没更新了，可到「编辑资料」检查绑定。',
+      detail: age
+        ? `上次成功同步在${age}。久未登录会暂停同步，打开站点或到「编辑资料」检查绑定即可。`
+        : '数据有一段时间没更新了，可到「编辑资料」检查绑定。',
     }
   }
   return null

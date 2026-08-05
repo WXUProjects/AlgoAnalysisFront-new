@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Link2Icon, Share2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
 import {
   addOrgMember,
   getInvite,
-  listJoinRequests,
-  reviewJoinRequest,
   rotateInvite,
   updateOrg,
 } from '@/api/org'
@@ -64,9 +63,6 @@ export function DashboardOrgSettings() {
   const [spiderInterval, setSpiderInterval] = useState(60)
   const [emailSchedule, setEmailSchedule] = useState('30 7 * * *')
   const [inviteCode, setInviteCode] = useState('')
-  const [requests, setRequests] = useState<
-    { id: number; name: string; username: string; orgDisplayName?: string }[]
-  >([])
   const [addSearch, setAddSearch] = useState('')
   const [addCandidates, setAddCandidates] = useState<UserProfile[]>([])
   const [addSearching, setAddSearching] = useState(false)
@@ -113,18 +109,12 @@ export function DashboardOrgSettings() {
         if (r.inviteCode) setInviteCode(r.inviteCode)
       })
     }
-    if (canReviewJoin) {
-      void listJoinRequests(orgId).then((r) => {
-        if (cancelled) return
-        setRequests(r.list as typeof requests)
-      })
-    }
     return () => {
       cancelled = true
     }
     // 仅在切换组织时重置草稿；依赖整个 currentOrg 会因对象引用变化反复重跑
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId, currentOrg?.id, canViewInvite, canReviewJoin])
+  }, [orgId, currentOrg?.id, canViewInvite])
 
   useEffect(() => {
     if (!addSearch.trim()) {
@@ -428,53 +418,19 @@ export function DashboardOrgSettings() {
       </>
       ) : null}
 
-      {canReviewJoin && requests.length > 0 && (
+      {canReviewJoin ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">待审批加入</CardTitle>
+            <CardTitle className="text-base">加入审批</CardTitle>
+            <CardDescription>审核通过邀请码提交的加入申请</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {requests.map((r) => (
-              <div key={r.id} className="flex items-center justify-between rounded border p-2">
-                <span className="text-sm">
-                  {r.orgDisplayName || r.name || r.username}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      void reviewJoinRequest(r.id, true).then(async (x) => {
-                        if (x.success) {
-                          toast.success('已通过')
-                          const list = await listJoinRequests(orgId)
-                          setRequests(list.list as typeof requests)
-                        }
-                      })
-                    }
-                  >
-                    通过
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      void reviewJoinRequest(r.id, false).then(async (x) => {
-                        if (x.success) {
-                          toast.success('已拒绝')
-                          const list = await listJoinRequests(orgId)
-                          setRequests(list.list as typeof requests)
-                        }
-                      })
-                    }
-                  >
-                    拒绝
-                  </Button>
-                </div>
-              </div>
-            ))}
+          <CardContent>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/admin/user?tab=join">去审批</Link>
+            </Button>
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
       {canAddMember ? (
       <Card>

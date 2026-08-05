@@ -201,7 +201,7 @@ export function submitActionLabel(status?: string): string {
 }
 
 export function activityActionLabel(type: string): string {
-  if (type === 'solution' || type === 'share') return '发表了博客'
+  if (type === 'solution' || type === 'share') return '发表了题解'
   if (type === 'comment') return '参与了讨论'
   return '发布了动态'
 }

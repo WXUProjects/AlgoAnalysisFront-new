@@ -103,6 +103,13 @@ export function DashboardSiteSettings() {
   const [upyunDomain, setUpyunDomain] = useState('')
   const [upyunScheme, setUpyunScheme] = useState('http')
 
+  const [ojLuoguUsername, setOjLuoguUsername] = useState('')
+  const [ojLuoguPassword, setOjLuoguPassword] = useState('')
+  const [ojLuoguPasswordSet, setOjLuoguPasswordSet] = useState(false)
+  const [ojQojUsername, setOjQojUsername] = useState('')
+  const [ojQojPassword, setOjQojPassword] = useState('')
+  const [ojQojPasswordSet, setOjQojPasswordSet] = useState(false)
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -227,6 +234,12 @@ export function DashboardSiteSettings() {
       setUpyunPasswordSet(d.upyunPasswordSet)
       setUpyunDomain(d.upyunDomain || '')
       setUpyunScheme(d.upyunScheme || 'http')
+      setOjLuoguUsername(d.ojLuoguUsername || '')
+      setOjLuoguPassword(d.ojLuoguPasswordSet ? SECRET_PLACEHOLDER : '')
+      setOjLuoguPasswordSet(d.ojLuoguPasswordSet)
+      setOjQojUsername(d.ojQojUsername || '')
+      setOjQojPassword(d.ojQojPasswordSet ? SECRET_PLACEHOLDER : '')
+      setOjQojPasswordSet(d.ojQojPasswordSet)
     })()
     return () => {
       cancelled = true
@@ -280,6 +293,8 @@ export function DashboardSiteSettings() {
     const agentSec = secretPayload(agentSecret, agentSecretSet)
     const aiSec = secretPayload(aiSecret, aiSecretSet)
     const upyunPw = secretPayload(upyunPassword, upyunPasswordSet)
+    const ojLgPw = secretPayload(ojLuoguPassword, ojLuoguPasswordSet)
+    const ojQojPw = secretPayload(ojQojPassword, ojQojPasswordSet)
 
     const days = Math.max(1, Math.min(365, Number(inactiveDays) || 14))
     setSaving(true)
@@ -310,6 +325,12 @@ export function DashboardSiteSettings() {
       clearUpyunPassword: upyunPw.clear,
       upyunDomain: upyunDomain.trim(),
       upyunScheme: upyunScheme.trim() || 'http',
+      ojLuoguUsername: ojLuoguUsername.trim(),
+      ojLuoguPassword: ojLgPw.secret,
+      clearOjLuoguPassword: ojLgPw.clear,
+      ojQojUsername: ojQojUsername.trim(),
+      ojQojPassword: ojQojPw.secret,
+      clearOjQojPassword: ojQojPw.clear,
     })
     setSaving(false)
     if (res.success) {
@@ -326,6 +347,10 @@ export function DashboardSiteSettings() {
         setAiSecretSet(again.data.aiAnalyzeSecretSet)
         setUpyunPassword(again.data.upyunPasswordSet ? SECRET_PLACEHOLDER : '')
         setUpyunPasswordSet(again.data.upyunPasswordSet)
+        setOjLuoguPassword(again.data.ojLuoguPasswordSet ? SECRET_PLACEHOLDER : '')
+        setOjLuoguPasswordSet(again.data.ojLuoguPasswordSet)
+        setOjQojPassword(again.data.ojQojPasswordSet ? SECRET_PLACEHOLDER : '')
+        setOjQojPasswordSet(again.data.ojQojPasswordSet)
       }
     } else {
       toast.error(res.message || '保存失败，请稍后重试')
@@ -692,6 +717,71 @@ export function DashboardSiteSettings() {
                 <p className="text-xs text-muted-foreground">
                   图床建议与站点同为 https。
                 </p>
+              </Field>
+            </FieldGroup>
+          </CardContent>
+        </Card>
+
+        <Card className="gap-3 py-4">
+          <CardHeader className="px-4 pb-0">
+            <CardTitle>OJ 爬虫账号</CardTitle>
+            <CardDescription>
+              用于同步洛谷与 QOJ 的提交记录；保存时会验证能否登录
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4">
+            <FieldGroup className="gap-3">
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="oj-lg-username">洛谷账号</FieldLabel>
+                <Input
+                  id="oj-lg-username"
+                  value={ojLuoguUsername}
+                  onChange={(e) => setOjLuoguUsername(e.target.value)}
+                  placeholder="洛谷用户名"
+                  autoComplete="off"
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="oj-lg-password">洛谷密码</FieldLabel>
+                <Input
+                  id="oj-lg-password"
+                  type="password"
+                  value={ojLuoguPassword}
+                  onChange={(e) => setOjLuoguPassword(e.target.value)}
+                  placeholder={
+                    ojLuoguPasswordSet ? '已保存；留空表示不修改' : '洛谷密码'
+                  }
+                  autoComplete="new-password"
+                  onFocus={() => {
+                    if (ojLuoguPassword === SECRET_PLACEHOLDER) setOjLuoguPassword('')
+                  }}
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="oj-qoj-username">QOJ 账号</FieldLabel>
+                <Input
+                  id="oj-qoj-username"
+                  value={ojQojUsername}
+                  onChange={(e) => setOjQojUsername(e.target.value)}
+                  placeholder="QOJ 用户名"
+                  autoComplete="off"
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="oj-qoj-password">QOJ 密码</FieldLabel>
+                <Input
+                  id="oj-qoj-password"
+                  type="password"
+                  value={ojQojPassword}
+                  onChange={(e) => setOjQojPassword(e.target.value)}
+                  placeholder={
+                    ojQojPasswordSet ? '已保存；留空表示不修改' : 'QOJ 密码'
+                  }
+                  autoComplete="new-password"
+                  onFocus={() => {
+                    if (ojQojPassword === SECRET_PLACEHOLDER) setOjQojPassword('')
+                  }}
+                />
               </Field>
             </FieldGroup>
           </CardContent>
