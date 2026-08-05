@@ -828,6 +828,20 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 - 今日计数 `todayEnqueued/todayOk/todayFail` 来自按 OJ 分桶的 Redis 日计数；`lastOkAt/lastFailAt/lastError` 为按 OJ 聚合的最近一次同步状态
 - `hasAccount` 仅洛谷/QOJ 为 true（全局账号），`accountStatus` 取 `sitesettings` 登录态（ok/fail/unchecked）
 
+### Health（运维监控，站点管理员）
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| GET | `/core/health/overview` | 是(站点管理员) | 运维总览：服务状态（AI/邮件/OJ）+ 中间件探测（数据库/Redis/注册中心/MQ）+ **服务器资源（CPU/内存/磁盘/负载，读后台 25s 采样缓存，不实时拉取）** + API 延迟/请求 + 容量估算 |
+| GET | `/core/health/resource-series` | 是(站点管理员) | 近 24h CPU/内存占用时序，query `points`（默认 288，服务端降采样，约 5 分钟粒度）；返回 `samples[{t,cpu,mem}]` + `intervalSec` + `hours`（服务刚启动可能不满 24h） |
+
+- 资源监控后台每 **25 秒**采样一次全机 CPU/内存/磁盘/负载，写入 Redis 时序（保留 24h）与快照缓存；运维页访问读缓存，不再实时 gopsutil（避免每次打开页面对 CPU 造成 ~500ms 采样负载）
+- 样例 `resource-series` 响应：
+```json
+{ "code": 0, "intervalSec": 25, "hours": 23.9,
+  "samples": [ { "t": 1754200000, "cpu": 12.5, "mem": 33.9 }, { "t": 1754200025, "cpu": 8.2, "mem": 34.1 } ] }
+```
+
 ### Statistic
 
 | Method | Path | Auth | 说明 |
@@ -1422,6 +1436,8 @@ POST   /api/core/spider/update-all
 GET    /api/core/spider/submit-inventory
 GET    /api/core/spider/monitor
 POST   /api/core/spider/purge-submits-and-recrawl
+GET    /api/core/health/overview
+GET    /api/core/health/resource-series
 GET    /api/core/statistic/heatmap
 GET    /api/core/statistic/period
 GET    /api/core/statistic/rank

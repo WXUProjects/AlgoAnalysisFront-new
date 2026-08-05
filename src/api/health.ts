@@ -59,8 +59,55 @@ export type HealthOverview = {
   collectedAt: number
 }
 
+/** 近 24h CPU/内存占用时序采样点 */
+export type ResourceSample = {
+  /** unix 秒 */
+  t: number
+  /** CPU 占用 % 0-100 */
+  cpu: number
+  /** 内存占用 % 0-100 */
+  mem: number
+}
+
+export type ResourceSeries = {
+  samples: ResourceSample[]
+  intervalSec: number
+  hours: number
+}
+
 function listOf(raw: unknown): Record<string, unknown>[] {
   return Array.isArray(raw) ? (raw as Record<string, unknown>[]) : []
+}
+
+/** 近 24h CPU/内存占用时序（读后端缓存，服务端已降采样到 ~288 点） */
+export async function getResourceSeries(
+  points = 288,
+): Promise<ApiResult<ResourceSeries>> {
+  const res = await get<Record<string, unknown>>(
+    `${endpoints.core.health.resourceSeries}?points=${points}`,
+  )
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
+  if (typeof raw.code === 'number' && raw.code !== 0) {
+    return {
+      success: false,
+      message: str(raw.message, '资源时序加载失败，请稍后重试'),
+      data: null,
+    }
+  }
+  const samples = listOf(raw.samples).map((s) => ({
+    t: num(s.t, 0),
+    cpu: Number(s.cpu) || 0,
+    mem: Number(s.mem) || 0,
+  }))
+  return {
+    ...res,
+    data: {
+      samples,
+      intervalSec: num(raw.intervalSec, 25),
+      hours: Number(raw.hours) || 0,
+    },
+  }
 }
 
 export async function getHealthOverview(): Promise<ApiResult<HealthOverview>> {

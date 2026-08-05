@@ -226,6 +226,8 @@ export const endpoints = {
     },
     health: {
       overview: `${API_PREFIX}/core/health/overview`,
+      /** 近 24h CPU/内存占用时序（后台 25s 采样缓存） */
+      resourceSeries: `${API_PREFIX}/core/health/resource-series`,
     },
     statistic: {
       heatmap: `${API_PREFIX}/core/statistic/heatmap`,

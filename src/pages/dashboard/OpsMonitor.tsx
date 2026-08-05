@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+import {
   getHealthOverview,
+  getResourceSeries,
   type HealthOverview,
+  type ResourceSample,
 } from '@/api/health'
 import { useAuth } from '@/auth/AuthContext'
 import {
@@ -102,7 +113,7 @@ function HealthOverviewCard() {
 
   useEffect(() => {
     void load()
-    const timer = setInterval(() => void load(), 30_000)
+    const timer = setInterval(() => void load(), 60_000)
     return () => clearInterval(timer)
   }, [load])
 
@@ -156,7 +167,7 @@ function HealthOverviewCard() {
           <CardTitle className="text-base">系统监控</CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
             采集于 {data?.collectedAt ? formatTime(data.collectedAt) : '—'}
-            {' · '}每 30 秒自动刷新
+            {' · '}每 60 秒自动刷新
           </p>
         </div>
       </CardHeader>
@@ -249,6 +260,9 @@ function HealthOverviewCard() {
           ))}
         </div>
 
+        {/* 近 24h CPU/内存时序 */}
+        <ResourceTrendCard />
+
         {/* API 延迟与请求 */}
         {data?.api ? (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -317,6 +331,105 @@ function HealthOverviewCard() {
   )
 }
 
+/** 近 24h CPU / 内存占用时序图（后台 25s 采样缓存） */
+function ResourceTrendCard() {
+  const [samples, setSamples] = useState<ResourceSample[] | null>(null)
+  const [error, setError] = useState('')
+
+  const load = useCallback(async () => {
+    const res = await getResourceSeries(288)
+    if (!res.success || !res.data) {
+      setError(res.message || '资源时序加载失败')
+      return
+    }
+    setSamples(res.data.samples)
+    setError('')
+  }, [])
+
+  useEffect(() => {
+    void load()
+    const timer = setInterval(() => void load(), 60_000)
+    return () => clearInterval(timer)
+  }, [load])
+
+  const chartData = (samples || []).map((s) => ({
+    time: formatTime(s.t).slice(5),
+    cpu: Math.round(s.cpu * 10) / 10,
+    mem: Math.round(s.mem * 10) / 10,
+  }))
+
+  return (
+    <div className="rounded-xl border bg-card px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium">近 24 小时资源占用</p>
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <span className="inline-block size-2 rounded-full bg-[var(--color-chart-1)]" />
+            CPU
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="inline-block size-2 rounded-full bg-[var(--color-chart-2)]" />
+            内存
+          </span>
+        </div>
+      </div>
+      <div className="mt-2 h-40 w-full">
+        {error && !samples ? (
+          <p className="text-sm text-destructive">{error}</p>
+        ) : !samples || chartData.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            采集中，稍后展示
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="cpuFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--color-chart-1)" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="var(--color-chart-1)" stopOpacity={0.02} />
+                </linearGradient>
+                <linearGradient id="memFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--color-chart-2)" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="var(--color-chart-2)" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis dataKey="time" tick={{ fontSize: 10 }} minTickGap={48} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} width={32} />
+              <Tooltip
+                formatter={(v, name) => [
+                  `${v}%`,
+                  name === 'cpu' ? 'CPU' : name === 'mem' ? '内存' : name,
+                ]}
+              />
+              <Area
+                type="monotone"
+                dataKey="cpu"
+                name="cpu"
+                stroke="var(--color-chart-1)"
+                strokeWidth={1.5}
+                fill="url(#cpuFill)"
+                dot={false}
+                isAnimationActive={false}
+              />
+              <Area
+                type="monotone"
+                dataKey="mem"
+                name="mem"
+                stroke="var(--color-chart-2)"
+                strokeWidth={1.5}
+                fill="url(#memFill)"
+                dot={false}
+                isAnimationActive={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function MiniStat({
   label,
   value,
@@ -325,8 +438,7 @@ function MiniStat({
   label: string
   value: string
   hint?: string
-}) {
-  return (
+}) {  return (
     <div className="rounded-lg bg-muted/40 px-3 py-2">
       <p className="text-[11px] text-muted-foreground">{label}</p>
       <p className="mt-0.5 truncate text-sm font-semibold tabular-nums" title={value}>

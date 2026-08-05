@@ -203,7 +203,7 @@ function SpiderMonitorSectionInner() {
 
   useEffect(() => {
     void load()
-    const timer = setInterval(() => void load(), 30_000)
+    const timer = setInterval(() => void load(), 60_000)
     return () => clearInterval(timer)
   }, [load])
 
@@ -242,7 +242,7 @@ function SpiderMonitorSectionInner() {
           <CardTitle className="text-base">爬虫监控</CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
             各 OJ 的提交 / 题库 / 比赛 / 账号模块状态
-            {' · '}每 30 秒自动刷新
+            {' · '}每 60 秒自动刷新
           </p>
         </div>
       </CardHeader>
