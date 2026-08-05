@@ -225,8 +225,8 @@
 | POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc\|blog\|blog_cover`。本地用途 ≤3MB（jpg/png/gif/webp/ico/**svg**；svg 拒脚本）。**`blog`/`blog_cover`**：走又拍云（需站点配置又拍云 + 站管在 `/admin/blog` 授权该用户），清晰度优先压缩，≤约 12MB 原图，返回公网 `{ url, hash }`（`hash`=落库字节 SHA-256，内容寻址 key `/blog/{uid}/{hash}{ext}`）；未授权或未配置则 403。本地 url 带真实扩展名 |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
 | GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo） |
-| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails`） |
-| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云**（`upyunBucket`/`upyunOperator`/`upyunPassword`/`clearUpyunPassword`/`upyunDomain`/`upyunScheme`）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails`；密钥空串表示不修改 |
+| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** / **OJ 爬虫账号** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails`） |
+| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails`；密钥空串表示不修改。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
 | POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
 | GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |
@@ -329,11 +329,21 @@
   "upyunPasswordSet": true,
   "clearUpyunPassword": false,
   "upyunDomain": "zhiyuansofts.cn",
-  "upyunScheme": "http"
+  "upyunScheme": "http",
+  "ojLuoguUsername": "",
+  "ojLuoguPassword": "",
+  "ojLuoguPasswordMasked": "",
+  "ojLuoguPasswordSet": false,
+  "clearOjLuoguPassword": false,
+  "ojQojUsername": "",
+  "ojQojPassword": "",
+  "ojQojPasswordMasked": "",
+  "ojQojPasswordSet": false,
+  "clearOjQojPassword": false
 }
 ```
 
-说明：`smtp` / `agent` / `ai_analyze` / **`upyun`** 原 yaml 配置已迁入站点设置；服务 yaml 仅作启动兜底。保存后写入 DB 并同步 Redis。`footerIcp` 为空时前端页脚使用默认备案号。`adminNotifyEmails` 为审核/举报邮件接收人（逗号或换行分隔）；留空则发给全部站点管理员账号邮箱；**不影响**站内信收件人。又拍云密码**不得**写入仓库源码。
+说明：`smtp` / `agent` / `ai_analyze` / **`upyun`** / **OJ 爬虫账号（洛谷、QOJ）** 原硬编码或 yaml 已迁入站点设置；服务 yaml 仅作启动兜底。保存后写入 DB 并同步 Redis。填写了洛谷/QOJ 用户名时，保存会先实测登录再落库。`footerIcp` 为空时前端页脚使用默认备案号。`adminNotifyEmails` 为审核/举报邮件接收人（逗号或换行分隔）；留空则发给全部站点管理员账号邮箱；**不影响**站内信收件人。又拍云 / OJ 密码**不得**写入仓库源码。
 
 ### Paste（粘贴板 / Pastebin）
 
@@ -961,7 +971,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/problemset/update` | 是 | body: `{ id, title?, description?, visibility?, password?, clearPassword? }`；系统题单仅可改描述 |
 | POST | `/core/problemset/delete` | 是 | body: `{ id }`；系统题单不可删 |
 | POST | `/core/problemset/unlock` | 否 | body: `{ id, password }` → `{ unlockToken, expiresIn }` |
-| POST | `/core/problemset/add` | 是 | body: `{ problemsetId?, problemId? }` 或 `{ problemsetId?, url? }`；**`problemsetId` 可省略**：仅向题库入库（须 `url`）；有 `problemsetId` 时同时加入该题单（须本人题单）。**先入库再后台补**：无真标题也可用 external_id 占位入库；缺题面/仅占位标题时**最高优先级**后台爬取（直爬 + MQ 兜底，HTTP 不阻塞）；AI 按操作者资格；无法识别链接 → `success=false, code=URL_PARSE_FAILED`（HTTP 200）。URL 会清洗粘贴噪声（query/fragment、前后说明文字、Markdown 链接）。成功 data：`{ problemId, fetchTriggered, platform?, title?, externalId? }`（识别摘要供前端确认弹窗）。支持：`CodeForces`（含 gym/group）、`AtCoder`、`LuoGu`、`NowCoder`（题库 `/acm/problem/{id}`、主站 `/practice/{uuid}`、**比赛题页** `/acm/contest/{contestId}/{A}` → problem-list 解析数字 problemId）、`QOJ`、`LeetCode`（cn/com）、`LOJ`（`/p/{id}`）、`UOJ`（`/problem/{id}`）、`POJ`（`/problem?id=`） |
+| POST | `/core/problemset/add` | 是 | body: `{ problemsetId?, problemId? }` 或 `{ problemsetId?, url? }`；**`problemsetId` 可省略**：仅向题库入库（须 `url`）；有 `problemsetId` 时同时加入该题单（须本人题单）。**先入库再后台补**：无真标题也可用 external_id 占位入库；缺题面/仅占位标题时**最高优先级**后台爬取（直爬 + MQ 兜底，HTTP 不阻塞）；AI 按操作者资格；无法识别链接 → `success=false, code=URL_PARSE_FAILED`（HTTP 200）。URL 会清洗粘贴噪声（query/fragment、前后说明文字、Markdown 链接）。成功 data：`{ problemId, fetchTriggered, platform?, title?, externalId? }`（识别摘要供前端确认弹窗）。支持：`CodeForces`（含 gym/group）、`AtCoder`、`LuoGu`、`NowCoder`（题库 `/acm/problem/{id}`、主站 `/practice/{uuid}`、**比赛题页** `/acm/contest/{contestId}/{A}` → problem-list 解析数字 problemId）、`QOJ`、`LeetCode`（cn/com）、`LOJ`（`/p/{id}`）、`UOJ`（`/problem/{id}`）、`POJ`（`/problem?id=`，题面按 `.ptt`/`.pst`/`.ptx` 解析） |
 | POST | `/core/problemset/add-manual` | 是 | 链接无法识别时手动建题（**无需审核**）；body: `{ problemsetId?, title, contentMd?, tags?, sourceUrl? }` → `{ problemId }`；`problemsetId` 可省略（仅入库）；`platform=Manual` |
 | POST | `/core/problemset/remove` | 是 | body: `{ problemsetId, problemId }` 手动剔除 |
 | POST | `/core/problemset/reorder` | 是 | 拖拽排序；body: `{ problemsetId, ids: [itemId…] }`（`ids` 为题单项 id，须覆盖该题单全部项）；按序重写 `sortOrder` 为 `0,1,2…`；仅 owner |
