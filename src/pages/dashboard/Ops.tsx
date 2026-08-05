@@ -6,6 +6,7 @@ import {
   type SubmitInventory,
 } from '@/api/ops'
 import { OpsMonitorSection } from '@/pages/dashboard/OpsMonitor'
+import { OpsSpiderMonitor } from '@/pages/dashboard/OpsSpiderMonitor'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import {
@@ -112,6 +113,7 @@ export function DashboardOps() {
 
       <div className="grid gap-4">
         <OpsMonitorSection />
+        <OpsSpiderMonitor />
 
         <Card>
           <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 space-y-0">
