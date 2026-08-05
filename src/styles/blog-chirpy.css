@@ -977,6 +977,14 @@
   border-radius: 0.35rem;
 }
 
+@media (max-width: 640px) {
+  .chirpy-prose .md-img-block img,
+  .chirpy-prose img {
+    width: 100% !important;
+    height: auto;
+  }
+}
+
 .chirpy-prose .md-img-block {
   display: flex;
   max-width: 100%;

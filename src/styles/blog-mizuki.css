@@ -801,6 +801,14 @@
   border-radius: 0.35rem;
 }
 
+@media (max-width: 640px) {
+  .mz-prose .md-img-block img,
+  .mz-prose img {
+    width: 100% !important;
+    height: auto;
+  }
+}
+
 .mz-prose .md-img-block {
   display: flex;
   max-width: 100%;

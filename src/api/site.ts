@@ -47,6 +47,18 @@ export type SiteAdminConfig = SiteConfig & {
   ojQojUsername: string
   ojQojPasswordMasked: string
   ojQojPasswordSet: boolean
+  ojLuoguStatus: string
+  ojLuoguStatusAt: number
+  ojLuoguErrMsg: string
+  ojQojStatus: string
+  ojQojStatusAt: number
+  ojQojErrMsg: string
+  agentStatus: string
+  agentStatusAt: number
+  agentErrMsg: string
+  aiAnalyzeStatus: string
+  aiAnalyzeStatusAt: number
+  aiAnalyzeErrMsg: string
 }
 
 function normalizeBrand(raw: Record<string, unknown> | null | undefined): SiteConfig {
@@ -90,6 +102,18 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     ojQojUsername: str(d.ojQojUsername),
     ojQojPasswordMasked: str(d.ojQojPasswordMasked),
     ojQojPasswordSet: Boolean(d.ojQojPasswordSet),
+    ojLuoguStatus: str(d.ojLuoguStatus, 'unchecked'),
+    ojLuoguStatusAt: num(d.ojLuoguStatusAt, 0),
+    ojLuoguErrMsg: str(d.ojLuoguErrMsg),
+    ojQojStatus: str(d.ojQojStatus, 'unchecked'),
+    ojQojStatusAt: num(d.ojQojStatusAt, 0),
+    ojQojErrMsg: str(d.ojQojErrMsg),
+    agentStatus: str(d.agentStatus, 'unchecked'),
+    agentStatusAt: num(d.agentStatusAt, 0),
+    agentErrMsg: str(d.agentErrMsg),
+    aiAnalyzeStatus: str(d.aiAnalyzeStatus, 'unchecked'),
+    aiAnalyzeStatusAt: num(d.aiAnalyzeStatusAt, 0),
+    aiAnalyzeErrMsg: str(d.aiAnalyzeErrMsg),
   }
 }
 

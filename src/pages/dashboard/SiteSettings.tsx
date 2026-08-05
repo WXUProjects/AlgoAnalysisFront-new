@@ -67,6 +67,49 @@ function jobStatusLabel(s: string): string {
 
 const SECRET_PLACEHOLDER = '••••••••'
 
+function CollapsibleCard({
+  title,
+  description,
+  defaultOpen = false,
+  footer,
+  children,
+}: {
+  title: string
+  description?: string
+  defaultOpen?: boolean
+  footer?: React.ReactNode
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <Card className="gap-0 py-0 overflow-hidden">
+        <CollapsibleTrigger className="flex w-full items-center gap-2 px-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors">
+          <div className="flex-1 text-left">
+            <div className="text-sm font-semibold leading-none">{title}</div>
+            {description && (
+              <p className="text-xs text-muted-foreground mt-1">{description}</p>
+            )}
+          </div>
+          <ChevronDown
+            className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="px-4 pb-3">
+            {children}
+          </CardContent>
+          {footer && (
+            <CardFooter className="justify-end gap-2 px-4 pb-3 pt-0">
+              {footer}
+            </CardFooter>
+          )}
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  )
+}
+
 export function DashboardSiteSettings() {
   const { can } = useAuth()
   const canWrite = can(Perm.SiteConfigWrite)
@@ -110,12 +153,16 @@ export function DashboardSiteSettings() {
   const [ojLuoguPassword, setOjLuoguPassword] = useState('')
   const [ojLuoguPasswordSet, setOjLuoguPasswordSet] = useState(false)
   const [ojLuoguStatus, setOjLuoguStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
-  const [ojLuoguError, setOjLuoguError] = useState('')
+  const [ojLuoguErrMsg, setOjLuoguErrMsg] = useState('')
   const [ojQojUsername, setOjQojUsername] = useState('')
   const [ojQojPassword, setOjQojPassword] = useState('')
   const [ojQojPasswordSet, setOjQojPasswordSet] = useState(false)
   const [ojQojStatus, setOjQojStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
-  const [ojQojError, setOjQojError] = useState('')
+  const [ojQojErrMsg, setOjQojErrMsg] = useState('')
+  const [agentStatus, setAgentStatus] = useState('unchecked')
+  const [agentErrMsg, setAgentErrMsg] = useState('')
+  const [aiStatus, setAiStatus] = useState('unchecked')
+  const [aiErrMsg, setAiErrMsg] = useState('')
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -244,9 +291,17 @@ export function DashboardSiteSettings() {
       setOjLuoguUsername(d.ojLuoguUsername || '')
       setOjLuoguPassword(d.ojLuoguPasswordSet ? SECRET_PLACEHOLDER : '')
       setOjLuoguPasswordSet(d.ojLuoguPasswordSet)
+      setOjLuoguStatus((d.ojLuoguStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
+      setOjLuoguErrMsg(d.ojLuoguErrMsg || '')
       setOjQojUsername(d.ojQojUsername || '')
       setOjQojPassword(d.ojQojPasswordSet ? SECRET_PLACEHOLDER : '')
       setOjQojPasswordSet(d.ojQojPasswordSet)
+      setOjQojStatus((d.ojQojStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
+      setOjQojErrMsg(d.ojQojErrMsg || '')
+      setAgentStatus(d.agentStatus || 'unchecked')
+      setAgentErrMsg(d.agentErrMsg || '')
+      setAiStatus(d.aiAnalyzeStatus || 'unchecked')
+      setAiErrMsg(d.aiAnalyzeErrMsg || '')
     })()
     return () => {
       cancelled = true
@@ -433,7 +488,7 @@ export function DashboardSiteSettings() {
 
   async function handleVerifyOj(platform: 'LuoGu' | 'QOJ') {
     const setStatus = platform === 'LuoGu' ? setOjLuoguStatus : setOjQojStatus
-    const setError = platform === 'LuoGu' ? setOjLuoguError : setOjQojError
+    const setErr = platform === 'LuoGu' ? setOjLuoguErrMsg : setOjQojErrMsg
     const user = platform === 'LuoGu' ? ojLuoguUsername.trim() : ojQojUsername.trim()
     const pass = platform === 'LuoGu' ? ojLuoguPassword : ojQojPassword
     if (!user) {
@@ -441,7 +496,7 @@ export function DashboardSiteSettings() {
       return
     }
     setStatus('loading')
-    setError('')
+    setErr('')
     const pw = secretPayload(
       pass,
       platform === 'LuoGu' ? ojLuoguPasswordSet : ojQojPasswordSet,
@@ -456,7 +511,7 @@ export function DashboardSiteSettings() {
       toast.success(`${platform === 'LuoGu' ? '洛谷' : 'QOJ'} 验证通过`)
     } else {
       setStatus('fail')
-      setError(res.data?.errorDetail || res.message || '验证失败')
+      setErr(res.data?.errorDetail || res.message || '验证失败')
     }
   }
 
@@ -490,451 +545,444 @@ export function DashboardSiteSettings() {
       >
         {/* 只读权限：整表单只读展示 */}
         <fieldset disabled={!canWrite} className="contents">
-        <Card className="gap-3 py-4">
-          <CardHeader className="px-4 pb-0">
-            <CardTitle>基本设置</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4">
-            <FieldGroup className="gap-3">
-              <Field className="gap-1.5">
-                <FieldLabel htmlFor="site-title">站点标题</FieldLabel>
-                <Input
-                  id="site-title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="GoAlgo"
+        <CollapsibleCard title="基本设置" defaultOpen>
+          <FieldGroup className="gap-3">
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="site-title">站点标题</FieldLabel>
+              <Input
+                id="site-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="GoAlgo"
+              />
+            </Field>
+            <Field className="gap-1.5">
+              <div className="flex items-end gap-4">
+                <ImageUploadTile
+                  label="站点 Logo"
+                  value={logo}
+                  uploading={uploading === 'logo'}
+                  sizeClass="size-20"
+                  onFile={(file) => void onUpload('logo', file)}
                 />
-              </Field>
-              <Field className="gap-1.5">
-                <div className="flex items-end gap-4">
-                  <ImageUploadTile
-                    label="站点 Logo"
-                    value={logo}
-                    uploading={uploading === 'logo'}
-                    sizeClass="size-20"
-                    onFile={(file) => void onUpload('logo', file)}
-                  />
-                  <ImageUploadTile
-                    label="浏览器图标"
-                    value={favicon}
-                    uploading={uploading === 'favicon'}
-                    sizeClass="size-16"
-                    onFile={(file) => void onUpload('favicon', file)}
-                  />
-                </div>
-              </Field>
-              <Field className="gap-1.5">
-                <FieldLabel htmlFor="footer-icp">备案号</FieldLabel>
-                <Input
-                  id="footer-icp"
-                  value={footerIcp}
-                  onChange={(e) => setFooterIcp(e.target.value)}
-                  placeholder="苏ICP备2025217901号"
+                <ImageUploadTile
+                  label="浏览器图标"
+                  value={favicon}
+                  uploading={uploading === 'favicon'}
+                  sizeClass="size-16"
+                  onFile={(file) => void onUpload('favicon', file)}
                 />
-              </Field>
-              <Field className="gap-1.5">
-                <FieldLabel htmlFor="inactive-days">不活跃天数阈值</FieldLabel>
-                <Input
-                  id="inactive-days"
-                  type="number"
-                  min={1}
-                  max={365}
-                  value={inactiveDays}
-                  onChange={(e) => setInactiveDays(e.target.value)}
-                  placeholder="14"
-                />
-                <p className="text-xs text-muted-foreground">
-                  超过该天数未登录将暂停自动同步与邮件提醒（默认 14 天）
-                </p>
-              </Field>
-            </FieldGroup>
-          </CardContent>
-        </Card>
+              </div>
+            </Field>
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="footer-icp">备案号</FieldLabel>
+              <Input
+                id="footer-icp"
+                value={footerIcp}
+                onChange={(e) => setFooterIcp(e.target.value)}
+                placeholder="苏ICP备2025217901号"
+              />
+            </Field>
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="inactive-days">不活跃天数阈值</FieldLabel>
+              <Input
+                id="inactive-days"
+                type="number"
+                min={1}
+                max={365}
+                value={inactiveDays}
+                onChange={(e) => setInactiveDays(e.target.value)}
+                placeholder="14"
+              />
+              <p className="text-xs text-muted-foreground">
+                超过该天数未登录将暂停自动同步与邮件提醒（默认 14 天）
+              </p>
+            </Field>
+          </FieldGroup>
+        </CollapsibleCard>
 
-        <Card className="gap-3 py-4">
-          <CardHeader className="px-4 pb-0">
-            <CardTitle>邮件</CardTitle>
-            <CardDescription>
-              验证码、找回密码、训练日报/周报、审核与举报提醒
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-4">
-            <FieldGroup className="gap-3">
+        <CollapsibleCard title="邮件" description="验证码、找回密码、日报/周报、审核提醒">
+          <FieldGroup className="gap-3">
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="admin-notify-emails">
+                审核 / 举报邮件接收人
+              </FieldLabel>
+              <textarea
+                id="admin-notify-emails"
+                value={adminNotifyEmails}
+                onChange={(e) => setAdminNotifyEmails(e.target.value)}
+                placeholder={'admin@example.com\nops@example.com'}
+                rows={2}
+                className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full min-w-0 rounded-md border px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <p className="text-xs text-muted-foreground">
+                每行或逗号分隔；留空则发给全部站点管理员
+              </p>
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
               <Field className="gap-1.5">
-                <FieldLabel htmlFor="admin-notify-emails">
-                  审核 / 举报邮件接收人
-                </FieldLabel>
-                <textarea
-                  id="admin-notify-emails"
-                  value={adminNotifyEmails}
-                  onChange={(e) => setAdminNotifyEmails(e.target.value)}
-                  placeholder={'admin@example.com\nops@example.com'}
-                  rows={2}
-                  className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full min-w-0 rounded-md border px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
-                />
-                <p className="text-xs text-muted-foreground">
-                  每行或逗号分隔；留空则发给全部站点管理员
-                </p>
-              </Field>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field className="gap-1.5">
-                  <FieldLabel htmlFor="smtp-host">邮件服务器</FieldLabel>
-                  <Input
-                    id="smtp-host"
-                    value={smtpHost}
-                    onChange={(e) => setSmtpHost(e.target.value)}
-                    placeholder="smtp.163.com"
-                  />
-                </Field>
-                <Field className="gap-1.5">
-                  <FieldLabel htmlFor="smtp-port">端口</FieldLabel>
-                  <Input
-                    id="smtp-port"
-                    value={smtpPort}
-                    onChange={(e) => setSmtpPort(e.target.value)}
-                    placeholder="465"
-                    inputMode="numeric"
-                  />
-                </Field>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field className="gap-1.5">
-                  <FieldLabel htmlFor="smtp-username">用户名</FieldLabel>
-                  <Input
-                    id="smtp-username"
-                    value={smtpUsername}
-                    onChange={(e) => setSmtpUsername(e.target.value)}
-                    placeholder="your@email.com"
-                    autoComplete="off"
-                  />
-                </Field>
-                <Field className="gap-1.5">
-                  <FieldLabel htmlFor="smtp-password">密码 / 授权码</FieldLabel>
-                  <Input
-                    id="smtp-password"
-                    type="password"
-                    value={smtpPassword}
-                    onChange={(e) => setSmtpPassword(e.target.value)}
-                    placeholder={
-                      smtpPasswordSet ? '已保存；留空表示不修改' : '邮箱密码或授权码'
-                    }
-                    autoComplete="new-password"
-                    onFocus={() => {
-                      if (smtpPassword === SECRET_PLACEHOLDER) setSmtpPassword('')
-                    }}
-                  />
-                </Field>
-              </div>
-              <Field className="gap-1.5">
-                <FieldLabel htmlFor="smtp-from">发件人邮箱</FieldLabel>
+                <FieldLabel htmlFor="smtp-host">邮件服务器</FieldLabel>
                 <Input
-                  id="smtp-from"
-                  value={smtpFrom}
-                  onChange={(e) => setSmtpFrom(e.target.value)}
+                  id="smtp-host"
+                  value={smtpHost}
+                  onChange={(e) => setSmtpHost(e.target.value)}
+                  placeholder="smtp.163.com"
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="smtp-port">端口</FieldLabel>
+                <Input
+                  id="smtp-port"
+                  value={smtpPort}
+                  onChange={(e) => setSmtpPort(e.target.value)}
+                  placeholder="465"
+                  inputMode="numeric"
+                />
+              </Field>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="smtp-username">用户名</FieldLabel>
+                <Input
+                  id="smtp-username"
+                  value={smtpUsername}
+                  onChange={(e) => setSmtpUsername(e.target.value)}
                   placeholder="your@email.com"
+                  autoComplete="off"
                 />
               </Field>
               <Field className="gap-1.5">
-                <FieldLabel htmlFor="smtp-test-to">测试收件人</FieldLabel>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    id="smtp-test-to"
-                    value={testTo}
-                    onChange={(e) => setTestTo(e.target.value)}
-                    placeholder="用来接收测试邮件的邮箱"
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={testing}
-                    onClick={() => void handleTestEmail()}
-                  >
-                    {testing ? <Spinner data-icon="inline-start" /> : null}
-                    发送测试邮件
-                  </Button>
-                </div>
-              </Field>
-            </FieldGroup>
-          </CardContent>
-        </Card>
-
-        <Card className="gap-3 py-4">
-          <CardHeader className="px-4 pb-0">
-            <CardTitle>AI 服务</CardTitle>
-            <CardDescription>日报/周报模型 + 题库分析</CardDescription>
-          </CardHeader>
-          <CardContent className="px-4">
-            <FieldGroup className="gap-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field className="gap-1.5">
-                  <FieldLabel htmlFor="agent-model">日报/周报模型</FieldLabel>
-                  <Input
-                    id="agent-model"
-                    value={agentModel}
-                    onChange={(e) => setAgentModel(e.target.value)}
-                    placeholder="模型名称"
-                  />
-                </Field>
-                <Field className="gap-1.5">
-                  <FieldLabel htmlFor="agent-secret">日报/周报密钥</FieldLabel>
-                  <Input
-                    id="agent-secret"
-                    type="password"
-                    value={agentSecret}
-                    onChange={(e) => setAgentSecret(e.target.value)}
-                    placeholder={
-                      agentSecretSet ? '已保存；留空表示不修改' : '请填写密钥'
-                    }
-                    autoComplete="new-password"
-                    onFocus={() => {
-                      if (agentSecret === SECRET_PLACEHOLDER) setAgentSecret('')
-                    }}
-                  />
-                </Field>
-              </div>
-              <Field className="gap-1.5">
-                <FieldLabel htmlFor="ai-endpoint">题库分析服务地址</FieldLabel>
+                <FieldLabel htmlFor="smtp-password">密码 / 授权码</FieldLabel>
                 <Input
-                  id="ai-endpoint"
-                  value={aiEndpoint}
-                  onChange={(e) => setAiEndpoint(e.target.value)}
-                  placeholder="服务商提供的接口地址"
-                />
-              </Field>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field className="gap-1.5">
-                  <FieldLabel htmlFor="ai-model">题库分析模型</FieldLabel>
-                  <Input
-                    id="ai-model"
-                    value={aiModel}
-                    onChange={(e) => setAiModel(e.target.value)}
-                    placeholder="模型名称"
-                  />
-                </Field>
-                <Field className="gap-1.5">
-                  <FieldLabel htmlFor="ai-secret">题库分析密钥</FieldLabel>
-                  <Input
-                    id="ai-secret"
-                    type="password"
-                    value={aiSecret}
-                    onChange={(e) => setAiSecret(e.target.value)}
-                    placeholder={
-                      aiSecretSet ? '已保存；留空表示不修改' : '请填写密钥'
-                    }
-                    autoComplete="new-password"
-                    onFocus={() => {
-                      if (aiSecret === SECRET_PLACEHOLDER) setAiSecret('')
-                    }}
-                  />
-                </Field>
-              </div>
-            </FieldGroup>
-          </CardContent>
-        </Card>
-
-        <Card className="gap-3 py-4">
-          <CardHeader className="px-4 pb-0">
-            <CardTitle>又拍云图床</CardTitle>
-            <CardDescription>
-              博客与题解图片上传；还需在「博客管理」为作者开通
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-4">
-            <FieldGroup className="gap-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field className="gap-1.5">
-                  <FieldLabel htmlFor="upyun-bucket">服务名称</FieldLabel>
-                  <Input
-                    id="upyun-bucket"
-                    value={upyunBucket}
-                    onChange={(e) => setUpyunBucket(e.target.value)}
-                    placeholder="如 yangcongxueyuan"
-                    autoComplete="off"
-                  />
-                </Field>
-                <Field className="gap-1.5">
-                  <FieldLabel htmlFor="upyun-operator">操作员</FieldLabel>
-                  <Input
-                    id="upyun-operator"
-                    value={upyunOperator}
-                    onChange={(e) => setUpyunOperator(e.target.value)}
-                    placeholder="操作员用户名"
-                    autoComplete="off"
-                  />
-                </Field>
-              </div>
-              <Field className="gap-1.5">
-                <FieldLabel htmlFor="upyun-password">操作员密码</FieldLabel>
-                <Input
-                  id="upyun-password"
+                  id="smtp-password"
                   type="password"
-                  value={upyunPassword}
-                  onChange={(e) => setUpyunPassword(e.target.value)}
+                  value={smtpPassword}
+                  onChange={(e) => setSmtpPassword(e.target.value)}
                   placeholder={
-                    upyunPasswordSet ? '已保存；留空表示不修改' : '操作员密码'
+                    smtpPasswordSet ? '已保存；留空表示不修改' : '邮箱密码或授权码'
                   }
                   autoComplete="new-password"
                   onFocus={() => {
-                    if (upyunPassword === SECRET_PLACEHOLDER) setUpyunPassword('')
+                    if (smtpPassword === SECRET_PLACEHOLDER) setSmtpPassword('')
                   }}
                 />
               </Field>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field className="gap-1.5">
-                  <FieldLabel htmlFor="upyun-domain">访问域名</FieldLabel>
-                  <Input
-                    id="upyun-domain"
-                    value={upyunDomain}
-                    onChange={(e) => setUpyunDomain(e.target.value)}
-                    placeholder="如 zhiyuansofts.cn"
-                    autoComplete="off"
-                  />
-                </Field>
-                <Field className="gap-1.5">
-                  <FieldLabel htmlFor="upyun-scheme">协议</FieldLabel>
-                  <Input
-                    id="upyun-scheme"
-                    value={upyunScheme}
-                    onChange={(e) => setUpyunScheme(e.target.value)}
-                    placeholder="http 或 https"
-                    autoComplete="off"
-                  />
-                </Field>
+            </div>
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="smtp-from">发件人邮箱</FieldLabel>
+              <Input
+                id="smtp-from"
+                value={smtpFrom}
+                onChange={(e) => setSmtpFrom(e.target.value)}
+                placeholder="your@email.com"
+              />
+            </Field>
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="smtp-test-to">测试收件人</FieldLabel>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  id="smtp-test-to"
+                  value={testTo}
+                  onChange={(e) => setTestTo(e.target.value)}
+                  placeholder="用来接收测试邮件的邮箱"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={testing}
+                  onClick={() => void handleTestEmail()}
+                >
+                  {testing ? <Spinner data-icon="inline-start" /> : null}
+                  发送测试邮件
+                </Button>
               </div>
-            </FieldGroup>
-          </CardContent>
-        </Card>
+            </Field>
+          </FieldGroup>
+        </CollapsibleCard>
 
-        <Card className="gap-3 py-4">
-          <CardHeader className="px-4 pb-0">
-            <CardTitle>OJ 爬虫账号</CardTitle>
-            <CardDescription>
-              用于同步用户提交记录；配置后可点击验证
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-4">
-            <FieldGroup className="gap-2">
-              {([
-                {
-                  key: 'luogu',
-                  label: '洛谷',
-                  user: ojLuoguUsername,
-                  setUser: setOjLuoguUsername,
-                  pass: ojLuoguPassword,
-                  setPass: setOjLuoguPassword,
-                  passSet: ojLuoguPasswordSet,
-                  status: ojLuoguStatus,
-                  error: ojLuoguError,
-                  platform: 'LuoGu' as const,
-                },
-                {
-                  key: 'qoj',
-                  label: 'QOJ',
-                  user: ojQojUsername,
-                  setUser: setOjQojUsername,
-                  pass: ojQojPassword,
-                  setPass: setOjQojPassword,
-                  passSet: ojQojPasswordSet,
-                  status: ojQojStatus,
-                  error: ojQojError,
-                  platform: 'QOJ' as const,
-                },
-              ]).map((oj) => (
-                <Collapsible key={oj.key} defaultOpen={!!oj.user}>
-                  <div className="flex items-center gap-2 rounded-md border px-3 py-2">
-                    <CollapsibleTrigger className="flex flex-1 items-center gap-2 text-sm font-medium">
-                      <span
-                        className={`inline-block size-2 rounded-full ${
-                          oj.status === 'ok'
-                            ? 'bg-green-500'
-                            : oj.status === 'fail'
-                              ? 'bg-red-500'
-                              : oj.status === 'loading'
-                                ? 'bg-yellow-500 animate-pulse'
-                                : 'bg-muted-foreground/30'
-                        }`}
-                      />
-                      {oj.label}
-                      {oj.user && (
-                        <span className="text-xs text-muted-foreground">({oj.user})</span>
-                      )}
-                      <ChevronDown className="ml-auto size-4 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
-                    </CollapsibleTrigger>
-                  </div>
-                  <CollapsibleContent>
-                    <div className="space-y-2 border-x border-b px-3 py-3">
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <Field className="gap-1">
-                          <FieldLabel htmlFor={`oj-${oj.key}-username`}>用户名</FieldLabel>
-                          <Input
-                            id={`oj-${oj.key}-username`}
-                            value={oj.user}
-                            onChange={(e) => {
-                              oj.setUser(e.target.value)
-                              if (oj.status !== 'unchecked') {
-                                oj.key === 'luogu' ? setOjLuoguStatus('unchecked') : setOjQojStatus('unchecked')
-                              }
-                            }}
-                            placeholder={`${oj.label}用户名`}
-                            autoComplete="off"
-                          />
-                        </Field>
-                        <Field className="gap-1">
-                          <FieldLabel htmlFor={`oj-${oj.key}-password`}>密码</FieldLabel>
-                          <Input
-                            id={`oj-${oj.key}-password`}
-                            type="password"
-                            value={oj.pass}
-                            onChange={(e) => {
-                              oj.setPass(e.target.value)
-                              if (oj.status !== 'unchecked') {
-                                oj.key === 'luogu' ? setOjLuoguStatus('unchecked') : setOjQojStatus('unchecked')
-                              }
-                            }}
-                            placeholder={
-                              oj.passSet ? '已保存；留空表示不修改' : `${oj.label}密码`
-                            }
-                            autoComplete="new-password"
-                            onFocus={() => {
-                              if (oj.pass === SECRET_PLACEHOLDER) oj.setPass('')
-                            }}
-                          />
-                        </Field>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={oj.status === 'loading'}
-                          onClick={() => void handleVerifyOj(oj.platform)}
-                        >
-                          {oj.status === 'loading' && <Spinner data-icon="inline-start" />}
-                          验证
-                        </Button>
-                        {oj.status === 'ok' && (
-                          <span className="text-xs text-green-600">登录成功</span>
-                        )}
-                        {oj.status === 'fail' && (
-                          <span className="text-xs text-destructive" title={oj.error}>
-                            验证失败{oj.error ? `：${oj.error.slice(0, 60)}` : ''}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              ))}
-            </FieldGroup>
-          </CardContent>
-          <CardFooter className="justify-end gap-2 px-4 pt-0">
+        <CollapsibleCard title="AI 服务" description="日报/周报模型 + 题库分析">
+          <FieldGroup className="gap-3">
+            <div className="flex items-center gap-2 text-xs">
+              <span
+                className={`inline-block size-2 rounded-full ${
+                  agentStatus === 'ok'
+                    ? 'bg-green-500'
+                    : agentStatus === 'fail'
+                      ? 'bg-red-500'
+                      : 'bg-muted-foreground/30'
+                }`}
+              />
+              日报模型：{agentStatus === 'ok' ? '正常' : agentStatus === 'fail' ? '异常' : '未验证'}
+              {agentErrMsg && <span className="text-muted-foreground truncate max-w-48" title={agentErrMsg}>{agentErrMsg}</span>}
+              <span className="mx-2 text-muted-foreground">·</span>
+              <span
+                className={`inline-block size-2 rounded-full ${
+                  aiStatus === 'ok'
+                    ? 'bg-green-500'
+                    : aiStatus === 'fail'
+                      ? 'bg-red-500'
+                      : 'bg-muted-foreground/30'
+                }`}
+              />
+              题库分析：{aiStatus === 'ok' ? '正常' : aiStatus === 'fail' ? '异常' : '未验证'}
+              {aiErrMsg && <span className="text-muted-foreground truncate max-w-48" title={aiErrMsg}>{aiErrMsg}</span>}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="agent-model">日报/周报模型</FieldLabel>
+                <Input
+                  id="agent-model"
+                  value={agentModel}
+                  onChange={(e) => setAgentModel(e.target.value)}
+                  placeholder="模型名称"
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="agent-secret">日报/周报密钥</FieldLabel>
+                <Input
+                  id="agent-secret"
+                  type="password"
+                  value={agentSecret}
+                  onChange={(e) => setAgentSecret(e.target.value)}
+                  placeholder={
+                    agentSecretSet ? '已保存；留空表示不修改' : '请填写密钥'
+                  }
+                  autoComplete="new-password"
+                  onFocus={() => {
+                    if (agentSecret === SECRET_PLACEHOLDER) setAgentSecret('')
+                  }}
+                />
+              </Field>
+            </div>
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="ai-endpoint">题库分析服务地址</FieldLabel>
+              <Input
+                id="ai-endpoint"
+                value={aiEndpoint}
+                onChange={(e) => setAiEndpoint(e.target.value)}
+                placeholder="服务商提供的接口地址"
+              />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="ai-model">题库分析模型</FieldLabel>
+                <Input
+                  id="ai-model"
+                  value={aiModel}
+                  onChange={(e) => setAiModel(e.target.value)}
+                  placeholder="模型名称"
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="ai-secret">题库分析密钥</FieldLabel>
+                <Input
+                  id="ai-secret"
+                  type="password"
+                  value={aiSecret}
+                  onChange={(e) => setAiSecret(e.target.value)}
+                  placeholder={
+                    aiSecretSet ? '已保存；留空表示不修改' : '请填写密钥'
+                  }
+                  autoComplete="new-password"
+                  onFocus={() => {
+                    if (aiSecret === SECRET_PLACEHOLDER) setAiSecret('')
+                  }}
+                />
+              </Field>
+            </div>
+          </FieldGroup>
+        </CollapsibleCard>
+
+        <CollapsibleCard title="又拍云图床" description="博客与题解图片上传">
+          <FieldGroup className="gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="upyun-bucket">服务名称</FieldLabel>
+                <Input
+                  id="upyun-bucket"
+                  value={upyunBucket}
+                  onChange={(e) => setUpyunBucket(e.target.value)}
+                  placeholder="如 yangcongxueyuan"
+                  autoComplete="off"
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="upyun-operator">操作员</FieldLabel>
+                <Input
+                  id="upyun-operator"
+                  value={upyunOperator}
+                  onChange={(e) => setUpyunOperator(e.target.value)}
+                  placeholder="操作员用户名"
+                  autoComplete="off"
+                />
+              </Field>
+            </div>
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="upyun-password">操作员密码</FieldLabel>
+              <Input
+                id="upyun-password"
+                type="password"
+                value={upyunPassword}
+                onChange={(e) => setUpyunPassword(e.target.value)}
+                placeholder={
+                  upyunPasswordSet ? '已保存；留空表示不修改' : '操作员密码'
+                }
+                autoComplete="new-password"
+                onFocus={() => {
+                  if (upyunPassword === SECRET_PLACEHOLDER) setUpyunPassword('')
+                }}
+              />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="upyun-domain">访问域名</FieldLabel>
+                <Input
+                  id="upyun-domain"
+                  value={upyunDomain}
+                  onChange={(e) => setUpyunDomain(e.target.value)}
+                  placeholder="如 zhiyuansofts.cn"
+                  autoComplete="off"
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="upyun-scheme">协议</FieldLabel>
+                <Input
+                  id="upyun-scheme"
+                  value={upyunScheme}
+                  onChange={(e) => setUpyunScheme(e.target.value)}
+                  placeholder="http 或 https"
+                  autoComplete="off"
+                />
+              </Field>
+            </div>
+          </FieldGroup>
+        </CollapsibleCard>
+
+        <CollapsibleCard
+          title="OJ 爬虫账号"
+          description="同步用户提交记录"
+          footer={
             <Button type="submit" disabled={saving || !canWrite}>
               {saving ? <Spinner data-icon="inline-start" /> : null}
               保存全部
             </Button>
-          </CardFooter>
-        </Card>
+          }
+        >
+          <FieldGroup className="gap-2">
+            {([
+              {
+                key: 'luogu',
+                label: '洛谷',
+                user: ojLuoguUsername,
+                setUser: setOjLuoguUsername,
+                pass: ojLuoguPassword,
+                setPass: setOjLuoguPassword,
+                passSet: ojLuoguPasswordSet,
+                status: ojLuoguStatus,
+                errMsg: ojLuoguErrMsg,
+                platform: 'LuoGu' as const,
+              },
+              {
+                key: 'qoj',
+                label: 'QOJ',
+                user: ojQojUsername,
+                setUser: setOjQojUsername,
+                pass: ojQojPassword,
+                setPass: setOjQojPassword,
+                passSet: ojQojPasswordSet,
+                status: ojQojStatus,
+                errMsg: ojQojErrMsg,
+                platform: 'QOJ' as const,
+              },
+            ]).map((oj) => (
+              <Collapsible key={oj.key}>
+                <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+                  <CollapsibleTrigger className="flex flex-1 items-center gap-2 text-sm font-medium cursor-pointer">
+                    <span
+                      className={`inline-block size-2 shrink-0 rounded-full ${
+                        oj.status === 'ok'
+                          ? 'bg-green-500'
+                          : oj.status === 'fail'
+                            ? 'bg-red-500'
+                            : oj.status === 'loading'
+                              ? 'bg-yellow-500 animate-pulse'
+                              : 'bg-muted-foreground/30'
+                      }`}
+                    />
+                    {oj.label}
+                    {oj.user && (
+                      <span className="text-xs text-muted-foreground">({oj.user})</span>
+                    )}
+                    <ChevronDown className="ml-auto size-4 text-muted-foreground transition-transform [[data-state=open]>&]:rotate-180" />
+                  </CollapsibleTrigger>
+                </div>
+                <CollapsibleContent>
+                  <div className="space-y-2 border-x border-b px-3 py-3">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Field className="gap-1">
+                        <FieldLabel htmlFor={`oj-${oj.key}-username`}>用户名</FieldLabel>
+                        <Input
+                          id={`oj-${oj.key}-username`}
+                          value={oj.user}
+                          onChange={(e) => {
+                            oj.setUser(e.target.value)
+                            if (oj.status !== 'unchecked') {
+                              oj.key === 'luogu' ? setOjLuoguStatus('unchecked') : setOjQojStatus('unchecked')
+                            }
+                          }}
+                          placeholder={`${oj.label}用户名`}
+                          autoComplete="off"
+                        />
+                      </Field>
+                      <Field className="gap-1">
+                        <FieldLabel htmlFor={`oj-${oj.key}-password`}>密码</FieldLabel>
+                        <Input
+                          id={`oj-${oj.key}-password`}
+                          type="password"
+                          value={oj.pass}
+                          onChange={(e) => {
+                            oj.setPass(e.target.value)
+                            if (oj.status !== 'unchecked') {
+                              oj.key === 'luogu' ? setOjLuoguStatus('unchecked') : setOjQojStatus('unchecked')
+                            }
+                          }}
+                          placeholder={
+                            oj.passSet ? '已保存；留空表示不修改' : `${oj.label}密码`
+                          }
+                          autoComplete="new-password"
+                          onFocus={() => {
+                            if (oj.pass === SECRET_PLACEHOLDER) oj.setPass('')
+                          }}
+                        />
+                      </Field>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={oj.status === 'loading'}
+                        onClick={() => void handleVerifyOj(oj.platform)}
+                      >
+                        {oj.status === 'loading' && <Spinner data-icon="inline-start" />}
+                        验证
+                      </Button>
+                      {oj.status === 'ok' && (
+                        <span className="text-xs text-green-600">登录成功</span>
+                      )}
+                      {oj.status === 'fail' && (
+                        <span className="text-xs text-destructive" title={oj.errMsg}>
+                          验证失败{oj.errMsg ? `：${oj.errMsg.slice(0, 60)}` : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+          </FieldGroup>
+        </CollapsibleCard>
         </fieldset>
       </form>
 
