@@ -81,6 +81,7 @@ export const endpoints = {
       testEmail: `${API_PREFIX}/user/site/test-email`,
       visitPing: `${API_PREFIX}/user/site/visit-ping`,
       accessStats: `${API_PREFIX}/user/site/access-stats`,
+      verifyOj: `${API_PREFIX}/user/site/verify-oj`,
       backup: {
         export: `${API_PREFIX}/user/site/backup/export`,
         import: `${API_PREFIX}/user/site/backup/import`,

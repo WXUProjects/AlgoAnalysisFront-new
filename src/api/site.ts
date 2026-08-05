@@ -160,10 +160,7 @@ export async function updateSiteConfig(body: {
   ojQojPassword?: string
   clearOjQojPassword?: boolean
 }): Promise<ApiResult<SiteConfig>> {
-  // 保存时后端会实测洛谷/QOJ 登录（含验证码），可能超过默认 30s
-  const res = await post<Record<string, unknown>>(endpoints.user.site.config, body, {
-    timeout: 120_000,
-  })
+  const res = await post<Record<string, unknown>>(endpoints.user.site.config, body)
   if (!res.success) return { ...res, data: null }
   const raw = pickRaw(res)
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
@@ -174,6 +171,27 @@ export async function updateSiteConfig(body: {
     }
   }
   return { ...res, data: normalizeBrand(raw) }
+}
+
+export type VerifyOjResult = {
+  ok: boolean
+  message: string
+  errorDetail: string
+}
+
+export async function verifyOjCredential(body: {
+  platform: string
+  username?: string
+  password?: string
+}): Promise<ApiResult<VerifyOjResult>> {
+  const res = await post<Record<string, unknown>>(endpoints.user.site.verifyOj, body)
+  if (!res.success) return { ...res, data: null }
+  const raw = pickRaw(res)
+  return {
+    success: typeof raw?.code === 'number' ? raw.code === 0 : res.success,
+    message: str(raw?.message, res.message),
+    data: { ok: Boolean(raw?.ok), message: str(raw?.message), errorDetail: str(raw?.errorDetail) },
+  }
 }
 
 export async function testSiteEmail(body: {
