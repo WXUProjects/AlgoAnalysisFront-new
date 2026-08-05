@@ -47,6 +47,15 @@ const RESOURCE_LABELS: Record<string, string> = {
   load: '系统负载',
 }
 
+/** 时序图 X 轴时间：unix 秒 → HH:mm */
+function chartHHMM(t: number): string {
+  if (!t) return '-'
+  const d = new Date(t * 1000)
+  const h = String(d.getHours()).padStart(2, '0')
+  const m = String(d.getMinutes()).padStart(2, '0')
+  return `${h}:${m}`
+}
+
 function statusColor(status: string): string {
   switch (status) {
     case 'ok':
@@ -353,7 +362,7 @@ function ResourceTrendCard() {
   }, [load])
 
   const chartData = (samples || []).map((s) => ({
-    time: formatTime(s.t).slice(5),
+    time: chartHHMM(s.t),
     cpu: Math.round(s.cpu * 10) / 10,
     mem: Math.round(s.mem * 10) / 10,
   }))
