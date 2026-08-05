@@ -221,6 +221,8 @@ export const endpoints = {
       updatePlatform: `${API_PREFIX}/core/spider/update-platform`,
       submitInventory: `${API_PREFIX}/core/spider/submit-inventory`,
       purgeSubmitsAndRecrawl: `${API_PREFIX}/core/spider/purge-submits-and-recrawl`,
+      /** 站管：各 OJ 爬虫模块监控（提交/题库/比赛/账号） */
+      monitor: `${API_PREFIX}/core/spider/monitor`,
     },
     health: {
       overview: `${API_PREFIX}/core/health/overview`,
@@ -414,6 +416,53 @@ export type Platform =
   | 'LOJ'
   | 'UOJ'
   | 'POJ'
+
+/** 单个 OJ 的爬虫各模块监控（GET /core/spider/monitor 返回项） */
+export interface SpiderPlatformStat {
+  platform: Platform | string
+  /** 绑定该 OJ 的用户数 */
+  boundUsers: number
+  /** 该 OJ 已入库提交记录数 */
+  submitCount: number
+  /** 今日入队任务数 */
+  todayEnqueued: number
+  /** 今日成功任务数 */
+  todayOk: number
+  /** 今日失败任务数 */
+  todayFail: number
+  /** 最近一次成功同步（unix 秒；0=无） */
+  lastOkAt: number
+  /** 最近一次同步失败（unix 秒；0=无） */
+  lastFailAt: number
+  /** 最近一次失败短文案 */
+  lastError: string
+  /** 题库模块：已入库题目数 */
+  problemCount: number
+  /** 比赛模块：日历已入库场次数 */
+  contestCount: number
+  /** 是否有提交爬虫能力 */
+  hasSubmitFetcher: boolean
+  /** 是否有题库爬虫能力 */
+  hasProblemFetch: boolean
+  /** 是否有比赛日历能力 */
+  hasContestCalendar: boolean
+  /** 是否有全局账号（洛谷/QOJ） */
+  hasAccount: boolean
+  /** 账号状态（ok/fail/unchecked；无全局账号时忽略） */
+  accountStatus: string
+  /** 账号最近状态时间（unix 秒） */
+  accountAt: number
+  /** 账号失败原因 */
+  accountErr: string
+}
+
+/** 各 OJ 爬虫监控响应（GET /core/spider/monitor） */
+export interface SpiderMonitorRes {
+  code: number
+  message: string
+  platforms: SpiderPlatformStat[]
+  collectedAt: number
+}
 
 /** 题单系统类型 */
 export type ProblemsetKind = 'favorites' | 'todo' | 'custom' | string

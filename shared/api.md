@@ -775,6 +775,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/spider/update-all` | 是(站点管理员) | 全站用户全量更新 |
 | POST | `/core/spider/update-platform` | 是(站点管理员) | 仅某平台全量回填；body `{ platform: "LeetCode" }`；清该平台 pending/inflight 后 needAll 入队 |
 | GET | `/core/spider/submit-inventory` | 是(站点管理员) | 真实入库库存：`submitLogsTotal` / `submitLogsRealTotal` / `oldestTime` / `newestTime`（`countedSubmitIdsTotal` 已废弃恒为 0） |
+| GET | `/core/spider/monitor` | 是(站点管理员) | 各 OJ 爬虫模块监控（提交/题库/比赛/账号），返回 `platforms[]` + `collectedAt` |
 | POST | `/core/spider/purge-submits-and-recrawl` | 是(站点管理员) | **硬清**训练数据并全量重爬；body `{ confirm: "PURGE_SUBMITS" }`。删：`submit_logs`（真假全删）、账本、日汇总、AC 预聚合、`contest_logs`、提醒发送日志 + 相关 Redis。**保留**：`platforms`、题库、公告/紧急通知、比赛日历赛程与订阅；用户账号在 user 库不动 |
 
 **SetSpiderReq**
@@ -804,6 +805,28 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 { "userId": 1 }
 ```
 仅站点管理员可调用；普通用户无手动更新入口，依赖组织定时同步与绑定后自动抓取。
+
+**SpiderMonitorRes.data**（`GET /core/spider/monitor`，仅站管；运维页爬虫监控）
+```json
+{
+  "collectedAt": 1754200000,
+  "platforms": [
+    {
+      "platform": "NowCoder",
+      "boundUsers": 128,          "submitCount": 89231,
+      "todayEnqueued": 42,        "todayOk": 39,          "todayFail": 3,
+      "lastOkAt": 1754190000,     "lastFailAt": 0,        "lastError": "",
+      "problemCount": 421,        "contestCount": 96,
+      "hasSubmitFetcher": true,   "hasProblemFetch": true, "hasContestCalendar": true,
+      "hasAccount": false,        "accountStatus": "",    "accountAt": 0, "accountErr": ""
+    }
+  ]
+}
+```
+- 固定返回 9 个 OJ（NowCoder / AtCoder / CodeForces / LuoGu / QOJ / LeetCode / LOJ / UOJ / POJ），未使用平台计数为 0
+- 模块字段：`boundUsers`（绑定用户）、`submitCount`（提交记录）、`problemCount`（题库题目）、`contestCount`（比赛日历场次）；能力开关 `hasSubmitFetcher` / `hasProblemFetch` / `hasContestCalendar`
+- 今日计数 `todayEnqueued/todayOk/todayFail` 来自按 OJ 分桶的 Redis 日计数；`lastOkAt/lastFailAt/lastError` 为按 OJ 聚合的最近一次同步状态
+- `hasAccount` 仅洛谷/QOJ 为 true（全局账号），`accountStatus` 取 `sitesettings` 登录态（ok/fail/unchecked）
 
 ### Statistic
 
@@ -1397,6 +1420,7 @@ POST   /api/core/spider/set
 POST   /api/core/spider/update
 POST   /api/core/spider/update-all
 GET    /api/core/spider/submit-inventory
+GET    /api/core/spider/monitor
 POST   /api/core/spider/purge-submits-and-recrawl
 GET    /api/core/statistic/heatmap
 GET    /api/core/statistic/period
