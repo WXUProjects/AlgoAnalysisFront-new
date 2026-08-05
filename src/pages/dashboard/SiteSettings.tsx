@@ -40,6 +40,7 @@ import { Input } from '@/components/ui/input'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Spinner } from '@/components/ui/spinner'
 import { Perm } from '@/lib/permissions'
+import { formatTime } from '@/lib/format'
 import { ChevronDown } from 'lucide-react'
 
 function formatBytes(n: number): string {
@@ -153,16 +154,23 @@ export function DashboardSiteSettings() {
   const [ojLuoguPassword, setOjLuoguPassword] = useState('')
   const [ojLuoguPasswordSet, setOjLuoguPasswordSet] = useState(false)
   const [ojLuoguStatus, setOjLuoguStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
+  const [ojLuoguStatusAt, setOjLuoguStatusAt] = useState(0)
   const [ojLuoguErrMsg, setOjLuoguErrMsg] = useState('')
   const [ojQojUsername, setOjQojUsername] = useState('')
   const [ojQojPassword, setOjQojPassword] = useState('')
   const [ojQojPasswordSet, setOjQojPasswordSet] = useState(false)
   const [ojQojStatus, setOjQojStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
+  const [ojQojStatusAt, setOjQojStatusAt] = useState(0)
   const [ojQojErrMsg, setOjQojErrMsg] = useState('')
   const [agentStatus, setAgentStatus] = useState('unchecked')
+  const [agentStatusAt, setAgentStatusAt] = useState(0)
   const [agentErrMsg, setAgentErrMsg] = useState('')
   const [aiStatus, setAiStatus] = useState('unchecked')
+  const [aiStatusAt, setAiStatusAt] = useState(0)
   const [aiErrMsg, setAiErrMsg] = useState('')
+  const [smtpStatus, setSmtpStatus] = useState('unchecked')
+  const [smtpStatusAt, setSmtpStatusAt] = useState(0)
+  const [smtpErrMsg, setSmtpErrMsg] = useState('')
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -292,16 +300,23 @@ export function DashboardSiteSettings() {
       setOjLuoguPassword(d.ojLuoguPasswordSet ? SECRET_PLACEHOLDER : '')
       setOjLuoguPasswordSet(d.ojLuoguPasswordSet)
       setOjLuoguStatus((d.ojLuoguStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
+      setOjLuoguStatusAt(d.ojLuoguStatusAt || 0)
       setOjLuoguErrMsg(d.ojLuoguErrMsg || '')
       setOjQojUsername(d.ojQojUsername || '')
       setOjQojPassword(d.ojQojPasswordSet ? SECRET_PLACEHOLDER : '')
       setOjQojPasswordSet(d.ojQojPasswordSet)
       setOjQojStatus((d.ojQojStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
+      setOjQojStatusAt(d.ojQojStatusAt || 0)
       setOjQojErrMsg(d.ojQojErrMsg || '')
       setAgentStatus(d.agentStatus || 'unchecked')
+      setAgentStatusAt(d.agentStatusAt || 0)
       setAgentErrMsg(d.agentErrMsg || '')
       setAiStatus(d.aiAnalyzeStatus || 'unchecked')
+      setAiStatusAt(d.aiAnalyzeStatusAt || 0)
       setAiErrMsg(d.aiAnalyzeErrMsg || '')
+      setSmtpStatus(d.smtpStatus || 'unchecked')
+      setSmtpStatusAt(d.smtpStatusAt || 0)
+      setSmtpErrMsg(d.smtpErrMsg || '')
     })()
     return () => {
       cancelled = true
@@ -605,6 +620,22 @@ export function DashboardSiteSettings() {
 
         <CollapsibleCard title="邮件" description="验证码、找回密码、日报/周报、审核提醒">
           <FieldGroup className="gap-3">
+            <div className="flex items-center gap-1.5 text-xs">
+              <span
+                className={`inline-block size-2 rounded-full ${
+                  smtpStatus === 'ok'
+                    ? 'bg-green-500'
+                    : smtpStatus === 'fail'
+                      ? 'bg-red-500'
+                      : 'bg-muted-foreground/30'
+                }`}
+              />
+              邮件服务：{smtpStatus === 'ok' ? '正常' : smtpStatus === 'fail' ? '异常' : '未验证'}
+              {smtpStatusAt > 0 && (
+                <span className="text-muted-foreground">· 最近发送 {formatTime(smtpStatusAt)}</span>
+              )}
+              {smtpErrMsg && <span className="text-muted-foreground truncate max-w-56" title={smtpErrMsg}>{smtpErrMsg}</span>}
+            </div>
             <Field className="gap-1.5">
               <FieldLabel htmlFor="admin-notify-emails">
                 审核 / 举报邮件接收人
@@ -705,30 +736,39 @@ export function DashboardSiteSettings() {
 
         <CollapsibleCard title="AI 服务" description="日报/周报模型 + 题库分析">
           <FieldGroup className="gap-3">
-            <div className="flex items-center gap-2 text-xs">
-              <span
-                className={`inline-block size-2 rounded-full ${
-                  agentStatus === 'ok'
-                    ? 'bg-green-500'
-                    : agentStatus === 'fail'
-                      ? 'bg-red-500'
-                      : 'bg-muted-foreground/30'
-                }`}
-              />
-              日报模型：{agentStatus === 'ok' ? '正常' : agentStatus === 'fail' ? '异常' : '未验证'}
-              {agentErrMsg && <span className="text-muted-foreground truncate max-w-48" title={agentErrMsg}>{agentErrMsg}</span>}
-              <span className="mx-2 text-muted-foreground">·</span>
-              <span
-                className={`inline-block size-2 rounded-full ${
-                  aiStatus === 'ok'
-                    ? 'bg-green-500'
-                    : aiStatus === 'fail'
-                      ? 'bg-red-500'
-                      : 'bg-muted-foreground/30'
-                }`}
-              />
-              题库分析：{aiStatus === 'ok' ? '正常' : aiStatus === 'fail' ? '异常' : '未验证'}
-              {aiErrMsg && <span className="text-muted-foreground truncate max-w-48" title={aiErrMsg}>{aiErrMsg}</span>}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className={`inline-block size-2 rounded-full ${
+                    agentStatus === 'ok'
+                      ? 'bg-green-500'
+                      : agentStatus === 'fail'
+                        ? 'bg-red-500'
+                        : 'bg-muted-foreground/30'
+                  }`}
+                />
+                日报模型：{agentStatus === 'ok' ? '正常' : agentStatus === 'fail' ? '异常' : '未验证'}
+                {agentStatusAt > 0 && (
+                  <span className="text-muted-foreground">· {formatTime(agentStatusAt)}</span>
+                )}
+                {agentErrMsg && <span className="text-muted-foreground truncate max-w-40" title={agentErrMsg}>{agentErrMsg}</span>}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className={`inline-block size-2 rounded-full ${
+                    aiStatus === 'ok'
+                      ? 'bg-green-500'
+                      : aiStatus === 'fail'
+                        ? 'bg-red-500'
+                        : 'bg-muted-foreground/30'
+                  }`}
+                />
+                题库分析：{aiStatus === 'ok' ? '正常' : aiStatus === 'fail' ? '异常' : '未验证'}
+                {aiStatusAt > 0 && (
+                  <span className="text-muted-foreground">· {formatTime(aiStatusAt)}</span>
+                )}
+                {aiErrMsg && <span className="text-muted-foreground truncate max-w-40" title={aiErrMsg}>{aiErrMsg}</span>}
+              </span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field className="gap-1.5">
@@ -882,6 +922,7 @@ export function DashboardSiteSettings() {
                 setPass: setOjLuoguPassword,
                 passSet: ojLuoguPasswordSet,
                 status: ojLuoguStatus,
+                statusAt: ojLuoguStatusAt,
                 errMsg: ojLuoguErrMsg,
                 platform: 'LuoGu' as const,
               },
@@ -894,6 +935,7 @@ export function DashboardSiteSettings() {
                 setPass: setOjQojPassword,
                 passSet: ojQojPasswordSet,
                 status: ojQojStatus,
+                statusAt: ojQojStatusAt,
                 errMsg: ojQojErrMsg,
                 platform: 'QOJ' as const,
               },
@@ -971,7 +1013,10 @@ export function DashboardSiteSettings() {
                         验证
                       </Button>
                       {oj.status === 'ok' && (
-                        <span className="text-xs text-green-600">登录成功</span>
+                        <span className="text-xs text-green-600">
+                          登录成功
+                          {oj.statusAt > 0 ? ` · ${formatTime(oj.statusAt)}` : ''}
+                        </span>
                       )}
                       {oj.status === 'fail' && (
                         <span className="text-xs text-destructive" title={oj.errMsg}>

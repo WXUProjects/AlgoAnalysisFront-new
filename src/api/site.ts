@@ -59,6 +59,9 @@ export type SiteAdminConfig = SiteConfig & {
   aiAnalyzeStatus: string
   aiAnalyzeStatusAt: number
   aiAnalyzeErrMsg: string
+  smtpStatus: string
+  smtpStatusAt: number
+  smtpErrMsg: string
 }
 
 function normalizeBrand(raw: Record<string, unknown> | null | undefined): SiteConfig {
@@ -114,6 +117,9 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     aiAnalyzeStatus: str(d.aiAnalyzeStatus, 'unchecked'),
     aiAnalyzeStatusAt: num(d.aiAnalyzeStatusAt, 0),
     aiAnalyzeErrMsg: str(d.aiAnalyzeErrMsg),
+    smtpStatus: str(d.smtpStatus, 'unchecked'),
+    smtpStatusAt: num(d.smtpStatusAt, 0),
+    smtpErrMsg: str(d.smtpErrMsg),
   }
 }
 

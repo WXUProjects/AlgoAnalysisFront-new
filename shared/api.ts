@@ -222,6 +222,9 @@ export const endpoints = {
       submitInventory: `${API_PREFIX}/core/spider/submit-inventory`,
       purgeSubmitsAndRecrawl: `${API_PREFIX}/core/spider/purge-submits-and-recrawl`,
     },
+    health: {
+      overview: `${API_PREFIX}/core/health/overview`,
+    },
     statistic: {
       heatmap: `${API_PREFIX}/core/statistic/heatmap`,
       period: `${API_PREFIX}/core/statistic/period`,
