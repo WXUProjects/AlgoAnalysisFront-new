@@ -511,7 +511,9 @@ export function DashboardSiteSettings() {
       toast.success(`${platform === 'LuoGu' ? '洛谷' : 'QOJ'} 验证通过`)
     } else {
       setStatus('fail')
-      setErr(res.data?.errorDetail || res.message || '验证失败')
+      const detail = res.data?.errorDetail || res.message || '验证失败'
+      setErr(detail)
+      toast.error(detail)
     }
   }
 

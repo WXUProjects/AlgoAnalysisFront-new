@@ -208,13 +208,17 @@ export async function verifyOjCredential(body: {
   username?: string
   password?: string
 }): Promise<ApiResult<VerifyOjResult>> {
-  const res = await post<Record<string, unknown>>(endpoints.user.site.verifyOj, body)
-  if (!res.success) return { ...res, data: null }
+  const res = await post<Record<string, unknown>>(endpoints.user.site.verifyOj, body, {
+    skipAuthExpired: true,
+  })
   const raw = pickRaw(res)
+  const ok = Boolean(raw?.ok)
+  const msg = str(raw?.message, res.message)
+  const detail = str(raw?.errorDetail)
   return {
-    success: typeof raw?.code === 'number' ? raw.code === 0 : res.success,
-    message: str(raw?.message, res.message),
-    data: { ok: Boolean(raw?.ok), message: str(raw?.message), errorDetail: str(raw?.errorDetail) },
+    success: ok || (typeof raw?.code === 'number' && raw.code === 0),
+    message: detail || msg || (ok ? '验证通过' : '验证失败'),
+    data: { ok, message: msg, errorDetail: detail },
   }
 }
 
