@@ -290,7 +290,7 @@ export function BlogPlaza() {
                 </EmptyTitle>
                 <EmptyDescription>
                   {keyword
-                    ? '换个关键词试试，或清空搜索看全部'
+                    ? '换个关键词，或清空搜索查看全部'
                     : sort === 'recommend'
                       ? '管理员挑选后，优质公开文会出现在这里'
                       : isLogin && blogActivated

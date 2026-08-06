@@ -701,7 +701,7 @@ export function QuestionBank() {
                 {!list.length && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      没有找到题目，试试调整筛选条件
+                      没有找到题目，可调整筛选条件
                     </TableCell>
                   </TableRow>
                 )}
