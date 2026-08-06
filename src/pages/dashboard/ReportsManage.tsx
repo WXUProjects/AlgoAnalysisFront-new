@@ -191,7 +191,7 @@ export function DashboardReportsManage() {
 
   const emptyText = useMemo(() => {
     const tabLabel = SOURCE_TABS.find((t) => t.value === tab)?.label ?? ''
-    if (status === 'pending') return `当前没有待处理的${tabLabel}举报`
+    if (status === 'pending') return `没有待处理的${tabLabel}举报，太棒了`
     return `没有符合筛选条件的${tabLabel}举报`
   }, [tab, status])
 

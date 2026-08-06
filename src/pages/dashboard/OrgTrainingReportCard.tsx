@@ -353,7 +353,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
               <EmptyHeader>
                 <EmptyTitle>还没有导出记录</EmptyTitle>
                 <EmptyDescription>
-                  点「一键生成上周报告」，或选好日期后点「按下方日期生成」。
+                  点「一键生成上周报告」，或选好日期后点「按下方日期生成」，第一份会出现在这里。
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>

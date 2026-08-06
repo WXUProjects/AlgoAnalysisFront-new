@@ -360,9 +360,9 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
   if (!data || !hasProfileContent(data)) {
     return (
       <div className="flex flex-col items-center justify-center gap-1.5 py-10 text-center">
-        <p className="text-sm text-foreground/80">画像生成中</p>
+        <p className="text-sm text-foreground/80">画像正在加紧构建中</p>
         <p className="text-xs text-muted-foreground">
-          同步做题数据后自动生成，刷新后查看
+          同步做题数据后会自动生成，稍后再刷新看看
         </p>
       </div>
     )
