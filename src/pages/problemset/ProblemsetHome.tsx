@@ -413,7 +413,7 @@ export function ProblemsetHome() {
           ) : mine.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
-                暂无题单，可点右上角新建
+                还没有题单，点右上角新建一个吧
               </CardContent>
             </Card>
           ) : (

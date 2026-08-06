@@ -671,7 +671,7 @@ export function QuestionBankDetail() {
                         </div>
                       ) : mySets.length === 0 ? (
                         <div className="px-2 py-3 text-sm text-muted-foreground">
-                          还没有题单。可先去题单页创建。
+                          还没有题单，去题单页建一个吧
                         </div>
                       ) : (
                         <DropdownMenuGroup>
