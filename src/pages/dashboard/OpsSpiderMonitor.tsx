@@ -15,7 +15,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import {
   Card,
@@ -23,8 +22,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { formatCompactNumber, formatTime } from '@/lib/format'
 import { formatSyncAge, spiderPlatformLabel } from '@/lib/spider-health'
 import { Perm } from '@/lib/permissions'
@@ -123,6 +122,7 @@ function SpiderMonitorCard({
   const overall = cardTone(statuses)
   const moduleLabels = ['提交', '题库', '比赛', '账号']
   const paused = stat.paused
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const lastSyncText =
     stat.lastOkAt > 0
@@ -132,6 +132,14 @@ function SpiderMonitorCard({
         : '暂无同步'
   const hasRecentFail = stat.lastFailAt > 0 && stat.lastFailAt >= stat.lastOkAt
   const failText = hasRecentFail ? `最近失败 ${formatTime(stat.lastFailAt)}` : null
+
+  function handleSwitchChange(v: boolean) {
+    if (v) {
+      onToggle?.(true)
+    } else {
+      setConfirmOpen(true)
+    }
+  }
 
   return (
     <div className={cn('rounded-xl border bg-card p-3.5', paused && 'border-amber-500/40')}>
@@ -160,33 +168,37 @@ function SpiderMonitorCard({
             </span>
           )}
           {onToggle ? (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button type="button" size="sm" variant="outline" disabled={toggling}>
-                  {paused ? '启用' : '关闭'}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {paused
-                      ? `恢复 ${spiderPlatformLabel(stat.platform)} 同步？`
-                      : `关闭 ${spiderPlatformLabel(stat.platform)} 同步？`}
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {paused
-                      ? '恢复后该 OJ 将重新开始抓取已绑定用户的提交与比赛数据。'
-                      : '已绑定用户与历史数据都会保留，只是不再同步；绑定该 OJ 的用户仍可继续绑定。'}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>取消</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onToggle(paused)}>
-                    {paused ? '恢复同步' : '确认关闭'}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <>
+              <Switch
+                checked={!paused}
+                disabled={toggling}
+                onCheckedChange={handleSwitchChange}
+                aria-label={paused ? '启用同步' : '暂停同步'}
+              />
+              <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      关闭 {spiderPlatformLabel(stat.platform)} 同步？
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      已绑定用户与历史数据都会保留，只是不再同步；绑定该 OJ 的用户仍可继续绑定。
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>取消</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        setConfirmOpen(false)
+                        onToggle(false)
+                      }}
+                    >
+                      确认关闭
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           ) : null}
         </div>
       </div>
