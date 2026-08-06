@@ -100,10 +100,8 @@ function SpiderMonitorCard({ stat }: { stat: SpiderPlatformStat }) {
       : stat.boundUsers > 0
         ? '尚未成功同步'
         : '暂无同步'
-  const failText =
-    stat.lastFailAt > 0
-      ? `最近失败 ${formatTime(stat.lastFailAt)}`
-      : null
+  const hasRecentFail = stat.lastFailAt > 0 && stat.lastFailAt >= stat.lastOkAt
+  const failText = hasRecentFail ? `最近失败 ${formatTime(stat.lastFailAt)}` : null
 
   return (
     <div className="rounded-xl border bg-card p-3.5">
