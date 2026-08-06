@@ -665,8 +665,8 @@ export function ContestCalendar() {
                   <CardTitle>暂时还没有赛程</CardTitle>
                   <CardDescription>
                     {hasFilters
-                      ? '当前筛选下没有比赛，可放宽筛选条件。'
-                      : '暂无可展示的赛程。'}
+                      ? '当前筛选下没有比赛，试试放宽条件。'
+                      : '暂时没有可展示的赛程，稍后再来看看。'}
                   </CardDescription>
                 </CardHeader>
               </Card>
