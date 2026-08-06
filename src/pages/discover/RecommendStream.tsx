@@ -174,7 +174,7 @@ export function RecommendStream() {
                 </EmptyDescription>
               </EmptyHeader>
               <Button variant="outline" size="sm" className="mt-2" asChild>
-                <Link to="/blog-plaza">逛博客广场</Link>
+                <Link to="/blog-plaza">去博客广场</Link>
               </Button>
             </Empty>
           }

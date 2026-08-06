@@ -445,7 +445,7 @@ export function ContestRecords() {
           <Card className="py-4">
             <CardContent className="px-4 text-sm text-muted-foreground">
               {hasFilters
-                ? '没有符合条件的比赛，试试放宽筛选条件'
+                ? '没有符合条件的比赛，可放宽筛选条件'
                 : '暂时还没有比赛记录'}
             </CardContent>
           </Card>

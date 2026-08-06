@@ -303,7 +303,7 @@ export function BlogComments({
       <ul className="divide-y">
         {comments.length === 0 ? (
           <li className="py-6 text-center text-sm text-muted-foreground">
-            还没有评论，来抢沙发吧
+            还没有评论，写下第一条评论
           </li>
         ) : (
           comments.map((c) => (

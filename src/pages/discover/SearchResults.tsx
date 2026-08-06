@@ -163,7 +163,7 @@ export function DiscoverSearchResults({
                 </EmptyMedia>
                 <EmptyTitle>没有找到匹配的用户</EmptyTitle>
                 <EmptyDescription>
-                  换个关键词试试，或返回继续浏览动态与组织
+                  换个关键词再搜一次
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>

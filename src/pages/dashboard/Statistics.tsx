@@ -362,7 +362,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     desc = '查看全站用户的提交与通过情况。'
   } else if (roleForCopy === OrgRole.OrgAdmin) {
     title = `${orgName} · 组织管理`
-    desc = '成员活跃、训练参与与待办审批。'
+    desc = '查看成员活跃、训练参与与待办审批。'
   } else if (roleForCopy === OrgRole.Coach) {
     title = `${orgName} · 教练工作台`
     desc = '按时间范围查看训练参与与成员排行。'
@@ -631,7 +631,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
               <EmptyHeader>
                 <EmptyTitle>这段时间还没有提交</EmptyTitle>
                 <EmptyDescription>
-                  换一个时间范围，或等队员刷题同步后再来看趋势。
+                  可更换时间范围，或等提交数据同步后查看。
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -677,7 +677,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
                   <EmptyHeader>
                     <EmptyTitle>本期还没有排行</EmptyTitle>
                     <EmptyDescription>
-                      队员有通过记录后会出现在这里。也可以先去「成员管理」看看同步状态。
+                      队员有通过记录后会出现在这里，同步状态可在「成员管理」查看。
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>

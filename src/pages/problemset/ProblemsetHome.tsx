@@ -444,7 +444,7 @@ export function ProblemsetHome() {
           ) : favorites.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
-                <p>还没有收藏别人的题单，去广场看看</p>
+                <p>还没有收藏的题单</p>
                 <Button
                   type="button"
                   variant="secondary"
