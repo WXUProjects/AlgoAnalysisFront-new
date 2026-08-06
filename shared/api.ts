@@ -133,6 +133,8 @@ export const endpoints = {
       get: `${API_PREFIX}/user/paste/get`,
       mine: `${API_PREFIX}/user/paste/mine`,
       delete: `${API_PREFIX}/user/paste/delete`,
+      /** 站管/内容治理：当前全部未过期粘贴内容（事后审查） */
+      adminList: `${API_PREFIX}/user/paste/admin-list`,
     },
     blog: {
       byUsername: `${API_PREFIX}/user/blog/by-username`,
@@ -223,6 +225,8 @@ export const endpoints = {
       purgeSubmitsAndRecrawl: `${API_PREFIX}/core/spider/purge-submits-and-recrawl`,
       /** 站管：各 OJ 爬虫模块监控（提交/题库/比赛/账号） */
       monitor: `${API_PREFIX}/core/spider/monitor`,
+      /** 站管：暂停/恢复某 OJ 的爬虫同步 body: { platform, enabled } */
+      togglePlatform: `${API_PREFIX}/core/spider/toggle-platform`,
     },
     health: {
       overview: `${API_PREFIX}/core/health/overview`,
@@ -428,6 +432,8 @@ export interface SpiderPlatformStat {
   submitCount: number
   /** 今日入队任务数 */
   todayEnqueued: number
+  /** 今日新入库（写入数据库）提交记录条数 */
+  todayRows: number
   /** 今日成功任务数 */
   todayOk: number
   /** 今日失败任务数 */
@@ -456,6 +462,8 @@ export interface SpiderPlatformStat {
   accountAt: number
   /** 账号失败原因 */
   accountErr: string
+  /** 站管是否已暂停该 OJ 的爬虫同步（true=暂停；绑定用户仍在，只是不再同步） */
+  paused: boolean
 }
 
 /** 各 OJ 爬虫监控响应（GET /core/spider/monitor） */
@@ -1334,6 +1342,14 @@ export interface PasteCreateReq {
   content: string
   language?: string
   expire?: PasteExpire
+}
+
+/** 粘贴板审查条目（站管/内容治理查看当前有效粘贴内容） */
+export interface PasteAdminItem extends PasteInfo {
+  /** 创建者用户名（账号已删除时为空） */
+  username?: string
+  /** 创建者昵称 */
+  name?: string
 }
 
 /** 站内通知类型 */

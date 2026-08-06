@@ -142,6 +142,11 @@ export const DashboardOps = lazy(() =>
     default: m.DashboardOps,
   })),
 )
+export const DashboardPasteReview = lazy(() =>
+  import('@/pages/dashboard/PasteReview').then((m) => ({
+    default: m.DashboardPasteReview,
+  })),
+)
 export const DashboardOrgSettings = lazy(() =>
   import('@/pages/dashboard/OrgSettings').then((m) => ({
     default: m.DashboardOrgSettings,

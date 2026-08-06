@@ -125,6 +125,14 @@ export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[]
       section: 'content',
       isActive: (p) => pathActive(p, '/admin/reports'),
     },
+    {
+      to: '/admin/paste-review',
+      label: '粘贴板审查',
+      icon: ClipboardCheckIcon,
+      anyOf: [Perm.ContentCommunityMod, Perm.ContentReportHandle],
+      section: 'content',
+      isActive: (p) => pathActive(p, '/admin/paste-review'),
+    },
     // —— 站点管理（全站范围）：数据 → 用户/组织/权限 → 触达 → 流水线 → 配置/运维 ——
     {
       to: '/admin/site-statistics',

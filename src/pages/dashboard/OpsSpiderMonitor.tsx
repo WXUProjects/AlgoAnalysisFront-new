@@ -1,25 +1,43 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getSpiderMonitor, type SpiderPlatformStat } from '@/api/ops'
+import { toast } from 'sonner'
+import {
+  getSpiderMonitor,
+  togglePlatformSync,
+  type SpiderPlatformStat,
+} from '@/api/ops'
 import { useAuth } from '@/auth/AuthContext'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCompactNumber, formatTime } from '@/lib/format'
 import { formatSyncAge, spiderPlatformLabel } from '@/lib/spider-health'
 import { Perm } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 
-type Tone = 'ok' | 'warn' | 'fail' | 'muted'
+type Tone = 'ok' | 'warn' | 'fail' | 'muted' | 'paused'
 
 const TONE_DOT: Record<Tone, string> = {
   ok: 'bg-green-500',
   warn: 'bg-yellow-500',
   fail: 'bg-red-500',
   muted: 'bg-muted-foreground/30',
+  paused: 'bg-amber-500',
 }
 
 const TONE_TEXT: Record<Tone, string> = {
@@ -27,10 +45,11 @@ const TONE_TEXT: Record<Tone, string> = {
   warn: 'text-yellow-600',
   fail: 'text-red-600',
   muted: 'text-muted-foreground',
+  paused: 'text-amber-600',
 }
 
 function worstTone(a: Tone, b: Tone): Tone {
-  const rank: Record<Tone, number> = { muted: 0, ok: 1, warn: 2, fail: 3 }
+  const rank: Record<Tone, number> = { muted: 0, paused: 1, ok: 2, warn: 3, fail: 4 }
   return rank[a] >= rank[b] ? a : b
 }
 
@@ -47,7 +66,9 @@ type ModuleStatus = { tone: Tone; label: string }
 
 function moduleStatuses(p: SpiderPlatformStat): ModuleStatus[] {
   let submit: ModuleStatus
-  if (!p.hasSubmitFetcher) {
+  if (p.paused) {
+    submit = { tone: 'muted', label: '暂停同步' }
+  } else if (!p.hasSubmitFetcher) {
     submit = { tone: 'muted', label: '不支持' }
   } else if (p.boundUsers <= 0) {
     submit = { tone: 'muted', label: '无绑定' }
@@ -89,10 +110,19 @@ function cardTone(statuses: ModuleStatus[]): Tone {
   return statuses.reduce<Tone>((acc, s) => worstTone(acc, s.tone), 'muted')
 }
 
-function SpiderMonitorCard({ stat }: { stat: SpiderPlatformStat }) {
+function SpiderMonitorCard({
+  stat,
+  onToggle,
+  toggling,
+}: {
+  stat: SpiderPlatformStat
+  onToggle?: (enabled: boolean) => void
+  toggling: boolean
+}) {
   const statuses = moduleStatuses(stat)
   const overall = cardTone(statuses)
   const moduleLabels = ['提交', '题库', '比赛', '账号']
+  const paused = stat.paused
 
   const lastSyncText =
     stat.lastOkAt > 0
@@ -104,30 +134,68 @@ function SpiderMonitorCard({ stat }: { stat: SpiderPlatformStat }) {
   const failText = hasRecentFail ? `最近失败 ${formatTime(stat.lastFailAt)}` : null
 
   return (
-    <div className="rounded-xl border bg-card p-3.5">
+    <div className={cn('rounded-xl border bg-card p-3.5', paused && 'border-amber-500/40')}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1.5">
-          <StatusDot tone={overall} />
+          <StatusDot tone={paused ? 'paused' : overall} />
           <span className="truncate text-sm font-semibold">
             {spiderPlatformLabel(stat.platform)}
           </span>
+          {paused && (
+            <span className="shrink-0 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
+              暂停同步
+            </span>
+          )}
         </div>
-        <span className={cn('shrink-0 text-xs font-medium', TONE_TEXT[overall])}>
-          {overall === 'fail'
-            ? '异常'
-            : overall === 'warn'
-              ? '待关注'
-              : overall === 'ok'
-                ? '正常'
-                : '未使用'}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {!paused && (
+            <span className={cn('text-xs font-medium', TONE_TEXT[overall])}>
+              {overall === 'fail'
+                ? '异常'
+                : overall === 'warn'
+                  ? '待关注'
+                  : overall === 'ok'
+                    ? '正常'
+                    : '未使用'}
+            </span>
+          )}
+          {onToggle ? (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" size="sm" variant="outline" disabled={toggling}>
+                  {paused ? '启用' : '关闭'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {paused
+                      ? `恢复 ${spiderPlatformLabel(stat.platform)} 同步？`
+                      : `关闭 ${spiderPlatformLabel(stat.platform)} 同步？`}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {paused
+                      ? '恢复后该 OJ 将重新开始抓取已绑定用户的提交与比赛数据。'
+                      : '已绑定用户与历史数据都会保留，只是不再同步；绑定该 OJ 的用户仍可继续绑定。'}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onToggle(paused)}>
+                    {paused ? '恢复同步' : '确认关闭'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
         <Mini label="绑定用户" value={formatCompactNumber(stat.boundUsers)} />
         <Mini label="提交记录" value={formatCompactNumber(stat.submitCount)} />
         <Mini label="今日 成功/失败" value={`${formatCompactNumber(stat.todayOk)} / ${formatCompactNumber(stat.todayFail)}`} />
-        <Mini label="今日入队" value={formatCompactNumber(stat.todayEnqueued)} />
+        <Mini label="今日入库" value={formatCompactNumber(stat.todayRows)} />
       </div>
 
       <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5">
@@ -183,9 +251,13 @@ function Mini({ label, value }: { label: string; value: string }) {
 }
 
 function SpiderMonitorSectionInner() {
+  const { can } = useAuth()
   const [data, setData] = useState<SpiderPlatformStat[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [toggling, setToggling] = useState(false)
+  const canToggle =
+    can(Perm.SiteConfigWrite) || can(Perm.SiteSpiderOps)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -198,6 +270,25 @@ function SpiderMonitorSectionInner() {
     setData(res.data)
     setError('')
   }, [])
+
+  const handleToggle = useCallback(
+    async (stat: SpiderPlatformStat, enabled: boolean) => {
+      setToggling(true)
+      const res = await togglePlatformSync(stat.platform, enabled)
+      setToggling(false)
+      if (res.success) {
+        toast.success(
+          enabled
+            ? `${spiderPlatformLabel(stat.platform)} 已恢复同步`
+            : `${spiderPlatformLabel(stat.platform)} 已关闭同步`,
+        )
+        void load()
+      } else {
+        toast.error(res.message || '操作失败，请稍后重试')
+      }
+    },
+    [load],
+  )
 
   useEffect(() => {
     void load()
@@ -247,7 +338,12 @@ function SpiderMonitorSectionInner() {
       <CardContent>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(data || []).map((s) => (
-            <SpiderMonitorCard key={s.platform} stat={s} />
+            <SpiderMonitorCard
+              key={s.platform}
+              stat={s}
+              onToggle={canToggle ? (enabled) => void handleToggle(s, enabled) : undefined}
+              toggling={toggling}
+            />
           ))}
         </div>
       </CardContent>

@@ -23,6 +23,7 @@ export async function getSpiderMonitor(): Promise<ApiResult<SpiderPlatformStat[]
       boundUsers: num(p.boundUsers, 0),
       submitCount: num(p.submitCount, 0),
       todayEnqueued: num(p.todayEnqueued, 0),
+      todayRows: num(p.todayRows, 0),
       todayOk: num(p.todayOk, 0),
       todayFail: num(p.todayFail, 0),
       lastOkAt: num(p.lastOkAt, 0),
@@ -37,8 +38,16 @@ export async function getSpiderMonitor(): Promise<ApiResult<SpiderPlatformStat[]
       accountStatus: str(p.accountStatus),
       accountAt: num(p.accountAt, 0),
       accountErr: str(p.accountErr),
+      paused: bool(p.paused),
     })),
   }
+}
+
+export async function togglePlatformSync(
+  platform: string,
+  enabled: boolean,
+): Promise<ApiResult<unknown>> {
+  return post(endpoints.core.spider.togglePlatform, { platform, enabled })
 }
 
 export async function getSubmitInventory(): Promise<ApiResult<SubmitInventory>> {

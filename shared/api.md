@@ -225,8 +225,8 @@
 | POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc\|blog\|blog_cover`。本地用途 ≤3MB（jpg/png/gif/webp/ico/**svg**；svg 拒脚本）。**`blog`/`blog_cover`**：走又拍云（需站点配置又拍云 + 站管在 `/admin/blog` 授权该用户），清晰度优先压缩，≤约 12MB 原图，返回公网 `{ url, hash }`（`hash`=落库字节 SHA-256，内容寻址 key `/blog/{uid}/{hash}{ext}`）；未授权或未配置则 403。本地 url 带真实扩展名 |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
 | GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo） |
-| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** / **OJ 爬虫账号** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails`） |
-| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails`；密钥空串表示不修改。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
+| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** / **OJ 爬虫账号** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails` + `opsNotifyEmails`） |
+| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails` + `opsNotifyEmails`；密钥空串表示不修改。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
 | POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
 | GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |
@@ -343,7 +343,7 @@
 }
 ```
 
-说明：`smtp` / `agent` / `ai_analyze` / **`upyun`** / **OJ 爬虫账号（洛谷、QOJ）** 原硬编码或 yaml 已迁入站点设置；服务 yaml 仅作启动兜底。保存后写入 DB 并同步 Redis。填写了洛谷/QOJ 用户名时，保存会先实测登录再落库。`footerIcp` 为空时前端页脚使用默认备案号。`adminNotifyEmails` 为审核/举报邮件接收人（逗号或换行分隔）；留空则发给全部站点管理员账号邮箱；**不影响**站内信收件人。又拍云 / OJ 密码**不得**写入仓库源码。
+说明：`smtp` / `agent` / `ai_analyze` / **`upyun`** / **OJ 爬虫账号（洛谷、QOJ）** 原硬编码或 yaml 已迁入站点设置；服务 yaml 仅作启动兜底。保存后写入 DB 并同步 Redis。填写了洛谷/QOJ 用户名时，保存会先实测登录再落库。`footerIcp` 为空时前端页脚使用默认备案号。`adminNotifyEmails` 为审核/举报邮件接收人（逗号或换行分隔）；留空则发给全部站点管理员账号邮箱；**不影响**站内信收件人。`opsNotifyEmails` 为**运维告警**邮件接收人（逗号或换行分隔）；留空则运维告警不发邮件。又拍云 / OJ 密码**不得**写入仓库源码。
 
 ### Paste（粘贴板 / Pastebin）
 
@@ -355,6 +355,7 @@ HTTP 手写路由。创建需登录；公开查看不需登录。
 | GET | `/user/paste/get` | 否 | query: `slug`；过期返回 404 |
 | GET | `/user/paste/mine` | 是 | 我创建的最近 50 条（不含正文） |
 | POST | `/user/paste/delete` | 是 | body: `{ slug }`；本人或站点管理员 |
+| GET | `/user/paste/admin-list` | 站管/内容治理 | query: `page, pageSize`；**当前全部未过期**粘贴内容（含正文，事后审查）；过期仍按既有逻辑正常删除 |
 
 **Paste**
 
@@ -776,6 +777,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/spider/update-platform` | 是(站点管理员) | 仅某平台全量回填；body `{ platform: "LeetCode" }`；清该平台 pending/inflight 后 needAll 入队 |
 | GET | `/core/spider/submit-inventory` | 是(站点管理员) | 真实入库库存：`submitLogsTotal` / `submitLogsRealTotal` / `oldestTime` / `newestTime`（`countedSubmitIdsTotal` 已废弃恒为 0） |
 | GET | `/core/spider/monitor` | 是(站点管理员) | 各 OJ 爬虫模块监控（提交/题库/比赛/账号），返回 `platforms[]` + `collectedAt` |
+| POST | `/core/spider/toggle-platform` | 是(站点管理员) | 暂停/恢复某 OJ 爬虫同步；body `{ platform, enabled }`。暂停**不清空**绑定/历史数据，仅不再入队/消费该平台 |
 | POST | `/core/spider/purge-submits-and-recrawl` | 是(站点管理员) | **硬清**训练数据并全量重爬；body `{ confirm: "PURGE_SUBMITS" }`。删：`submit_logs`（真假全删）、账本、日汇总、AC 预聚合、`contest_logs`、提醒发送日志 + 相关 Redis。**保留**：`platforms`、题库、公告/紧急通知、比赛日历赛程与订阅；用户账号在 user 库不动 |
 
 **SetSpiderReq**
@@ -814,18 +816,20 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
     {
       "platform": "NowCoder",
       "boundUsers": 128,          "submitCount": 89231,
-      "todayEnqueued": 42,        "todayOk": 39,          "todayFail": 3,
+      "todayEnqueued": 42,        "todayRows": 38,        "todayOk": 39,          "todayFail": 3,
       "lastOkAt": 1754190000,     "lastFailAt": 0,        "lastError": "",
       "problemCount": 421,        "contestCount": 96,
       "hasSubmitFetcher": true,   "hasProblemFetch": true, "hasContestCalendar": true,
-      "hasAccount": false,        "accountStatus": "",    "accountAt": 0, "accountErr": ""
+      "hasAccount": false,        "accountStatus": "",    "accountAt": 0, "accountErr": "",
+      "paused": false
     }
   ]
 }
 ```
 - 固定返回 9 个 OJ（NowCoder / AtCoder / CodeForces / LuoGu / QOJ / LeetCode / LOJ / UOJ / POJ），未使用平台计数为 0
 - 模块字段：`boundUsers`（绑定用户）、`submitCount`（提交记录）、`problemCount`（题库题目）、`contestCount`（比赛日历场次）；能力开关 `hasSubmitFetcher` / `hasProblemFetch` / `hasContestCalendar`
-- 今日计数 `todayEnqueued/todayOk/todayFail` 来自按 OJ 分桶的 Redis 日计数；`lastOkAt/lastFailAt/lastError` 为按 OJ 聚合的最近一次同步状态
+- 今日计数 `todayEnqueued/todayOk/todayFail` 来自按 OJ 分桶的 Redis 日计数；`todayRows` 为今日**入库**（写入数据库）提交记录条数；`lastOkAt/lastFailAt/lastError` 为按 OJ 聚合的最近一次同步状态
+- `paused`：站管是否已暂停该 OJ 同步（暂停时绑定用户仍在，仅停止同步）
 - `hasAccount` 仅洛谷/QOJ 为 true（全局账号），`accountStatus` 取 `sitesettings` 登录态（ok/fail/unchecked）
 
 ### Health（运维监控，站点管理员）

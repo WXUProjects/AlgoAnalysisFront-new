@@ -107,3 +107,69 @@ export async function listMyPastes(): Promise<ApiResult<PasteInfo[]>> {
 export async function deletePaste(slug: string): Promise<ApiResult<unknown>> {
   return post(endpoints.user.paste.delete, { slug })
 }
+
+export type AdminPasteItem = {
+  id: number
+  slug: string
+  title: string
+  content: string
+  language: string
+  userId: number
+  createdAt: number
+  expireAt?: number | null
+  username?: string
+  name?: string
+}
+
+/** 站管/内容治理：查看当前全部未过期粘贴内容（事后审查） */
+export async function listAdminPastes(
+  page = 1,
+  pageSize = 30,
+): Promise<ApiResult<{ list: AdminPasteItem[]; total: number }>> {
+  const res = await get<Record<string, unknown>>(
+    `${endpoints.user.paste.adminList}?page=${page}&pageSize=${pageSize}`,
+  )
+  const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
+  const listRaw = Array.isArray(raw.list)
+    ? raw.list
+    : Array.isArray(res.data)
+      ? (res.data as Record<string, unknown>[])
+      : null
+  if (listRaw === null) {
+    return {
+      success: false,
+      message: res.message || '加载失败，请稍后重试',
+      data: null,
+      status: res.status,
+      raw: res.raw,
+    }
+  }
+  const normalize = (x: Record<string, unknown>): AdminPasteItem => {
+    const expireAt = x.expireAt
+    return {
+      id: num(x.id),
+      slug: str(x.slug),
+      title: str(x.title),
+      content: str(x.content),
+      language: str(x.language, 'text'),
+      userId: num(x.userId),
+      createdAt: num(x.createdAt),
+      expireAt:
+        expireAt === null || expireAt === undefined || expireAt === ''
+          ? null
+          : num(expireAt),
+      username: str(x.username) || undefined,
+      name: str(x.name) || undefined,
+    }
+  }
+  return {
+    success: true,
+    message: res.message || 'ok',
+    data: {
+      list: listRaw.map(normalize),
+      total: num(raw.total, listRaw.length) || listRaw.length,
+    },
+    raw: res.raw,
+    status: res.status,
+  }
+}

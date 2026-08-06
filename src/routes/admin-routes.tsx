@@ -13,6 +13,7 @@ import {
   DashboardOrgSettings,
   DashboardOrgStatistics,
   DashboardOrgsManage,
+  DashboardPasteReview,
   DashboardProblemEditReview,
   DashboardProblemProgress,
   DashboardReportsManage,
@@ -251,6 +252,16 @@ export const adminRoutes: RouteObject = {
         <RequirePerm anyOf={[Perm.ContentReportHandle]}>
           <Lazy>
             <DashboardReportsManage />
+          </Lazy>
+        </RequirePerm>
+      ),
+    },
+    {
+      path: 'paste-review',
+      element: (
+        <RequirePerm anyOf={[Perm.ContentCommunityMod, Perm.ContentReportHandle]}>
+          <Lazy>
+            <DashboardPasteReview />
           </Lazy>
         </RequirePerm>
       ),

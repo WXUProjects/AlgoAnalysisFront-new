@@ -142,6 +142,7 @@ export function DashboardSiteSettings() {
 
   const [inactiveDays, setInactiveDays] = useState('14')
   const [adminNotifyEmails, setAdminNotifyEmails] = useState('')
+  const [opsNotifyEmails, setOpsNotifyEmails] = useState('')
 
   const [upyunBucket, setUpyunBucket] = useState('')
   const [upyunOperator, setUpyunOperator] = useState('')
@@ -290,6 +291,7 @@ export function DashboardSiteSettings() {
       setAiSecretSet(d.aiAnalyzeSecretSet)
       setInactiveDays(String(d.inactiveDays || 14))
       setAdminNotifyEmails(d.adminNotifyEmails || '')
+      setOpsNotifyEmails(d.opsNotifyEmails || '')
       setUpyunBucket(d.upyunBucket || '')
       setUpyunOperator(d.upyunOperator || '')
       setUpyunPassword(d.upyunPasswordSet ? SECRET_PLACEHOLDER : '')
@@ -396,6 +398,7 @@ export function DashboardSiteSettings() {
       inactiveDays: days,
       setInactiveDays: true,
       adminNotifyEmails: adminNotifyEmails.trim(),
+      opsNotifyEmails: opsNotifyEmails.trim(),
       upyunBucket: upyunBucket.trim(),
       upyunOperator: upyunOperator.trim(),
       upyunPassword: upyunPw.secret,
@@ -650,6 +653,22 @@ export function DashboardSiteSettings() {
               />
               <p className="text-xs text-muted-foreground">
                 每行或逗号分隔；留空则发给全部站点管理员
+              </p>
+            </Field>
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="ops-notify-emails">
+                运维告警邮件接收人
+              </FieldLabel>
+              <textarea
+                id="ops-notify-emails"
+                value={opsNotifyEmails}
+                onChange={(e) => setOpsNotifyEmails(e.target.value)}
+                placeholder={'ops@example.com\nops2@example.com'}
+                rows={2}
+                className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full min-w-0 rounded-md border px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <p className="text-xs text-muted-foreground">
+                每行或逗号分隔；留空则运维告警不发邮件
               </p>
             </Field>
             <div className="grid gap-3 sm:grid-cols-2">
