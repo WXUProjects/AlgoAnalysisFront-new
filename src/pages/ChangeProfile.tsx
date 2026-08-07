@@ -245,7 +245,7 @@ export function ChangeProfile() {
   }
 
   return (
-    <PageShell className="mx-auto w-full max-w-lg">
+    <PageShell className="mx-auto w-full max-w-2xl">
       <Card className="gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>编辑资料</CardTitle>
