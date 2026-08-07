@@ -83,7 +83,7 @@ export function DashboardOrgSettings() {
 
   function copyDomainShareUrl() {
     if (!domainShareUrl) {
-      toast.error('暂无法生成链接，请确认已选中组织')
+      toast.error('暂时生成不了链接，确认已选中组织')
       return
     }
     void navigator.clipboard.writeText(domainShareUrl).then(
@@ -141,7 +141,7 @@ export function DashboardOrgSettings() {
     const res = await uploadImage(file, 'site')
     setLogoUploading(false)
     if (!res.success || !res.data?.url) {
-      toast.error(res.message || '上传失败，请稍后重试')
+      toast.error(res.message || '上传失败，稍后重试')
       return
     }
     setBrandLogo(res.data.url)
@@ -168,7 +168,7 @@ export function DashboardOrgSettings() {
     if (res.success) {
       toast.success('已保存')
       await refreshOrgs()
-    } else toast.error(res.message || '保存失败，请稍后重试')
+    } else toast.error(res.message || '保存失败，稍后重试')
   }
 
   // 按持有的权限决定可见区块；一个都没有则拒绝访问
@@ -178,7 +178,7 @@ export function DashboardOrgSettings() {
   if (!hasOrgAdminAccess) {
     return (
       <div className="p-6 text-sm text-muted-foreground">
-        你还没有本组织的设置权限。训练报告请到「组织数据」；需要改品牌或邀请时，请联系团队管理员开通。
+        你还没有本组织的设置权限。训练报告去「组织数据」看；要改品牌或邀请的话，找团队管理员开通。
       </div>
     )
   }

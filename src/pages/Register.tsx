@@ -92,7 +92,7 @@ export function Register() {
       toast.success(res.message || '验证码已发送')
       setCooldown(60)
     } else {
-      toast.error(res.message || '发送失败，请稍后重试')
+      toast.error(res.message || '没发出去，过会儿再试')
     }
   }
 
@@ -116,7 +116,7 @@ export function Register() {
         : '/login'
       navigate(loginPath, { replace: true })
     } else {
-      toast.error(res.message || '注册失败，请稍后重试')
+      toast.error(res.message || '注册没成功，过会儿再试')
     }
   }
 
@@ -127,10 +127,9 @@ export function Register() {
           <CardTitle>注册</CardTitle>
           <CardDescription>
             {inviteOrgName
-              ? `欢迎加入${inviteOrgName}。创建账号后将自动加入该组织（需邮箱验证）`
-              : '创建账号，需完成邮箱验证'}
-          </CardDescription>
-        </CardHeader>
+              ? `欢迎加入${inviteOrgName}～注册后会自动进队（需邮箱验证）`
+              : '创建账号，要过邮箱验证哦'}
+          </CardDescription>        </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <CardContent className="px-4">
             <FieldGroup className="gap-3">
@@ -159,7 +158,7 @@ export function Register() {
                   autoComplete="new-password"
                   value={form.password}
                   onChange={(e) => update('password', e.target.value)}
-                  placeholder="请输入密码"
+                  placeholder="密码"
                   disabled={pending}
                 />
               </Field>
@@ -171,7 +170,7 @@ export function Register() {
                   autoComplete="new-password"
                   value={form.passwordConfirm}
                   onChange={(e) => update('passwordConfirm', e.target.value)}
-                  placeholder="请再次输入密码"
+                  placeholder="再输一遍密码"
                   disabled={pending}
                 />
               </Field>
@@ -187,8 +186,8 @@ export function Register() {
                 />
                 <p className="text-xs text-muted-foreground">
                   {inviteOrgName
-                    ? `此昵称将作为你在「${inviteOrgName}」与公共域中的称呼，之后可在组织里再改。`
-                    : '注册后会自动加入「公共域」，此昵称即你在公共域中的对外称呼。加入其他校队时，可再单独设置队内名称。'}
+                    ? `这个称呼会用在「${inviteOrgName}」和公共域里，之后还能在组织里改。`
+                    : '注册后会自动加入「公共域」，这个称呼就是你在公共域的对外名字。以后进了别的校队，还能单独设队内名称。'}
                 </p>
               </Field>
               <Field className="gap-1.5">
@@ -199,7 +198,7 @@ export function Register() {
                   autoComplete="email"
                   value={form.email}
                   onChange={(e) => update('email', e.target.value)}
-                  placeholder="用于接收验证码，也可用于登录"
+                  placeholder="收验证码、也能登录"
                   disabled={pending}
                 />
               </Field>

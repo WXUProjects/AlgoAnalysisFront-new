@@ -62,7 +62,7 @@ export function RecommendStream() {
       if (seq !== requestSeq.current) return
       if (!res.success || !res.data) {
         if (reset) {
-          toast.error(res.message || '推荐内容加载失败')
+          toast.error(res.message || '推荐内容没加载出来')
           setItems([])
           setHasMore(false)
         }
@@ -166,11 +166,11 @@ export function RecommendStream() {
                 <EmptyMedia variant="icon">
                   <CompassIcon />
                 </EmptyMedia>
-                <EmptyTitle>暂无可推荐内容</EmptyTitle>
+                <EmptyTitle>还没有可推荐的内容</EmptyTitle>
                 <EmptyDescription>
                   {isPublicOrg
-                    ? '全站有新的博客或讨论后，会出现在这里。也可切换到「提交动态」看时间线。'
-                    : '本组织有新的博客或讨论后，会出现在这里。也可切换到「提交动态」看时间线。'}
+                    ? '全站有新的博客或讨论，会出现在这里。也可以切到「提交动态」看时间线。'
+                    : '本组织有新的博客或讨论，会出现在这里。也可以切到「提交动态」看时间线。'}
                 </EmptyDescription>
               </EmptyHeader>
               <Button variant="outline" size="sm" className="mt-2" asChild>

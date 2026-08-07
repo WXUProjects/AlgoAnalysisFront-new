@@ -181,7 +181,7 @@ export function RightSidebar() {
             ))}
           {!rankLoading && !rank.length && (
             <p className="px-4 py-6 text-center text-xs text-muted-foreground">
-              暂无排行
+              还没有排行
             </p>
           )}
           <div className="px-4 py-2">

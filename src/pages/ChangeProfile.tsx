@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { PlusIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import type { SpiderBinding } from '@shared/api'
 import { sendCode } from '@/api/auth'
+import { getProblemUserProfile } from '@/api/problem'
 import { setEmailEnabled, updateProfile } from '@/api/profile'
 import { getPrivacy, updatePrivacy } from '@/api/social'
 import { setSpider } from '@/api/spider'
@@ -18,11 +21,21 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -31,14 +44,217 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
 import {
-  getOjBindGuide,
+  getPlatformHomeLink,
+  OJ_BIND_GUIDES,
   OJ_PLATFORMS,
   normalizeOjQuery,
   type OjPlatform,
 } from '@/lib/link'
-import { spiderPlatformHealth } from '@/lib/spider-health'
+import { spiderPlatformHealth, type SpiderHealthKind } from '@/lib/spider-health'
+import { cn } from '@/lib/utils'
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
+
+const HEALTH_TONE: Record<SpiderHealthKind, string> = {
+  ok: 'bg-green-500',
+  never: 'bg-amber-500',
+  failed: 'bg-red-500',
+  stale: 'bg-yellow-500',
+}
+
+const HEALTH_TEXT: Record<SpiderHealthKind, string> = {
+  ok: 'text-green-600 dark:text-green-400',
+  never: 'text-amber-600 dark:text-amber-400',
+  failed: 'text-destructive',
+  stale: 'text-yellow-600 dark:text-yellow-400',
+}
+
+function StatusDot({ tone }: { tone: string }) {
+  return (
+    <span className={cn('inline-block size-2 shrink-0 rounded-full', tone)} />
+  )
+}
+
+function OjPlatformCard({
+  platform,
+  label,
+  spider,
+  acCount,
+  onEdit,
+}: {
+  platform: OjPlatform
+  label: string
+  spider: SpiderBinding
+  acCount?: number
+  onEdit: () => void
+}) {
+  const health = spiderPlatformHealth(spider)
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onEdit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onEdit()
+        }
+      }}
+      className="flex cursor-pointer flex-col gap-1.5 rounded-xl border bg-card p-3 transition-colors hover:bg-muted/40"
+    >
+      <div className="flex items-center gap-1.5">
+        <StatusDot tone={HEALTH_TONE[health.kind]} />
+        <span className="truncate text-sm font-semibold">{label}</span>
+        {health.kind === 'failed' || health.kind === 'never' || health.kind === 'stale' ? (
+          <span
+            className={cn(
+              'ml-auto shrink-0 text-[10px] font-medium',
+              HEALTH_TEXT[health.kind],
+            )}
+          >
+            {health.label}
+          </span>
+        ) : null}
+      </div>
+      <p className="truncate text-xs">
+        <a
+          href={getPlatformHomeLink(platform, spider.username)}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="font-mono text-foreground hover:underline"
+        >
+          {spider.username}
+        </a>
+      </p>
+      {typeof acCount === 'number' && acCount > 0 ? (
+        <p className="text-xs text-muted-foreground tabular-nums">已过 {acCount} 题</p>
+      ) : null}
+    </div>
+  )
+}
+
+function OjBindDialog({
+  open,
+  lockedPlatform,
+  spiders,
+  onClose,
+  onSave,
+}: {
+  open: boolean
+  lockedPlatform: OjPlatform | ''
+  spiders: SpiderBinding[] | undefined
+  onClose: () => void
+  onSave: (platform: OjPlatform, username: string) => Promise<boolean>
+}) {
+  const [platform, setPlatform] = useState<OjPlatform | ''>(lockedPlatform)
+  const [username, setUsername] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  // 打开时初始化：锁定平台直接带入；自由模式先清空，等用户选
+  useEffect(() => {
+    if (!open) return
+    setPlatform(lockedPlatform)
+    setSaving(false)
+    if (!lockedPlatform) {
+      setUsername('')
+      return
+    }
+    setUsername(spiders?.find((s) => s.platform === lockedPlatform)?.username ?? '')
+  }, [open, lockedPlatform, spiders])
+
+  // 自由模式：选中已绑定平台 → 预填用户名；未绑定 → 清空
+  useEffect(() => {
+    if (!open || lockedPlatform) return
+    if (!platform) {
+      setUsername('')
+      return
+    }
+    setUsername(spiders?.find((s) => s.platform === platform)?.username ?? '')
+  }, [open, lockedPlatform, platform, spiders])
+
+  const guide = platform ? OJ_BIND_GUIDES[platform] : null
+  const bound = platform
+    ? spiders?.find((s) => s.platform === platform)
+    : undefined
+  const health = bound ? spiderPlatformHealth(bound) : null
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent showCloseButton>
+        <DialogHeader>
+          <DialogTitle>{lockedPlatform ? '编辑 OJ 绑定' : '绑定 OJ'}</DialogTitle>
+          <DialogDescription>
+            绑定常用 OJ 账号后，平台会自动同步你的提交与比赛记录
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-3 py-2">
+          <Field className="gap-1.5">
+            <FieldLabel>OJ 平台</FieldLabel>
+            <Select
+              value={platform}
+              onValueChange={(v) => setPlatform(v as OjPlatform)}
+              disabled={Boolean(lockedPlatform)}
+            >
+              <SelectTrigger disabled={Boolean(lockedPlatform)}>
+                <SelectValue placeholder="选择 OJ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {OJ_PLATFORMS.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>
+                      {p.label}
+                      {spiders?.some((s) => s.platform === p.value) ? '（已绑定）' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+
+          {platform && guide ? (
+            <Field className="gap-1.5">
+              <FieldLabel>{guide.fieldLabel}</FieldLabel>
+              <Input
+                value={username}
+                placeholder={guide.placeholder}
+                disabled={saving}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="off"
+              />
+              <FieldDescription>{guide.tip}</FieldDescription>
+              {guide.example ? (
+                <p className="break-all font-mono text-[11px] text-muted-foreground">
+                  {guide.example}
+                </p>
+              ) : null}
+            </Field>
+          ) : null}
+
+          {health?.kind === 'failed' ? (
+            <p className="text-xs leading-relaxed text-destructive">{health.detail}</p>
+          ) : null}
+        </div>
+        <DialogFooter>
+          <Button
+            size="sm"
+            disabled={saving || !platform || !username.trim()}
+            onClick={async () => {
+              if (!platform) return
+              setSaving(true)
+              const ok = await onSave(platform, username.trim())
+              setSaving(false)
+              if (ok) onClose()
+            }}
+          >
+            {saving ? <Spinner data-icon="inline-start" /> : null}
+            {bound ? '保存' : '绑定'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 export function ChangeProfile() {
   const { user, profile, sync } = useAuth()
@@ -51,10 +267,10 @@ export function ChangeProfile() {
   const [avatar, setAvatar] = useState('')
   const [emailOn, setEmailOn] = useState(false)
   const [weeklyOn, setWeeklyOn] = useState(false)
-  const [platform, setPlatform] = useState<OjPlatform>(preOj || 'AtCoder')
-  const [ojUsername, setOjUsername] = useState('')
+  const [bindOpen, setBindOpen] = useState(false)
+  const [bindLocked, setBindLocked] = useState<OjPlatform | ''>(preOj || '')
+  const [acCounts, setAcCounts] = useState<Map<string, number>>(new Map())
   const [saving, setSaving] = useState(false)
-  const [binding, setBinding] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [sendingCode, setSendingCode] = useState(false)
   const [codeCooldown, setCodeCooldown] = useState(0)
@@ -62,11 +278,6 @@ export function ChangeProfile() {
   const [privacySaving, setPrivacySaving] = useState(false)
   const [allowPublicProfile, setAllowPublicProfile] = useState(true)
   const [allowPublicFeed, setAllowPublicFeed] = useState(true)
-  const ojGuide = getOjBindGuide(platform)
-  const currentSpider = profile?.spiders?.find((s) => s.platform === platform)
-  const platformHealth = currentSpider
-    ? spiderPlatformHealth(currentSpider)
-    : null
 
   const boundEmail = (profile?.email || '').trim()
   const displayName = profile?.name || user?.username || 'U'
@@ -82,13 +293,14 @@ export function ChangeProfile() {
       setAvatar(profile.avatar || '')
       setEmailOn(profile.emailEnabled ?? false)
       setWeeklyOn(profile.emailWeeklyEnabled ?? false)
-      const bound = profile.spiders.find((s) => s.platform === (preOj || platform))
-      if (bound) setOjUsername(bound.username)
     }
-  }, [profile, preOj, platform])
+  }, [profile])
 
   useEffect(() => {
-    if (preOj) setPlatform(preOj)
+    if (preOj) {
+      setBindLocked(preOj)
+      setBindOpen(true)
+    }
   }, [preOj])
 
   useEffect(() => {
@@ -110,7 +322,7 @@ export function ChangeProfile() {
       if (cancelled) return
       setPrivacyLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '隐私设置加载失败，请稍后重试')
+        toast.error(res.message || '隐私设置没加载出来，过会儿再试')
         return
       }
       setAllowPublicProfile(res.data.allowPublicProfile)
@@ -120,6 +332,21 @@ export function ChangeProfile() {
       cancelled = true
     }
   }, [])
+
+  // 各平台过题数（卡片展示用；无数据不阻塞）
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    void getProblemUserProfile(user.userId).then((res) => {
+      if (cancelled || !res.success || !res.data) return
+      const m = new Map<string, number>()
+      res.data.platforms.forEach((p) => m.set(p.name, p.count))
+      setAcCounts(m)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   useEffect(() => {
     if (window.location.hash !== '#privacy') return
@@ -131,11 +358,11 @@ export function ChangeProfile() {
 
   async function handleSendEmailCode() {
     if (!emailOk(email)) {
-      toast.error('请输入有效邮箱')
+      toast.error('邮箱格式不对哦')
       return
     }
     if (!emailChanged) {
-      toast.message('邮箱未变更，无需验证')
+      toast.message('邮箱没变，不用验证')
       return
     }
     setSendingCode(true)
@@ -145,7 +372,7 @@ export function ChangeProfile() {
       toast.success(res.message || '验证码已发送，请查收新邮箱')
       setCodeCooldown(60)
     } else {
-      toast.error(res.message || '发送失败，请稍后重试')
+      toast.error(res.message || '没发出去，过会儿再试')
     }
   }
 
@@ -153,15 +380,15 @@ export function ChangeProfile() {
     e.preventDefault()
     if (!user) return
     if (!email.trim()) {
-      toast.error('请填写邮箱，订阅提醒与找回密码都需要它')
+      toast.error('邮箱还没填哦，收提醒和找回密码都要用它')
       return
     }
     if (!emailOk(email)) {
-      toast.error('请输入有效邮箱')
+      toast.error('邮箱格式不对哦')
       return
     }
     if (emailChanged && !emailCode.trim()) {
-      toast.error('修改邮箱需填写发往新邮箱的验证码')
+      toast.error('改邮箱要填新邮箱收到的验证码')
       return
     }
     setSaving(true)
@@ -173,64 +400,66 @@ export function ChangeProfile() {
     })
     setSaving(false)
     if (res.success) {
-      toast.success(res.message || '资料已更新')
+      toast.success(res.message || '资料更新好啦')
       setEmailCode('')
       await sync()
     } else {
-      toast.error(res.message || '更新失败，请稍后重试')
+      toast.error(res.message || '没更新成，过会儿再试')
     }
   }
 
   async function handleEmailToggle(checked: boolean, kind: 'daily' | 'weekly') {
     if (!user) return
     if (!boundEmail) {
-      toast.error('请先绑定邮箱后再开启邮件通知')
+      toast.error('先绑邮箱，才能开邮件通知')
       return
     }
     if (kind === 'daily') {
       if (checked && profile && profile.emailAllowedByOrg === false) {
-        toast.error('当前没有组织开通日报邮件，无法开启')
+        toast.error('当前组织没开通日报邮件，开不了')
         return
       }
       setEmailOn(checked)
     } else {
       if (checked && profile && profile.emailWeeklyAllowedByOrg === false) {
-        toast.error('当前没有组织开通周报（需教练/队长或管理员权限）')
+        toast.error('当前组织没开通周报（要教练/队长或管理员）')
         return
       }
       setWeeklyOn(checked)
     }
     const res = await setEmailEnabled(user.userId, checked, kind)
     if (res.success) {
-      toast.success(res.message || '已更新邮件设置')
+      toast.success(res.message || '邮件设置更新好啦')
       await sync()
     } else {
       if (kind === 'daily') setEmailOn(!checked)
       else setWeeklyOn(!checked)
-      toast.error(res.message || '设置失败，请稍后重试')
+      toast.error(res.message || '没设置成，过会儿再试')
     }
   }
 
-  async function handleBindOj(e: React.FormEvent) {
-    e.preventDefault()
-    if (!user) return
-    if (!ojUsername.trim()) {
-      toast.error('请输入 OJ 用户名')
-      return
-    }
-    setBinding(true)
+  const bound = OJ_PLATFORMS.flatMap((p) => {
+    const bind = profile?.spiders?.find((s) => s.platform === p.value)
+    return bind ? [{ platform: p, bind }] : []
+  })
+
+  async function handleCardSave(
+    platform: OjPlatform,
+    username: string,
+  ): Promise<boolean> {
+    if (!user) return false
     const res = await setSpider({
       userId: user.userId,
       platform,
-      username: ojUsername.trim(),
+      username,
     })
-    setBinding(false)
     if (res.success) {
-      toast.success(res.message || '已保存，正在同步做题数据')
+      toast.success(res.message || '存好啦，正在同步做题数据')
       await sync()
-    } else {
-      toast.error(res.message || '绑定失败，请稍后重试')
+      return true
     }
+    toast.error(res.message || '没绑上，过会儿再试')
+    return false
   }
 
   async function handleSavePrivacy() {
@@ -238,10 +467,10 @@ export function ChangeProfile() {
     const res = await updatePrivacy({ allowPublicProfile, allowPublicFeed })
     setPrivacySaving(false)
     if (!res.success) {
-      toast.error(res.message || '隐私设置保存失败，请稍后重试')
+      toast.error(res.message || '隐私设置没存上，过会儿再试')
       return
     }
-    toast.success('隐私设置已保存')
+    toast.success('隐私设置存好啦')
   }
 
   return (
@@ -249,7 +478,7 @@ export function ChangeProfile() {
       <Card className="gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>编辑资料</CardTitle>
-          <CardDescription>管理头像、邮箱与邮件通知。改昵称请到「我的组织」。</CardDescription>
+          <CardDescription>头像、邮箱、邮件通知都在这里。改昵称去「我的组织」。</CardDescription>
         </CardHeader>
         <form onSubmit={handleSaveProfile}>
           <CardContent className="px-4">
@@ -278,11 +507,11 @@ export function ChangeProfile() {
                             const res = await uploadImage(file, 'avatar')
                             setUploading(false)
                             if (!res.success || !res.data?.url) {
-                              toast.error(res.message || '上传失败，请稍后重试')
+                              toast.error(res.message || '没传上去，过会儿再试')
                               return
                             }
                             setAvatar(res.data.url)
-                            toast.success('头像已上传，请点保存资料')
+                            toast.success('头像传好啦，记得点保存资料')
                           }}
                         />
                       </label>
@@ -306,13 +535,13 @@ export function ChangeProfile() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  公共域显示站内昵称；加入其他校队后，可单独设置队内称呼。
+                  公共域显示站内昵称；进了别的校队，可以单独设队内称呼。
                 </p>
               </Field>
 
               {!boundEmail ? (
                 <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-foreground">
-                  尚未绑定邮箱。请填写并验证邮箱，否则无法接收比赛订阅与日报邮件。
+                  邮箱还没绑哦，不验证就收不到比赛订阅和日报邮件。
                 </div>
               ) : null}
 
@@ -327,16 +556,16 @@ export function ChangeProfile() {
                     setEmailCode('')
                   }}
                   disabled={saving}
-                  placeholder="用于接收提醒和找回密码"
+                  placeholder="收提醒、找回密码都用它"
                   autoComplete="email"
                 />
                 {boundEmail && !emailChanged ? (
-                  <p className="text-xs text-muted-foreground">已绑定。更换邮箱时，需向新地址发送验证码。</p>
+                  <p className="text-xs text-muted-foreground">已绑定。换邮箱要往新地址发验证码。</p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
                     {emailChanged
-                      ? '邮箱已更改，请向新邮箱发送验证码后再保存。'
-                      : '填写并验证常用邮箱后，即可接收订阅与提醒。'}
+                      ? '邮箱改啦，先往新邮箱发验证码再保存。'
+                      : '验证常用邮箱后，就能收订阅和提醒。'}
                   </p>
                 )}
               </Field>
@@ -388,11 +617,11 @@ export function ChangeProfile() {
                 </div>
                 {profile?.emailAllowedByOrg === false ? (
                   <p className="text-xs text-muted-foreground">
-                    当前没有组织开通日报邮件，暂无法开启。
+                    当前组织没开通日报邮件，开不了。
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    开启后，你会按所在组织的安排收到训练日报。
+                    开了就按组织安排收训练日报。
                   </p>
                 )}
               </Field>
@@ -411,11 +640,11 @@ export function ChangeProfile() {
                 </div>
                 {profile?.emailWeeklyAllowedByOrg === false ? (
                   <p className="text-xs text-muted-foreground">
-                    需教练、队长或管理员身份，且组织已开启周报。
+                    要教练、队长或管理员，且组织开了周报才行。
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    开启后，每周一发送本队训练周报。
+                    开了就每周一发队内训练周报。
                   </p>
                 )}
               </Field>
@@ -436,97 +665,66 @@ export function ChangeProfile() {
       </Card>
 
       <Card id="bind-oj" className="scroll-mt-20 gap-4 py-4">
-        <CardHeader className="gap-1 px-4">
-          <CardTitle>绑定 OJ</CardTitle>
-          <CardDescription>
-            绑定常用 OJ 账号后，平台会自动同步你的提交与比赛记录
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-2 px-4">
+          <div className="flex min-w-0 flex-col gap-1">
+            <CardTitle>绑定 OJ</CardTitle>
+            <CardDescription>
+              把常用 OJ 账号都接进来吧～
+            </CardDescription>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              setBindLocked('')
+              setBindOpen(true)
+            }}
+          >
+            <PlusIcon data-icon="inline-start" />
+            绑定 OJ
+          </Button>
         </CardHeader>
-        <form onSubmit={handleBindOj}>
-          <CardContent className="px-4">
-            <FieldGroup className="gap-3">
-              <Field className="gap-1.5">
-                <FieldLabel>平台</FieldLabel>
-                <Select
-                  value={platform}
-                  onValueChange={(v) => {
-                    const next = v as OjPlatform
-                    setPlatform(next)
-                    const bound = profile?.spiders.find((s) => s.platform === next)
-                    setOjUsername(bound?.username || '')
+        <CardContent className="px-4">
+          {bound.length === 0 ? (
+            <Empty className="rounded-xl border border-dashed">
+              <EmptyContent>
+                <EmptyTitle>还没有绑定 OJ</EmptyTitle>
+                <EmptyDescription>
+                  点右上角「绑定 OJ」，绑定后自动同步你的做题记录
+                </EmptyDescription>
+              </EmptyContent>
+            </Empty>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {bound.map(({ platform: p, bind }) => (
+                <OjPlatformCard
+                  key={p.value}
+                  platform={p.value}
+                  label={p.label}
+                  spider={bind}
+                  acCount={acCounts.get(p.value)}
+                  onEdit={() => {
+                    setBindLocked(p.value)
+                    setBindOpen(true)
                   }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="选择平台" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OJ_PLATFORMS.map((p) => (
-                      <SelectItem key={p.value} value={p.value}>
-                        {p.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              {platformHealth && platformHealth.kind !== 'ok' ? (
-                <div
-                  className={
-                    platformHealth.kind === 'failed'
-                      ? 'rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive'
-                      : 'rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-200'
-                  }
-                >
-                  <p className="font-medium">{platformHealth.label}</p>
-                  <p className="mt-1 leading-relaxed opacity-90">
-                    {platformHealth.detail}
-                  </p>
-                </div>
-              ) : currentSpider ? (
-                <p className="text-xs text-muted-foreground">
-                  当前已绑定：
-                  <span className="font-mono text-foreground">{currentSpider.username}</span>
-                  {platformHealth?.kind === 'ok' ? ' · 同步正常' : null}
-                </p>
-              ) : null}
-              <div className="rounded-lg border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
-                <p className="font-medium text-foreground">如何填写？</p>
-                <p className="mt-1 leading-relaxed">{ojGuide.tip}</p>
-                {ojGuide.example ? (
-                  <p className="mt-1 break-all font-mono text-xs leading-relaxed">
-                    {ojGuide.example}
-                  </p>
-                ) : null}
-              </div>
-              <Field className="gap-1.5">
-                <FieldLabel htmlFor="oj-username">{ojGuide.fieldLabel}</FieldLabel>
-                <Input
-                  id="oj-username"
-                  value={ojUsername}
-                  onChange={(e) => setOjUsername(e.target.value)}
-                  placeholder={ojGuide.placeholder}
-                  disabled={binding}
-                  autoComplete="off"
                 />
-                <FieldDescription>
-                  请按上方示例从个人主页复制。
-                </FieldDescription>
-              </Field>
-            </FieldGroup>
-          </CardContent>
-          <CardFooter className="px-4">
-            <Button type="submit" disabled={binding}>
-              {binding ? <Spinner data-icon="inline-start" /> : null}
-              绑定
-            </Button>
-          </CardFooter>
-        </form>
+              ))}
+            </div>
+          )}
+        </CardContent>
       </Card>
+      <OjBindDialog
+        open={bindOpen}
+        lockedPlatform={bindLocked}
+        spiders={profile?.spiders}
+        onClose={() => setBindOpen(false)}
+        onSave={handleCardSave}
+      />
 
       <Card id="privacy" className="scroll-mt-20 gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>隐私设置</CardTitle>
           <CardDescription>
-            只影响公共域。在校队等私人组织里，队友仍可查看你的资料与动态。
+            只影响公共域。在校队这种私人组织里，队友还是能看到你的资料和动态。
           </CardDescription>
         </CardHeader>
         <CardContent className="px-4">
@@ -543,7 +741,7 @@ export function ChangeProfile() {
                     允许他人查看个人资料
                   </FieldLabel>
                   <FieldDescription>
-                    关闭后，公共域中的其他人将无法打开你的资料页
+                    关掉后，公共域里的其他人就打不开你的资料页了
                   </FieldDescription>
                 </div>
                 <Switch
@@ -556,7 +754,7 @@ export function ChangeProfile() {
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <FieldLabel htmlFor="set-feed">出现在公共域动态</FieldLabel>
                   <FieldDescription>
-                    关闭后，公共域动态里不会再出现你的提交
+                    关掉后，公共域动态里就不会再出现你的提交了
                   </FieldDescription>
                 </div>
                 <Switch
@@ -582,7 +780,7 @@ export function ChangeProfile() {
       <Card className="gap-4 py-4">
         <CardHeader className="gap-1 px-4">
           <CardTitle>账号安全</CardTitle>
-          <CardDescription>修改登录密码，或通过邮箱找回密码</CardDescription>
+          <CardDescription>改登录密码，或用邮箱找回</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2 px-4">
           <Button type="button" variant="outline" asChild>

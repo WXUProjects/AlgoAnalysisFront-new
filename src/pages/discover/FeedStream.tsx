@@ -68,7 +68,7 @@ export function FeedStream({
 
       const gate = canLoadFeedStream({ followingOnly, isLogin })
       if (!gate.allow) {
-        toast.error('登录后可查看关注动态')
+        toast.error('登录后才能看关注动态')
         setItems([])
         setHasMore(false)
         setLoading(false)
@@ -94,7 +94,7 @@ export function FeedStream({
         })
         if (seq !== requestSeq.current) return
         if (!res.success) {
-          toast.error(res.message || '动态加载失败，请稍后重试')
+          toast.error(res.message || '动态没加载出来，过会儿再试')
           if (reset) {
             setItems([])
             setHasMore(false)
@@ -129,7 +129,7 @@ export function FeedStream({
   }, [loadMore, reloadToken])
 
   const description = userMode
-    ? '该用户的提交动态'
+    ? '这位用户的提交动态'
     : followingOnly
       ? '你关注的人在本组织内的动态'
       : feedScope === 'mine'

@@ -74,11 +74,11 @@ export async function login(
     }
     return {
       success: false,
-      message: data?.message || '登录失败，请检查账号密码后重试',
+      message: data?.message || '登录没成功，检查下账号密码再试',
       data: null,
     }
   } catch (err) {
-    return { success: false, message: errMessage(err, '登录失败，请检查账号密码后重试'), data: null }
+    return { success: false, message: errMessage(err, '登录没成功，检查下账号密码再试'), data: null }
   }
 }
 
@@ -87,7 +87,7 @@ export async function sendCode(
   purpose: SendCodeReq['purpose'],
 ): Promise<ApiResult<SendCodeRes>> {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { success: false, message: '请输入有效邮箱', data: null }
+    return { success: false, message: '邮箱格式不对哦', data: null }
   }
   const body: SendCodeReq = {
     email: email.trim(),
@@ -98,11 +98,11 @@ export async function sendCode(
     const data = res.data
     return {
       success: Boolean(data?.success),
-      message: data?.message || (data?.success ? '验证码已发送' : '发送失败，请稍后重试'),
+      message: data?.message || (data?.success ? '验证码已发送' : '没发出去，过会儿再试'),
       data: data ?? null,
     }
   } catch (err) {
-    return { success: false, message: errMessage(err, '发送失败，请稍后重试'), data: null }
+    return { success: false, message: errMessage(err, '没发出去，过会儿再试'), data: null }
   }
 }
 
@@ -113,7 +113,7 @@ export const USERNAME_HINT =
 
 export function validateUsername(username: string): string | null {
   const u = username.trim()
-  if (!u) return '请填写账号'
+  if (!u) return '账号还没填哦'
   if (!USERNAME_RE.test(u)) return USERNAME_HINT
   return null
 }
@@ -140,7 +140,7 @@ export async function register(input: {
     !input.email ||
     !input.code
   ) {
-    return { success: false, message: '请填写所有必填项', data: null }
+    return { success: false, message: '必填的还没填全哦', data: null }
   }
 
   const usernameErr = validateUsername(input.username)
@@ -149,11 +149,11 @@ export async function register(input: {
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
-    return { success: false, message: '请输入有效邮箱', data: null }
+    return { success: false, message: '邮箱格式不对哦', data: null }
   }
 
   if (input.password !== input.passwordConfirm) {
-    return { success: false, message: '密码不一致', data: null }
+    return { success: false, message: '两次密码不一致', data: null }
   }
 
   const body: RegisterReq = {
@@ -172,11 +172,11 @@ export async function register(input: {
     const data = res.data
     return {
       success: Boolean(data?.success),
-      message: data?.message || (data?.success ? '注册成功' : '注册失败，请稍后重试'),
+      message: data?.message || (data?.success ? '注册成功' : '没注册成功，过会儿再试'),
       data: data ?? null,
     }
   } catch (err) {
-    return { success: false, message: errMessage(err, '注册失败，请稍后重试'), data: null }
+    return { success: false, message: errMessage(err, '没注册成功，过会儿再试'), data: null }
   }
 }
 
@@ -186,13 +186,13 @@ export async function changePassword(input: {
   newPasswordConfirm: string
 }): Promise<ApiResult<{ success: boolean; message: string }>> {
   if (!input.oldPassword || !input.newPassword) {
-    return { success: false, message: '请填写当前密码和新密码', data: null }
+    return { success: false, message: '当前密码和新密码都要填', data: null }
   }
   if (input.newPassword !== input.newPasswordConfirm) {
     return { success: false, message: '两次输入的新密码不一致', data: null }
   }
   if (input.oldPassword === input.newPassword) {
-    return { success: false, message: '新密码不能与当前密码相同', data: null }
+    return { success: false, message: '新密码不能和当前密码一样', data: null }
   }
   try {
     const res = await http.post<{ success: boolean; message: string }>(
@@ -205,11 +205,11 @@ export async function changePassword(input: {
     const data = res.data
     return {
       success: Boolean(data?.success),
-      message: data?.message || (data?.success ? '密码已更新' : '修改失败，请稍后重试'),
+      message: data?.message || (data?.success ? '密码已更新' : '没改成功，过会儿再试'),
       data: data ?? null,
     }
   } catch (err) {
-    return { success: false, message: errMessage(err, '修改失败，请稍后重试'), data: null }
+    return { success: false, message: errMessage(err, '没改成功，过会儿再试'), data: null }
   }
 }
 
@@ -220,13 +220,13 @@ export async function resetPassword(input: {
   passwordConfirm: string
 }): Promise<ApiResult<ResetPasswordRes>> {
   if (!input.email || !input.code || !input.password) {
-    return { success: false, message: '请填写所有必填项', data: null }
+    return { success: false, message: '必填的还没填全哦', data: null }
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
-    return { success: false, message: '请输入有效邮箱', data: null }
+    return { success: false, message: '邮箱格式不对哦', data: null }
   }
   if (input.password !== input.passwordConfirm) {
-    return { success: false, message: '密码不一致', data: null }
+    return { success: false, message: '两次密码不一致', data: null }
   }
 
   const body: ResetPasswordReq = {
@@ -244,11 +244,11 @@ export async function resetPassword(input: {
     return {
       success: Boolean(data?.success),
       message:
-        data?.message || (data?.success ? '密码已重置' : '密码重置失败，请稍后重试'),
+        data?.message || (data?.success ? '密码已重置' : '没重置成功，过会儿再试'),
       data: data ?? null,
     }
   } catch (err) {
-    return { success: false, message: errMessage(err, '密码重置失败，请稍后重试'), data: null }
+    return { success: false, message: errMessage(err, '没重置成功，过会儿再试'), data: null }
   }
 }
 
@@ -290,11 +290,11 @@ async function doRefreshToken(): Promise<ApiResult<LoginRes>> {
     }
     return {
       success: false,
-      message: data?.message || '刷新失败，请稍后重试',
+      message: data?.message || '没刷新成功，过会儿再试',
       data: null,
     }
   } catch (err) {
-    return { success: false, message: errMessage(err, '刷新失败，请稍后重试'), data: null }
+    return { success: false, message: errMessage(err, '没刷新成功，过会儿再试'), data: null }
   }
 }
 

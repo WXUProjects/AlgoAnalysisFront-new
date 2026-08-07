@@ -288,7 +288,7 @@ export function MarkdownEditor({
         return
       }
       if (!file.type.startsWith('image/')) {
-        toast.error('请选择图片文件')
+        toast.error('先选图片文件')
         return
       }
       const id = `up-${++uploadSeq}`
@@ -317,7 +317,7 @@ export function MarkdownEditor({
               : u,
           ),
         )
-        toast.error(res.message || '图片上传失败，请稍后重试')
+        toast.error(res.message || '图片没传上去，稍后重试')
         return
       }
       patchUploads((prev) =>
@@ -350,7 +350,7 @@ export function MarkdownEditor({
       if (disabled) return
       const list = Array.from(files).filter((f) => f.type.startsWith('image/'))
       if (!list.length) {
-        toast.error('请选择图片文件')
+        toast.error('先选图片文件')
         return
       }
       // 多图：都进库；第一张插入正文，其余仅入库（可从图片库插入）
@@ -920,7 +920,7 @@ export function MarkdownEditor({
           <span className="tabular-nums">
             {stats.chars > 0
               ? `${stats.chars} 字 · 约 ${stats.words} 词`
-              : '尚未输入'}
+              : '还没开始写'}
           </span>
           <span>{paneLabel}</span>
         </div>

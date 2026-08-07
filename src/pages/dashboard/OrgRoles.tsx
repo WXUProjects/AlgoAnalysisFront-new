@@ -17,7 +17,7 @@ export function DashboardOrgRoles() {
       {orgId > 0 ? (
         <RoleManager scope="org" orgId={orgId} />
       ) : (
-        <p className="text-sm text-muted-foreground">请先选择组织。</p>
+        <p className="text-sm text-muted-foreground">先选择组织。</p>
       )}
     </PageShell>
   )

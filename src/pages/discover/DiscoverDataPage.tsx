@@ -142,7 +142,7 @@ export function DiscoverDataPage({ isLogin, userId }: Props) {
           else {
             setPeriod(null)
             if (!res.success) {
-              toast.error(res.message || '统计加载失败，请稍后重试')
+              toast.error(res.message || '统计没加载出来，过会儿再试')
             }
           }
         }),
@@ -202,7 +202,7 @@ export function DiscoverDataPage({ isLogin, userId }: Props) {
       }).then((res) => {
         if (cancelled) return
         if (res.success) setAcHeat(res.data || [])
-        else toast.error(res.message || 'AC 热力图加载失败')
+        else toast.error(res.message || '热力图没加载出来')
         setAcHeatLoaded(true)
         setAcHeatLoading(false)
       })

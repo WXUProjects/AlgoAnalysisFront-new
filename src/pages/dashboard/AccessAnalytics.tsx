@@ -152,7 +152,7 @@ export function DashboardAccessAnalytics() {
       if (res.success && res.data) setData(res.data)
       else {
         setData(null)
-        if (!silent) toast.error(res.message || '访问统计加载失败，请稍后重试')
+        if (!silent) toast.error(res.message || '访问统计加载失败，稍后重试')
       }
       setLoading(false)
       setRefreshing(false)
@@ -206,7 +206,7 @@ export function DashboardAccessAnalytics() {
     return (
       <PageShell>
         <p className="text-sm text-muted-foreground">
-          你还没有查看访问统计的权限。如有需要，请联系站点管理员开通。
+          你还没有查看访问统计的权限。有需要的话，找站点管理员开通。
         </p>
       </PageShell>
     )
@@ -569,7 +569,7 @@ export function DashboardAccessAnalytics() {
             </div>
           ) : !data?.ips?.length ? (
             <p className="px-4 text-sm text-muted-foreground">
-              暂无 IP 记录。请确认前置 Nginx/Cloudflare 已传递 CF-Connecting-IP 或 X-Real-IP。
+              还没有 IP 记录。确认前置 Nginx/Cloudflare 已传递 CF-Connecting-IP 或 X-Real-IP。
             </p>
           ) : (
             <div className="max-h-96 overflow-auto">

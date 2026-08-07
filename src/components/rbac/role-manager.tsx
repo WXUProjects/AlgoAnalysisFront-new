@@ -202,7 +202,7 @@ export function RoleManager({
     void listPermissionGroups().then((res) => {
       if (cancelled) return
       if (res.success) setGroups(res.groups)
-      else toast.error(res.message || '权限目录加载失败，请稍后重试')
+      else toast.error(res.message || '权限目录加载失败，稍后重试')
     })
     return () => {
       cancelled = true
@@ -217,7 +217,7 @@ export function RoleManager({
       if (rid !== rolesRequestId.current) return
       setRolesLoading(false)
       if (!res.success) {
-        toast.error(res.message || '角色列表加载失败，请稍后重试')
+        toast.error(res.message || '角色列表加载失败，稍后重试')
         return
       }
       setRoles(res.list)
@@ -276,7 +276,7 @@ export function RoleManager({
       setMembers(res.list)
       setMemberTotal(res.total)
     } else {
-      toast.error(res.message || '成员列表加载失败，请稍后重试')
+      toast.error(res.message || '成员列表加载失败，稍后重试')
     }
   }, [selectedRoleId, scopeOrgId, memberPage, memberKeyword])
 
@@ -337,7 +337,7 @@ export function RoleManager({
     const systemPermsOnly = Boolean(editorRole?.isSystem)
     if (!systemPermsOnly) {
       if (!name) {
-        toast.error('请填写角色名称')
+        toast.error('角色名称要填')
         return
       }
       if (name.length > ROLE_NAME_MAX) {
@@ -365,7 +365,7 @@ export function RoleManager({
       )
       setSavingRole(false)
       if (!res.success) {
-        toast.error(res.message || '保存失败，请稍后重试')
+        toast.error(res.message || '保存失败，稍后重试')
         return
       }
       toast.success(res.message || '已保存修改')
@@ -381,7 +381,7 @@ export function RoleManager({
       })
       setSavingRole(false)
       if (!res.success) {
-        toast.error(res.message || '创建失败，请稍后重试')
+        toast.error(res.message || '创建失败，稍后重试')
         return
       }
       toast.success(res.message || '已创建角色')
@@ -401,7 +401,7 @@ export function RoleManager({
     })
     setSavingRole(false)
     if (!res.success) {
-      toast.error(res.message || '恢复失败，请稍后重试')
+      toast.error(res.message || '恢复失败，稍后重试')
       return
     }
     toast.success(res.message || '已恢复默认权限')
@@ -415,7 +415,7 @@ export function RoleManager({
     const res = await deleteRole(selectedRole.roleId)
     setDeleting(false)
     if (!res.success) {
-      toast.error(res.message || '删除失败，请稍后重试')
+      toast.error(res.message || '删除失败，稍后重试')
       return
     }
     toast.success(res.message || '已删除角色')
@@ -428,13 +428,13 @@ export function RoleManager({
     const res = await assignRole(selectedRole.roleId, [u.userId])
     setAssigningId(null)
     if (!res.success) {
-      toast.error(res.message || '添加失败，请稍后重试')
+      toast.error(res.message || '添加失败，稍后重试')
       return
     }
     if (res.added === 0 && res.skipped.includes(u.userId)) {
       toast.error(
         scope === 'org'
-          ? '该用户不在本组织，请先邀请对方加入组织'
+          ? '该用户不在本组织，先邀请对方加入组织'
           : res.message || '该用户已拥有此角色，或暂时无法添加',
       )
       return
@@ -453,7 +453,7 @@ export function RoleManager({
     setRemoving(false)
     setRemoveTarget(null)
     if (!res.success) {
-      toast.error(res.message || '移除失败，请稍后重试')
+      toast.error(res.message || '移除失败，稍后重试')
       return
     }
     toast.success(res.message || '已移除成员')
@@ -668,7 +668,7 @@ export function RoleManager({
                     ))}
                     {scope === 'org' ? (
                       <p className="text-xs text-muted-foreground">
-                        只能添加本组织成员；还没加入的用户请先通过邀请链接加入。
+                        只能添加本组织成员；还没加入的用户先通过邀请链接加入。
                       </p>
                     ) : null}
                   </div>

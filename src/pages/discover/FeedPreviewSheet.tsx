@@ -99,7 +99,7 @@ export function FeedPreviewSheet({ target, onOpenChange }: Props) {
                   <Link to={detailHref}>打开题目讨论</Link>
                 </Button>
               ) : (
-                <p className="text-muted-foreground">暂无关联题目</p>
+                <p className="text-muted-foreground">还没有关联题目</p>
               )}
               {item?.body ? (
                 <div className="rounded-lg border bg-muted/30 p-3">

@@ -106,7 +106,7 @@ export function FeedEmptyState({
 
   async function handleFollow(userId: number) {
     if (!isLogin) {
-      toast.error('请先登录后再关注')
+      toast.error('先登录才能关注哦')
       return
     }
     if (relationMap[userId]) {
@@ -117,7 +117,7 @@ export function FeedEmptyState({
     const res = await followUser(userId)
     setBusyId(0)
     if (!res.success) {
-      toast.error(res.message || '关注失败，请稍后重试')
+      toast.error(res.message || '没关注上，过会儿再试')
       return
     }
     setRelationMap((m) => ({ ...m, [userId]: true }))
@@ -132,11 +132,11 @@ export function FeedEmptyState({
           <EmptyMedia variant="icon">
             <UsersIcon />
           </EmptyMedia>
-          <EmptyTitle>暂无动态</EmptyTitle>
+          <EmptyTitle>还没有动态</EmptyTitle>
           <EmptyDescription>
             {followingOnly
               ? '关注他人后，这里会显示其提交与博客。'
-              : '暂无组织动态。可关注活跃用户以获取更新。'}
+              : '还没有组织动态，可以关注些活跃用户。'}
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -201,7 +201,7 @@ export function FeedEmptyState({
             })}
           {!loading && !creators.length && (
             <li className="py-4 text-center text-sm text-muted-foreground">
-              暂无可推荐用户
+              还没有可推荐的用户
             </li>
           )}
         </ul>

@@ -129,7 +129,7 @@ export function HomeSetupCards() {
                 绑定 OJ 账号
               </CardTitle>
               <CardDescription>
-                绑定后才会同步提交与比赛记录。
+                把常用 OJ 账号都接进来吧～
               </CardDescription>
             </div>
             <Button
@@ -191,7 +191,7 @@ export function HomeSetupCards() {
                 加入校队 / 组织
               </CardTitle>
               <CardDescription>
-                向教练要团队邀请码，加入后可看队内统计与公告。
+                找教练要个邀请码，进队就能看队内统计和公告。
               </CardDescription>
             </div>
             <Button
@@ -227,7 +227,7 @@ export function HomeSetupCards() {
                 {currentOrg?.name || '组织'} · 开箱清单
               </CardTitle>
               <CardDescription>
-                把队伍跑起来：邀请队员、看本周队况、导出训练报告。
+                把队伍跑起来：邀请队员、看看本周队况、导出训练报告。
               </CardDescription>
             </div>
             <Button

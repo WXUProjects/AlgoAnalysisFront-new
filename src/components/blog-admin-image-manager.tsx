@@ -192,7 +192,7 @@ export function BlogAdminImageManager() {
                 <ImagesIcon />
               </EmptyMedia>
               <EmptyTitle>
-                {isCleanup ? '没有可清理的图片' : '暂无图片'}
+                {isCleanup ? '没有可清理的图片' : '还没有图片'}
               </EmptyTitle>
               {isCleanup ? (
                 <EmptyDescription>

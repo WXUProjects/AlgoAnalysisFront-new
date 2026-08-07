@@ -274,7 +274,7 @@ export function ContestDetails() {
     if (rid !== boardRequestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '榜单加载失败，请稍后重试')
+      toast.error(res.message || '榜单没加载出来，过会儿再试')
       return
     }
     setBoardRows(res.data.rows)
@@ -738,7 +738,7 @@ export function ContestDetails() {
                             }
                             className="text-center text-muted-foreground"
                           >
-                            暂无榜单
+                            还没有榜单
                           </TableCell>
                         </TableRow>
                       )}
@@ -780,8 +780,8 @@ export function ContestDetails() {
               ) : !problems.length ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   {ensureStatus === 'running'
-                    ? '题目准备中，请稍候…'
-                    : '暂无题目目录'}
+                    ? '题目还在准备中，稍等一下…'
+                    : '还没有题目目录'}
                 </p>
               ) : (
                 <Tabs
@@ -906,7 +906,7 @@ export function ContestDetails() {
                             )}
                           >
                             <CardContent className="px-4 text-sm text-muted-foreground">
-                               题目尚未入库，暂无博客
+                               题目还没入库，暂时没有博客
                             </CardContent>
                           </Card>
                         )}

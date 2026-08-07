@@ -160,7 +160,7 @@ export function CoachWeekPanel({
           {loading ? (
             <Skeleton className="h-24 w-full" />
           ) : noSubmit.length === 0 ? (
-            <p className="text-xs text-muted-foreground">近 {DROP_DAYS} 天大家都有提交，暂无掉队名单</p>
+            <p className="text-xs text-muted-foreground">近 {DROP_DAYS} 天大家都有提交，还没有掉队名单</p>
           ) : (
             <ul className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
               {noSubmit.map((u) => (

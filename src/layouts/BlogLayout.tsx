@@ -90,7 +90,7 @@ export function BlogLayout() {
     if (!username) return
     const res = await listBlogByUsername({ username, page: 1, pageSize: 8 })
     if (!res.success || !res.data) {
-      setError(res.message || '找不到这个博客')
+      setError(res.message || '没找到这个博客')
       setAuthor(null)
       setIsOwner(false)
       setActivated(false)

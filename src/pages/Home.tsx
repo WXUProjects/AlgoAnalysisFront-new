@@ -224,7 +224,7 @@ export function Home() {
       const tasks: Promise<unknown>[] = [
         getPeriod(periodUid).then((res) => {
           if (!cancelled && res.success) setPeriod(res.data)
-          else if (!res.success) toast.error(res.message || '统计加载失败，请稍后重试')
+          else if (!res.success) toast.error(res.message || '统计没加载出来，过会儿再试')
         }),
         getHeatmap({
           startDate: start,
@@ -272,7 +272,7 @@ export function Home() {
       }).then((res) => {
         if (cancelled) return
         if (res.success) setAcHeat(res.data || [])
-        else toast.error(res.message || '刷题热力图加载失败，请稍后重试')
+        else toast.error(res.message || '热力图没加载出来，过会儿再试')
         setAcHeatLoaded(true)
         setAcHeatLoading(false)
       })
@@ -443,7 +443,7 @@ export function Home() {
                   <CardTitle className="text-base">刷题画像</CardTitle>
                 </div>
                 <CardDescription>
-                  根据你已通过的题目与标签生成
+                  根据你 AC 过的题和标签生成
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-4">
@@ -469,7 +469,7 @@ export function Home() {
                 to="/bulletin"
                 className="text-xs text-muted-foreground hover:underline"
               >
-                查看全部
+                看全部
               </Link>
             </CardHeader>
             <CardContent className="flex flex-col gap-1.5 px-4">
@@ -508,7 +508,7 @@ export function Home() {
                   })}
               {!loading && !bulletins.length && (
                 <p className="py-4 text-center text-sm text-muted-foreground">
-                  暂无公告
+                  还没有公告
                 </p>
               )}
             </CardContent>

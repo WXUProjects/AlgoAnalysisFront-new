@@ -201,7 +201,7 @@ export function BlogImagePanel({
       ? `${rows.length} 张`
       : activeUploads.length > 0
         ? `上传中 ${activeUploads.length}`
-        : '暂无'
+        : '—'
 
   if (collapsible) {
     return (

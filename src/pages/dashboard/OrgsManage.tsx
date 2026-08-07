@@ -96,7 +96,7 @@ export function DashboardOrgsManage() {
     const res = await listMyOrgs({ all: true })
     setLoading(false)
     if (res.success) setOrgs(res.list)
-    else toast.error(res.message || '组织列表加载失败，请稍后重试')
+    else toast.error(res.message || '组织列表加载失败，稍后重试')
   }, [])
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export function DashboardOrgsManage() {
       const r = await listOrgMembers(orgId, { page, pageSize })
       setMembersLoading(false)
       if (!r.success) {
-        toast.error('成员列表加载失败，请稍后重试')
+        toast.error('成员列表加载失败，稍后重试')
         return
       }
       setMembers(r.list)
@@ -182,7 +182,7 @@ export function DashboardOrgsManage() {
       await load()
       await refreshOrgs()
       if (res.data) setSelected(res.data)
-    } else toast.error(res.message || '保存失败，请稍后重试')
+    } else toast.error(res.message || '保存失败，稍后重试')
   }
 
   async function handleDeleteOrg() {
@@ -195,7 +195,7 @@ export function DashboardOrgsManage() {
       setSelected(null)
       await load()
       await refreshOrgs()
-    } else toast.error(res.message || '删除失败，请稍后重试')
+    } else toast.error(res.message || '删除失败，稍后重试')
   }
 
   return (
@@ -506,7 +506,7 @@ export function DashboardOrgsManage() {
                       </div>
                     )}
                     {!membersLoading && members.length === 0 && (
-                      <p className="text-sm text-muted-foreground">暂无成员</p>
+                      <p className="text-sm text-muted-foreground">还没有成员</p>
                     )}
                     {!membersLoading &&
                       members.map((m) => (

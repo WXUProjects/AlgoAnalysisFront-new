@@ -53,7 +53,7 @@ export function ForgotPassword() {
       toast.success(res.message || '验证码已发送')
       setCooldown(60)
     } else {
-      toast.error(res.message || '发送失败，请稍后重试')
+      toast.error(res.message || '没发出去，过会儿再试')
     }
   }
 
@@ -66,7 +66,7 @@ export function ForgotPassword() {
       toast.success(res.message || '密码已重置')
       navigate('/login', { replace: true })
     } else {
-      toast.error(res.message || '密码重置失败，请稍后重试')
+      toast.error(res.message || '密码没重置成功，过会儿再试')
     }
   }
 
@@ -75,7 +75,7 @@ export function ForgotPassword() {
       <Card className="w-full max-w-sm gap-4 py-4 motion-lift">
         <CardHeader className="gap-1 px-4">
           <CardTitle>找回密码</CardTitle>
-          <CardDescription>验证注册邮箱后设置新密码</CardDescription>
+          <CardDescription>验证注册邮箱后设新密码</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <CardContent className="px-4">
@@ -88,7 +88,7 @@ export function ForgotPassword() {
                   autoComplete="email"
                   value={form.email}
                   onChange={(e) => update('email', e.target.value)}
-                  placeholder="注册时使用的邮箱"
+                  placeholder="注册时用的邮箱"
                   disabled={pending}
                 />
               </Field>
@@ -130,7 +130,7 @@ export function ForgotPassword() {
                   autoComplete="new-password"
                   value={form.password}
                   onChange={(e) => update('password', e.target.value)}
-                  placeholder="请输入新密码"
+                  placeholder="新密码"
                   disabled={pending}
                 />
               </Field>
@@ -142,7 +142,7 @@ export function ForgotPassword() {
                   autoComplete="new-password"
                   value={form.passwordConfirm}
                   onChange={(e) => update('passwordConfirm', e.target.value)}
-                  placeholder="请再次输入新密码"
+                  placeholder="再输一遍新密码"
                   disabled={pending}
                 />
               </Field>

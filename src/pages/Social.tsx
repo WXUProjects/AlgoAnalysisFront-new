@@ -117,7 +117,7 @@ export function Social() {
       } else {
         setTargetUserId(0)
         setTargetName('')
-        toast.error(res.message || '找不到该用户')
+        toast.error(res.message || '没找到这个用户')
       }
     }
     void resolve()
@@ -135,7 +135,7 @@ export function Social() {
       if (rid !== loadRequestId.current) return
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '搜索失败，请稍后重试')
+        toast.error(res.message || '没搜到，过会儿再试')
         setList([])
         setTotal(0)
         return
@@ -157,7 +157,7 @@ export function Social() {
     if (rid !== loadRequestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '用户列表加载失败，请稍后重试')
+      toast.error(res.message || '用户列表没加载出来，过会儿再试')
       setList([])
       setTotal(0)
       return
@@ -254,7 +254,7 @@ export function Social() {
 
   async function toggleFollow(u: SocialUser) {
     if (!isLogin) {
-      toast.error('请先登录后再继续')
+      toast.error('先登录才能关注哦')
       return
     }
     if (user && u.userId === user.userId) return
@@ -265,7 +265,7 @@ export function Social() {
       : await followUser(u.userId)
     setBusyId(0)
     if (!res.success) {
-      toast.error(res.message || '操作未完成，请稍后重试')
+      toast.error(res.message || '没弄成，过会儿再试试')
       return
     }
     relationCache.set(u.userId, !following)
@@ -286,7 +286,7 @@ export function Social() {
         <div>
           <h2 className="text-lg font-semibold">{title}</h2>
           <p className="text-sm text-muted-foreground">
-            关注同学，在动态与题库中只看他们的内容
+            关注同学，动态和题库里就能只看他们的内容
           </p>
         </div>
         {username && (
@@ -348,7 +348,7 @@ export function Social() {
             ))}
           {!loading && !list.length && (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-              没有找到相关用户
+              没找到相关的用户
             </p>
           )}
           {!loading &&

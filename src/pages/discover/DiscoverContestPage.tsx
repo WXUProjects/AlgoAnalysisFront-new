@@ -27,7 +27,7 @@ export function DiscoverContestPage() {
       if (cancelled) return
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '赛事加载失败，请稍后重试')
+        toast.error(res.message || '赛事没加载出来，过会儿再试')
         setList([])
         return
       }
@@ -79,7 +79,7 @@ export function DiscoverContestPage() {
           ))}
         {!loading && !list.length ? (
           <p className="px-4 py-12 text-center text-sm text-muted-foreground">
-            近期暂无赛事
+            近期还没有赛事
           </p>
         ) : null}
       </CardContent>

@@ -53,7 +53,7 @@ export function PrivacySetupDialog() {
     const res = await updatePrivacy({ allowPublicProfile, allowPublicFeed })
     setSaving(false)
     if (!res.success) {
-      toast.error(res.message || '保存失败，请稍后重试')
+      toast.error(res.message || '没保存上，过会儿再试')
       return
     }
     toast.success('隐私设置已保存')

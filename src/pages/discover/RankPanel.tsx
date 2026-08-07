@@ -73,7 +73,7 @@ export function RankPanel() {
       if (cancelled) return
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '排行加载失败，请稍后重试')
+        toast.error(res.message || '排行没加载出来，过会儿再试')
         setList([])
         setTotal(0)
         return
@@ -157,7 +157,7 @@ export function RankPanel() {
                         <EmptyMedia variant="icon">
                           <TrophyIcon />
                         </EmptyMedia>
-                        <EmptyTitle>暂无排行</EmptyTitle>
+                        <EmptyTitle>还没有排行</EmptyTitle>
                         <EmptyDescription>
                           本周有提交后会出现在这里
                         </EmptyDescription>

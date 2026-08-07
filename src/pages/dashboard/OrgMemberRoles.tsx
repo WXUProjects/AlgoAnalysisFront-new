@@ -416,7 +416,7 @@ export function DashboardOrgMemberRoles() {
                           <SelectContent>
                             {squadsInGroup.length === 0 ? (
                               <SelectItem value="__empty" disabled>
-                                暂无分队，请先在「分组」页创建
+                                还没有分队，先在「分组」页创建
                               </SelectItem>
                             ) : (
                               squadsInGroup.map((s) => (
@@ -456,13 +456,13 @@ export function DashboardOrgMemberRoles() {
             | undefined
           if (need === 'group') {
             if (!scopeGroupId) {
-              toast.error('请选择要管理的分组')
+              toast.error('先选要管理的分组')
               return
             }
             scope = { scopeType: 'group', scopeId: Number(scopeGroupId) }
           } else if (need === 'squad') {
             if (!scopeSquadId) {
-              toast.error('请选择要管理的分队')
+              toast.error('先选要管理的分队')
               return
             }
             scope = { scopeType: 'squad', scopeId: Number(scopeSquadId) }
@@ -502,7 +502,7 @@ export function DashboardOrgMemberRoles() {
             if (r.success) {
               toast.success(r.message || '已移除成员')
               await loadMembers()
-            } else toast.error(r.message || '移除失败，请稍后重试')
+            } else toast.error(r.message || '移除失败，稍后重试')
           })
         }}
       />

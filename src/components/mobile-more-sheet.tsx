@@ -132,7 +132,7 @@ export function MobileMoreSheet({
             更多
           </SheetTitle>
           <SheetDescription className="text-xs text-muted-foreground">
-            浏览其它功能与账号设置
+            其它功能和账号设置都在这
           </SheetDescription>
         </SheetHeader>
 
@@ -331,7 +331,7 @@ export function MobileMoreAccountFooter({
       ) : (
         <ConfirmDialog
           title="确认退出？"
-          description="退出后需要重新登录才能访问个人相关功能。"
+          description="退出后要重新登录，才能用个人相关功能。"
           confirmLabel="退出"
           onConfirm={() => {
             onLogout()

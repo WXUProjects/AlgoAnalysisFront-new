@@ -204,7 +204,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     if (rid !== requestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '用户列表加载失败，请稍后重试')
+      toast.error(res.message || '用户列表加载失败，稍后重试')
       return
     }
     setList(res.data.list)
@@ -305,7 +305,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
       toast.success(res.message || '已更新分组')
       setEditUser(null)
       void load()
-    } else toast.error(res.message || '更新失败，请稍后重试')
+    } else toast.error(res.message || '更新失败，稍后重试')
   }
 
   /** 内置「站点管理员」角色的增删（与自建站点角色同一套交互） */
@@ -315,7 +315,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     const res = await setSiteAdmin(userId, wantAdmin)
     setIdentitySaving(false)
     if (!res.success) {
-      toast.error(res.message || '操作未完成，请稍后重试')
+      toast.error(res.message || '操作没完成，稍后重试')
       void load()
       return
     }
@@ -346,7 +346,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
       setRoleToggling(false)
       setRoleToggleTarget(null)
       if (!res.success) {
-        toast.error(res.message || '操作未完成，请稍后重试')
+        toast.error(res.message || '操作没完成，稍后重试')
         return
       }
       if (res.added === 0 && res.skipped.includes(userId)) {
@@ -364,7 +364,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
       setRoleToggling(false)
       setRoleToggleTarget(null)
       if (!res.success) {
-        toast.error(res.message || '操作未完成，请稍后重试')
+        toast.error(res.message || '操作没完成，稍后重试')
         return
       }
       toast.success(res.message || '已移除角色，对方重新进入后生效')
@@ -397,7 +397,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
           ? { ...cur, syncExempt: next, dormant: next ? false : cur.dormant }
           : cur,
       )
-    } else toast.error(res.message || '操作未完成，请稍后重试')
+    } else toast.error(res.message || '操作没完成，稍后重试')
   }
 
   function toggleSelected(userId: number, checked: boolean) {
@@ -424,14 +424,14 @@ function UserListPage({ scope }: { scope: UserScope }) {
     if (!canSiteSync) return
     const ids = Array.from(new Set(userIds.filter((id) => id > 0)))
     if (!ids.length) {
-      toast.error('请先勾选要解除的用户')
+      toast.error('先勾选要解除的用户')
       return
     }
     setClearingDormant(true)
     const res = await clearDormant(ids)
     setClearingDormant(false)
     if (!res.success) {
-      toast.error(res.message || '解除失败，请稍后重试')
+      toast.error(res.message || '解除失败，稍后重试')
       return
     }
     const n = res.data?.updated ?? ids.length
@@ -478,7 +478,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     )
     const days = Math.floor(Number(opts.inactiveDays) || 0)
     if (!ids.length && days <= 0) {
-      toast.error('请勾选用户，或填写未登录天数')
+      toast.error('勾选用户，或填写未登录天数')
       return
     }
     setFreezingDormant(true)
@@ -487,7 +487,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     )
     setFreezingDormant(false)
     if (!res.success) {
-      toast.error(res.message || '暂停同步失败，请稍后重试')
+      toast.error(res.message || '暂停同步失败，稍后重试')
       return
     }
     toast.success(
@@ -532,7 +532,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     if (res.success) {
       toast.success(res.message || '已移除该用户')
       void load()
-    } else toast.error(res.message || '删除失败，请稍后重试')
+    } else toast.error(res.message || '删除失败，稍后重试')
   }
 
   async function handleSetDisabled(u: UserListItem, disabled: boolean) {
@@ -545,7 +545,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     const res = await setUserDisabled(u.userId, disabled)
     setTogglingDisabled(false)
     if (!res.success) {
-      toast.error(res.message || (disabled ? '禁用失败，请稍后重试' : '启用失败，请稍后重试'))
+      toast.error(res.message || (disabled ? '禁用失败，稍后重试' : '启用失败，稍后重试'))
       return
     }
     toast.success(
@@ -581,7 +581,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     const res = await updateSpider(userId)
     setSyncingId(null)
     if (res.success) toast.success(res.message || '已开始同步该用户的 OJ 数据')
-    else toast.error(res.message || '同步失败，请稍后重试')
+    else toast.error(res.message || '同步失败，稍后重试')
   }
 
   function openDetail(u: UserListItem) {
@@ -612,7 +612,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
     })
     setSavingIntervals(false)
     if (!res.success) {
-      toast.error(res.message || '同步间隔保存失败，请稍后重试')
+      toast.error(res.message || '同步间隔保存失败，稍后重试')
       return
     }
     toast.success(res.message || '已更新同步间隔')
@@ -682,7 +682,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
             : { ...cur, problemAiEnabled: !checked }
           : cur,
       )
-      toast.error(res.message || '设置失败，请稍后重试')
+      toast.error(res.message || '设置失败，稍后重试')
     }
   }
 
@@ -735,7 +735,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
             : { ...row, emailWeeklyEnabled: !checked }
         }),
       )
-      toast.error(res.message || '设置失败，请稍后重试')
+      toast.error(res.message || '设置失败，稍后重试')
     }
   }
 
@@ -979,8 +979,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       : keyword
                         ? `没有找到与「${keyword}」相关的用户`
                         : isSite
-                          ? '暂无用户'
-                          : '暂无成员'}
+                          ? '还没有用户'
+                          : '还没有成员'}
             </div>
           ) : (
             <Table>
@@ -1086,7 +1086,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                             <Badge
                               variant="outline"
                               className="text-[10px]"
-                              title="尚未记录最近活跃时间，筛选「最近未登录」时会列出"
+                              title="还没记录最近活跃时间，筛选「最近未登录」时会列出"
                             >
                               未记录活跃
                             </Badge>
@@ -1357,7 +1357,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       <Badge
                         variant="outline"
                         className="text-[10px]"
-                        title="尚未记录最近活跃时间"
+                        title="还没记录最近活跃时间"
                       >
                         未记录活跃
                       </Badge>
@@ -1387,7 +1387,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                             minute: '2-digit',
                           },
                         )
-                      : '暂无记录'}
+                      : '还没有记录'}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     最近活跃：
@@ -1403,7 +1403,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                             minute: '2-digit',
                           },
                         )
-                      : '暂无记录'}
+                      : '还没有记录'}
                   </span>
                 </div>
               </div>

@@ -149,7 +149,7 @@ function SharedOrgBadge({
     <Badge
       variant="secondary"
       className="max-w-[12rem] truncate font-normal"
-      title={dn && dn !== primary.trim() ? `${org}内称呼：${dn}` : `同属：${org}`}
+      title={dn && dn !== primary.trim() ? `${org}内称呼：${dn}` : `都在这：${org}`}
     >
       {label}
     </Badge>

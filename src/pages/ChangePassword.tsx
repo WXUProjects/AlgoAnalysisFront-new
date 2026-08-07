@@ -39,17 +39,16 @@ export function ChangePassword() {
       setNewPasswordConfirm('')
       navigate('/change-profile', { replace: true })
     } else {
-      toast.error(res.message || '密码修改失败，请稍后重试')
+      toast.error(res.message || '密码没改成功，过会儿再试')
     }
   }
-
   return (
     <PageShell className="items-center justify-center" stagger={false}>
       <Card className="w-full max-w-sm gap-4 py-4 motion-lift">
         <CardHeader className="gap-1 px-4">
           <CardTitle>修改密码</CardTitle>
           <CardDescription>
-            验证当前密码后设置新密码。若忘记当前密码，可在登录页使用邮箱找回。
+            验证当前密码后设新密码。若忘了当前密码，可在登录页用邮箱找回。
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

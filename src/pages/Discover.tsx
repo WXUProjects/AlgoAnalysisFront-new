@@ -270,7 +270,7 @@ export function Discover() {
         <div className="hidden min-w-0 lg:block">
           <h2 className="text-lg font-semibold tracking-tight">发现</h2>
           <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
-            浏览推荐内容、提交动态与组织
+            逛逛推荐内容、提交动态和组织
           </p>
         </div>
         {/* 搜人：桌面始终显示；移动端仅在「发现」流 */}

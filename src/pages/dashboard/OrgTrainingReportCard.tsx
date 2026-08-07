@@ -118,7 +118,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
           if (res.data.status === 'done') {
             toast.success('训练报告已生成，可下载（24 小时内有效）')
           } else if (res.data.status === 'failed') {
-            toast.error(res.data.errorDetail || res.data.message || '生成失败，请稍后重试')
+            toast.error(res.data.errorDetail || res.data.message || '生成失败，稍后重试')
           }
           return
         }
@@ -142,7 +142,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
     const start = override?.start ?? startDate
     const end = override?.end ?? endDate
     if (!start || !end) {
-      toast.error('请选择分析起止日期')
+      toast.error('先选分析起止日期')
       return
     }
     if (start > end) {
@@ -183,7 +183,7 @@ export function OrgTrainingReportCard({ orgId }: { orgId: number }) {
     })
     setStarting(false)
     if (!res.success || !res.data?.jobId) {
-      toast.error(res.message || '暂时无法开始生成，请稍后重试')
+      toast.error(res.message || '暂时无法开始生成，稍后重试')
       return
     }
     toast.success('已开始生成，完成后会发邮件通知你')

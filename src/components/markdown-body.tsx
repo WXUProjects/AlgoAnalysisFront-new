@@ -51,7 +51,7 @@ export function MarkdownBody({
   content,
   mode = 'markdown',
   className,
-  emptyText = '暂无内容',
+  emptyText = '还没有内容',
   enableLightbox = false,
   onImageLayoutChange,
   onImageWidthChange,

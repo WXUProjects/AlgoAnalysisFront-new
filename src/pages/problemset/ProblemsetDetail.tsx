@@ -246,7 +246,7 @@ export function ProblemsetDetail() {
 
   async function handleUnlock() {
     if (!id || !password.trim()) {
-      toast.error('请输入密码')
+      toast.error('密码要填哦')
       return
     }
     setUnlocking(true)
@@ -265,7 +265,7 @@ export function ProblemsetDetail() {
   async function handleLike() {
     if (!set) return
     if (!isLogin) {
-      toast.message('登录后即可点赞')
+      toast.message('登录后就能点赞啦')
       navigate('/login')
       return
     }
@@ -280,12 +280,12 @@ export function ProblemsetDetail() {
   async function handleFavorite() {
     if (!set) return
     if (!isLogin) {
-      toast.message('登录后即可收藏题单')
+      toast.message('登录后就能收藏题单啦')
       navigate('/login')
       return
     }
     if (set.isSystem || set.visibility !== 'public') {
-      toast.error('仅公开题单可收藏')
+      toast.error('公开题单才能收藏哦')
       return
     }
     const res = await toggleProblemsetFavorite(set.id)
@@ -310,7 +310,7 @@ export function ProblemsetDetail() {
         title: it.title || String(it.problemId),
       }))
     if (plan.length === 0) {
-      toast.message('请先勾选要移除的题目')
+      toast.message('先勾选要移除的题目')
       return
     }
     setRemovePlan(plan)
@@ -352,16 +352,16 @@ export function ProblemsetDetail() {
       else {
         fail++
         lastErr =
-          (r.status === 'fulfilled' ? r.value.message : '') || '移除失败'
+          (r.status === 'fulfilled' ? r.value.message : '') || '没移除成'
       }
     }
     setBusyConfirm(false)
     if (ok === 0) {
-      toast.error(lastErr || '移除失败')
+      toast.error(lastErr || '没移除成')
       return
     }
     if (fail > 0) {
-      toast.message(`已移除 ${ok} 题，另有 ${fail} 题未能移除`)
+      toast.message(`已移除 ${ok} 题，另有 ${fail} 题没移除掉`)
     } else {
       toast.success(ok === 1 ? '已移除' : `已移除 ${ok} 题`)
     }
@@ -383,7 +383,7 @@ export function ProblemsetDetail() {
     setReordering(false)
     if (!res.success) {
       setSet((cur) => (cur ? { ...cur, items: prev } : cur))
-      toast.error(res.message || '排序保存失败，请稍后重试')
+      toast.error(res.message || '排序没保存上，过会儿再试')
       return
     }
     setSet((cur) =>
@@ -430,7 +430,7 @@ export function ProblemsetDetail() {
     const res = await deleteProblemset(set.id)
     setBusyConfirm(false)
     if (!res.success) {
-      toast.error(res.message || '删除失败')
+      toast.error(res.message || '没删掉')
       return
     }
     toast.success('已删除')
@@ -448,7 +448,7 @@ export function ProblemsetDetail() {
       setBankHits(res.data.data || [])
     } else {
       setBankHits([])
-      toast.error(res.message || '搜索失败')
+      toast.error(res.message || '没搜到')
     }
   }
 
@@ -458,7 +458,7 @@ export function ProblemsetDetail() {
     const res = await addProblemToSet({ problemsetId: set.id, problemId })
     setAdding(false)
     if (!res.success) {
-      toast.error(res.message || '加入失败')
+      toast.error(res.message || '没加进去')
       return
     }
     toast.success(
@@ -472,7 +472,7 @@ export function ProblemsetDetail() {
 
   async function handleRecognizeUrl() {
     if (!set || !url.trim()) {
-      toast.error('请粘贴题目链接')
+      toast.error('粘贴一下题目链接')
       return
     }
     const pasted = url.trim()
@@ -487,8 +487,8 @@ export function ProblemsetDetail() {
       setUrlPhase('failed')
       setUrlFailMsg(
         res.code === 'URL_PARSE_FAILED'
-          ? '无法从该链接识别题目'
-          : res.message || '识别失败',
+          ? '从这条链接认不出题目'
+          : res.message || '没识别出来',
       )
       return
     }
@@ -496,7 +496,7 @@ export function ProblemsetDetail() {
     if (!pid) {
       setAdding(false)
       setUrlPhase('failed')
-      setUrlFailMsg('识别失败，请手写加题')
+      setUrlFailMsg('没识别出来，手写加题吧')
       return
     }
     const seed = {
@@ -515,7 +515,7 @@ export function ProblemsetDetail() {
     setAddOpen(false)
     resetUrlAdd()
     toast.message('正在识别题目…', {
-      description: '题面拉取较慢，识别成功或失败会再通知你',
+      description: '题面拉取有点慢，识别好了会通知你',
     })
     const setId = set.id
     bgWatchStop.current?.()
@@ -533,7 +533,7 @@ export function ProblemsetDetail() {
                   problemId: p.id,
                 })
                 if (!r.success) {
-                  toast.error(r.message || '加入失败')
+                  toast.error(r.message || '没加进去')
                   return
                 }
                 toast.success('已加入题单')
@@ -545,8 +545,8 @@ export function ProblemsetDetail() {
       },
       onFail: (reason) => {
         bgWatchStop.current = null
-        toast.error(reason || '识别失败', {
-          description: '可手写加题，或放弃',
+        toast.error(reason || '没识别出来', {
+          description: '可以手写加题，或先放弃',
           action: {
             label: '手写加题',
             onClick: () => openManualAdd(pasted),
@@ -565,7 +565,7 @@ export function ProblemsetDetail() {
     })
     setAdding(false)
     if (!res.success) {
-      toast.error(res.message || '加入失败')
+      toast.error(res.message || '没加进去')
       return
     }
     toast.success(`已加入：${formatRecognizedProblemLine(recognized)}`)
@@ -807,8 +807,8 @@ export function ProblemsetDetail() {
                 {items.length === 0
                   ? '还没有题目，点「加题」从题库或链接添加。'
                   : set.isOwner
-                    ? '勾选后可批量移除；拖动手柄调整顺序；点题名打开详情。'
-                    : '点击题目可打开详情。'}
+                    ? '勾选能批量移除；拖动把手调顺序；点题名看详情。'
+                    : '点题目能打开详情。'}
               </CardDescription>
             </div>
             {set.isOwner && selectedCount > 0 && (
@@ -841,7 +841,7 @@ export function ProblemsetDetail() {
         <CardContent>
           {items.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              暂无题目
+              还没有题目
             </p>
           ) : (
             <Table>
@@ -1114,7 +1114,7 @@ export function ProblemsetDetail() {
                     {formatRecognizedProblemLine(recognized)}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    请确认是否这道题，再加入题单。
+                    是这道题的话，就加入题单吧。
                   </p>
                 </div>
               )}
@@ -1122,7 +1122,7 @@ export function ProblemsetDetail() {
                 <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3 text-sm">
                   <p className="font-medium text-destructive">识别失败</p>
                   <p className="mt-1 text-muted-foreground">
-                    {urlFailMsg || '无法识别该链接'}。可手写加题，或改链接后重试。
+                    {urlFailMsg || '认不出这个链接'}。可以手写加题，或换个链接再试。
                   </p>
                 </div>
               )}
@@ -1187,8 +1187,7 @@ export function ProblemsetDetail() {
             <DialogTitle>编辑题单</DialogTitle>
             <DialogDescription>
               {set.isSystem ? '可修改描述。' : '可改标题、描述与可见性。'}
-            </DialogDescription>
-          </DialogHeader>
+            </DialogDescription>          </DialogHeader>
           <FieldGroup>
             {!set.isSystem && (
               <Field>
@@ -1270,8 +1269,8 @@ export function ProblemsetDetail() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {removePlan && removePlan.length > 1
-                ? `确定移除已选的 ${removePlan.length} 道题？移除后仍可重新加回。`
-                : `确定从题单中移除「${removePlan?.[0]?.title || removePlan?.[0]?.problemId}」？`}
+                ? `要移除选中的 ${removePlan.length} 道题吗？移除后还能重新加回来。`
+                : `要把「${removePlan?.[0]?.title || removePlan?.[0]?.problemId}」从题单移走吗？`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

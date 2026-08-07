@@ -60,7 +60,7 @@ export function BlogArchivesPage() {
       <div className="mz-article" id="archives">
         <h1 className="mz-page-title">归档</h1>
         {groups.length === 0 ? (
-          <div className="mz-empty">暂无文章</div>
+          <div className="mz-empty">还没有文章</div>
         ) : (
           groups.map((g) => (
             <div key={g.year}>
@@ -90,7 +90,7 @@ export function BlogArchivesPage() {
           归档
         </h1>
         {groups.length === 0 ? (
-          <div className="chirpy-empty">暂无文章</div>
+          <div className="chirpy-empty">还没有文章</div>
         ) : (
           groups.map((g) => (
             <div key={g.year}>
@@ -118,7 +118,7 @@ export function BlogArchivesPage() {
       <h1 className="text-xl font-semibold">归档</h1>
       {groups.length === 0 ? (
         <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
-          暂无文章
+          还没有文章
         </div>
       ) : (
         groups.map((g) => (

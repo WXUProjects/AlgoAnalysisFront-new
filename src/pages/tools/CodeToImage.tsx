@@ -126,7 +126,7 @@ export function CodeToImage() {
     const frame = frameRef.current
     if (!frame) return
     if (!code.trim()) {
-      toast.error('请先粘贴代码')
+      toast.error('先粘贴代码呀')
       return
     }
     setExporting(true)
@@ -144,9 +144,9 @@ export function CodeToImage() {
         primaryFont: settings.fontFamily,
       })
       downloadDataUrl(dataUrl, `code-${Date.now()}.png`)
-      toast.success('已下载 PNG')
+      toast.success('PNG 下载好啦')
     } catch {
-      toast.error('导出失败，请稍后重试')
+      toast.error('没导出成，过会儿再试')
     } finally {
       setExporting(false)
     }
@@ -156,7 +156,7 @@ export function CodeToImage() {
     const frame = frameRef.current
     if (!frame) return
     if (!code.trim()) {
-      toast.error('请先粘贴代码')
+      toast.error('先粘贴代码呀')
       return
     }
     setExporting(true)
@@ -174,13 +174,13 @@ export function CodeToImage() {
         primaryFont: settings.fontFamily,
       })
       const ok = await copyDataUrlToClipboard(dataUrl)
-      if (ok) toast.success('已复制到剪贴板')
+      if (ok) toast.success('复制到剪贴板啦')
       else {
         downloadDataUrl(dataUrl, `code-${Date.now()}.png`)
-        toast.message('当前浏览器无法复制图片，已改为下载文件')
+        toast.message('这个浏览器复制不了图片，改成下载文件啦')
       }
     } catch {
-      toast.error('复制失败，请稍后重试')
+      toast.error('没复制上，过会儿再试')
     } finally {
       setExporting(false)
     }

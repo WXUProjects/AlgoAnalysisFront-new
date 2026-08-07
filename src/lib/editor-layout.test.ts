@@ -29,7 +29,7 @@ describe('editor layout (blog + solution)', () => {
     assert.match(src, /全屏|fullscreen|Maximize2Icon/)
     assert.match(src, /Undo2Icon|undo/)
     assert.match(src, /任务列表|- \[ \]/)
-    assert.match(src, /尚未输入|字 ·/)
+    assert.match(src, /还没开始写|字 ·/)
   })
 
   it('BlogEditor default height is significantly above old 480', () => {

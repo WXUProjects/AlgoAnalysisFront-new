@@ -218,7 +218,7 @@ export function Profile() {
       setLoading(false)
       setProfile(null)
       setPeriod(null)
-      const msg = pRes.message || '资料加载失败，请稍后重试'
+      const msg = pRes.message || '资料没加载出来，过会儿再试'
       if (msg.includes('隐私') || msg.includes('禁止') || msg.includes('未开放')) {
         setDenied(true)
       } else {
@@ -320,7 +320,7 @@ export function Profile() {
       }).then((res) => {
         if (cancelled) return
         if (res.success) setAcHeat(res.data || [])
-        else toast.error(res.message || '刷题热力图加载失败，请稍后重试')
+        else toast.error(res.message || '热力图没加载出来，过会儿再试')
         setAcHeatLoaded(true)
         setAcHeatLoading(false)
       })
@@ -358,8 +358,8 @@ export function Profile() {
         <Card className="py-4">
           <CardContent className="px-4 text-sm text-muted-foreground">
             {denied
-              ? '该用户未开放公共域个人资料'
-              : '找不到该用户'}
+              ? '这位用户没开放公共域资料'
+              : '没找到这个用户'}
           </CardContent>
         </Card>
       </PageShell>
@@ -383,7 +383,7 @@ export function Profile() {
       : await followUser(profile.userId)
     setFollowBusy(false)
     if (!res.success) {
-      toast.error(res.message || '操作未完成，请稍后重试')
+      toast.error(res.message || '没弄成，过会儿再试试')
       return
     }
     setIsFollowing(!isFollowing)
@@ -417,7 +417,7 @@ export function Profile() {
           ) : null}
         </div>
         {bound.length === 0 ? (
-          <p className="text-xs text-muted-foreground">尚未绑定 OJ，去管理里添加</p>
+          <p className="text-xs text-muted-foreground">还没绑 OJ，去管理里加一个吧</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {bound.map(({ platform: p, bind }) => {
@@ -511,7 +511,7 @@ export function Profile() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>确认退出？</AlertDialogTitle>
                     <AlertDialogDescription>
-                      退出后需要重新登录才能访问个人相关功能。
+                      退出后要重新登录，才能用个人相关功能。
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -615,7 +615,7 @@ export function Profile() {
                       ? age
                         ? `上次同步：${age}`
                         : `上次同步：${abs}`
-                      : '上次同步：尚未同步'
+                      : '上次同步：未同步'
                     return (
                       <p
                         className="mt-1.5 text-[11px] text-muted-foreground tabular-nums sm:text-xs lg:text-center"
@@ -686,7 +686,7 @@ export function Profile() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>确认退出？</AlertDialogTitle>
                               <AlertDialogDescription>
-                                退出后需要重新登录才能访问个人相关功能。
+                                退出后要重新登录，才能用个人相关功能。
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -778,7 +778,7 @@ export function Profile() {
             <CardHeader className="flex flex-row items-center justify-between px-4 space-y-0">
               <CardTitle className="text-base">近期动态</CardTitle>
               <Button type="button" size="sm" variant="ghost" asChild>
-                <Link to={`/all-activities?id=${targetId}`}>查看所有动态</Link>
+                <Link to={`/all-activities?id=${targetId}`}>看全部动态</Link>
               </Button>
             </CardHeader>
             <CardContent className="px-4 py-2">
@@ -867,7 +867,7 @@ export function Profile() {
                   })}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">暂无动态</p>
+                <p className="text-sm text-muted-foreground">还没有动态</p>
               )}
             </CardContent>
           </Card>
@@ -902,7 +902,7 @@ export function Profile() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted-foreground">暂无评论</p>
+                  <p className="text-sm text-muted-foreground">还没有评论</p>
                 )}
               </div>
               <div>
@@ -930,7 +930,7 @@ export function Profile() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted-foreground">暂无题解</p>
+                  <p className="text-sm text-muted-foreground">还没有题解</p>
                 )}
               </div>
             </CardContent>
@@ -940,7 +940,7 @@ export function Profile() {
             <CardHeader className="px-4">
               <CardTitle className="text-base">刷题画像</CardTitle>
               <CardDescription>
-                根据你已通过的题目与标签生成
+                根据你 AC 过的题和标签生成
               </CardDescription>
             </CardHeader>
             <CardContent className="px-4">
@@ -952,7 +952,7 @@ export function Profile() {
             <CardHeader className="flex flex-row items-center justify-between px-4 space-y-0">
               <CardTitle className="text-base">最近参加的比赛</CardTitle>
               <Button type="button" size="sm" variant="ghost" asChild>
-                <Link to={`/contest?id=${targetId}`}>查看所有比赛</Link>
+                <Link to={`/contest?id=${targetId}`}>看全部比赛</Link>
               </Button>
             </CardHeader>
             <CardContent className="flex flex-col gap-2 px-4">
@@ -1016,7 +1016,7 @@ export function Profile() {
                 </div>
               ))}
               {!contests.length && (
-                <p className="text-sm text-muted-foreground">暂无比赛</p>
+                <p className="text-sm text-muted-foreground">还没有比赛</p>
               )}
             </CardContent>
           </Card>

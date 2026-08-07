@@ -62,7 +62,7 @@ export function PasteCreate() {
       return
     }
     // 失败时不要静默显示「还没有发布过，发布后会出现在这里」
-    setMineError(res.message || '加载失败，请稍后重试')
+    setMineError(res.message || '没加载出来，过会儿再试')
   }, [ready, isLogin])
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export function PasteCreate() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!content.trim()) {
-      toast.error('请先粘贴要分享的内容')
+      toast.error('先把要分享的内容贴进来')
       return
     }
     setSaving(true)
@@ -118,7 +118,7 @@ export function PasteCreate() {
     })
     setSaving(false)
     if (!res.success || !res.data?.slug) {
-      toast.error(res.message || '发布失败，请稍后重试')
+      toast.error(res.message || '没发布成，过会儿再试')
       return
     }
     toast.success('已生成分享链接')
@@ -130,7 +130,7 @@ export function PasteCreate() {
     if (res.success) {
       toast.success('已删除')
       void loadMine()
-    } else toast.error(res.message || '删除失败，请稍后重试')
+    } else toast.error(res.message || '没删掉，过会儿再试')
   }
 
   return (
@@ -140,7 +140,7 @@ export function PasteCreate() {
           <CardHeader>
             <CardTitle>粘贴板</CardTitle>
             <CardDescription>
-              把代码或文本贴进来，生成链接分享。
+              把代码或文本贴进来，生成链接就能分享。
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -203,7 +203,7 @@ export function PasteCreate() {
                   minHeight={320}
                 />
                 <p className="text-xs text-muted-foreground">
-                  自动识别语言，边写边高亮；Tab 缩进 2 空格，大小约不超过 512KB
+                  自动识别语言、边写边高亮；Tab 缩进 2 空格，大小约不超过 512KB
                 </p>
               </Field>
             </FieldGroup>
@@ -224,7 +224,7 @@ export function PasteCreate() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">我最近发布的</CardTitle>
-            <CardDescription>此列表仅自己可见，他人需通过链接访问。</CardDescription>
+            <CardDescription>这个列表只有自己能看到，别人得靠链接访问。</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {mineLoading && !mine.length ? (
@@ -277,7 +277,7 @@ export function PasteCreate() {
                     </div>
                     <ConfirmDialog
                       title="删除这条粘贴？"
-                      description={`「${p.title || p.slug}」删除后，分享链接将失效且无法恢复。`}
+                      description={`「${p.title || p.slug}」删掉后，分享链接就失效了，找不回来。`}
                       confirmLabel="删除"
                       destructive
                       onConfirm={() => void handleDelete(p.slug)}

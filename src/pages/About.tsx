@@ -28,11 +28,11 @@ const features: {
   },
   {
     title: '多平台数据同步',
-    desc: '自动同步 Codeforces、AtCoder、洛谷、牛客等平台的提交与比赛，并提供热力图与时段统计。',
+    desc: '自动同步 Codeforces、AtCoder、洛谷、牛客等平台的提交与比赛，还有热力图和时段统计。',
   },
   {
     title: '多组织隔离',
-    desc: '公共域对所有人开放；各校队可有独立成员、分组、公告与后台，数据彼此隔离。',
+    desc: '公共域对所有人开放；各校队有独立的成员、分组、公告和后台，数据互不相通。',
   },
   {
     title: '角色与权限',
@@ -40,20 +40,20 @@ const features: {
   },
   {
     title: '题库与提交',
-    desc: '浏览、筛选题目，查看题面与提交历史，支持个人与队内复盘。',
+    desc: '浏览、筛选题目，查看题面与提交历史，支持个人和队内复盘。',
   },
   {
     title: '比赛与动态',
-    desc: '比赛列表、站内榜，以及全站或队内提交动态。',
+    desc: '比赛列表、站内榜，以及全站或队内的提交动态。',
   },
   {
     title: '日报与周报',
-    desc: '按日、按周汇总做题与训练情况，生成日报与周报。',
+    desc: '自动汇总每日、每周的训练情况，生成日报和周报发送到邮箱。',
   },
   {
     title: '数据导出',
     upcoming: true,
-    desc: '计划支持导出队员与队内训练数据，便于总结、考核与留档。',
+    desc: '计划支持导出队员与队内训练数据，方便考核和留档。',
   },
 ]
 
@@ -189,10 +189,6 @@ export function About() {
               </li>
             ))}
           </ul>
-          <Separator />
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            当前为默认公共域。加入校队后可切换组织查看队内数据。
-          </p>
         </CardContent>
       </Card>
 
@@ -206,30 +202,22 @@ export function About() {
         <CardContent className="flex flex-col gap-3 text-sm leading-relaxed text-muted-foreground">
           <p>
             面向算法协会、ACM
-            集训队及相关院系：独立成员与公告管理，可配置品牌与数据同步。
+            集训队及相关院系开放。每个校队有独立的成员与公告，品牌名和同步策略可单独配置。
           </p>
           <div>
             <p className="font-medium text-foreground">合作内容</p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
               <li>
                 <span className="text-foreground">独立组织空间</span>
-                ：成员、分组、公告与队内统计与本校绑定
-              </li>
-              <li>
-                <span className="text-foreground">品牌配置</span>
-                ：侧栏名称、标志等可按校队设置
+                ：成员、分组、公告与队内统计，都和本校绑定
               </li>
               <li>
                 <span className="text-foreground">成员与角色</span>
                 ：邀请码加入与审批，教练、队长分工
               </li>
               <li>
-                <span className="text-foreground">多平台同步</span>
-                ：提交与比赛自动汇总，含热力图与动态
-              </li>
-              <li>
-                <span className="text-foreground">同步策略</span>
-                ：可按组织配置开关与间隔
+                <span className="text-foreground">品牌与同步</span>
+                ：侧栏名称、标志可按校队设置，同步开关与间隔也可按组织配置
               </li>
               <li>
                 <span className="text-foreground">平台维护</span>
@@ -254,8 +242,7 @@ export function About() {
           </div>
           <p>
             联系时请注明学校或团队名称、人数与主要需求。
-          </p>
-        </CardContent>
+          </p>        </CardContent>
       </Card>
 
       <Card>
@@ -275,7 +262,7 @@ export function About() {
             </a>
             的指导，以及无锡学院算法协会同学的使用反馈。
           </p>
-          <p>感谢所有提出建议、参与测试与使用的同学与伙伴。</p>
+          <p>也谢谢所有提过建议、帮忙测过的同学和伙伴。</p>
         </CardContent>
       </Card>
 
@@ -285,7 +272,7 @@ export function About() {
         </CardHeader>
         <CardContent className="flex flex-col gap-2 text-sm text-muted-foreground">
           <p>
-            当前为默认公共空间。已有校队邀请码可在「我的组织」中加入；新组织由站点管理员创建与管理。
+            现在默认在公共空间。有校队邀请码就去「我的组织」加入；新组织由站点管理员创建和管理。
           </p>
           <Separator className="my-2" />
           <p>
@@ -296,7 +283,7 @@ export function About() {
             >
               我的组织
             </Link>
-            ；未登录请先{' '}
+            ；还没登录就先{' '}
             <Link
               to="/login"
               className="text-primary underline-offset-4 hover:underline"

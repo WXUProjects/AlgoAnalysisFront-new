@@ -96,7 +96,7 @@ export async function getGroup(
   if (!res.success && !res.data) return { ...res, data: null }
   const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
   if (raw.id === undefined && raw.name === undefined) {
-    return { success: false, message: res.message || '分组加载失败，请稍后重试', data: null }
+    return { success: false, message: res.message || '分组没加载出来，过会儿再试', data: null }
   }
   const data = normalizeGroup(raw)
   return {

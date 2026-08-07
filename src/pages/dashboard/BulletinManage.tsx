@@ -99,7 +99,7 @@ export function DashboardBulletinManage({
     const res = await listBulletins(page, pageSize, scope)
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '公告加载失败，请稍后重试')
+      toast.error(res.message || '公告加载失败，稍后重试')
       return
     }
     setList(res.data.list)
@@ -128,7 +128,7 @@ export function DashboardBulletinManage({
 
   async function handleSave() {
     if (!title.trim()) {
-      toast.error('请填写标题')
+      toast.error('标题要填')
       return
     }
     setSaving(true)
@@ -150,7 +150,7 @@ export function DashboardBulletinManage({
       toast.success(res.message || '已保存')
       setOpen(false)
       void load()
-    } else toast.error(res.message || '保存失败，请稍后重试')
+    } else toast.error(res.message || '保存失败，稍后重试')
   }
 
   async function handleDelete(id: number) {
@@ -158,7 +158,7 @@ export function DashboardBulletinManage({
     if (res.success) {
       toast.success(res.message || '已删除')
       void load()
-    } else toast.error(res.message || '删除失败，请稍后重试')
+    } else toast.error(res.message || '删除失败，稍后重试')
   }
 
   // 站点公告需站点公告管理权限；无权限则回组织公告管理页
@@ -169,7 +169,7 @@ export function DashboardBulletinManage({
     return (
       <PageShell>
         <p className="text-sm text-muted-foreground">
-          你还没有管理公告的权限。如有需要，请联系团队管理员开通。
+          你还没有管理公告的权限。有需要的话，找团队管理员开通。
         </p>
       </PageShell>
     )

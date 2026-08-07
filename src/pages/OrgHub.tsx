@@ -45,11 +45,11 @@ export function OrgHub() {
 
   async function handleJoin() {
     if (!code.trim()) {
-      toast.error('请输入团队邀请码')
+      toast.error('邀请码要填哦')
       return
     }
     if (!orgDisplayName.trim()) {
-      toast.error('请填写组织内名称')
+      toast.error('组织里的名字要填哦')
       return
     }
     setLoading(true)
@@ -61,7 +61,7 @@ export function OrgHub() {
       setOrgDisplayNameInput('')
       await refreshOrgs()
     } else {
-      toast.error(res.message || '加入失败，请稍后重试')
+      toast.error(res.message || '没加进去，过会儿再试')
     }
   }
 
@@ -84,7 +84,7 @@ export function OrgHub() {
       // 退出当前组织时后端会签发新 JWT；必须 sync 刷新 orgId/orgRole
       await sync()
     } else {
-      toast.error(res.message || '退出失败，请稍后重试')
+      toast.error(res.message || '没退成，过会儿再试')
     }
   }
 
@@ -97,11 +97,11 @@ export function OrgHub() {
     if (!editOrg) return
     const name = editName.trim()
     if (!name) {
-      toast.error('请填写组织内名称')
+      toast.error('组织里的名字要填哦')
       return
     }
     if ([...name].length > 32) {
-      toast.error('组织内名称最多 32 字')
+      toast.error('组织内名称最多 32 个字哦')
       return
     }
     setSavingName(true)
@@ -115,7 +115,7 @@ export function OrgHub() {
       setEditOrg(null)
       await refreshOrgs()
     } else {
-      toast.error(res.message || '更新失败，请稍后重试')
+      toast.error(res.message || '没更新成，过会儿再试')
     }
   }
 
@@ -125,8 +125,8 @@ export function OrgHub() {
         <h1 className="text-xl font-semibold">我的组织</h1>
         <p className="text-sm text-muted-foreground">
           默认在公共域。可用团队邀请码加入校队，并切换当前所在组织。
-          <strong className="font-medium text-foreground">站内昵称请在下方「修改称呼」中设置</strong>
-          （改公共域称呼即改昵称）；加入其他校队后可单独设置队内名称。
+          <strong className="font-medium text-foreground">站内昵称在下方「修改称呼」里改</strong>
+          （改公共域称呼就是改昵称）；进了别的校队可以单独设队内名称。
         </p>
       </div>
 
@@ -139,7 +139,7 @@ export function OrgHub() {
         </CardHeader>
         <CardContent className="space-y-3">
           {orgs.length === 0 && (
-            <p className="text-sm text-muted-foreground">暂时读不到组织信息，请重新登录后再试。</p>
+            <p className="text-sm text-muted-foreground">暂时读不到组织信息，重新登录再看看。</p>
           )}
           {orgs.map((o) => (
             <div
@@ -202,7 +202,7 @@ export function OrgHub() {
         <CardHeader>
           <CardTitle className="text-base">加入团队</CardTitle>
           <CardDescription>
-            向管理员索取团队邀请码，并填写你在队内显示的名称。
+            找管理员要个团队邀请码，再填你在队内显示的名字。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -241,7 +241,7 @@ export function OrgHub() {
           <AlertDialogHeader>
             <AlertDialogTitle>退出组织？</AlertDialogTitle>
             <AlertDialogDescription>
-              确定退出「{leaveTarget?.name}」？退出后需重新用邀请码加入。
+              确定退出「{leaveTarget?.name}」？退出去就得重新用邀请码加回来。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

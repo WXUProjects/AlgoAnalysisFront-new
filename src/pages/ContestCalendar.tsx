@@ -253,7 +253,7 @@ export function ContestCalendar() {
     if (id !== requestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '赛程加载失败，请稍后重试')
+      toast.error(res.message || '赛程没加载出来，过会儿再试')
       return
     }
     setList(res.data.list)
@@ -400,7 +400,7 @@ export function ContestCalendar() {
 
   function openContestSub(item: ContestCalendarItem) {
     if (!isLogin) {
-      toast.message('请先登录后再订阅')
+      toast.message('先登录才能订阅哦')
       return
     }
     const existing = contestSubMap.get(item.id)
@@ -425,7 +425,7 @@ export function ContestCalendar() {
     })
     setSubSaving(false)
     if (!res.success) {
-      toast.error(res.message || '订阅保存失败，请稍后重试')
+      toast.error(res.message || '订阅没保存上，过会儿再试')
       return
     }
     toast.success(enabled ? '订阅成功' : '已取消本场提醒')
@@ -454,7 +454,7 @@ export function ContestCalendar() {
         enabled: false,
       })
       if (!res.success) {
-        toast.error(res.message || '取消失败，请稍后重试')
+        toast.error(res.message || '没取消成，过会儿再试')
         return
       }
       toast.success('已取消本场提醒')
@@ -467,7 +467,7 @@ export function ContestCalendar() {
       platform: item.platform,
     })
     if (!res.success) {
-      toast.error(res.message || '取消失败，请稍后重试')
+      toast.error(res.message || '没取消成，过会儿再试')
       return
     }
     toast.success('已取消本场提醒')
@@ -480,7 +480,7 @@ export function ContestCalendar() {
     advance: number,
   ) {
     if (!isLogin) {
-      toast.message('请先登录后再订阅')
+      toast.message('先登录才能订阅哦')
       return
     }
     setPlatBusy(plat.platform)
@@ -491,7 +491,7 @@ export function ContestCalendar() {
       })
       setPlatBusy(null)
       if (!res.success) {
-        toast.error(res.message || '取消失败，请稍后重试')
+        toast.error(res.message || '没取消成，过会儿再试')
         return
       }
       toast.success(`已取消 ${plat.platformName} 平台订阅`)
@@ -506,7 +506,7 @@ export function ContestCalendar() {
     })
     setPlatBusy(null)
     if (!res.success) {
-      toast.error(res.message || '订阅失败，请稍后重试')
+      toast.error(res.message || '没订阅成，过会儿再试')
       return
     }
     toast.success(`已订阅 ${plat.platformName}（提前 ${advanceLabel(advance)}）`)
@@ -567,7 +567,7 @@ export function ContestCalendar() {
               size="sm"
               onClick={() => {
                 if (!isLogin) {
-                  toast.message('请先登录后再管理订阅')
+                  toast.message('先登录才能管理订阅哦')
                   return
                 }
                 setPlatDialogOpen(true)
@@ -665,8 +665,8 @@ export function ContestCalendar() {
                   <CardTitle>暂时还没有赛程</CardTitle>
                   <CardDescription>
                     {hasFilters
-                      ? '当前筛选下没有比赛，试试放宽条件。'
-                      : '暂时没有可展示的赛程，稍后再来看看。'}
+                      ? '当前筛选下没有比赛，放宽点条件试试。'
+                      : '暂时还没有可展示的赛程，过会儿再来看看。'}
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -734,7 +734,7 @@ export function ContestCalendar() {
                             (subbed ? (
                               <ConfirmDialog
                                 title="取消本场提醒？"
-                                description={`确定取消「${item.name}」的邮件提醒？`}
+                                description={`要把「${item.name}」的邮件提醒关掉吗？`}
                                 confirmLabel="取消订阅"
                                 onConfirm={() => void removeContestSub(item)}
                               >
@@ -939,7 +939,7 @@ export function ContestCalendar() {
         title="取消平台订阅？"
         description={
           platOffTarget
-            ? `确定取消「${platOffTarget.platformName}」的全部比赛提醒？`
+            ? `要把「${platOffTarget.platformName}」的全部比赛提醒关掉吗？`
             : ''
         }
         confirmLabel="取消订阅"

@@ -69,7 +69,7 @@ export function OrgsPanel({
     const res = await discoverOrgs({ page, pageSize, q })
     setLoading(false)
     if (!res.success) {
-      toast.error(res.message || '组织列表加载失败，请稍后重试')
+      toast.error(res.message || '组织列表没加载出来，过会儿再试')
       setList([])
       setTotal(0)
       return
@@ -87,10 +87,10 @@ export function OrgsPanel({
     const res = await switchOrg(org.id)
     setSwitching(0)
     if (!res.success) {
-      toast.error(res.message || '切换失败，请稍后重试')
+      toast.error(res.message || '没切过去，过会儿再试')
       return
     }
-    toast.success(`已切换到「${org.name}」`)
+    toast.success(`切到「${org.name}」啦`)
     await refreshOrgs()
     void reload()
   }
@@ -98,18 +98,18 @@ export function OrgsPanel({
   async function handleJoin() {
     if (!joinTarget) return
     if (!inviteCode.trim()) {
-      toast.error('请输入团队邀请码')
+      toast.error('邀请码要填哦')
       return
     }
     if (!displayName.trim()) {
-      toast.error('请填写组织内名称')
+      toast.error('组织里的名字要填哦')
       return
     }
     setJoining(true)
     const res = await joinOrg(inviteCode.trim(), displayName.trim())
     setJoining(false)
     if (!res.success) {
-      toast.error(res.message || '加入失败，请稍后重试')
+      toast.error(res.message || '没加进去，过会儿再试')
       return
     }
     toast.success(res.message || '已提交加入申请')
@@ -240,7 +240,7 @@ export function OrgsPanel({
                     </EmptyMedia>
                     <EmptyTitle>暂时还没有组织</EmptyTitle>
                     <EmptyDescription>
-                      {q ? '没有匹配的组织名称' : '暂时没有可展示的组织'}
+                      {q ? '没有匹配的组织名称' : '暂时还没有可展示的组织'}
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
@@ -292,8 +292,7 @@ export function OrgsPanel({
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="在组织里显示的名字"
-              />
-            </div>
+              />            </div>
           </div>
           <DialogFooter>
             <Button

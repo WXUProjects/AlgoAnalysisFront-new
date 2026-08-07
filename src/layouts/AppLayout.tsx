@@ -205,8 +205,8 @@ function AppLayoutInner() {
   async function handleSwitchOrg(orgId: number) {
     if (!orgId || orgId === user?.orgId) return
     const res = await switchOrg(orgId)
-    if (res.success) toast.success('已切换组织')
-    else toast.error(res.message || '切换失败，请稍后重试')
+    if (res.success) toast.success('切过去啦')
+    else toast.error(res.message || '切换没成功，过会儿再试')
   }
 
   return (
@@ -465,7 +465,7 @@ function AppLayoutInner() {
                 <SidebarMenuItem>
                   <ConfirmDialog
                     title="确认退出？"
-                    description="退出后需要重新登录才能访问个人相关功能。"
+                    description="退出后要重新登录，才能用个人相关功能。"
                     confirmLabel="退出"
                     onConfirm={handleLogout}
                   >
@@ -507,7 +507,7 @@ function AppLayoutInner() {
           </header>
           {showLoginBanner && (
             <div className="shrink-0 border-b bg-muted/50 px-4 py-2.5 text-center text-sm text-muted-foreground">
-              您还没有登录，请{' '}
+              还没登录哦，{' '}
               <Link
                 to="/register"
                 className="font-medium text-foreground underline-offset-4 hover:underline"

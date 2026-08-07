@@ -112,7 +112,7 @@ export function BlogPlaza() {
       if (!res.success || !res.data) {
         setList([])
         setTotal(0)
-        toast.error(res.message || '文章加载失败')
+        toast.error(res.message || '文章没加载出来')
       } else {
         setList(res.data.list)
         setTotal(res.data.total)
@@ -285,8 +285,8 @@ export function BlogPlaza() {
                   {keyword
                     ? '没有找到相关文章'
                     : sort === 'recommend'
-                      ? '暂无精选文章'
-                      : '暂无公开文章'}
+                      ? '还没有精选文章'
+                      : '还没有公开文章'}
                 </EmptyTitle>
                 <EmptyDescription>
                   {keyword
@@ -349,7 +349,7 @@ export function BlogPlaza() {
               </div>
             ) : authors.length === 0 ? (
               <p className="py-4 text-center text-sm text-muted-foreground">
-                暂无活跃博主
+                还没有活跃博主
               </p>
             ) : (
               <ul className="flex flex-col gap-1">

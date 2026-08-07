@@ -43,9 +43,9 @@ export function RequireCoach({ children }: { children: React.ReactNode }) {
       <PageShell className="items-center justify-center" stagger={false}>
         <Card className="w-full max-w-md text-center motion-lift" role="alert">
           <CardHeader>
-            <CardTitle>暂无管理权限</CardTitle>
+            <CardTitle>还没有管理权限</CardTitle>
             <CardDescription>
-              当前账号无法进入管理中心，请联系管理员开通权限。
+              当前账号进不了管理中心，找管理员开权限吧。
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center gap-2">

@@ -61,7 +61,7 @@ export function DashboardOps() {
     const res = await getSubmitInventory()
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '提交数据加载失败，请稍后重试')
+      toast.error(res.message || '提交数据加载失败，稍后重试')
       return
     }
     setInv(res.data)
@@ -75,7 +75,7 @@ export function DashboardOps() {
     return (
       <PageShell>
         <p className="text-sm text-muted-foreground">
-          你还没有使用运维工具的权限。如有需要，请联系站点管理员开通。
+          你还没有使用运维工具的权限。有需要的话，找站点管理员开通。
         </p>
       </PageShell>
     )
@@ -83,14 +83,14 @@ export function DashboardOps() {
 
   async function handlePurge() {
     if (confirm !== CONFIRM_TOKEN) {
-      toast.error(`请输入确认口令 ${CONFIRM_TOKEN}`)
+      toast.error(`输入确认口令 ${CONFIRM_TOKEN}`)
       return
     }
     setPurging(true)
     const res = await purgeSubmitsAndRecrawl(CONFIRM_TOKEN)
     setPurging(false)
     if (!res.success) {
-      toast.error(res.message || '操作未完成，请稍后重试')
+      toast.error(res.message || '操作没完成，稍后重试')
       return
     }
     const d = res.data
@@ -107,7 +107,7 @@ export function DashboardOps() {
       <div className="mb-4 space-y-1">
         <h3 className="text-lg font-semibold tracking-tight">运维</h3>
         <p className="text-sm text-muted-foreground">
-          查看提交数据规模，以及需要谨慎操作的数据维护。
+          看提交数据规模，以及需要谨慎操作的数据维护。
         </p>
       </div>
 
@@ -156,7 +156,7 @@ export function DashboardOps() {
                   hint={
                     inv && inv.oldestTime > 0
                       ? `${formatTime(inv.oldestTime)} → ${formatTime(inv.newestTime)}`
-                      : '暂无数据'
+                      : '还没有数据'
                   }
                 />
               </div>
@@ -179,7 +179,7 @@ export function DashboardOps() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="purge-confirm">
-                请输入确认码{' '}
+                输入确认码{' '}
                 <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                   {CONFIRM_TOKEN}
                 </code>

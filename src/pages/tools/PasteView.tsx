@@ -58,7 +58,7 @@ export function PasteView() {
 
   useEffect(() => {
     if (!slug) {
-      setError('链接无效')
+      setError('这个链接不顶用')
       setLoading(false)
       return
     }
@@ -85,19 +85,19 @@ export function PasteView() {
     try {
       await navigator.clipboard.writeText(data.content)
       setCopied(true)
-      toast.success('已复制全文')
+      toast.success('全文复制好啦')
       window.setTimeout(() => setCopied(false), 1500)
     } catch {
-      toast.error('复制失败，请稍后重试')
+      toast.error('没复制上，过会儿再试')
     }
   }
 
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(window.location.href)
-      toast.success('已复制链接')
+      toast.success('链接复制好啦')
     } catch {
-      toast.error('复制失败，请稍后重试')
+      toast.error('没复制上，过会儿再试')
     }
   }
 
@@ -115,12 +115,12 @@ export function PasteView() {
       <PageShell className="mx-auto w-full max-w-lg p-6">
         <Card>
           <CardHeader>
-            <CardTitle>无法打开</CardTitle>
+            <CardTitle>打不开</CardTitle>
             <CardDescription>{error || '内容不存在或已过期'}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link to="/tools/paste">去发布新内容</Link>
+              <Link to="/tools/paste">去发条新的</Link>
             </Button>
           </CardContent>
         </Card>
@@ -141,8 +141,7 @@ export function PasteView() {
               {data.createdAt ? ` · ${formatTime(String(data.createdAt))}` : ''}
               {data.expireAt
                 ? ` · 将于 ${formatTime(String(data.expireAt))} 失效`
-                : ' · 不过期'}
-            </CardDescription>
+                : ' · 不过期'}            </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" variant="outline" onClick={() => void copyLink()}>
@@ -158,8 +157,7 @@ export function PasteView() {
             </Button>
             <Button type="button" size="sm" asChild>
               <Link to="/tools/paste">再发一条</Link>
-            </Button>
-          </div>
+            </Button>          </div>
         </CardHeader>
         <CardContent>
           <CodeHighlight code={data.content || ''} language={data.language} />

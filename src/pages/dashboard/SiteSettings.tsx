@@ -245,7 +245,7 @@ export function DashboardSiteSettings() {
                 : '导入完成，请刷新页面',
             )
           } else {
-            toast.error(res.data.errorDetail || res.data.message || '任务失败，请稍后重试')
+            toast.error(res.data.errorDetail || res.data.message || '任务失败，稍后重试')
           }
         }
       }, 2000)
@@ -267,7 +267,7 @@ export function DashboardSiteSettings() {
       setLoading(false)
       if (running) startPoll(running.id)
       if (!res.success || !res.data) {
-        toast.error(res.message || '站点配置加载失败，请稍后重试')
+        toast.error(res.message || '站点配置加载失败，稍后重试')
         return
       }
       const d = res.data
@@ -330,7 +330,7 @@ export function DashboardSiteSettings() {
     return (
       <PageShell>
         <p className="text-sm text-muted-foreground">
-          你还没有查看站点设置的权限。如有需要，请联系站点管理员开通。
+          你还没有查看站点设置的权限。有需要的话，找站点管理员开通。
         </p>
       </PageShell>
     )
@@ -342,7 +342,7 @@ export function DashboardSiteSettings() {
     const res = await uploadImage(file, 'site')
     setUploading(null)
     if (!res.success || !res.data?.url) {
-      toast.error(res.message || '上传失败，请稍后重试')
+      toast.error(res.message || '上传失败，稍后重试')
       return
     }
     if (kind === 'logo') setLogo(res.data.url)
@@ -433,13 +433,13 @@ export function DashboardSiteSettings() {
         setOjQojPasswordSet(again.data.ojQojPasswordSet)
       }
     } else {
-      toast.error(res.message || '保存失败，请稍后重试')
+      toast.error(res.message || '保存失败，稍后重试')
     }
   }
 
   async function handleTestEmail() {
     if (!testTo.trim()) {
-      toast.error('请填写收件人邮箱')
+      toast.error('收件人邮箱要填')
       return
     }
     const port = Number(smtpPort) || 465
@@ -455,7 +455,7 @@ export function DashboardSiteSettings() {
     })
     setTesting(false)
     if (res.success) toast.success(res.message || '测试邮件已发送')
-    else toast.error(res.message || '发送失败，请稍后重试')
+    else toast.error(res.message || '发送失败，稍后重试')
   }
 
   async function handleExport() {
@@ -463,7 +463,7 @@ export function DashboardSiteSettings() {
     const res = await startBackupExport(['all'])
     if (!res.success || !res.data?.jobId) {
       setExporting(false)
-      toast.error(res.message || '导出任务创建失败，请稍后重试')
+      toast.error(res.message || '导出任务创建失败，稍后重试')
       return
     }
     toast.success('导出已开始，可稍后回来下载')
@@ -474,11 +474,11 @@ export function DashboardSiteSettings() {
 
   async function handleConfirmImport() {
     if (!importFile) {
-      toast.error('请选择备份 zip 文件')
+      toast.error('先选备份 zip 文件')
       return
     }
     if (importConfirm.trim() !== 'RESTORE') {
-      toast.error('请输入 RESTORE 确认导入')
+      toast.error('输入 RESTORE 确认导入')
       return
     }
     setImporting(true)
@@ -489,7 +489,7 @@ export function DashboardSiteSettings() {
     if (fileInputRef.current) fileInputRef.current.value = ''
     if (!res.success || !res.data?.jobId) {
       setImporting(false)
-      toast.error(res.message || '导入任务创建失败，请稍后重试')
+      toast.error(res.message || '导入任务创建失败，稍后重试')
       return
     }
     toast.message('正在导入，请勿关闭页面或中断服务…')
@@ -501,7 +501,7 @@ export function DashboardSiteSettings() {
   function handleDownload(jobId: number) {
     const res = downloadBackupJob(jobId)
     if (res.success) toast.success('已开始下载')
-    else toast.error(res.message || '下载失败，请稍后重试')
+    else toast.error(res.message || '下载失败，稍后重试')
   }
 
   async function handleVerifyOj(platform: 'LuoGu' | 'QOJ') {
@@ -510,7 +510,7 @@ export function DashboardSiteSettings() {
     const user = platform === 'LuoGu' ? ojLuoguUsername.trim() : ojQojUsername.trim()
     const pass = platform === 'LuoGu' ? ojLuoguPassword : ojQojPassword
     if (!user) {
-      toast.error('请先填写用户名')
+      toast.error('先填用户名')
       return
     }
     setStatus('loading')
@@ -556,7 +556,7 @@ export function DashboardSiteSettings() {
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
       {!canWrite && (
         <p className="text-sm text-muted-foreground">
-          你当前只能查看站点配置，无法修改。如需调整，请联系站点管理员。
+          你当前只能查看站点配置，无法修改。要调整的话，找站点管理员。
         </p>
       )}
       <form
@@ -807,7 +807,7 @@ export function DashboardSiteSettings() {
                   value={agentSecret}
                   onChange={(e) => setAgentSecret(e.target.value)}
                   placeholder={
-                    agentSecretSet ? '已保存；留空表示不修改' : '请填写密钥'
+                    agentSecretSet ? '已保存；留空表示不修改' : '填密钥'
                   }
                   autoComplete="new-password"
                   onFocus={() => {
@@ -843,7 +843,7 @@ export function DashboardSiteSettings() {
                   value={aiSecret}
                   onChange={(e) => setAiSecret(e.target.value)}
                   placeholder={
-                    aiSecretSet ? '已保存；留空表示不修改' : '请填写密钥'
+                    aiSecretSet ? '已保存；留空表示不修改' : '填密钥'
                   }
                   autoComplete="new-password"
                   onFocus={() => {
@@ -1196,7 +1196,7 @@ export function DashboardSiteSettings() {
           <AlertDialogHeader>
             <AlertDialogTitle>确认导入并覆盖现有数据？</AlertDialogTitle>
             <AlertDialogDescription>
-              导入将按备份包清空并重写对应表（用户密码哈希、提交记录、题库等均会被替换）。此操作不可撤销。请先确认已有可用备份。目标环境的配置加密密钥须与导出时一致。
+              导入将按备份包清空并重写对应表（用户密码哈希、提交记录、题库等均会被替换）。此操作不可撤销。先确认已有可用备份。目标环境的配置加密密钥要和导出时一致。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-3 px-1">

@@ -106,7 +106,7 @@ export function DashboardReportsManage() {
       if (id !== requestId.current) return
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '举报列表加载失败，请稍后重试')
+        toast.error(res.message || '举报列表加载失败，稍后重试')
         return
       }
       setTotal(res.data.total)
@@ -136,7 +136,7 @@ export function DashboardReportsManage() {
     if (id !== requestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '举报列表加载失败，请稍后重试')
+      toast.error(res.message || '举报列表加载失败，稍后重试')
       return
     }
     setTotal(res.data.total)
@@ -182,7 +182,7 @@ export function DashboardReportsManage() {
         : await handleCommunityReport({ id, action })
     setHandling(null)
     if (!res.success) {
-      toast.error(res.message || '操作失败，请稍后重试')
+      toast.error(res.message || '操作失败，稍后重试')
       return
     }
     toast.success(action === 'resolve' ? '已标记为处理完成' : '已驳回该举报')
@@ -199,7 +199,7 @@ export function DashboardReportsManage() {
     return (
       <PageShell>
         <p className="text-sm text-muted-foreground">
-          你还没有处理用户举报的权限。如有需要，请联系站点管理员开通。
+          你还没有处理用户举报的权限。有需要的话，找站点管理员开通。
         </p>
       </PageShell>
     )

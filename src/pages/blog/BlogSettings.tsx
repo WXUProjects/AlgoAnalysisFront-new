@@ -139,7 +139,7 @@ export function BlogSettingsPage() {
     })
     setSaving(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '保存失败')
+      toast.error(res.message || '没保存上')
       return
     }
     toast.success('外观已保存')
@@ -398,7 +398,7 @@ export function BlogSettingsPage() {
             })
             setSavingNotify(false)
             if (!res.success) {
-              toast.error(res.message || '保存失败')
+              toast.error(res.message || '没保存上')
               return
             }
             toast.success('通知偏好已保存')

@@ -74,7 +74,7 @@ export function BlogAnalyticsPage() {
         <ul className="divide-y">
           {(data?.topArticles || []).length === 0 ? (
             <li className="px-4 py-8 text-center text-sm text-muted-foreground">
-              暂无数据
+              还没有数据
             </li>
           ) : (
             data!.topArticles.map((a) => (

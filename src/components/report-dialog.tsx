@@ -68,7 +68,7 @@ export function ReportDialog({
     const res = await onSubmit(reason)
     setSending(false)
     if (!res.success) {
-      toast.error(res.message || '提交失败，请稍后重试')
+      toast.error(res.message || '没提交上，过会儿再试')
       return
     }
     toast.success(res.message || '已收到举报，我们会尽快处理')

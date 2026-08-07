@@ -60,18 +60,18 @@ export function BlogActivateDialog({
           onActivated?.()
         }
       } else {
-        toast.error(res.message || '协议加载失败')
+        toast.error(res.message || '协议没加载出来')
       }
     })
   }, [open, onOpenChange, onActivated])
 
   async function handleActivate() {
     if (!agreed) {
-      toast.error('请先阅读并勾选同意开通协议')
+      toast.error('先勾选同意开通协议才行')
       return
     }
     if (!isLogin) {
-      toast.error('请先登录')
+      toast.error('先登录哦')
       return
     }
     setSubmitting(true)
@@ -83,10 +83,10 @@ export function BlogActivateDialog({
     })
     setSubmitting(false)
     if (!res.success || !res.data?.activated) {
-      toast.error(res.message || '开通失败')
+      toast.error(res.message || '没开通成功')
       return
     }
-    toast.success('个人博客已开通')
+    toast.success('个人博客开通啦')
     onOpenChange(false)
     onActivated?.()
   }
@@ -98,7 +98,7 @@ export function BlogActivateDialog({
           <DialogHeader>
             <DialogTitle>开通个人博客</DialogTitle>
             <DialogDescription>
-              请先登录主站账号，完成统一登录后再签署开通协议。
+              先登录主站账号，完成统一登录后再签协议。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -124,7 +124,7 @@ export function BlogActivateDialog({
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            开通前须阅读并同意本协议。不同意则无法开通个人博客。
+            开通前要先阅读并同意本协议，不同意就开不了个人博客。
             {version ? `（版本 ${version}）` : null}
           </DialogDescription>
         </DialogHeader>
@@ -137,7 +137,7 @@ export function BlogActivateDialog({
           ) : (
             <div className="h-[min(50vh,360px)] overflow-y-auto rounded-md border bg-muted/30 p-3">
               <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-foreground">
-                {content || '暂无协议内容'}
+                {content || '还没有协议内容'}
               </pre>
             </div>
           )}

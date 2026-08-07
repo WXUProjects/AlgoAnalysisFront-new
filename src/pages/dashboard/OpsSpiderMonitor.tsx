@@ -76,20 +76,20 @@ function moduleStatuses(p: SpiderPlatformStat): ModuleStatus[] {
   } else if (p.lastOkAt > 0) {
     submit = { tone: 'ok', label: '正常' }
   } else {
-    submit = { tone: 'warn', label: '尚未同步' }
+    submit = { tone: 'warn', label: '未同步' }
   }
 
   const problem: ModuleStatus = !p.hasProblemFetch
     ? { tone: 'muted', label: '不支持' }
     : p.problemCount > 0
       ? { tone: 'ok', label: '正常' }
-      : { tone: 'muted', label: '暂无题目' }
+      : { tone: 'muted', label: '还没有题目' }
 
   const contest: ModuleStatus = !p.hasContestCalendar
     ? { tone: 'muted', label: '不支持' }
     : p.contestCount > 0
       ? { tone: 'ok', label: '正常' }
-      : { tone: 'muted', label: '暂无赛程' }
+      : { tone: 'muted', label: '还没有赛程' }
 
   let account: ModuleStatus
   if (!p.hasAccount) {
@@ -128,8 +128,8 @@ function SpiderMonitorCard({
     stat.lastOkAt > 0
       ? `最近同步 ${formatSyncAge(stat.lastOkAt)}`
       : stat.boundUsers > 0
-        ? '尚未成功同步'
-        : '暂无同步'
+        ? '还未成功同步'
+        : '还没有同步'
   const hasRecentFail = stat.lastFailAt > 0 && stat.lastFailAt >= stat.lastOkAt
   const failText = hasRecentFail ? `最近失败 ${formatTime(stat.lastFailAt)}` : null
 
@@ -296,7 +296,7 @@ function SpiderMonitorSectionInner() {
         )
         void load()
       } else {
-        toast.error(res.message || '操作失败，请稍后重试')
+        toast.error(res.message || '操作失败，稍后重试')
       }
     },
     [load],

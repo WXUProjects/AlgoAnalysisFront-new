@@ -63,7 +63,7 @@ export function DiscoverRankPage() {
       if (cancelled) return
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '排行加载失败，请稍后重试')
+        toast.error(res.message || '排行没加载出来，过会儿再试')
         setList([])
         setTotal(0)
         return
@@ -162,8 +162,7 @@ export function DiscoverRankPage() {
           ))}
         {!loading && !list.length ? (
           <p className="px-4 py-12 text-center text-sm text-muted-foreground">
-            {period === 'week' ? '本周还没有排行数据' : '暂时还没有排行数据'}
-          </p>
+            {period === 'week' ? '本周还没有排行数据' : '暂时还没有排行数据'}          </p>
         ) : null}
       </CardContent>
       {total > PAGE_SIZE ? (

@@ -112,7 +112,7 @@ export function DiscoverSearchResults({
 
   async function toggleFollow(u: SocialUser) {
     if (!isLogin) {
-      toast.error('请先登录后再继续')
+      toast.error('先登录才能关注哦')
       return
     }
     if (userId && u.userId === userId) return
@@ -123,7 +123,7 @@ export function DiscoverSearchResults({
       : await followUser(u.userId)
     setBusyId(0)
     if (!res.success) {
-      toast.error(res.message || '操作未完成，请稍后重试')
+      toast.error(res.message || '没弄成，过会儿再试试')
       return
     }
     setRelationMap((m) => ({ ...m, [u.userId]: !following }))

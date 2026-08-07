@@ -71,7 +71,7 @@ export function HotAllSheet({ open, onOpenChange }: Props) {
         if (cancelled) return
         setLoading(false)
         if (!res.success || !res.data) {
-          toast.error(res.message || '热题加载失败，请稍后重试')
+          toast.error(res.message || '热题没加载出来，过会儿再试')
           setList([])
           setTotal(0)
           return

@@ -276,7 +276,7 @@ export function ProblemsetHome() {
 
   async function handleLike(id: number) {
     if (!isLogin) {
-      toast.message('登录后即可点赞')
+      toast.message('登录后就能点赞啦')
       navigate('/login')
       return
     }
@@ -298,7 +298,7 @@ export function ProblemsetHome() {
 
   async function handleFavorite(id: number) {
     if (!isLogin) {
-      toast.message('登录后即可收藏题单')
+      toast.message('登录后就能收藏题单啦')
       navigate('/login')
       return
     }
@@ -325,11 +325,11 @@ export function ProblemsetHome() {
   async function handleCreate() {
     const t = title.trim()
     if (!t) {
-      toast.error('请填写题单标题')
+      toast.error('题单标题要写哦')
       return
     }
     if (visibility === 'password' && !password.trim()) {
-      toast.error('请设置访问密码')
+      toast.error('访问密码要设一个')
       return
     }
     setSaving(true)
@@ -341,7 +341,7 @@ export function ProblemsetHome() {
     })
     setSaving(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '创建失败')
+      toast.error(res.message || '没创建成功')
       return
     }
     toast.success('题单已创建')
@@ -359,7 +359,7 @@ export function ProblemsetHome() {
         <div>
           <h2 className="text-lg font-semibold">题单</h2>
           <p className="text-sm text-muted-foreground">
-            待做与自建题单；可收藏他人公开题单；公开题单会出现在广场。
+            待做和自建题单都在这里；能收藏别人的公开题单；公开题单会出现在广场。
           </p>
         </div>
         {isLogin && (
@@ -398,7 +398,7 @@ export function ProblemsetHome() {
           {!isLogin ? (
             <Card>
               <CardContent className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
-                <p>登录后可查看收藏题目、待做和自建题单</p>
+                <p>登录后就能看收藏题目、待做和自建题单</p>
                 <Button asChild>
                   <Link to="/login">去登录</Link>
                 </Button>
@@ -414,8 +414,7 @@ export function ProblemsetHome() {
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
                 还没有题单，点右上角新建一个吧
-              </CardContent>
-            </Card>
+              </CardContent>            </Card>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {mine.map((item) => (
@@ -429,7 +428,7 @@ export function ProblemsetHome() {
           {!isLogin ? (
             <Card>
               <CardContent className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
-                <p>登录后可收藏他人公开题单</p>
+                <p>登录后才能收藏别人的公开题单</p>
                 <Button asChild>
                   <Link to="/login">去登录</Link>
                 </Button>
@@ -444,7 +443,7 @@ export function ProblemsetHome() {
           ) : favorites.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
-                <p>还没有收藏别人的题单，去广场看看</p>
+                <p>还没有收藏别人的题单，去广场逛逛</p>
                 <Button
                   type="button"
                   variant="secondary"
@@ -517,7 +516,7 @@ export function ProblemsetHome() {
           ) : square.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
-                暂无公开题单
+                还没有公开题单
               </CardContent>
             </Card>
           ) : (
@@ -552,7 +551,7 @@ export function ProblemsetHome() {
           <DialogHeader>
             <DialogTitle>新建题单</DialogTitle>
             <DialogDescription>
-              可选私有、密码或公开。系统会创建收藏与待做题单。
+              可选私有、密码或公开。系统会帮你建好收藏与待做题单。
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>
@@ -574,8 +573,7 @@ export function ProblemsetHome() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="简单写写这套题的用途或说明"
                 rows={3}
-              />
-            </Field>
+              />            </Field>
             <Field>
               <FieldLabel>可见性</FieldLabel>
               <Select

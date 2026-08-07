@@ -5,63 +5,63 @@
  */
 
 /** 通用失败：请求未完成 */
-export const UX_REQUEST_FAILED = '请求未完成，请稍后重试'
+export const UX_REQUEST_FAILED = '请求没完成，过会儿再试'
 
 /** 网络异常 */
-export const UX_NETWORK = '网络连接异常，请检查网络设置后重试'
+export const UX_NETWORK = '网络有点问题，检查下网络再试'
 
 /** 请求超时 */
-export const UX_TIMEOUT = '请求超时，请稍后重试'
+export const UX_TIMEOUT = '请求超时了，过会儿再试'
 
 /** 无权限（403） */
-export const UX_FORBIDDEN = '暂无权限执行此操作'
+export const UX_FORBIDDEN = '没有权限做这个操作'
 
 /** 登录失效（401 业务提示；清会话由 http 拦截器处理） */
-export const UX_UNAUTHORIZED = '登录已失效，请重新登录'
+export const UX_UNAUTHORIZED = '登录失效了，重新登录下'
 
 /** 接口/页面资源不可用 */
-export const UX_SERVICE_UNAVAILABLE = '服务暂时不可用，请稍后重试'
+export const UX_SERVICE_UNAVAILABLE = '服务暂时不可用，过会儿再试'
 
 /** 需登录 */
-export const UX_LOGIN_REQUIRED = '请先登录后再继续'
+export const UX_LOGIN_REQUIRED = '先登录再继续哦'
 
-export const UX_LOAD_FAILED = '加载失败，请稍后重试'
-export const UX_SAVE_FAILED = '保存失败，请稍后重试'
-export const UX_DELETE_FAILED = '删除失败，请稍后重试'
-export const UX_SUBMIT_FAILED = '提交失败，请稍后重试'
-export const UX_UPLOAD_FAILED = '上传失败，请稍后重试'
-export const UX_DOWNLOAD_FAILED = '下载失败，请稍后重试'
-export const UX_SEND_FAILED = '发送失败，请稍后重试'
-export const UX_UPDATE_FAILED = '更新失败，请稍后重试'
-export const UX_CREATE_FAILED = '创建失败，请稍后重试'
-export const UX_SEARCH_FAILED = '搜索失败，请稍后重试'
-export const UX_SYNC_FAILED = '同步失败，请稍后重试'
-export const UX_ACTION_FAILED = '操作未完成，请稍后重试'
-export const UX_SWITCH_FAILED = '切换失败，请稍后重试'
-export const UX_JOIN_FAILED = '加入失败，请稍后重试'
-export const UX_LEAVE_FAILED = '退出失败，请稍后重试'
-export const UX_PUBLISH_FAILED = '发布失败，请稍后重试'
-export const UX_BIND_FAILED = '绑定失败，请稍后重试'
-export const UX_LOGIN_FAILED = '登录失败，请检查账号密码后重试'
-export const UX_REGISTER_FAILED = '注册失败，请稍后重试'
-export const UX_RESET_FAILED = '密码重置失败，请稍后重试'
-export const UX_PASSWORD_CHANGE_FAILED = '密码修改失败，请稍后重试'
-export const UX_SETTING_FAILED = '设置失败，请稍后重试'
-export const UX_TASK_FAILED = '任务失败，请稍后重试'
-export const UX_CANCEL_FAILED = '取消失败，请稍后重试'
-export const UX_SUBSCRIBE_FAILED = '订阅失败，请稍后重试'
-export const UX_EXPORT_FAILED = '导出失败，请稍后重试'
-export const UX_IMPORT_FAILED = '导入失败，请稍后重试'
-export const UX_COPY_FAILED = '复制失败，请稍后重试'
+export const UX_LOAD_FAILED = '没加载出来，过会儿再试'
+export const UX_SAVE_FAILED = '没保存上，过会儿再试'
+export const UX_DELETE_FAILED = '没删掉，过会儿再试'
+export const UX_SUBMIT_FAILED = '没提交上，过会儿再试'
+export const UX_UPLOAD_FAILED = '没传上去，过会儿再试'
+export const UX_DOWNLOAD_FAILED = '没下载下来，过会儿再试'
+export const UX_SEND_FAILED = '没发出去，过会儿再试'
+export const UX_UPDATE_FAILED = '没更新成，过会儿再试'
+export const UX_CREATE_FAILED = '没创建成功，过会儿再试'
+export const UX_SEARCH_FAILED = '没搜到，过会儿再试'
+export const UX_SYNC_FAILED = '同步没成功，过会儿再试'
+export const UX_ACTION_FAILED = '没弄成，过会儿再试'
+export const UX_SWITCH_FAILED = '没切换成功，过会儿再试'
+export const UX_JOIN_FAILED = '没加入成功，过会儿再试'
+export const UX_LEAVE_FAILED = '没退出成功，过会儿再试'
+export const UX_PUBLISH_FAILED = '没发布成功，过会儿再试'
+export const UX_BIND_FAILED = '没绑上，过会儿再试'
+export const UX_LOGIN_FAILED = '登录没成功，检查下账号密码再试'
+export const UX_REGISTER_FAILED = '没注册成功，过会儿再试'
+export const UX_RESET_FAILED = '密码没重置成功，过会儿再试'
+export const UX_PASSWORD_CHANGE_FAILED = '密码没改成功，过会儿再试'
+export const UX_SETTING_FAILED = '没设置成功，过会儿再试'
+export const UX_TASK_FAILED = '任务没跑成，过会儿再试'
+export const UX_CANCEL_FAILED = '没取消成功，过会儿再试'
+export const UX_SUBSCRIBE_FAILED = '没订阅成功，过会儿再试'
+export const UX_EXPORT_FAILED = '没导出成功，过会儿再试'
+export const UX_IMPORT_FAILED = '没导入成功，过会儿再试'
+export const UX_COPY_FAILED = '没复制成功，再试一次'
 
 /** 「某某加载失败，请稍后重试」 */
 export function loadFailed(what: string): string {
-  return `${what}加载失败，请稍后重试`
+  return `${what}没加载出来，过会儿再试`
 }
 
 /** 「某某保存失败，请稍后重试」 */
 export function saveFailed(what: string): string {
-  return `${what}保存失败，请稍后重试`
+  return `${what}没保存上，过会儿再试`
 }
 
 /**

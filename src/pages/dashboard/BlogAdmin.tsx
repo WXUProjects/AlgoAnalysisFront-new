@@ -234,7 +234,7 @@ export function DashboardBlogAdmin() {
   if (ready && !canBlogAdmin) {
     return (
       <p className="p-6 text-sm text-muted-foreground">
-        你还没有管理博客的权限。如有需要，请联系站点管理员开通。
+        你还没有管理博客的权限。有需要的话，找站点管理员开通。
       </p>
     )
   }
@@ -344,7 +344,7 @@ export function DashboardBlogAdmin() {
                         colSpan={8}
                         className="text-center text-muted-foreground"
                       >
-                        暂无开通记录
+                        还没有开通记录
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -477,7 +477,7 @@ export function DashboardBlogAdmin() {
                         colSpan={6}
                         className="text-center text-muted-foreground"
                       >
-                        暂无文章
+                        还没有文章
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -652,8 +652,8 @@ export function DashboardBlogAdmin() {
                         className="text-center text-muted-foreground"
                       >
                         {uploadReqStatus === 'pending'
-                          ? '暂无待审申请'
-                          : '暂无记录'}
+                          ? '还没有待审申请'
+                          : '还没有记录'}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -768,7 +768,7 @@ export function DashboardBlogAdmin() {
               onChange={(e) => setRejectNote(e.target.value)}
               rows={3}
               maxLength={500}
-              placeholder="例如：请先开通博客后再申请"
+              placeholder="例如：先开通博客后再申请"
             />
           </Field>
           <DialogFooter>

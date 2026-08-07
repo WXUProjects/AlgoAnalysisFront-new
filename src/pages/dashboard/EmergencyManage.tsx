@@ -88,7 +88,7 @@ export function DashboardEmergencyManage() {
     const res = await listEmergencies(1, LIST_PAGE_SIZE)
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '重要通知加载失败，请稍后重试')
+      toast.error(res.message || '重要通知加载失败，稍后重试')
       return
     }
     setList(res.data.list)
@@ -121,7 +121,7 @@ export function DashboardEmergencyManage() {
 
   async function handleSave() {
     if (!title.trim()) {
-      toast.error('请填写标题')
+      toast.error('标题要填')
       return
     }
     setSaving(true)
@@ -145,7 +145,7 @@ export function DashboardEmergencyManage() {
       toast.success(res.message || '已保存')
       setOpen(false)
       void load()
-    } else toast.error(res.message || '保存失败，请稍后重试')
+    } else toast.error(res.message || '保存失败，稍后重试')
   }
 
   async function handleDelete(id: number) {
@@ -153,7 +153,7 @@ export function DashboardEmergencyManage() {
     if (res.success) {
       toast.success(res.message || '已删除')
       void load()
-    } else toast.error(res.message || '删除失败，请稍后重试')
+    } else toast.error(res.message || '删除失败，稍后重试')
   }
 
   async function commitOrder(next: EmergencyInfo[]) {
@@ -164,7 +164,7 @@ export function DashboardEmergencyManage() {
     setReordering(false)
     if (!res.success) {
       setList(prev)
-      toast.error(res.message || '排序保存失败，请稍后重试')
+      toast.error(res.message || '排序保存失败，稍后重试')
       return
     }
     // 同步本地 sortOrder，避免与服务端短暂不一致
@@ -202,7 +202,7 @@ export function DashboardEmergencyManage() {
     return (
       <PageShell>
         <p className="text-sm text-muted-foreground">
-          你还没有管理重要通知的权限。如有需要，请联系站点管理员开通。
+          你还没有管理重要通知的权限。有需要的话，找站点管理员开通。
         </p>
       </PageShell>
     )

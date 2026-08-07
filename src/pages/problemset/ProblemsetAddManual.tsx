@@ -45,7 +45,7 @@ export function ProblemsetAddManual() {
   useEffect(() => {
     if (!ready) return
     if (!isLogin) {
-      toast.error('请先登录')
+      toast.error('先登录哦')
       navigate(backTo, { replace: true })
     }
   }, [ready, isLogin, navigate, backTo])
@@ -65,7 +65,7 @@ export function ProblemsetAddManual() {
   async function handlePublish() {
     const t = title.trim()
     if (!t) {
-      toast.error('请填写题目标题')
+      toast.error('题目标题要写哦')
       return
     }
     setSaving(true)
@@ -127,8 +127,8 @@ export function ProblemsetAddManual() {
           <CardTitle className="text-base">手动加入题库</CardTitle>
           <CardDescription>
             {forBankOnly
-              ? '链接无法自动识别时，可填写标题后发布。题面与标签可选。'
-              : '链接无法自动识别时，可填写标题后发布。题面与标签可选，发布后会加入当前题单。'}
+              ? '链接认不出来的时候，填个标题就能发布。题面和标签可写可不写。'
+              : '链接认不出来的时候，填个标题就能发布。题面和标签可写可不写，发布后会加进当前题单。'}
             {sourceUrl ? (
               <>
                 {' '}

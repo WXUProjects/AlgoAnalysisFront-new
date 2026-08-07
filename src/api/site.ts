@@ -151,7 +151,7 @@ export async function getSiteAdminConfig(): Promise<ApiResult<SiteAdminConfig>> 
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
     return {
       success: false,
-      message: str(raw.message, '加载失败，请稍后重试'),
+      message: str(raw.message, '没加载出来，过会儿再试'),
       data: null,
     }
   }
@@ -201,7 +201,7 @@ export async function updateSiteConfig(body: {
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
     return {
       success: false,
-      message: str(raw.message, '保存失败，请稍后重试'),
+      message: str(raw.message, '没保存上，过会儿再试'),
       data: null,
     }
   }
@@ -247,7 +247,7 @@ export async function testSiteEmail(body: {
   const ok = Boolean(raw?.success) || (typeof raw?.code === 'number' && raw.code === 0)
   return {
     success: ok,
-    message: str(raw?.message, ok ? '测试邮件已发送' : '发送失败，请稍后重试'),
+    message: str(raw?.message, ok ? '测试邮件已发送' : '没发出去，过会儿再试'),
     data: ok ? { success: true } : null,
   }
 }
@@ -398,13 +398,13 @@ export async function startBackupExport(
   if (!res.success) return { ...res, data: null }
   const raw = pickRaw(res)
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
-    return { success: false, message: str(raw.message, '导出任务创建失败，请稍后重试'), data: null }
+    return { success: false, message: str(raw.message, '导出任务没创建成功，过会儿再试'), data: null }
   }
   const jobId = num(raw?.jobId, 0) || 0
   if (!jobId) {
     return {
       success: false,
-      message: str(raw?.message, '创建任务失败，请稍后重试'),
+      message: str(raw?.message, '创建任务没成功，过会儿再试'),
       data: null,
     }
   }
@@ -437,7 +437,7 @@ export async function startBackupImport(
     if (typeof body.code === 'number' && body.code !== 0) {
       return {
         success: false,
-        message: str(body.message, '导入任务创建失败，请稍后重试'),
+        message: str(body.message, '导入任务没创建成功，过会儿再试'),
         data: null,
       }
     }
@@ -452,7 +452,7 @@ export async function startBackupImport(
     if (!jobId) {
       return {
         success: false,
-        message: str(body.message, '创建任务失败，请稍后重试'),
+        message: str(body.message, '创建任务没成功，过会儿再试'),
         data: null,
       }
     }
@@ -474,11 +474,11 @@ export async function getBackupJob(id: number): Promise<ApiResult<BackupJob>> {
   if (!res.success) return { ...res, data: null }
   const raw = pickRaw(res)
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
-    return { success: false, message: str(raw.message, '加载失败，请稍后重试'), data: null }
+    return { success: false, message: str(raw.message, '没加载出来，过会儿再试'), data: null }
   }
   const job = normalizeBackupJob(raw?.job ?? raw)
   if (!job) {
-    return { success: false, message: '任务信息异常，请稍后重试', data: null }
+    return { success: false, message: '任务信息异常，过会儿再试', data: null }
   }
   return { ...res, data: job }
 }
@@ -488,7 +488,7 @@ export async function listBackupJobs(): Promise<ApiResult<BackupJob[]>> {
   if (!res.success) return { ...res, data: null }
   const raw = pickRaw(res)
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
-    return { success: false, message: str(raw.message, '加载失败，请稍后重试'), data: null }
+    return { success: false, message: str(raw.message, '没加载出来，过会儿再试'), data: null }
   }
   const list = Array.isArray(raw?.jobs) ? raw!.jobs : []
   return {
@@ -502,7 +502,7 @@ export async function deleteBackupJob(id: number): Promise<ApiResult<null>> {
   if (!res.success) return { ...res, data: null }
   const raw = pickRaw(res)
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
-    return { success: false, message: str(raw.message, '删除失败，请稍后重试'), data: null }
+    return { success: false, message: str(raw.message, '没删掉，过会儿再试'), data: null }
   }
   return { success: true, message: 'ok', data: null }
 }
@@ -514,7 +514,7 @@ export async function deleteBackupJob(id: number): Promise<ApiResult<null>> {
  */
 export function downloadBackupJob(id: number): ApiResult<null> {
   if (!jwt.isValid()) {
-    return { success: false, message: '请先登录后再下载', data: null }
+    return { success: false, message: '先登录才能下载', data: null }
   }
   const url = new URL(
     endpoints.user.site.backup.download(id),
@@ -541,7 +541,7 @@ export async function getAccessStats(days = 30): Promise<ApiResult<AccessStats>>
   if (raw && typeof raw.code === 'number' && raw.code !== 0) {
     return {
       success: false,
-      message: str(raw.message, '加载失败，请稍后重试'),
+      message: str(raw.message, '没加载出来，过会儿再试'),
       data: null,
     }
   }

@@ -66,7 +66,7 @@ export function AllActivities() {
       // 仅「加载更多」用布尔锁防重复点击；reset 不被在途请求拦住
       if (!reset && loadingRef.current) return
       if (followingOnly && !isLogin) {
-        toast.error('登录后可查看关注动态')
+        toast.error('登录后才能看关注动态')
         return
       }
       const seq = ++requestSeq.current
@@ -84,7 +84,7 @@ export function AllActivities() {
       loadingRef.current = false
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '动态加载失败，请稍后重试')
+        toast.error(res.message || '动态没加载出来，过会儿再试')
         return
       }
       const list = res.data
@@ -140,7 +140,6 @@ export function AllActivities() {
     : followingOnly
       ? '你关注的人在本组织内的动态'
       : '当前组织内的提交动态'
-
   return (
     <PageShell className="gap-5">
       <section className="flex flex-wrap items-start justify-between gap-3">
@@ -205,12 +204,12 @@ export function AllActivities() {
                 <EmptyMedia variant="icon">
                   <ActivityIcon />
                 </EmptyMedia>
-                <EmptyTitle>暂无动态</EmptyTitle>
+                <EmptyTitle>还没有动态</EmptyTitle>
                 <EmptyDescription>
                   {followingOnly
                     ? '关注队友后，这里会显示他们的提交动态'
                     : userMode
-                      ? '该用户暂无提交记录'
+                      ? '这位用户还没有提交记录'
                       : '组织内有新的提交时会出现在这里'}
                 </EmptyDescription>
               </EmptyHeader>

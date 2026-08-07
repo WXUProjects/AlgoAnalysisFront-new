@@ -113,7 +113,7 @@ export function DashboardProblemProgress() {
     if (rid !== requestId.current) return
     if (!silent) setLoading(false)
     if (!res.success || !res.data) {
-      if (!silent) toast.error(res.message || '进度加载失败，请稍后重试')
+      if (!silent) toast.error(res.message || '进度加载失败，稍后重试')
       return
     }
     setData(res.data)
@@ -149,7 +149,7 @@ export function DashboardProblemProgress() {
     if (res.success) {
       toast.success(res.message || `${label}成功`)
       void load(true)
-    } else toast.error(res.message || `${label}失败，请稍后重试`)
+    } else toast.error(res.message || `失败，稍后重试`)
   }
 
   async function handleToggleAnalyze() {
@@ -184,7 +184,7 @@ export function DashboardProblemProgress() {
     const res = await clearRecentFailedProblems()
     setBusy(false)
     if (!res.success) {
-      toast.error(res.message || '清空失败，请稍后重试')
+      toast.error(res.message || '清空失败，稍后重试')
       return
     }
     // 列表本地也清掉，避免刷新前仍闪旧数据

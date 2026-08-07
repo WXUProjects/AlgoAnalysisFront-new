@@ -61,7 +61,7 @@ export function BlogAdminLayout() {
     if (!username) return
     const res = await listBlogByUsername({ username, page: 1, pageSize: 1 })
     if (!res.success || !res.data) {
-      setError(res.message || '找不到这个博客')
+      setError(res.message || '没找到这个博客')
       setAuthor(null)
       setIsOwner(false)
       return
@@ -203,9 +203,9 @@ export function BlogAdminLayout() {
               </div>
             ) : needAgreement ? (
               <div className="rounded-lg border border-dashed p-10 text-center">
-                <p className="mb-2 font-medium">开通个人博客前须签署协议</p>
+                <p className="mb-2 font-medium">开通个人博客前要先签协议</p>
                 <p className="mb-4 text-sm text-muted-foreground">
-                  请阅读并同意开通协议后，才能管理文章与外观。不同意则无法开通。
+                  读完并同意开通协议，才能管理文章和外观。不同意就开不了哦。
                 </p>
                 <Button onClick={() => setActivateOpen(true)}>阅读并签署协议</Button>
               </div>

@@ -214,7 +214,7 @@ export function QuestionBankDetail() {
         setProblem(null)
         loadedProblemIdRef.current = null
       }
-      toast.error(pRes.message || '题目加载失败，请稍后重试')
+      toast.error(pRes.message || '题目没加载出来，过会儿再试')
       return
     }
     setProblem(pRes.data)
@@ -259,7 +259,7 @@ export function QuestionBankDetail() {
       setSubs(sRes.data.list || [])
       setSubsTotal(sRes.data.total || 0)
     } else if (!sRes.success) {
-      toast.error(sRes.message || '提交记录加载失败，请稍后重试')
+      toast.error(sRes.message || '提交记录没加载出来，过会儿再试')
     }
   }, [id, followingOnly, acOnly, subsPage, subsPageSize])
 
@@ -268,7 +268,7 @@ export function QuestionBankDetail() {
     const res = await listMyProblemsets({ problemId })
     setMySetsLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '题单加载失败，请稍后重试')
+      toast.error(res.message || '题单没加载出来，过会儿再试')
       setMySets([])
       return
     }
@@ -308,7 +308,7 @@ export function QuestionBankDetail() {
             : s,
         ),
       )
-      toast.error(res.message || (next ? '加入失败，请稍后重试' : '移除失败，请稍后重试'))
+      toast.error(res.message || (next ? '没加进去，过会儿再试' : '没移除成，过会儿再试'))
       return
     }
     toast.success(
@@ -344,7 +344,7 @@ export function QuestionBankDetail() {
       if (res.success && res.data) setFollowStatus(res.data)
       else {
         setFollowStatus([])
-        if (!res.success) toast.error(res.message || '关注进度加载失败，请稍后重试')
+        if (!res.success) toast.error(res.message || '关注进度没加载出来，过会儿再试')
       }
     })
     return () => {
@@ -355,7 +355,7 @@ export function QuestionBankDetail() {
   function openTagsEdit() {
     if (!problem) return
     if (!isLogin) {
-      toast.error('请先登录后再修改')
+      toast.error('先登录才能改哦')
       return
     }
     setSelectedTags([...problem.tags])
@@ -371,7 +371,7 @@ export function QuestionBankDetail() {
   function openContentEdit() {
     if (!problem) return
     if (!isLogin) {
-      toast.error('请先登录后再修改')
+      toast.error('先登录才能改哦')
       return
     }
     navigate(`/question-bank/detail/${problem.id}/edit-content`)
@@ -389,7 +389,7 @@ export function QuestionBankDetail() {
       })
       setSaving(false)
       if (!res.success) {
-        toast.error(res.message || '保存失败，请稍后重试')
+        toast.error(res.message || '没保存上，过会儿再试')
         return
       }
       toast.success(res.message || '标签已更新')
@@ -406,7 +406,7 @@ export function QuestionBankDetail() {
     })
     setSaving(false)
     if (!res.success) {
-      toast.error(res.message || '提交失败，请稍后重试')
+      toast.error(res.message || '没提交上，过会儿再试')
       return
     }
     toast.success(res.message || '已提交审核')
@@ -428,7 +428,7 @@ export function QuestionBankDetail() {
       <PageShell>
         <Card className="py-4">
           <CardContent className="px-4 text-sm text-muted-foreground">
-            题目不存在
+            没找到这道题
           </CardContent>
         </Card>
       </PageShell>
@@ -533,7 +533,7 @@ export function QuestionBankDetail() {
               </Badge>
             ))}
             {tagsEmpty && (
-              <span className="text-xs text-muted-foreground">暂无标签</span>
+              <span className="text-xs text-muted-foreground">还没有标签</span>
             )}
             {isLogin && (
               <Button
@@ -572,7 +572,7 @@ export function QuestionBankDetail() {
           )}
           {hasPending && (
             <p className="text-xs text-muted-foreground">
-              你有一条修改申请正在等待站点管理员审核
+              你有一条修改申请在等站点管理员审核
             </p>
           )}
         </div>
@@ -639,7 +639,7 @@ export function QuestionBankDetail() {
                 <CardTitle className="text-base">题面</CardTitle>
                 {contentEmpty && (
                   <CardDescription>
-                    题面尚未就绪，登录后可补充内容并提交审核
+                    题面还没就绪，登录后可以补充并提交审核
                   </CardDescription>
                 )}
               </div>
@@ -731,7 +731,7 @@ export function QuestionBankDetail() {
               <MarkdownBody
                 content={problem.contentMd || ''}
                 mode="auto"
-                emptyText="题面准备中，请稍后刷新；登录后也可自行补充题面"
+                emptyText="题面还在准备中，稍后刷新看看；登录后也可以自己补充题面"
               />
             </CardContent>
           </Card>
@@ -751,7 +751,7 @@ export function QuestionBankDetail() {
                     关联比赛
                   </CardTitle>
                   <CardDescription>
-                    本题在站内出现过的比赛，可进入详情看榜单与同场题目
+                    本题在站内出现过的比赛，点进去看榜单和同场题目
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-2 px-4">
@@ -1066,7 +1066,7 @@ export function QuestionBankDetail() {
                           colSpan={4}
                           className="text-center text-muted-foreground"
                         >
-                          {subsLoading ? '加载中…' : '暂无提交'}
+                          {subsLoading ? '加载中…' : '还没有提交'}
                         </TableCell>
                       </TableRow>
                     )}
@@ -1145,7 +1145,7 @@ export function QuestionBankDetail() {
                             colSpan={2}
                             className="text-center text-muted-foreground"
                           >
-                            还没有关注的人，或暂时无法加载关注列表
+                            还没关注的人，或者关注列表暂时加载不出来
                           </TableCell>
                         </TableRow>
                       )}
@@ -1165,7 +1165,7 @@ export function QuestionBankDetail() {
             <DialogDescription>
               {canReview
                 ? '点选已有标签，或输入后回车新建。保存后立即生效。'
-                : '点选已有标签，或输入后回车新建。提交后需管理员审核才会更新。'}
+                : '点选已有标签，或输入后回车新建。提交后要管理员审核才更新。'}
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>
@@ -1216,7 +1216,7 @@ export function QuestionBankDetail() {
         title="从题单移除？"
         description={
           removeFromSetTarget
-            ? `确定从「${removeFromSetTarget.title}」移除此题？`
+            ? `要把「${removeFromSetTarget.title}」里的这道题移走吗？`
             : ''
         }
         confirmLabel="移除"

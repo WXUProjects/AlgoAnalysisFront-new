@@ -105,7 +105,7 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
 
   async function onLikeSolution(s: ProblemUserSolutionItem) {
     if (!isLogin) {
-      toast.error('请先登录后再点赞')
+      toast.error('先登录才能点赞哦')
       return
     }
     setLikingId(s.id)
@@ -243,7 +243,7 @@ export function ProblemSolutionsPanel({ problemId, className }: SharedProps) {
           ))}
           {!solutions.length && (
             <li className="px-3 py-8 text-center text-sm text-muted-foreground">
-              暂无博客
+              还没有博客
             </li>
           )}
         </ul>
@@ -392,7 +392,7 @@ export function ProblemComments({
 
   async function onLikeComment(c: ProblemCommentItem) {
     if (!isLogin) {
-      toast.error('请先登录后再点赞')
+      toast.error('先登录才能点赞哦')
       return
     }
     setLikingId(c.id)
@@ -522,7 +522,7 @@ export function ProblemComments({
               onLike={onLikeComment}
               onReply={(item) => {
                 if (!isLogin) {
-                  toast.error('请先登录后再回复')
+                  toast.error('先登录才能回复哦')
                   return
                 }
                 setReplyTo(item)
@@ -533,7 +533,7 @@ export function ProblemComments({
           ))}
           {!comments.length && (
             <li className="px-3 py-8 text-center text-sm text-muted-foreground">
-              暂无评论
+              还没有评论
             </li>
           )}
         </ul>

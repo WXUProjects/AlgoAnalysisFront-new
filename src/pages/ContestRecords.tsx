@@ -223,7 +223,7 @@ export function ContestRecords() {
     if (id !== requestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '比赛列表加载失败，请稍后重试')
+      toast.error(res.message || '比赛列表没加载出来，过会儿再试')
       return
     }
     setList(res.data.list)
@@ -319,8 +319,8 @@ export function ContestRecords() {
           </h3>
           <p className="text-sm text-muted-foreground">
             {userMode
-              ? '按平台、名称或时间查找参赛记录，可打开站内榜或原站'
-              : '组织内出现过的比赛；你打过的会显示自己的排名与过题数'}
+              ? '按平台、名称或时间找参赛记录，可打开站内榜或原站'
+              : '组织内出现过的比赛；你打过的会显示自己的排名和过题数'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -445,8 +445,8 @@ export function ContestRecords() {
           <Card className="py-4">
             <CardContent className="px-4 text-sm text-muted-foreground">
               {hasFilters
-                ? '没有符合条件的比赛，试试放宽筛选条件'
-                : '暂时还没有比赛记录'}
+                ? '没有符合条件的比赛，放宽点筛选条件试试'
+                : '还没有比赛记录'}
             </CardContent>
           </Card>
         )}

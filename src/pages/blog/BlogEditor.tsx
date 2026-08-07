@@ -158,7 +158,7 @@ export function BlogEditor() {
       const res = await getBlogArticle({ id: editId })
       if (cancelled) return
       if (!res.success || !res.data) {
-        toast.error(res.message || '加载失败')
+        toast.error(res.message || '没加载出来')
         setLoading(false)
         return
       }
@@ -313,11 +313,11 @@ export function BlogEditor() {
 
   async function handleSave() {
     if (!title.trim()) {
-      toast.error('请填写标题')
+      toast.error('标题要写哦')
       return
     }
     if (!content.trim()) {
-      toast.error('请填写正文')
+      toast.error('正文要写哦')
       return
     }
     if (!useFirstImageAsCover && coverUrl && !isAllowedBlogImageUrl(coverUrl)) {
@@ -325,7 +325,7 @@ export function BlogEditor() {
       return
     }
     if (visibility === 'password' && isNew && !password.trim()) {
-      toast.error('请设置访问密码')
+      toast.error('访问密码要设一个')
       return
     }
     setSaving(true)
@@ -346,7 +346,7 @@ export function BlogEditor() {
       : await updateBlogArticle({ ...body, id: editId })
     setSaving(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '保存失败')
+      toast.error(res.message || '没保存上')
       return
     }
     toast.success(isNew ? '已发布' : '已保存')
@@ -460,11 +460,11 @@ export function BlogEditor() {
             </li>
             <li>
               {imageUploadEnabled
-                ? '可粘贴或上传图片；在预览图上可调整大小与对齐'
-                : '图片可插入外链；开通上传后可直接粘贴图片'}
+                ? '可以粘贴或上传图片；在预览图上能调整大小和对齐'
+                : '图片可以插外链；开通上传后能直接粘贴图片'}
             </li>
             <li>选中文字后粘贴网址，会自动变成链接</li>
-            <li>需要专注时可点「全屏」</li>
+            <li>需要专注时点「全屏」</li>
           </ul>
         </CollapsibleContent>
       </Collapsible>

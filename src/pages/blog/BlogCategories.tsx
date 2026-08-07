@@ -77,14 +77,14 @@ export function BlogCategoriesPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) {
-      toast.error('请输入分类名称')
+      toast.error('分类名称要写哦')
       return
     }
     setCreating(true)
     const res = await createBlogCategory(name.trim())
     setCreating(false)
     if (!res.success) {
-      toast.error(res.message || '创建失败')
+      toast.error(res.message || '没创建成功')
       return
     }
     setName('')
@@ -108,7 +108,7 @@ export function BlogCategoriesPage() {
     const res = await updateBlogCategory({ id: renameTarget.id, name: next })
     setRenaming(false)
     if (!res.success) {
-      toast.error(res.message || '保存失败')
+      toast.error(res.message || '没保存上')
       return
     }
     toast.success('已更新')
@@ -122,7 +122,7 @@ export function BlogCategoriesPage() {
     const res = await deleteBlogCategory(deleteTarget.id)
     setDeleting(false)
     if (!res.success) {
-      toast.error(res.message || '删除失败')
+      toast.error(res.message || '没删掉')
       return
     }
     toast.success('已删除')
@@ -177,7 +177,7 @@ export function BlogCategoriesPage() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {c.articleCount ?? 0} 篇
-                  {c.isDefault ? ' · 不可删除' : ''}
+                  {c.isDefault ? ' · 删不掉' : ''}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-1">

@@ -39,7 +39,7 @@ export function BlogCategoriesPublicPage() {
       <div>
         <h1 className="mz-page-title">分类</h1>
         {list.length === 0 ? (
-          <div className="mz-empty">暂无分类</div>
+          <div className="mz-empty">还没有分类</div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {list.map((c) => (
@@ -68,7 +68,7 @@ export function BlogCategoriesPublicPage() {
           分类
         </h1>
         {list.length === 0 ? (
-          <div className="chirpy-empty">暂无分类</div>
+          <div className="chirpy-empty">还没有分类</div>
         ) : (
           <div className="space-y-3">
             {list.map((c) => (
@@ -95,7 +95,7 @@ export function BlogCategoriesPublicPage() {
       <h1 className="text-xl font-semibold">分类</h1>
       {list.length === 0 ? (
         <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
-          暂无分类
+          还没有分类
         </div>
       ) : (
         <ul className="grid gap-2 sm:grid-cols-2">

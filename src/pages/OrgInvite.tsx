@@ -51,7 +51,7 @@ export function OrgInvite() {
   useEffect(() => {
     if (!code) {
       setLoading(false)
-      setError('邀请链接无效，请向组织管理员重新索取')
+      setError('邀请链接不顶用，找组织管理员重新要一个吧')
       return
     }
     rememberInviteCode(code)
@@ -61,7 +61,7 @@ export function OrgInvite() {
       if (cancelled) return
       setLoading(false)
       if (!r.success || !r.orgName) {
-        setError(r.message || '邀请链接无效或已失效')
+        setError(r.message || '邀请链接不顶用或已失效')
         return
       }
       setOrgName(r.orgName)
@@ -108,7 +108,7 @@ export function OrgInvite() {
       const res = await switchOrg(orgId)
       if (!res.success) {
         setActing(false)
-        toast.error(res.message || '切换组织失败，请稍后重试')
+        toast.error(res.message || '没切过去，过会儿再试')
         return
       }
     }
@@ -127,7 +127,7 @@ export function OrgInvite() {
     const res = await switchOrg(orgId)
     setActing(false)
     if (!res.success) {
-      toast.error(res.message || '切换组织失败，请稍后重试')
+      toast.error(res.message || '没切过去，过会儿再试')
       return
     }
     clearInviteCode()
@@ -138,14 +138,14 @@ export function OrgInvite() {
     if (!code) return
     const name = displayName.trim()
     if (!name) {
-      toast.error('请填写你在组织里的名称')
+      toast.error('你在组织里的名字要填哦')
       return
     }
     setJoining(true)
     const res = await joinOrg(code, name)
     setJoining(false)
     if (!res.success) {
-      toast.error(res.message || '加入失败，请稍后重试')
+      toast.error(res.message || '没加进去，过会儿再试')
       return
     }
     clearInviteCode()
@@ -222,11 +222,10 @@ export function OrgInvite() {
                   </AvatarFallback>
                 </Avatar>
               </div>
-              <CardTitle className="text-xl">欢迎加入{orgName}</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl">欢迎加入{orgName}</CardTitle>              <CardDescription>
                 {joinMode === 'review'
-                  ? '加入需管理员通过。注册或登录后提交申请即可。'
-                  : '注册或登录后即可成为组织成员。'}
+                  ? '加入要管理员通过，注册或登录后提交申请就行。'
+                  : '注册或登录后就能成为组织成员。'}
               </CardDescription>
             </>
           )}
@@ -238,7 +237,7 @@ export function OrgInvite() {
               <CardContent className="px-4">
                 {isCurrentOrg ? null : (
                   <p className="text-center text-sm text-muted-foreground">
-                    切换后将按该组织的内容展示。
+                    切过去后就按该组织的内容展示了。
                   </p>
                 )}
               </CardContent>
@@ -288,7 +287,7 @@ export function OrgInvite() {
                   </FieldGroup>
                 ) : (
                   <p className="text-center text-sm text-muted-foreground">
-                    还没有账号？注册时会带上本邀请；已有账号请登录后加入。
+                    还没有账号？注册时会带上这个邀请；有账号就登录后再加入。
                   </p>
                 )}
               </CardContent>

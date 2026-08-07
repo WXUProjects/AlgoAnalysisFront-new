@@ -91,7 +91,7 @@ export async function getResourceSeries(
   if (typeof raw.code === 'number' && raw.code !== 0) {
     return {
       success: false,
-      message: str(raw.message, '资源时序加载失败，请稍后重试'),
+      message: str(raw.message, '资源时序没加载出来，过会儿再试'),
       data: null,
     }
   }

@@ -31,17 +31,17 @@ export const COLOR_SCHEME_OPTIONS: readonly {
   {
     id: 'light',
     label: '浅色',
-    description: '始终使用浅色外观',
+    description: '一直用浅色外观',
   },
   {
     id: 'dark',
     label: '深色',
-    description: '始终使用深色外观',
+    description: '一直用深色外观',
   },
   {
     id: 'system',
     label: '跟随系统',
-    description: '随设备浅色/深色自动切换',
+    description: '跟着设备深浅自动切',
   },
 ] as const
 
@@ -77,7 +77,7 @@ export function colorSchemeControlLabel(mode?: string | null): string {
 /** Hint for cycle buttons: what the next click will do. */
 export function colorSchemeCycleHint(mode?: string | null): string {
   const next = nextColorScheme(mode)
-  return `当前${colorSchemeLabel(mode)}，点击切换为${colorSchemeLabel(next)}`
+  return `现在是${colorSchemeLabel(mode)}，点一下切成${colorSchemeLabel(next)}`
 }
 
 /** Resolve light|dark from mode + current OS preference. */

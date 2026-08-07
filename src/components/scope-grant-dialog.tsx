@@ -116,7 +116,7 @@ export function ScopeGrantDialog({
               <Label>分组</Label>
               <div className="flex flex-col gap-1.5">
                 {groups.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">暂无分组</p>
+                  <p className="text-xs text-muted-foreground">还没有分组</p>
                 ) : (
                   groups.map((g) => (
                     <label
@@ -138,7 +138,7 @@ export function ScopeGrantDialog({
               <Label>分队</Label>
               <div className="flex flex-col gap-1.5">
                 {squads.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">暂无分队</p>
+                  <p className="text-xs text-muted-foreground">还没有分队</p>
                 ) : (
                   squads.map((s) => (
                     <label

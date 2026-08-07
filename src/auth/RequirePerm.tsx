@@ -55,9 +55,9 @@ export function RequirePerm({
       <PageShell className="items-center justify-center" stagger={false}>
         <Card className="w-full max-w-md text-center motion-lift" role="alert">
           <CardHeader>
-            <CardTitle>暂无访问权限</CardTitle>
+            <CardTitle>还没有访问权限</CardTitle>
             <CardDescription>
-              当前账号没有访问此页面的权限，请联系管理员。
+              当前账号看不了这页，找管理员问问吧。
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center gap-2">

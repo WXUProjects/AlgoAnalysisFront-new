@@ -72,7 +72,7 @@ export function BlogManage() {
         setTotal(res.data.total)
       } else {
         setList([])
-        toast.error(res.message || '加载失败')
+        toast.error(res.message || '没加载出来')
       }
       setLoading(false)
     })()
@@ -109,7 +109,7 @@ export function BlogManage() {
     const res = await deleteBlogArticle(deleteTarget.id)
     setDeleting(false)
     if (!res.success) {
-      toast.error(res.message || '删除失败')
+      toast.error(res.message || '没删掉')
       return
     }
     toast.success('已删除')
@@ -158,7 +158,7 @@ export function BlogManage() {
         </div>
       ) : list.length === 0 ? (
         <div className="rounded-lg border border-dashed py-16 text-center text-muted-foreground">
-          暂无文章，可点击「写文章」
+          还没有文章，点「写文章」发一篇吧
         </div>
       ) : (
         <ul className="divide-y rounded-xl border bg-card">
@@ -234,7 +234,7 @@ export function BlogManage() {
           <AlertDialogHeader>
             <AlertDialogTitle>删除文章？</AlertDialogTitle>
             <AlertDialogDescription>
-              确定删除「{deleteTarget?.title}」？删除后无法恢复。
+              要把「{deleteTarget?.title}」删掉吗？删了找不回来。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -224,7 +224,7 @@ export function QuestionBank() {
       if (cancelled) return
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '题库加载失败，请稍后重试')
+        toast.error(res.message || '题库没加载出来，过会儿再试')
         return
       }
       setList(res.data.data)
@@ -272,11 +272,11 @@ export function QuestionBank() {
   async function handleRecognizeUrl() {
     const u = addUrl.trim()
     if (!u) {
-      toast.error('请粘贴题目链接')
+      toast.error('粘贴一下题目链接')
       return
     }
     if (!isLogin) {
-      toast.error('请先登录')
+      toast.error('先登录哦')
       navigate('/login')
       return
     }
@@ -290,8 +290,8 @@ export function QuestionBank() {
       setAddPhase('failed')
       setAddFailMsg(
         res.code === 'URL_PARSE_FAILED'
-          ? '无法从该链接识别题目'
-          : res.message || '识别失败',
+          ? '从这条链接认不出题目'
+          : res.message || '没识别出来',
       )
       return
     }
@@ -299,7 +299,7 @@ export function QuestionBank() {
     if (!pid) {
       setAdding(false)
       setAddPhase('failed')
-      setAddFailMsg('识别失败，请手写加题')
+      setAddFailMsg('没识别出来，手写加题吧')
       return
     }
     const seed = {
@@ -318,7 +318,7 @@ export function QuestionBank() {
     setAddOpen(false)
     resetAddDialog()
     toast.message('正在识别题目…', {
-      description: '题面拉取较慢，识别成功或失败会再通知你',
+      description: '题面拉取有点慢，识别好了会通知你',
     })
     bgWatchStop.current?.()
     bgWatchStop.current = watchProblemInBackground(pid, {
@@ -335,8 +335,8 @@ export function QuestionBank() {
       },
       onFail: (reason) => {
         bgWatchStop.current = null
-        toast.error(reason || '识别失败', {
-          description: '可手写加题，或放弃',
+        toast.error(reason || '没识别出来', {
+          description: '可以手写加题，或先放弃',
           action: {
             label: '手写加题',
             onClick: () => openManualAdd(u),
@@ -389,7 +389,7 @@ export function QuestionBank() {
         <div>
           <h2 className="text-lg font-semibold">题库</h2>
           <p className="text-sm text-muted-foreground">
-            按条件筛选题目，默认按最近提交排序
+            按条件筛题目，默认按最近提交排序
           </p>
         </div>
         {isLogin && (
@@ -701,7 +701,7 @@ export function QuestionBank() {
                 {!list.length && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      没有找到题目，试试调整筛选条件
+                      没找到这样的题，放宽点筛选条件试试
                     </TableCell>
                   </TableRow>
                 )}
@@ -741,7 +741,7 @@ export function QuestionBank() {
           <DialogHeader>
             <DialogTitle>向题库加题</DialogTitle>
             <DialogDescription>
-              粘贴常见 OJ 题目链接，点「识别」后在本页确认标题。无法识别时可手写加题。
+              粘贴常见 OJ 题目链接，点「识别」后在本页确认标题。认不出来就手写加题。
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>
@@ -780,7 +780,7 @@ export function QuestionBank() {
                 {formatRecognizedProblemLine(recognized)}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                请确认是否这道题，再加入题库。
+                是这道题的话，就加入题库吧。
               </p>
             </div>
           )}
@@ -788,7 +788,7 @@ export function QuestionBank() {
             <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3 text-sm">
               <p className="font-medium text-destructive">识别失败</p>
               <p className="mt-1 text-muted-foreground">
-                {addFailMsg || '无法识别该链接'}。可手写加题，或改链接后重试。
+                {addFailMsg || '认不出这个链接'}。可以手写加题，或换个链接再试。
               </p>
             </div>
           )}

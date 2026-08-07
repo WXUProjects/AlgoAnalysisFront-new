@@ -43,7 +43,7 @@ export function ImageUploadApplyBanner({
   async function submit() {
     const r = reason.trim()
     if (r.length < MIN_REASON) {
-      toast.error(`请填写至少 ${MIN_REASON} 字的申请理由`)
+      toast.error(`申请理由至少写 ${MIN_REASON} 个字`)
       return
     }
     if (r.length > MAX_REASON) {
@@ -54,7 +54,7 @@ export function ImageUploadApplyBanner({
     const res = await applyBlogImageUpload({ reason: r })
     setSubmitting(false)
     if (!res.success) {
-      toast.error(res.message || '提交失败，请稍后重试')
+      toast.error(res.message || '没提交上，过会儿再试')
       return
     }
     toast.success(res.message || '已提交申请，请等待站点管理员审批')

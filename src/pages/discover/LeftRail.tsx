@@ -308,7 +308,7 @@ export function LeftRail({
             ))}
           {!contestLoading && !contests.length && (
             <p className="px-3 py-5 text-center text-[11px] text-muted-foreground">
-              近期暂无赛事
+              近期还没有赛事
             </p>
           )}
           <div className="px-2 py-1.5">

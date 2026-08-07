@@ -38,7 +38,7 @@ export async function startTrainingReport(
   if (typeof raw.code === 'number' && raw.code !== 0) {
     return {
       success: false,
-      message: str(raw.msg ?? raw.message, res.message || '创建失败，请稍后重试'),
+      message: str(raw.msg ?? raw.message, res.message || '没创建成功，过会儿再试'),
       data: null,
     }
   }
@@ -98,7 +98,7 @@ export async function listTrainingReportJobs(params?: {
 /** 浏览器直接下载 HTML（Cookie + access_token 兜底） */
 export function downloadTrainingReport(jobId: string): ApiResult<null> {
   if (!jwt.isValid()) {
-    return { success: false, message: '请先登录后再下载', data: null }
+    return { success: false, message: '先登录才能下载', data: null }
   }
   const url = new URL(endpoints.agent.trainingReport.download, window.location.origin)
   url.searchParams.set('jobId', jobId)

@@ -73,7 +73,7 @@ export function ProblemContentEdit() {
     const res = await getProblem(id)
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '题目加载失败，请稍后重试')
+      toast.error(res.message || '题目没加载出来，过会儿再试')
       return
     }
     setProblem(res.data)
@@ -103,7 +103,7 @@ export function ProblemContentEdit() {
   useEffect(() => {
     if (!ready) return
     if (!isLogin) {
-      toast.error('请先登录后再修改')
+      toast.error('先登录才能改哦')
       navigate(backTo, { replace: true })
     }
   }, [ready, isLogin, navigate, backTo])
@@ -112,7 +112,7 @@ export function ProblemContentEdit() {
     if (!problem) return
     const content = contentInput.trim()
     if (!content) {
-      toast.error('题面内容不能为空')
+      toast.error('题面内容不能为空哦')
       return
     }
     const tags = selectedTags.map((t) => t.trim()).filter(Boolean)
@@ -138,7 +138,7 @@ export function ProblemContentEdit() {
       })
       setSaving(false)
       if (!res.success) {
-        toast.error(res.message || '保存失败，请稍后重试')
+        toast.error(res.message || '没保存上，过会儿再试')
         return
       }
       toast.success(res.message || '已更新')
@@ -158,7 +158,7 @@ export function ProblemContentEdit() {
     })
     setSaving(false)
     if (!res.success) {
-      toast.error(res.message || '提交失败，请稍后重试')
+      toast.error(res.message || '没提交上，过会儿再试')
       return
     }
     toast.success(res.message || '已提交审核')
@@ -231,7 +231,7 @@ export function ProblemContentEdit() {
           <CardDescription>
             {canReview
               ? '可改题面、标签与难度，保存后立即生效。'
-              : '可改题面、标签与难度，提交后需管理员审核通过才会展示。'}
+              : '可改题面、标签与难度，提交后要管理员审核通过才展示。'}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 px-4 pt-1">
@@ -267,7 +267,7 @@ export function ProblemContentEdit() {
               disabled={saving}
             />
             <p className="text-xs text-muted-foreground">
-              点选已有标签，或输入后回车新建。也可在详情页单独改标签。
+              点选已有标签，或输入后回车新建。也能在详情页单独改标签。
             </p>
           </Field>
           {!canReview && (

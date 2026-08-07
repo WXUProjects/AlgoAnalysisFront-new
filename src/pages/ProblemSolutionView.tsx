@@ -204,7 +204,7 @@ export function ProblemSolutionView() {
   async function onLike() {
     if (!solution) return
     if (!isLogin) {
-      toast.error('请先登录后再点赞')
+      toast.error('先登录才能点赞哦')
       return
     }
     setLiking(true)
@@ -214,7 +214,7 @@ export function ProblemSolutionView() {
     })
     setLiking(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '操作失败')
+      toast.error(res.message || '没操作成')
       return
     }
     setSolution((prev) =>
@@ -380,7 +380,7 @@ export function ProblemSolutionView() {
               </Button>
               <ConfirmDialog
                 title="删除这篇博客？"
-                description="删除后无法恢复，相关点赞与评论也会一并消失。"
+                description="删了就找不回来了，点赞和评论也会一起没掉。"
                 confirmLabel="删除"
                 destructive
                 loading={removing}
@@ -418,13 +418,13 @@ export function ProblemSolutionView() {
                 <MarkdownBody
                   content={problem?.contentMd || ''}
                   mode="auto"
-                  emptyText="题面准备中，请稍后刷新；也可返回题目页补充题面"
+                  emptyText="题面还在准备中，稍后刷新看看；也可以回题目页补充题面"
                 />
               ) : (
                 <MarkdownBody
                   content={solution.contentMd || ''}
                   mode="markdown"
-                  emptyText="暂无博客内容"
+                  emptyText="博客还没有内容"
                 />
               )}
             </CardContent>

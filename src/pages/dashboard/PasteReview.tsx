@@ -47,7 +47,7 @@ export function DashboardPasteReview() {
     if (id !== requestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '粘贴内容加载失败，请稍后重试')
+      toast.error(res.message || '粘贴内容加载失败，稍后重试')
       return
     }
     setTotal(res.data.total)
@@ -62,7 +62,7 @@ export function DashboardPasteReview() {
     return (
       <PageShell>
         <p className="text-sm text-muted-foreground">
-          你还没有查看社区内容的权限。如有需要，请联系站点管理员开通。
+          你还没有查看社区内容的权限。有需要的话，找站点管理员开通。
         </p>
       </PageShell>
     )

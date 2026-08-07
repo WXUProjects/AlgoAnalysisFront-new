@@ -156,7 +156,7 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
   async function onCreate() {
     const gid = Number(newGroupId)
     if (!gid || !newName.trim()) {
-      toast.error('请选择分组并填写分队名称')
+      toast.error('先选分组并填分队名称')
       return
     }
     setCreating(true)
@@ -176,7 +176,7 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
     if (!selected) return false
     const next = name.trim()
     if (!next) {
-      toast.error('请填写分队名称')
+      toast.error('分队名称要填')
       return false
     }
     setRenaming(true)
@@ -366,7 +366,7 @@ export function SquadPanel({ canWrite }: { canWrite: boolean }) {
               {membersLoading ? (
                 <Skeleton className="h-20 w-full" />
               ) : members.length === 0 ? (
-                <p className="text-sm text-muted-foreground">暂无队员</p>
+                <p className="text-sm text-muted-foreground">还没有队员</p>
               ) : (
                 <ul className="flex flex-col gap-1.5">
                   {members.map((m) => {

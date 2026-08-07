@@ -27,7 +27,7 @@ export function Contest() {
       <div className="flex flex-col gap-1">
         <h2 className="text-2xl font-semibold tracking-tight">比赛</h2>
         <p className="text-sm text-muted-foreground">
-          查看参赛记录，或订阅公开赛程邮件提醒
+          看看参赛记录，或订阅公开赛程的邮件提醒
         </p>
       </div>
 

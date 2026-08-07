@@ -234,7 +234,7 @@ export function DashboardGroup() {
       if (selectedId !== null) {
         void loadDetail(selectedId, memberPage, memberPageSize)
       }
-    } else toast.error(res.message || '保存失败，请稍后重试')
+    } else toast.error(res.message || '保存失败，稍后重试')
   }
 
   async function handleDelete(id: number) {
@@ -243,7 +243,7 @@ export function DashboardGroup() {
       toast.success(res.message || '已删除')
       if (selectedId === id) setSelectedId(null)
       void loadList()
-    } else toast.error(res.message || '删除失败，请稍后重试')
+    } else toast.error(res.message || '删除失败，稍后重试')
   }
 
   async function handleAdd(userId: number) {
@@ -293,7 +293,7 @@ export function DashboardGroup() {
     return (
       <PageShell>
         <p className="text-sm text-muted-foreground">
-          你还没有查看分组的权限。如有需要，请联系组织管理员开通。
+          你还没有查看分组的权限。有需要的话，找组织管理员开通。
         </p>
       </PageShell>
     )

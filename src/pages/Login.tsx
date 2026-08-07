@@ -62,7 +62,7 @@ export function Login() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!username || !password) {
-      toast.error('请输入账号和密码')
+      toast.error('账号和密码都填上呀')
       return
     }
     setPending(true)
@@ -86,7 +86,7 @@ export function Login() {
       }
       navigate(postLoginPath(redirectParam), { replace: true })
     } else {
-      toast.error(res.message || '登录失败，请检查账号密码后重试')
+      toast.error(res.message || '登录失败，检查下账号密码再试试')
     }
   }
 
@@ -95,7 +95,7 @@ export function Login() {
       <Card className="w-full max-w-sm gap-4 py-4 motion-lift">
         <CardHeader className="gap-1 px-4">
           <CardTitle>登录</CardTitle>
-          <CardDescription>使用账号或邮箱登录</CardDescription>
+          <CardDescription>用账号或邮箱都行～</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <CardContent className="px-4">
@@ -112,22 +112,14 @@ export function Login() {
                 />
               </Field>
               <Field className="gap-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <FieldLabel htmlFor="password">密码</FieldLabel>
-                  <Link
-                    to="/forgot-password"
-                    className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-                  >
-                    忘记密码？
-                  </Link>
-                </div>
+                <FieldLabel htmlFor="password">密码</FieldLabel>
                 <Input
                   id="password"
                   type="password"
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="请输入密码"
+                  placeholder="密码"
                   disabled={pending}
                 />
               </Field>
@@ -138,6 +130,12 @@ export function Login() {
               {pending ? <Spinner data-icon="inline-start" /> : null}
               登录
             </Button>
+            <Link
+              to="/forgot-password"
+              className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+            >
+              忘记密码？
+            </Link>
             <p className="text-sm text-muted-foreground">
               没有账号？{' '}
               <Link

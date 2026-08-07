@@ -257,7 +257,7 @@ export function NotificationInbox({ enabled }: { enabled: boolean }) {
           </SheetHeader>
           <div className="flex items-center justify-between gap-2 border-b px-4 py-2">
             <span className="text-xs text-muted-foreground">
-              {unread > 0 ? `${unread} 条未读` : '暂无未读'}
+              {unread > 0 ? `${unread} 条未读` : '还没有未读'}
             </span>
             <div className="flex items-center gap-1">
               <Button
@@ -287,7 +287,7 @@ export function NotificationInbox({ enabled }: { enabled: boolean }) {
               <p className="py-6 text-center text-sm text-muted-foreground">加载中…</p>
             )}
             {!loading && list.length === 0 && (
-              <p className="py-6 text-center text-sm text-muted-foreground">暂无通知</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">还没有通知</p>
             )}
             <ul className="flex flex-col gap-1.5 pb-2">
               {list.map((n) => {

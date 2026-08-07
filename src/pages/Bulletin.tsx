@@ -43,7 +43,7 @@ export function Bulletin() {
       if (cancelled) return
       setLoading(false)
       if (!res.success || !res.data) {
-        toast.error(res.message || '公告加载失败，请稍后重试')
+        toast.error(res.message || '公告没加载出来，过会儿再试')
         return
       }
       setList(res.data.list)
@@ -85,7 +85,7 @@ export function Bulletin() {
         {!loading && !list.length && (
           <Card className="py-4">
             <CardHeader className="px-4">
-              <CardDescription>暂无公告</CardDescription>
+              <CardDescription>还没有公告</CardDescription>
             </CardHeader>
           </Card>
         )}

@@ -290,7 +290,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
         hasLoadedOnce.current = true
       } catch (e) {
         if (!cancelled && fetchId === abortRef.current) {
-          setErrors([e instanceof Error ? e.message : '数据加载失败，请稍后重试'])
+          setErrors([e instanceof Error ? e.message : '数据加载失败，稍后重试'])
         }
       } finally {
         if (!cancelled && fetchId === abortRef.current) {
@@ -337,7 +337,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     return (
       <PageShell>
         <p className="text-sm text-muted-foreground">
-          你还没有查看全站统计的权限。如有需要，请联系站点管理员开通。
+          你还没有查看全站统计的权限。有需要的话，找站点管理员开通。
         </p>
       </PageShell>
     )
@@ -348,7 +348,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     const res = await updateAllSpiders()
     setUpdating(false)
     if (res.success) toast.success(res.message || '已开始全站同步')
-    else toast.error(res.message || '全站同步失败，请稍后重试')
+    else toast.error(res.message || '全站同步失败，稍后重试')
   }
 
   const orgName = currentOrg?.name || '当前组织'
@@ -739,7 +739,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
                     value={
                       metrics.peakDay
                         ? `${metrics.peakDay.date.slice(5)} · ${metrics.peakDay.count} 次`
-                        : '暂无'
+                        : '—'
                     }
                   />
                   <InsightRow
@@ -770,7 +770,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
                   />
                   {metrics.noAcMembers > 0 && (
                     <InsightRow
-                      label="本期暂无通过"
+                      label="本期还没有通过"
                       value={`${metrics.noAcMembers} 人`}
                       valueClassName="text-muted-foreground"
                     />

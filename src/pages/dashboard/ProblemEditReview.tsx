@@ -90,7 +90,7 @@ export function DashboardProblemEditReview() {
     })
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '审核列表加载失败，请稍后重试')
+      toast.error(res.message || '审核列表加载失败，稍后重试')
       return
     }
     setList(res.data.list)
@@ -112,7 +112,7 @@ export function DashboardProblemEditReview() {
     })
     setActing(false)
     if (!res.success) {
-      toast.error(res.message || '操作未完成，请稍后重试')
+      toast.error(res.message || '操作没完成，稍后重试')
       return
     }
     toast.success(res.message || (approve ? '已通过' : '已驳回'))
@@ -247,7 +247,7 @@ export function DashboardProblemEditReview() {
                       colSpan={6}
                       className="py-10 text-center text-muted-foreground"
                     >
-                      暂无待审申请
+                      还没有待审申请
                     </TableCell>
                   </TableRow>
                 )}
@@ -416,7 +416,7 @@ export function DashboardProblemEditReview() {
                     </ConfirmDialog>
                     <ConfirmDialog
                       title="通过并应用修改？"
-                      description="通过后会用本次内容覆盖题目信息，请确认已仔细核对。"
+                      description="通过后会用本次内容覆盖题目信息，确认已仔细核对。"
                       confirmLabel="通过并应用"
                       loading={acting}
                       onConfirm={() => void handleReview(true)}

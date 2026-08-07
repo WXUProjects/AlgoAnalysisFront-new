@@ -144,7 +144,7 @@ export function BlogComments({
     }
     const content = draft.trim()
     if (!content) {
-      toast.error('请写点内容再发送')
+      toast.error('写点内容再发吧')
       return
     }
     setPosting(true)
@@ -157,7 +157,7 @@ export function BlogComments({
       })
       setPosting(false)
       if (!res.success) {
-        toast.error(res.message || '发送失败')
+        toast.error(res.message || '没发出去')
         return
       }
       setDraft('')
@@ -174,7 +174,7 @@ export function BlogComments({
     })
     setPosting(false)
     if (!res.success) {
-      toast.error(res.message || '发送失败')
+      toast.error(res.message || '没发出去')
       return
     }
     setDraft('')
@@ -197,7 +197,7 @@ export function BlogComments({
       })
       setLikingId(0)
       if (!res.success || !res.data) {
-        toast.error(res.message || '操作失败')
+        toast.error(res.message || '没操作成')
         return
       }
       setComments((prev) =>
@@ -208,7 +208,7 @@ export function BlogComments({
     const res = await toggleBlogCommentLike(c.id)
     setLikingId(0)
     if (!res.success || !res.data) {
-      toast.error(res.message || '操作失败')
+      toast.error(res.message || '没操作成')
       return
     }
     setComments((prev) =>
@@ -222,7 +222,7 @@ export function BlogComments({
     if (mirror) {
       const res = await deleteProblemComment(id)
       if (!res.success) {
-        toast.error(res.message || '删除失败')
+        toast.error(res.message || '没删掉')
         return
       }
       toast.success('已删除')
@@ -232,7 +232,7 @@ export function BlogComments({
     }
     const res = await deleteBlogComment(id)
     if (!res.success) {
-      toast.error(res.message || '删除失败')
+      toast.error(res.message || '没删掉')
       return
     }
     toast.success('已删除')
@@ -281,7 +281,7 @@ export function BlogComments({
           onChange={(e) => setDraft(e.target.value)}
           placeholder={
             !isLogin
-              ? '登录后即可评论'
+              ? '登录后就能评论'
               : replyTo
                 ? `回复 ${replyTo.author?.name || replyTo.author?.username || ''}…`
                 : '写下你的想法…'
@@ -428,7 +428,7 @@ function BlogCommentNode({
             {canDelete ? (
               <ConfirmDialog
                 title="删除这条评论？"
-                description="删除后无法恢复，其下回复也会一并删除。"
+                description="删了就找不回来了，下面的回复也会一起没掉。"
                 confirmLabel="删除"
                 destructive
                 onConfirm={() => void onDelete(c.id)}

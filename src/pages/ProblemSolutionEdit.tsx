@@ -86,14 +86,14 @@ export function ProblemSolutionEdit() {
       const sol = sRes.data
       if (sol.problemId && sol.problemId !== problemId) {
         setLoading(false)
-        toast.error('博客与题目不匹配')
+        toast.error('这篇博客和题目对不上')
         navigate(backTo, { replace: true })
         return
       }
       const myId = user?.userId ?? 0
       if (myId && sol.userId !== myId && !canModerate) {
         setLoading(false)
-        toast.error('只能编辑自己的博客')
+        toast.error('只能改自己的博客哦')
         navigate(
           `/question-bank/detail/${problemId}/solution/${editId}`,
           { replace: true },
@@ -126,7 +126,7 @@ export function ProblemSolutionEdit() {
   useEffect(() => {
     if (!ready) return
     if (!isLogin) {
-      toast.error('请先登录后再写博客')
+      toast.error('先登录才能写博客哦')
       navigate(backTo, { replace: true })
     }
   }, [ready, isLogin, navigate, backTo])
@@ -134,7 +134,7 @@ export function ProblemSolutionEdit() {
   async function submitSolution() {
     if (!problemId) return
     if (!sTitle.trim() || !sContent.trim()) {
-      toast.error('请填写标题和正文')
+      toast.error('标题和正文都要写哦')
       return
     }
     setSaving(true)
@@ -151,7 +151,7 @@ export function ProblemSolutionEdit() {
         })
     setSaving(false)
     if (!res.success) {
-      toast.error(res.message || '保存失败')
+      toast.error(res.message || '没保存上')
       return
     }
     toast.success(isEdit ? '博客已更新' : '博客已发布')
@@ -178,7 +178,7 @@ export function ProblemSolutionEdit() {
       <PageShell>
         <Card className="py-4">
           <CardContent className="px-4 text-sm text-muted-foreground">
-            题目不存在。
+            没找到这道题。
             <Link to="/question-bank" className="ml-2 underline underline-offset-2">
               返回题库
             </Link>
@@ -221,7 +221,7 @@ export function ProblemSolutionEdit() {
             {isEdit ? '编辑博客' : '发布博客'}
           </CardTitle>
           <CardDescription>
-            左侧编辑、右侧预览。可用 @用户名 提醒他人；发布后会出现在当前组织的发现页。
+            左边编辑、右边预览。可以用 @用户名 提醒别人；发布后会出现在当前组织的发现页。
           </CardDescription>
         </CardHeader>
         <CardContent className="px-4 pt-1">

@@ -225,7 +225,7 @@ export function spiderPlatformHealth(
     return {
       kind: 'never',
       label: '尚未同步',
-      detail: '已绑定，做题数据通常几分钟内开始同步。',
+      detail: '刚绑定，数据几分钟内开始同步。',
       platforms: [name],
     }
   }
@@ -242,8 +242,8 @@ export function spiderPlatformHealth(
   }
   return {
     kind: 'ok',
-    label: '已同步',
-    detail: '近期同步正常。',
+    label: '同步正常',
+    detail: '最近同步正常。',
     platforms: [name],
   }
 }

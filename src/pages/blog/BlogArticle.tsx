@@ -207,14 +207,14 @@ export function BlogArticlePage() {
   async function handleUnlock(e: React.FormEvent) {
     e.preventDefault()
     if (!article || !password) {
-      toast.error('请输入访问密码')
+      toast.error('访问密码要填哦')
       return
     }
     setUnlocking(true)
     const res = await unlockBlogArticle(article.id, password)
     setUnlocking(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '密码不正确')
+      toast.error(res.message || '密码不对')
       return
     }
     if (res.data.unlockToken) {
@@ -243,7 +243,7 @@ export function BlogArticlePage() {
         targetId: article.sourceSolutionId,
       })
       if (!res.success || !res.data) {
-        toast.error(res.message || '操作失败')
+        toast.error(res.message || '没操作成')
         return
       }
       setArticle({
@@ -255,7 +255,7 @@ export function BlogArticlePage() {
     }
     const res = await toggleBlogLike(article.id)
     if (!res.success || !res.data) {
-      toast.error(res.message || '操作失败')
+      toast.error(res.message || '没操作成')
       return
     }
     setArticle({
@@ -279,9 +279,9 @@ export function BlogArticlePage() {
   async function handleCopyLink() {
     try {
       await navigator.clipboard.writeText(window.location.href)
-      toast.success('链接已复制')
+      toast.success('链接复制好啦')
     } catch {
-      toast.error('复制失败，请手动复制地址栏')
+      toast.error('复制不了，手动复制地址栏吧')
     }
   }
 
@@ -393,7 +393,7 @@ export function BlogArticlePage() {
           <MarkdownBody
             content={article.content || ''}
             mode="markdown"
-            emptyText="（空文章）"
+            emptyText="（空空的）"
             className="prose-blog"
             enableLightbox
           />
@@ -403,7 +403,7 @@ export function BlogArticlePage() {
           <MarkdownBody
             content={article.content || ''}
             mode="markdown"
-            emptyText="（空文章）"
+            emptyText="（空空的）"
             className="prose-blog"
             enableLightbox
           />
@@ -413,7 +413,7 @@ export function BlogArticlePage() {
           <MarkdownBody
             content={article.content || ''}
             mode="markdown"
-            emptyText="（空文章）"
+            emptyText="（空空的）"
             className="prose-blog text-[15px] leading-relaxed"
             enableLightbox
           />
@@ -450,7 +450,7 @@ export function BlogArticlePage() {
       <p className="text-center text-sm text-muted-foreground">
         {(article.likeCount ?? 0) > 0
           ? `已有 ${article.likeCount} 人为这篇文章点赞`
-          : '觉得写得好？给作者点个赞吧'}
+          : '觉得不错？给作者点个赞吧'}
       </p>
     </div>
   ) : null
