@@ -6,7 +6,7 @@ import {
   type RbacRole,
   type RbacRoleMember,
 } from '@shared/api'
-import { get, post } from '@/lib/http'
+import { get, post, num } from '@/lib/http'
 
 function bizOk(code: unknown): boolean {
   return code === undefined || code === null || code === 0 || code === '0'
@@ -34,6 +34,15 @@ export async function listPermissionGroups() {
   }
 }
 
+/** protojson int64 → number 归一化 */
+function normRole(r: Record<string, unknown>): RbacRole {
+  return { ...(r as RbacRole), roleId: num(r.roleId), orgId: num(r.orgId) }
+}
+
+function normRoleMember(r: Record<string, unknown>): RbacRoleMember {
+  return { ...(r as RbacRoleMember), userId: num(r.userId) }
+}
+
 /** 角色列表：scope=site 站点级；scope=org 为全局模板 + 该组织自定义 */
 export async function listRoles(scope: PermScope, orgId?: number) {
   const params: Record<string, string> = { scope }
@@ -43,7 +52,7 @@ export async function listRoles(scope: PermScope, orgId?: number) {
   return {
     success,
     message,
-    list: (Array.isArray(body.list) ? body.list : []) as RbacRole[],
+    list: (Array.isArray(body.list) ? body.list : []).map(normRole),
   }
 }
 
@@ -100,7 +109,7 @@ export async function listRoleMembers(params: {
   return {
     success,
     message,
-    list: (Array.isArray(body.list) ? body.list : []) as RbacRoleMember[],
+    list: (Array.isArray(body.list) ? body.list : []).map(normRoleMember),
     total: typeof body.total === 'number' ? body.total : 0,
   }
 }
@@ -154,5 +163,8 @@ export async function unassignRole(roleId: number, userIds: number[]) {
 export async function fetchMyPermissions() {
   const res = await get<Body>(endpoints.user.rbac.myPermissions)
   const { body, success, message } = unwrap(res)
-  return { success, message, data: success ? (body as unknown as MyPermissionsRes) : null }
+  const data = success
+    ? ({ ...(body as unknown as MyPermissionsRes), orgId: num(body.orgId) } as MyPermissionsRes)
+    : null
+  return { success, message, data }
 }

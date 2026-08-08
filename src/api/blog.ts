@@ -439,9 +439,16 @@ export async function getBlogAnalytics(): Promise<ApiResult<BlogAnalytics>> {
     totalViews: num(data.totalViews),
     totalLikes: num(data.totalLikes),
     totalComments: num(data.totalComments),
-    topArticles: (Array.isArray(data.topArticles)
-      ? data.topArticles
-      : []) as BlogAnalytics['topArticles'],
+    topArticles: (Array.isArray(data.topArticles) ? data.topArticles : []).map((t) => {
+      const r = t as Record<string, unknown>
+      return {
+        ...r,
+        id: num(r.id),
+        viewCount: num(r.viewCount),
+        likeCount: num(r.likeCount),
+        commentCount: num(r.commentCount),
+      }
+    }) as BlogAnalytics['topArticles'],
   }))
 }
 
