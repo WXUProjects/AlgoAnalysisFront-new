@@ -117,6 +117,7 @@ export function Profile() {
   )
   const [recentBlogs, setRecentBlogs] = useState<BlogArticle[]>([])
   const [refreshing, setRefreshing] = useState(false)
+  const [refreshConfirmOpen, setRefreshConfirmOpen] = useState(false)
   const [contests, setContests] = useState<ContestItem[]>([])
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
   const [period, setPeriod] = useState<PeriodData | null>(null)
@@ -465,6 +466,7 @@ export function Profile() {
   }
 
   async function handleRefresh() {
+    setRefreshConfirmOpen(false)
     setRefreshing(true)
     const res = await refreshSpider()
     setRefreshing(false)
@@ -501,7 +503,7 @@ export function Profile() {
                 type="button"
                 variant="outline"
                 disabled={refreshing}
-                onClick={() => void handleRefresh()}
+                onClick={() => setRefreshConfirmOpen(true)}
                 className="gap-1.5"
               >
                 <RefreshCwIcon
@@ -509,6 +511,32 @@ export function Profile() {
                 />
                 刷新做题记录
               </Button>
+              <AlertDialog
+                open={refreshConfirmOpen}
+                onOpenChange={setRefreshConfirmOpen}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>刷新做题记录？</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      将重新拉取你各 OJ 的最新提交记录（增量）。每次会消耗今日 2 次机会之一，
+                      且 5 分钟内只能刷新一次。
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={refreshing}>取消</AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={refreshing}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        void handleRefresh()
+                      }}
+                    >
+                      {refreshing ? '刷新中…' : '确认刷新'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button type="button" variant="ghost">
