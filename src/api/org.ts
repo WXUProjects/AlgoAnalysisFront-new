@@ -1,6 +1,5 @@
 import {
   endpoints,
-  type JoinRequestInfo,
   type OrgDiscoverItem,
   type OrgInfo,
   type OrgMemberInfo,
@@ -23,26 +22,31 @@ function bizOk(code: unknown): boolean {
 }
 
 /** protojson int64 → number（id/时间戳等字符串数字归一化） */
-function normalizeOrg(raw: Record<string, unknown>): OrgInfo {
-  return { ...(raw as OrgInfo), id: num(raw.id) }
+function normalizeOrg(raw: OrgInfo): OrgInfo {
+  return { ...raw, id: num(raw.id) }
 }
 
-function normalizeMember(raw: Record<string, unknown>): OrgMemberInfo {
+function normalizeMember(raw: OrgMemberInfo): OrgMemberInfo {
   return {
-    ...(raw as OrgMemberInfo),
+    ...raw,
     userId: num(raw.userId),
     groupId: raw.groupId === undefined || raw.groupId === null ? null : num(raw.groupId),
     joinedAt: num(raw.joinedAt),
   }
 }
 
-function normalizeJoinRequest(raw: Record<string, unknown>): JoinRequestInfo {
-  return {
-    ...(raw as JoinRequestInfo),
-    id: num(raw.id),
-    userId: num(raw.userId),
-    createdAt: num(raw.createdAt),
-  }
+interface JoinRequestItem {
+  id: number
+  userId: number
+  username?: string
+  name?: string
+  status?: string
+  createdAt?: number
+}
+
+function normalizeJoinRequest(r: unknown): JoinRequestItem {
+  const rr = r as unknown as JoinRequestItem
+  return { ...rr, id: num(rr.id), userId: num(rr.userId), createdAt: num(rr.createdAt) }
 }
 
 export async function listMyOrgs(opts?: { all?: boolean }) {
@@ -54,7 +58,7 @@ export async function listMyOrgs(opts?: { all?: boolean }) {
   return {
     success: res.success && bizOk(body?.code),
     message: body?.message || res.message,
-    list: asList<Record<string, unknown>>(body.list ?? res.data).map(normalizeOrg),
+    list: asList<OrgInfo>(body.list ?? res.data).map(normalizeOrg),
   }
 }
 
@@ -115,7 +119,7 @@ export async function getOrg(id?: number) {
   return {
     success: res.success,
     message: (res.data as { message?: string })?.message || res.message,
-    data: data && typeof data === 'object' ? normalizeOrg(data as Record<string, unknown>) : undefined,
+    data: data ? normalizeOrg(data) : undefined,
   }
 }
 
@@ -199,7 +203,7 @@ export async function createOrg(payload: {
   return {
     success: res.success && bizOk(raw?.code),
     message: raw?.message || res.message,
-    data: data && typeof data === 'object' ? normalizeOrg(data as Record<string, unknown>) : undefined,
+    data: data ? normalizeOrg(data) : undefined,
   }
 }
 
@@ -217,7 +221,7 @@ export async function updateOrg(payload: Record<string, unknown>) {
   return {
     success: res.success && bizOk(raw?.code),
     message: raw?.message || res.message,
-    data: data && typeof data === 'object' ? normalizeOrg(data as Record<string, unknown>) : undefined,
+    data: data ? normalizeOrg(data) : undefined,
   }
 }
 
@@ -255,14 +259,13 @@ export async function listOrgMembers(
     page?: number
     pageSize?: number
   }
-  const rawList = asList<Record<string, unknown>>(body.list ?? res.data)
+  const rawList = asList<OrgMemberInfo>(body.list ?? res.data)
   // 保留 scopes（组长/队长管理范围，含 label）
   const list = rawList.map((m) => {
     const member = normalizeMember(m)
-    const raw = m as OrgMemberInfo & { scopes?: OrgMemberInfo['scopes'] }
     return {
       ...member,
-      scopes: Array.isArray(raw.scopes) ? raw.scopes : member.scopes,
+      scopes: Array.isArray(member.scopes) ? member.scopes : member.scopes,
     }
   })
   return {
@@ -398,7 +401,7 @@ export async function listJoinRequests(orgId?: number) {
   return {
     success: res.success,
     message: res.message || raw.message,
-    list: asList<Record<string, unknown>>(raw.list ?? res.data).map(normalizeJoinRequest),
+    list: asList<JoinRequestItem>(raw.list ?? res.data).map(normalizeJoinRequest),
   }
 }
 

@@ -35,12 +35,14 @@ export async function listPermissionGroups() {
 }
 
 /** protojson int64 → number 归一化 */
-function normRole(r: Record<string, unknown>): RbacRole {
-  return { ...(r as RbacRole), roleId: num(r.roleId), orgId: num(r.orgId) }
+function normRole(r: unknown): RbacRole {
+  const rr = r as RbacRole
+  return { ...rr, roleId: num(rr.roleId), orgId: num(rr.orgId) }
 }
 
-function normRoleMember(r: Record<string, unknown>): RbacRoleMember {
-  return { ...(r as RbacRoleMember), userId: num(r.userId) }
+function normRoleMember(r: unknown): RbacRoleMember {
+  const rr = r as RbacRoleMember
+  return { ...rr, userId: num(rr.userId) }
 }
 
 /** 角色列表：scope=site 站点级；scope=org 为全局模板 + 该组织自定义 */
