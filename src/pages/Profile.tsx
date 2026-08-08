@@ -27,7 +27,6 @@ import { getHeatmap, getPeriod } from '@/api/statistic'
 import { getSubmitLogs } from '@/api/submitLog'
 import {
   listUserRecentComments,
-  listUserRecentSolutions,
 } from '@/api/community'
 import { listContests } from '@/api/contest'
 import { getProblemUserProfile } from '@/api/problem'
@@ -39,7 +38,7 @@ import type {
   SocialUser,
   UserProfile,
   UserRecentCommentItem,
-  UserRecentSolutionItem,
+  BlogArticle,
 } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { AlgoProfileChart } from '@/components/charts/algo-profile-chart'
@@ -114,9 +113,7 @@ export function Profile() {
   const [recentComments, setRecentComments] = useState<UserRecentCommentItem[]>(
     [],
   )
-  const [recentSolutions, setRecentSolutions] = useState<
-    UserRecentSolutionItem[]
-  >([])
+  const [recentBlogs, setRecentBlogs] = useState<BlogArticle[]>([])
   const [contests, setContests] = useState<ContestItem[]>([])
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
   const [period, setPeriod] = useState<PeriodData | null>(null)
@@ -277,19 +274,20 @@ export function Profile() {
       getProblemUserProfile(uid),
       getPeriod(uid),
       listUserRecentComments({ userId: uid, limit: 8 }),
-      listUserRecentSolutions({ userId: uid, limit: 8 }),
       pf.username
-        ? listBlogByUsername({ username: pf.username, page: 1, pageSize: 1 })
+        ? listBlogByUsername({ username: pf.username, page: 1, pageSize: 5 })
         : Promise.resolve(null),
-    ]).then(([cont, algoRes, periodRes, rcRes, rsRes, blogRes]) => {
+    ]).then(([cont, algoRes, periodRes, rcRes, blogRes]) => {
       if (signal?.cancelled) return
       if (cont.success) setContests(cont.data?.list || [])
       if (algoRes.success) setAlgo(algoRes.data)
       if (periodRes.success && periodRes.data) setPeriod(periodRes.data)
       else setPeriod(null)
       if (rcRes.success) setRecentComments(rcRes.data || [])
-      if (rsRes.success) setRecentSolutions(rsRes.data || [])
-      setBlogActivated(Boolean(blogRes?.success && blogRes.data?.activated))
+      if (blogRes?.success && blogRes.data) {
+        setBlogActivated(Boolean(blogRes.data.activated))
+        setRecentBlogs(blogRes.data.list || [])
+      }
     })
   }, [routeUsername, queryId, user?.userId, isLogin, navigate])
 
@@ -835,8 +833,8 @@ export function Profile() {
 
           <Card className="gap-3 py-4">
             <CardHeader className="px-4">
-              <CardTitle className="text-base">近期评论与题解</CardTitle>
-              <CardDescription>题目讨论与题解</CardDescription>
+              <CardTitle className="text-base">近期评论与博客</CardTitle>
+              <CardDescription>题目讨论与博客</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4 px-4">
               <div>
@@ -868,30 +866,28 @@ export function Profile() {
               </div>
               <div>
                 <p className="mb-2 text-xs font-medium text-muted-foreground">
-                  题解
+                  博客
                 </p>
-                {recentSolutions.length ? (
+                {blogActivated && recentBlogs.length ? (
                   <ul className="divide-y rounded-lg border">
-                    {recentSolutions.map((s) => (
-                      <li key={s.id} className="px-3 py-2 text-sm">
+                    {recentBlogs.map((b) => (
+                      <li key={b.id} className="px-3 py-2 text-sm">
                         <Link
-                          to={`/question-bank/detail/${s.problemId}/solution/${s.id}`}
+                          to={`/blog/${profile?.username}/${b.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="font-medium text-sky-600 hover:underline dark:text-sky-400"
                         >
-                          {s.title}
+                          {b.title}
                         </Link>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {cleanProblemTitle(
-                            s.problemTitle,
-                            `题目 #${s.problemId}`,
-                          )}{' '}
-                          · {formatTime(s.createdAt)}
+                          {formatTime(b.publishedAt || b.createdAt)}
                         </p>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted-foreground">还没有题解</p>
+                  <p className="text-sm text-muted-foreground">还没有博客文章</p>
                 )}
               </div>
             </CardContent>
