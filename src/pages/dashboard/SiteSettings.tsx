@@ -143,6 +143,7 @@ export function DashboardSiteSettings() {
   const [inactiveDays, setInactiveDays] = useState('14')
   const [adminNotifyEmails, setAdminNotifyEmails] = useState('')
   const [opsNotifyEmails, setOpsNotifyEmails] = useState('')
+  const [dataDiskPath, setDataDiskPath] = useState('')
 
   const [upyunBucket, setUpyunBucket] = useState('')
   const [upyunOperator, setUpyunOperator] = useState('')
@@ -292,6 +293,7 @@ export function DashboardSiteSettings() {
       setInactiveDays(String(d.inactiveDays || 14))
       setAdminNotifyEmails(d.adminNotifyEmails || '')
       setOpsNotifyEmails(d.opsNotifyEmails || '')
+      setDataDiskPath(d.dataDiskPath || '')
       setUpyunBucket(d.upyunBucket || '')
       setUpyunOperator(d.upyunOperator || '')
       setUpyunPassword(d.upyunPasswordSet ? SECRET_PLACEHOLDER : '')
@@ -399,6 +401,7 @@ export function DashboardSiteSettings() {
       setInactiveDays: true,
       adminNotifyEmails: adminNotifyEmails.trim(),
       opsNotifyEmails: opsNotifyEmails.trim(),
+      dataDiskPath: dataDiskPath.trim(),
       upyunBucket: upyunBucket.trim(),
       upyunOperator: upyunOperator.trim(),
       upyunPassword: upyunPw.secret,
@@ -669,6 +672,19 @@ export function DashboardSiteSettings() {
               />
               <p className="text-xs text-muted-foreground">
                 每行或逗号分隔；留空则运维告警不发邮件
+              </p>
+            </Field>
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="data-disk-path">运维磁盘统计目录</FieldLabel>
+              <Input
+                id="data-disk-path"
+                value={dataDiskPath}
+                onChange={(e) => setDataDiskPath(e.target.value)}
+                placeholder="/data"
+                autoComplete="off"
+              />
+              <p className="text-xs text-muted-foreground">
+                数据盘挂载点，运维页磁盘使用率按它统计；留空默认 /data（未挂载回退系统盘 /）
               </p>
             </Field>
             <div className="grid gap-3 sm:grid-cols-2">

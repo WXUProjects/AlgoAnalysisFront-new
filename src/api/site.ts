@@ -34,6 +34,8 @@ export type SiteAdminConfig = SiteConfig & {
   adminNotifyEmails: string
   /** 运维告警邮件收件人（逗号或换行）；空则运维告警不发邮件 */
   opsNotifyEmails: string
+  /** 运维磁盘统计目录（数据盘挂载点；空=默认 /data） */
+  dataDiskPath: string
   /** 又拍云图床 */
   upyunBucket: string
   upyunOperator: string
@@ -96,6 +98,7 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     inactiveDays: Math.max(1, Math.min(365, num(d.inactiveDays, 14) || 14)),
     adminNotifyEmails: str(d.adminNotifyEmails),
     opsNotifyEmails: str(d.opsNotifyEmails),
+    dataDiskPath: str(d.dataDiskPath),
     upyunBucket: str(d.upyunBucket),
     upyunOperator: str(d.upyunOperator),
     upyunPasswordMasked: str(d.upyunPasswordMasked),
@@ -182,6 +185,8 @@ export async function updateSiteConfig(body: {
   adminNotifyEmails?: string
   /** 运维告警邮件收件人；可传空串清空 */
   opsNotifyEmails?: string
+  /** 运维磁盘统计目录（数据盘挂载点）；可传空串恢复默认 /data */
+  dataDiskPath?: string
   upyunBucket?: string
   upyunOperator?: string
   upyunPassword?: string

@@ -227,6 +227,8 @@ export const endpoints = {
       monitor: `${API_PREFIX}/core/spider/monitor`,
       /** 站管：某 OJ 的绑定用户列表 query: platform, offset, limit */
       platformUsers: `${API_PREFIX}/core/spider/platform-users`,
+      /** 用户：手动增量刷新自己的 OJ 做题记录（每日限 2 次） */
+      refresh: `${API_PREFIX}/core/spider/refresh`,
       /** 站管：暂停/恢复某 OJ 的爬虫同步 body: { platform, enabled } */
       togglePlatform: `${API_PREFIX}/core/spider/toggle-platform`,
     },
@@ -496,6 +498,14 @@ export interface PlatformUsersRes {
   message: string
   total: number
   list: PlatformUserItem[]
+}
+
+/** 手动刷新做题记录响应（POST /core/spider/refresh） */
+export interface RefreshSpiderRes {
+  code: number
+  message: string
+  /** 今日剩余手动刷新次数（0=已用完） */
+  remaining: number
 }
 
 /** 题单系统类型 */

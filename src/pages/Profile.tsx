@@ -8,6 +8,7 @@ import {
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   FlameIcon,
+  RefreshCwIcon,
   TrendingDownIcon,
   TrendingUpIcon,
   UserPlusIcon,
@@ -16,6 +17,7 @@ import {
 import { toast } from 'sonner'
 import { listBlogByUsername } from '@/api/blog'
 import { getProfileById, getProfileByUsername } from '@/api/profile'
+import { refreshSpider } from '@/api/spider'
 import {
   followUser,
   getSocialCounts,
@@ -114,6 +116,7 @@ export function Profile() {
     [],
   )
   const [recentBlogs, setRecentBlogs] = useState<BlogArticle[]>([])
+  const [refreshing, setRefreshing] = useState(false)
   const [contests, setContests] = useState<ContestItem[]>([])
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
   const [period, setPeriod] = useState<PeriodData | null>(null)
@@ -461,6 +464,19 @@ export function Profile() {
     )
   }
 
+  async function handleRefresh() {
+    setRefreshing(true)
+    const res = await refreshSpider()
+    setRefreshing(false)
+    if (res.success && res.data) {
+      // 后端 message 已含剩余次数提示：成功「已开始刷新做题记录，今日剩余 N 次」/ 用完「每个用户每日拥有两次手动刷新做题记录次数，当前还剩下 N 次」
+      if (res.data.code === 0) toast.success(res.data.message)
+      else toast.error(res.data.message)
+    } else {
+      toast.error(res.message || '刷新失败，稍后再试')
+    }
+  }
+
   function renderProfileActions(opts: { desktopOnlySelfActions?: boolean }) {
     return (
       <div className="flex flex-col gap-2">
@@ -480,6 +496,18 @@ export function Profile() {
             <div className="flex flex-col gap-2">
               <Button type="button" asChild>
                 <Link to="/change-profile">编辑个人资料</Link>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={refreshing}
+                onClick={() => void handleRefresh()}
+                className="gap-1.5"
+              >
+                <RefreshCwIcon
+                  className={cn('size-3.5', refreshing && 'animate-spin')}
+                />
+                刷新做题记录
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
