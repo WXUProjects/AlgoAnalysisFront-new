@@ -275,7 +275,7 @@ export function Profile() {
       getPeriod(uid),
       listUserRecentComments({ userId: uid, limit: 8 }),
       pf.username
-        ? listBlogByUsername({ username: pf.username, page: 1, pageSize: 5 })
+        ? listBlogByUsername({ username: pf.username, page: 1, pageSize: 3 })
         : Promise.resolve(null),
     ]).then(([cont, algoRes, periodRes, rcRes, blogRes]) => {
       if (signal?.cancelled) return
