@@ -299,7 +299,7 @@
   width: 100%;
   max-width: var(--mz-page-width);
   margin: 0 auto;
-  padding: 1rem 0.75rem 2.5rem;
+  padding: 1rem 0.5rem 2.5rem;
 }
 
 @media (min-width: 768px) {

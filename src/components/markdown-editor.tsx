@@ -634,8 +634,9 @@ export function MarkdownEditor({
         )}
         style={!fullPage ? { height: minHeight, maxHeight: minHeight } : undefined}
       >
-        {/* 工具栏：历史 · 文字 · 结构 · 插入 · 视图 */}
-        <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-b bg-muted/30 px-1.5 py-1">
+        {/* 工具栏：历史 · 文字 · 结构 · 插入 · 视图
+            移动端单行横向滚动，避免 flex-wrap + ml-auto 换行后按钮错位 */}
+        <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b bg-muted/30 px-1.5 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ToolBtn
             title="撤销 ⌘Z"
             disabled={disabled || !canUndo}
@@ -805,7 +806,7 @@ export function MarkdownEditor({
           >
             <MinusIcon />
           </ToolBtn>
-          <div className="ml-auto flex items-center gap-0.5">
+          <div className="ml-auto flex shrink-0 items-center gap-0.5">
             <ToolBtn
               title="仅编辑"
               active={pane === 'edit'}

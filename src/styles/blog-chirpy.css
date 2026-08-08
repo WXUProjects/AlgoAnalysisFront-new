@@ -383,8 +383,8 @@
   width: 100%;
   min-height: 100svh;
   max-width: 1140px;
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 @media (min-width: 1200px) {

@@ -631,6 +631,9 @@ export function BlogEditor() {
                 同步到主站
               </FieldLabel>
             </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              勾选后文章会出现在主站博客广场与组织动态；取消则只在个人博客站公开可见。
+            </p>
           </Field>
         ) : null}
         <Field className="sm:col-span-2">
