@@ -418,12 +418,14 @@ export function ProblemSolutionView() {
                 <MarkdownBody
                   content={problem?.contentMd || ''}
                   mode="auto"
+                  enableLightbox
                   emptyText="题面还在准备中，稍后刷新看看；也可以回题目页补充题面"
                 />
               ) : (
                 <MarkdownBody
                   content={solution.contentMd || ''}
                   mode="markdown"
+                  enableLightbox
                   emptyText="博客还没有内容"
                 />
               )}

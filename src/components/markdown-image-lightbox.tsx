@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Lightbox from 'yet-another-react-lightbox'
+import Fullscreen from 'yet-another-react-lightbox/plugins/fullscreen'
+import Zoom from 'yet-another-react-lightbox/plugins/zoom'
 import 'yet-another-react-lightbox/styles.css'
 
 export type MarkdownLightboxSlide = {
@@ -61,6 +63,12 @@ export function MarkdownImageLightbox({
       slides={resolvedSlides}
       on={{ view: ({ index: i }) => setIndex(i) }}
       controller={{ closeOnBackdropClick: true }}
+      plugins={[Zoom, Fullscreen]}
+      zoom={{
+        scrollToZoom: true,
+        maxZoomPixelRatio: 3,
+        wheelZoomDistanceFactor: 0.12,
+      }}
       styles={{
         container: { backgroundColor: 'rgba(0, 0, 0, 0.92)' },
       }}
