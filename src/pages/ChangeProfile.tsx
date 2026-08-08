@@ -50,30 +50,9 @@ import {
   normalizeOjQuery,
   type OjPlatform,
 } from '@/lib/link'
-import { spiderPlatformHealth, type SpiderHealthKind } from '@/lib/spider-health'
-import { cn } from '@/lib/utils'
+import { spiderPlatformHealth } from '@/lib/spider-health'
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
-
-const HEALTH_TONE: Record<SpiderHealthKind, string> = {
-  ok: 'bg-green-500',
-  never: 'bg-amber-500',
-  failed: 'bg-red-500',
-  stale: 'bg-yellow-500',
-}
-
-const HEALTH_TEXT: Record<SpiderHealthKind, string> = {
-  ok: 'text-green-600 dark:text-green-400',
-  never: 'text-amber-600 dark:text-amber-400',
-  failed: 'text-destructive',
-  stale: 'text-yellow-600 dark:text-yellow-400',
-}
-
-function StatusDot({ tone }: { tone: string }) {
-  return (
-    <span className={cn('inline-block size-2 shrink-0 rounded-full', tone)} />
-  )
-}
 
 function OjPlatformCard({
   platform,
@@ -88,7 +67,6 @@ function OjPlatformCard({
   acCount?: number
   onEdit: () => void
 }) {
-  const health = spiderPlatformHealth(spider)
   return (
     <div
       role="button"
@@ -103,18 +81,7 @@ function OjPlatformCard({
       className="flex cursor-pointer flex-col gap-1.5 rounded-xl border bg-card p-3 transition-colors hover:bg-muted/40"
     >
       <div className="flex items-center gap-1.5">
-        <StatusDot tone={HEALTH_TONE[health.kind]} />
         <span className="truncate text-sm font-semibold">{label}</span>
-        {health.kind === 'failed' || health.kind === 'never' || health.kind === 'stale' ? (
-          <span
-            className={cn(
-              'ml-auto shrink-0 text-[10px] font-medium',
-              HEALTH_TEXT[health.kind],
-            )}
-          >
-            {health.label}
-          </span>
-        ) : null}
       </div>
       <p className="truncate text-xs">
         <a

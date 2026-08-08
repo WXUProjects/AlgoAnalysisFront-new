@@ -20,7 +20,6 @@ import {
 } from '@/components/ui/card'
 import { userSyncHealth } from '@/lib/spider-health'
 import { OrgRole } from '@/lib/roles'
-import { cn } from '@/lib/utils'
 
 function storageKey(parts: Array<string | number>) {
   return `goalgo:setup:${parts.join(':')}`
@@ -107,9 +106,13 @@ export function HomeSetupCards() {
     nonSystemOrg &&
     !readDismissed(coachKey)
 
+  // 首页只提示「用户可自行修复」的问题（如绑定用户名错误）；
+  // OJ 侧/网络类问题（非用户过错）不打扰用户，恢复后自然消失。
   const syncHint = useMemo(() => {
     if (!isLogin || spidersLen === null || spidersLen === 0) return null
-    return userSyncHealth(spiders as never, lastSyncAt)
+    const hint = userSyncHealth(spiders as never, lastSyncAt)
+    if (!hint || hint.kind !== 'failed' || hint.fault !== 'user') return null
+    return hint
   }, [isLogin, spidersLen, spiders, lastSyncAt])
 
   // re-render after dismiss
@@ -154,30 +157,15 @@ export function HomeSetupCards() {
       ) : null}
 
       {syncHint ? (
-        <Card
-          className={cn(
-            'shadow-none',
-            syncHint.kind === 'failed'
-              ? 'border-destructive/40'
-              : 'border-amber-500/30',
-          )}
-        >
+        <Card className="border-destructive/40 shadow-none">
           <CardHeader className="space-y-1 pb-2">
             <CardTitle className="text-base">{syncHint.label}</CardTitle>
             <CardDescription>{syncHint.detail}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2 pt-0">
-            {syncHint.kind === 'failed' && syncHint.fault === 'system' ? (
-              <Button asChild size="sm" variant="secondary">
-                <Link to="/change-profile?focus=oj">查看绑定</Link>
-              </Button>
-            ) : (
-              <Button asChild size="sm" variant="secondary">
-                <Link to="/change-profile?focus=oj">
-                  {syncHint.fault === 'user' ? '检查用户名' : '检查绑定'}
-                </Link>
-              </Button>
-            )}
+            <Button asChild size="sm" variant="secondary">
+              <Link to="/change-profile?focus=oj">检查用户名</Link>
+            </Button>
           </CardContent>
         </Card>
       ) : null}

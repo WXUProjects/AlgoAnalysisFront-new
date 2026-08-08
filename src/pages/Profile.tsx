@@ -84,11 +84,7 @@ import {
   todayYmd,
 } from '@/lib/format'
 import { getPlatformHomeLink, getSubmitLink, OJ_PLATFORMS } from '@/lib/link'
-import {
-  formatSyncAge,
-  spiderPlatformHealth,
-  userSyncHealth,
-} from '@/lib/spider-health'
+import { formatSyncAge } from '@/lib/spider-health'
 import { cn } from '@/lib/utils'
 import {
   contestSeedFromItem,
@@ -422,7 +418,6 @@ export function Profile() {
           <div className="flex flex-wrap gap-1.5">
             {bound.map(({ platform: p, bind }) => {
               const href = getPlatformHomeLink(p.value, bind.username)
-              const health = spiderPlatformHealth(bind)
               const label = (
                 <>
                   <span className="font-medium text-foreground">{p.label}</span>
@@ -431,32 +426,19 @@ export function Profile() {
                       ({bind.rating})
                     </span>
                   ) : null}
-                  {health.kind === 'failed' || health.kind === 'never' || health.kind === 'stale' ? (
-                    <span
-                      className={cn(
-                        'ml-1 text-[10px] font-medium',
-                        health.kind === 'failed'
-                          ? 'text-destructive'
-                          : 'text-amber-600 dark:text-amber-400',
-                      )}
-                    >
-                      · {health.label}
-                    </span>
-                  ) : null}
                 </>
               )
               const className = cn(
                 'inline-flex h-7 max-w-full items-center gap-0 rounded-full border border-border/80',
                 'bg-muted/40 px-2.5 text-xs transition-colors',
                 'hover:bg-muted/70 active:bg-muted',
-                health.kind === 'failed' && 'border-destructive/40',
               )
               if (!href) {
                 return (
                   <span
                     key={p.value}
                     className={className}
-                    title={`${bind.username} · ${health.detail}`}
+                    title={bind.username}
                   >
                     {label}
                   </span>
@@ -468,7 +450,7 @@ export function Profile() {
                   href={href}
                   target="_blank"
                   rel="noreferrer"
-                  title={`${p.label} · ${bind.username} · ${health.detail}`}
+                  title={`${p.label} · ${bind.username}`}
                   className={className}
                 >
                   {label}
@@ -603,10 +585,6 @@ export function Profile() {
                     </Link>
                   </div>
                   {(() => {
-                    const syncHealth = userSyncHealth(
-                      profile.spiders,
-                      profile.lastSyncAt,
-                    )
                     const age = formatSyncAge(profile.lastSyncAt)
                     const abs = profile.lastSyncAt
                       ? formatTime(profile.lastSyncAt)
@@ -619,26 +597,9 @@ export function Profile() {
                     return (
                       <p
                         className="mt-1.5 text-[11px] text-muted-foreground tabular-nums sm:text-xs lg:text-center"
-                        title={
-                          abs
-                            ? `上次成功同步：${abs}${syncHealth?.detail ? ` · ${syncHealth.detail}` : ''}`
-                            : '尚无成功同步记录'
-                        }
+                        title={abs ? `上次成功同步：${abs}` : '尚无成功同步记录'}
                       >
                         {primary}
-                        {syncHealth?.kind === 'stale' ? (
-                          <span className="ml-1 text-amber-600 dark:text-amber-400">
-                            · 偏旧
-                          </span>
-                        ) : null}
-                        {syncHealth?.kind === 'failed' ||
-                        profile.spiders?.some(
-                          (s) => spiderPlatformHealth(s).kind === 'failed',
-                        ) ? (
-                          <span className="ml-1 text-destructive">
-                            · 有平台异常
-                          </span>
-                        ) : null}
                       </p>
                     )
                   })()}
