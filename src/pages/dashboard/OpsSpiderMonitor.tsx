@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import type { PlatformUserItem } from '@shared/api'
 import {
+  getPlatformUsers,
   getSpiderMonitor,
   togglePlatformSync,
   type SpiderPlatformStat,
@@ -22,6 +24,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { formatCompactNumber, formatTime } from '@/lib/format'
@@ -113,10 +122,12 @@ function SpiderMonitorCard({
   stat,
   onToggle,
   toggling,
+  onViewUsers,
 }: {
   stat: SpiderPlatformStat
   onToggle?: (enabled: boolean) => void
   toggling: boolean
+  onViewUsers?: (platform: string) => void
 }) {
   const statuses = moduleStatuses(stat)
   const overall = cardTone(statuses)
@@ -204,7 +215,15 @@ function SpiderMonitorCard({
       </div>
 
       <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-        <Mini label="绑定用户" value={formatCompactNumber(stat.boundUsers)} />
+        <Mini
+          label="绑定用户"
+          value={formatCompactNumber(stat.boundUsers)}
+          onClick={
+            stat.boundUsers > 0 && onViewUsers
+              ? () => onViewUsers(stat.platform)
+              : undefined
+          }
+        />
         <Mini label="提交记录" value={formatCompactNumber(stat.submitCount)} />
         <Mini label="今日 成功/失败" value={`${formatCompactNumber(stat.todayOk)} / ${formatCompactNumber(stat.todayFail)}`} />
         <Mini label="今日入库" value={formatCompactNumber(stat.todayRows)} />
@@ -251,14 +270,33 @@ function SpiderMonitorCard({
   )
 }
 
-function Mini({ label, value }: { label: string; value: string }) {
-  return (
+function Mini({
+  label,
+  value,
+  onClick,
+}: {
+  label: string
+  value: string
+  onClick?: () => void
+}) {
+  const inner = (
     <div>
       <p className="text-[11px] text-muted-foreground">{label}</p>
       <p className="truncate font-semibold tabular-nums" title={value}>
         {value}
       </p>
     </div>
+  )
+  if (!onClick) return inner
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="cursor-pointer rounded text-left transition-opacity hover:opacity-70"
+      title={`查看${label}列表`}
+    >
+      {inner}
+    </button>
   )
 }
 
@@ -270,6 +308,26 @@ function SpiderMonitorSectionInner() {
   const [toggling, setToggling] = useState(false)
   const canToggle =
     can(Perm.SiteConfigWrite) || can(Perm.SiteSpiderOps)
+
+  const [usersOpen, setUsersOpen] = useState(false)
+  const [usersPlatform, setUsersPlatform] = useState('')
+  const [users, setUsers] = useState<PlatformUserItem[]>([])
+  const [usersTotal, setUsersTotal] = useState(0)
+  const [usersLoading, setUsersLoading] = useState(false)
+
+  const openUsers = useCallback(async (platform: string) => {
+    setUsersPlatform(platform)
+    setUsersOpen(true)
+    setUsersLoading(true)
+    const res = await getPlatformUsers(platform)
+    setUsersLoading(false)
+    if (res.success && res.data) {
+      setUsers(res.data.list)
+      setUsersTotal(res.data.total)
+    } else {
+      toast.error(res.message || '加载绑定用户失败')
+    }
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -355,10 +413,62 @@ function SpiderMonitorSectionInner() {
               stat={s}
               onToggle={canToggle ? (enabled) => void handleToggle(s, enabled) : undefined}
               toggling={toggling}
+              onViewUsers={(platform) => void openUsers(platform)}
             />
           ))}
         </div>
       </CardContent>
+
+      <Dialog open={usersOpen} onOpenChange={setUsersOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {spiderPlatformLabel(usersPlatform)} · 绑定用户（{usersTotal}）
+            </DialogTitle>
+            <DialogDescription>
+              绑定该 OJ 的站内用户与 OJ 账号
+            </DialogDescription>
+          </DialogHeader>
+          {usersLoading ? (
+            <div className="flex flex-col gap-2 py-2">
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          ) : users.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              暂无绑定用户
+            </p>
+          ) : (
+            <div className="max-h-96 overflow-auto rounded-lg border">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-muted/60 text-left text-xs text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2">用户</th>
+                    <th className="px-3 py-2">OJ 账号</th>
+                    <th className="px-3 py-2 text-right">Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.userId} className="border-t">
+                      <td className="px-3 py-2 font-medium">
+                        {u.name || u.username || `用户${u.userId}`}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs">
+                        {u.ojUsername || '—'}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {u.hasRating && u.rating != null ? u.rating : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

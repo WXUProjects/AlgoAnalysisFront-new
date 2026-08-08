@@ -225,6 +225,8 @@ export const endpoints = {
       purgeSubmitsAndRecrawl: `${API_PREFIX}/core/spider/purge-submits-and-recrawl`,
       /** 站管：各 OJ 爬虫模块监控（提交/题库/比赛/账号） */
       monitor: `${API_PREFIX}/core/spider/monitor`,
+      /** 站管：某 OJ 的绑定用户列表 query: platform, offset, limit */
+      platformUsers: `${API_PREFIX}/core/spider/platform-users`,
       /** 站管：暂停/恢复某 OJ 的爬虫同步 body: { platform, enabled } */
       togglePlatform: `${API_PREFIX}/core/spider/toggle-platform`,
     },
@@ -472,6 +474,28 @@ export interface SpiderMonitorRes {
   message: string
   platforms: SpiderPlatformStat[]
   collectedAt: number
+}
+
+/** 某 OJ 的绑定用户（GET /core/spider/platform-users 返回项） */
+export interface PlatformUserItem {
+  userId: number
+  /** 站内展示名（无则回退站内用户名） */
+  name: string
+  /** 站内用户名 */
+  username: string
+  /** 绑定的该 OJ 账号 */
+  ojUsername: string
+  /** 平台当前 rating（hasRating=false 时忽略） */
+  rating?: number
+  hasRating?: boolean
+}
+
+/** 某 OJ 绑定用户列表响应（GET /core/spider/platform-users） */
+export interface PlatformUsersRes {
+  code: number
+  message: string
+  total: number
+  list: PlatformUserItem[]
 }
 
 /** 题单系统类型 */

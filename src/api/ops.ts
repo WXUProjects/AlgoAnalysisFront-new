@@ -1,5 +1,5 @@
 import { endpoints } from '@shared/api'
-import type { SpiderMonitorRes } from '@shared/api'
+import type { SpiderMonitorRes, PlatformUsersRes } from '@shared/api'
 import { get, post, num, str, bool, type ApiResult } from '@/lib/http'
 
 export interface SubmitInventory {
@@ -48,6 +48,37 @@ export async function togglePlatformSync(
   enabled: boolean,
 ): Promise<ApiResult<unknown>> {
   return post(endpoints.core.spider.togglePlatform, { platform, enabled })
+}
+
+/** 站管：某 OJ 的绑定用户列表 */
+export async function getPlatformUsers(
+  platform: string,
+  offset = 0,
+  limit = 100,
+): Promise<ApiResult<PlatformUsersRes>> {
+  const res = await get<Record<string, unknown>>(
+    endpoints.core.spider.platformUsers,
+    { platform, offset, limit },
+  )
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
+  const list = Array.isArray(raw.list) ? (raw.list as Record<string, unknown>[]) : []
+  return {
+    ...res,
+    data: {
+      code: num(raw.code),
+      message: str(raw.message),
+      total: num(raw.total),
+      list: list.map((u) => ({
+        userId: num(u.userId),
+        name: str(u.name),
+        username: str(u.username),
+        ojUsername: str(u.ojUsername),
+        rating: num(u.rating),
+        hasRating: bool(u.hasRating),
+      })),
+    },
+  }
 }
 
 export async function getSubmitInventory(): Promise<ApiResult<SubmitInventory>> {
