@@ -29,7 +29,7 @@ export function ProblemsetAddManual() {
   const navigate = useNavigate()
   const { isLogin, ready } = useAuth()
 
-  const sourceUrl = params.get('url') || ''
+  const [sourceUrl, setSourceUrl] = useState(() => params.get('url') || '')
   const problemsetId = id ? Number(id) : 0
   const forBankOnly = !problemsetId
   const backTo = problemsetId ? `/problemset/${problemsetId}` : '/question-bank'
@@ -129,23 +129,19 @@ export function ProblemsetAddManual() {
             {forBankOnly
               ? '链接认不出来的时候，填个标题就能发布。题面和标签可写可不写。'
               : '链接认不出来的时候，填个标题就能发布。题面和标签可写可不写，发布后会加进当前题单。'}
-            {sourceUrl ? (
-              <>
-                {' '}
-                原链接：
-                <a
-                  href={sourceUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="break-all underline underline-offset-2"
-                >
-                  {sourceUrl}
-                </a>
-              </>
-            ) : null}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 px-4 pt-1">
+          <Field>
+            <FieldLabel>原题链接（可选）</FieldLabel>
+            <Input
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              placeholder="https://…"
+              className="max-w-xl"
+              disabled={saving}
+            />
+          </Field>
           <Field>
             <FieldLabel>标签（可选）</FieldLabel>
             <TagInput
