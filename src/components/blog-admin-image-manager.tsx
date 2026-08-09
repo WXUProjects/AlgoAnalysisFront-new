@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ImageOffIcon, ImagesIcon, Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -43,6 +43,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { createBlogAdminImageController } from '@/lib/blog-admin-images'
+import { bindImageViewer } from '@/lib/viewer'
 import type {
   BlogAdminImageListResult,
   BlogAdminImageMode,
@@ -79,6 +80,13 @@ export function BlogAdminImageManager() {
   const [busyId, setBusyId] = useState(0)
   const [batchBusy, setBatchBusy] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const thumbRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = thumbRef.current
+    if (!el || !data?.list.length) return
+    return bindImageViewer(el)
+  }, [data])
 
   async function load(
     mode: BlogAdminImageMode,
@@ -203,7 +211,7 @@ export function BlogAdminImageManager() {
           </Empty>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" ref={thumbRef}>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -220,14 +228,12 @@ export function BlogAdminImageManager() {
                     <TableRow key={image.id}>
                       <TableCell>
                         <div className="flex min-w-56 items-center gap-3">
-                          <a href={image.url} target="_blank" rel="noreferrer">
-                            <img
-                              src={image.url}
-                              alt=""
-                              loading="lazy"
-                              className="size-12 rounded-md border object-cover"
-                            />
-                          </a>
+                          <img
+                            src={image.url}
+                            alt=""
+                            loading="lazy"
+                            className="size-12 rounded-md border object-cover"
+                          />
                           <span className="max-w-72 truncate text-xs text-muted-foreground">
                             {image.objectKey}
                           </span>

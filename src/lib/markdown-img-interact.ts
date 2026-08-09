@@ -1,5 +1,5 @@
 /**
- * Markdown image interactions: click-to-zoom + preview layout toolbar.
+ * Markdown image interactions: preview layout toolbar.
  *
  * 工具条叠在图片内侧（不悬空到框外），避免移入控件时丢失 hover。
  * 布局变更先改 DOM，离开图片后再写回 Markdown，避免重渲染打断操作。
@@ -12,69 +12,7 @@ const HANDLE_CLASS = 'md-img-resize-handle'
 const WRAP_CLASS = 'md-img-resize-wrap'
 const TOOLBAR_CLASS = 'md-img-toolbar'
 const BADGE_CLASS = 'md-img-resize-badge'
-const ZOOMABLE_CLASS = 'md-img-zoomable'
 const BLOCK_CLASS = 'md-img-block'
-
-export type MarkdownLightboxOpenPayload = {
-  src: string
-  alt: string
-  /** All zoomable images in the root (gallery) */
-  slides: Array<{ src: string; alt: string }>
-}
-
-/**
- * Mark images as zoomable and bind click → onOpen(src, alt, slides).
- * Skips clicks on resize handles / toolbar.
- */
-export function bindMarkdownImageLightbox(
-  root: HTMLElement,
-  onOpen: (payload: MarkdownLightboxOpenPayload) => void,
-): () => void {
-  const imgs = root.querySelectorAll('img')
-  imgs.forEach((img) => {
-    if (!(img instanceof HTMLImageElement)) return
-    if (!img.getAttribute('src')) return
-    img.classList.add(ZOOMABLE_CLASS)
-    if (!img.getAttribute('title')) {
-      img.setAttribute('title', '点击放大')
-    }
-  })
-
-  const collectSlides = () => {
-    const slides: Array<{ src: string; alt: string }> = []
-    const seen = new Set<string>()
-    root.querySelectorAll(`img.${ZOOMABLE_CLASS}`).forEach((el) => {
-      if (!(el instanceof HTMLImageElement)) return
-      const s = (el.currentSrc || el.src || '').trim()
-      if (!s || seen.has(s)) return
-      seen.add(s)
-      slides.push({ src: s, alt: el.alt || '' })
-    })
-    return slides
-  }
-
-  const onClick = (event: Event) => {
-    const target = event.target
-    if (!(target instanceof Element)) return
-    if (target.closest(`.${HANDLE_CLASS}`)) return
-    if (target.closest(`.${TOOLBAR_CLASS}`)) return
-    const img = target.closest('img')
-    if (!img || !(img instanceof HTMLImageElement) || !root.contains(img)) return
-    const src = (img.currentSrc || img.src || '').trim()
-    if (!src) return
-    event.preventDefault()
-    event.stopPropagation()
-    onOpen({ src, alt: img.alt || '', slides: collectSlides() })
-  }
-
-  root.addEventListener('click', onClick)
-  return () => {
-    root.removeEventListener('click', onClick)
-    root.querySelectorAll(`img.${ZOOMABLE_CLASS}`).forEach((el) => {
-      el.classList.remove(ZOOMABLE_CLASS)
-    })
-  }
-}
 
 type SizeMode = 'percent' | 'px'
 

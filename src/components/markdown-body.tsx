@@ -1,16 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import 'katex/dist/katex.min.css'
-import { MarkdownImageLightbox } from '@/components/markdown-image-lightbox'
 import { PromptDialog } from '@/components/prompt-dialog'
 import type { ImageLayoutPatch } from '@/lib/blog-image'
 import { cn } from '@/lib/utils'
 import { bindMarkdownCodeCopy } from '@/lib/markdown-code-copy'
 import {
-  bindMarkdownImageLightbox,
   bindMarkdownImageResize,
   type CustomSizePromptRequest,
 } from '@/lib/markdown-img-interact'
+import { bindImageViewer } from '@/lib/viewer'
 import {
   prepareMarkdownHighlight,
   renderContentAsync,
@@ -59,12 +58,6 @@ export function MarkdownBody({
   const rootRef = useRef<HTMLDivElement>(null)
   // 首帧留空占位，仅在 effect 中渲染一次，避免挂载时同步+异步双重解析
   const [html, setHtml] = useState('')
-  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
-  const [lightboxAlt, setLightboxAlt] = useState('')
-  const [lightboxSlides, setLightboxSlides] = useState<
-    Array<{ src: string; alt: string }>
-  >([])
-  const [lightboxOpen, setLightboxOpen] = useState(false)
   const [sizePrompt, setSizePrompt] = useState<CustomSizePromptRequest | null>(
     null,
   )
@@ -101,6 +94,11 @@ export function MarkdownBody({
   }, [])
 
   const layoutEnabled = Boolean(onImageLayoutChange || onImageWidthChange)
+
+  // dangerouslySetInnerHTML 的对象必须稳定：React 对它是按引用 diff，
+  // 每次新建对象会让父组件 re-render 时整体重写 innerHTML，导致 img 元素被替换、
+  // 依赖 img 引用的 viewerjs 实例失效。
+  const innerHtml = useMemo(() => ({ __html: html }), [html])
 
   useEffect(() => {
     if (!content) {
@@ -143,16 +141,11 @@ export function MarkdownBody({
     }
   }, [html])
 
-  // 点击放大（多图画廊）
+  // 点击图片放大（viewerjs 画廊）
   useEffect(() => {
     const root = rootRef.current
     if (!root || !html || !enableLightbox) return
-    return bindMarkdownImageLightbox(root, ({ src, alt, slides }) => {
-      setLightboxSrc(src)
-      setLightboxAlt(alt)
-      setLightboxSlides(slides)
-      setLightboxOpen(true)
-    })
+    return bindImageViewer(root)
   }, [html, enableLightbox])
 
   // 预览布局工具条
@@ -189,23 +182,8 @@ export function MarkdownBody({
           'markdown-body content-md min-w-0 max-w-full',
           className,
         )}
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={innerHtml}
       />
-      {enableLightbox ? (
-        <MarkdownImageLightbox
-          slides={lightboxSlides}
-          src={lightboxSrc}
-          alt={lightboxAlt}
-          open={lightboxOpen}
-          onOpenChange={(o) => {
-            setLightboxOpen(o)
-            if (!o) {
-              setLightboxSrc(null)
-              setLightboxSlides([])
-            }
-          }}
-        />
-      ) : null}
       <PromptDialog
         open={sizePromptOpen}
         onOpenChange={(open) => {

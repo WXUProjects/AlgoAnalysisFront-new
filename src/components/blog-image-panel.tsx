@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -20,6 +20,7 @@ import {
   type BlogSessionImage,
 } from '@/lib/blog-image'
 import { cn } from '@/lib/utils'
+import { bindImageViewer } from '@/lib/viewer'
 
 export type UploadProgressItem = {
   id: string
@@ -61,6 +62,7 @@ export function BlogImagePanel({
   compact = false,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen)
+  const gridRef = useRef<HTMLUListElement>(null)
   const rows = useMemo(() => {
     // 仅本站上传图（fromUpload）；过滤误入的外链
     return images
@@ -73,6 +75,12 @@ export function BlogImagePanel({
 
   const activeUploads = uploads.filter((u) => u.status === 'uploading')
   const hasContent = rows.length > 0 || uploads.length > 0
+
+  useEffect(() => {
+    const el = gridRef.current
+    if (!el || rows.length === 0) return
+    return bindImageViewer(el)
+  }, [rows, collapsible, open])
 
   if (!hasContent && !forceShow) return null
 
@@ -123,6 +131,7 @@ export function BlogImagePanel({
 
       {rows.length > 0 ? (
         <ul
+          ref={gridRef}
           className={cn(
             'grid gap-2',
             compact

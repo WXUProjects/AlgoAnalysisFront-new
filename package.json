@@ -39,7 +39,7 @@
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.2",
     "turndown": "^7.2.4",
-    "yet-another-react-lightbox": "^3.32.1"
+    "viewerjs": "^1.11.8"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",

@@ -653,8 +653,8 @@
   justify-content: flex-end;
 }
 
-/* 正文图可点击放大 */
-.markdown-body img.md-img-zoomable {
+/* 可放大图片（viewerjs 绑定，正文 + 后台/面板缩略图） */
+img.md-img-zoomable {
   cursor: zoom-in;
 }
 
