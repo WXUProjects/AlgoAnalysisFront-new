@@ -74,6 +74,8 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
   const [payUrl, setPayUrl] = useState('')
   const [amountCents, setAmountCents] = useState(0)
   const [creating, setCreating] = useState(false)
+  /** 手动点击「已经支付」查询中 */
+  const [checking, setChecking] = useState(false)
   const [error, setError] = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mountedRef = useRef(true)
@@ -117,23 +119,35 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
     })()
   }, [open])
 
-  // 支付回流轮询：paid → 提示 + 刷新我的订阅 + 关闭；closed/超时 → 提示重新下单
+  // 支付状态检查（轮询与「已经支付」手动查询共用）：
+  // paid → 提示 + 刷新我的订阅 + 关闭，返回 true；未 paid 返回 false
+  const checkPaid = useCallback(
+    async (no: string): Promise<boolean> => {
+      const res = await getOrder(no)
+      if (!mountedRef.current) return false
+      if (res.success && res.data?.status === 'paid') {
+        stopPoll()
+        toast.success('赞助成功，感谢支持！')
+        onSubscribed?.()
+        const myRes = await getMySubscription()
+        if (mountedRef.current && myRes.success) setMySub(myRes.data)
+        onOpenChange(false)
+        return true
+      }
+      return false
+    },
+    [onOpenChange, onSubscribed, stopPoll],
+  )
+
+  // 支付回流轮询：paid → 完成；closed/超时 → 提示重新下单
   const startPoll = useCallback(
     (no: string) => {
       stopPoll()
       const startedAt = Date.now()
       pollRef.current = setInterval(async () => {
+        if (await checkPaid(no)) return
         const res = await getOrder(no)
         if (!mountedRef.current) return
-        if (res.success && res.data?.status === 'paid') {
-          stopPoll()
-          toast.success('赞助成功，感谢支持！')
-          onSubscribed?.()
-          const myRes = await getMySubscription()
-          if (mountedRef.current && myRes.success) setMySub(myRes.data)
-          onOpenChange(false)
-          return
-        }
         if (res.success && (res.data?.status === 'closed' || Date.now() - startedAt > POLL_MAX_MS)) {
           stopPoll()
           setPayUrl('')
@@ -142,8 +156,18 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
         }
       }, POLL_INTERVAL_MS)
     },
-    [onOpenChange, onSubscribed, stopPoll],
+    [checkPaid, stopPoll],
   )
+
+  /** 「已经支付」手动查询：立即查一次订单状态，避免等待轮询 */
+  async function handleAlreadyPaid() {
+    if (!orderNo || checking) return
+    setChecking(true)
+    const paid = await checkPaid(orderNo)
+    setChecking(false)
+    if (!mountedRef.current || paid) return
+    toast.info('还没检测到支付，请确认已完成付款后重试')
+  }
 
   async function handlePay() {
     if (creating) return
@@ -290,13 +314,24 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
                 赞助费用将用于维持基本运维与 AI 需求；支付完成后本页会自动刷新，请勿关闭
               </p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => window.open(payUrl, '_blank', 'noopener,noreferrer')}
-            >
-              重新打开支付页
-            </Button>          </div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button
+                type="button"
+                variant="default"
+                disabled={checking}
+                onClick={() => void handleAlreadyPaid()}
+              >
+                {checking ? '查询中…' : '已经支付'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => window.open(payUrl, '_blank', 'noopener,noreferrer')}
+              >
+                重新打开支付页
+              </Button>
+            </div>
+          </div>
         ) : (
           <>
             <div className="flex items-center justify-center gap-2">
