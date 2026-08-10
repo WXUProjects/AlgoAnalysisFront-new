@@ -12,6 +12,8 @@ export type SiteConfig = {
   favicon: string
   /** 页脚备案号；空则前端用默认 */
   footerIcp: string
+  /** 支付是否已完整配置（appId + 应用私钥 + 支付宝公钥齐备） */
+  alipayConfigured: boolean
 }
 
 export type SiteAdminConfig = SiteConfig & {
@@ -75,6 +77,7 @@ function normalizeBrand(raw: Record<string, unknown> | null | undefined): SiteCo
     siteLogo: normalizeStaticUrl(str(d.siteLogo)),
     favicon: normalizeStaticUrl(str(d.favicon)),
     footerIcp: str(d.footerIcp),
+    alipayConfigured: Boolean(d.alipayConfigured),
   }
 }
 

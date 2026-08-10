@@ -242,15 +242,17 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
               <>
                 <p>
                   AI 分析题目：
-                  {myAiStatus.aiAnalyzeQuota > 0 ? (
+                  {myAiStatus.aiAnalyzeUnlimited ? (
                     <span className="font-medium text-foreground">
-                      ✓ 已开通 · {myAiStatus.aiAnalyzeQuota} 题/月（
+                      ✓ 已开通 · 不限量（
                       {myAiStatus.aiAnalyzeSource === 'pro_org'
                         ? 'Pro 会员 + 组织'
-                        : myAiStatus.aiAnalyzeSource === 'pro'
-                          ? 'Pro 会员'
-                          : '组织已开通'}
+                        : '组织已开通'}
                       ）
+                    </span>
+                  ) : myAiStatus.aiAnalyzeQuota > 0 ? (
+                    <span className="font-medium text-foreground">
+                      ✓ 已开通 · {myAiStatus.aiAnalyzeQuota} 题/月（Pro 会员）
                     </span>
                   ) : (
                     '✗ 未开通'

@@ -225,9 +225,9 @@
 |--------|------|------|------|
 | POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc\|blog\|blog_cover`。本地用途（`site\|bulletin\|misc`）≤3MB（jpg/png/gif/webp/ico/**svg**；svg 拒脚本），本地 url 带真实扩展名。**`blog`/`blog_cover`**：走又拍云（需站点配置又拍云 + 站管在 `/admin/blog` 授权该用户），清晰度优先压缩，≤约 12MB 原图，返回公网 `{ url, hash }`（`hash`=落库字节 SHA-256，内容寻址 key `/blog/{uid}/{hash}{ext}`）；未授权或未配置则 403。**`avatar`**：也走又拍云（仅需站点配置又拍云，无需博客授权），≤3MB（jpg/png/gif/webp/ico，**拒 svg**），清晰度优先压缩，返回公网 `{ url, hash }`（key `/avatar/{uid}/{hash}{ext}`），未配置则 403；`users.avatar` 落库为 path-only key，读取时按当前图床域名扩展（换域/切 https 即时生效） |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
-| GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo） |
+| GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo）+ **`alipayConfigured`**（支付是否已完整配置：appId + 应用私钥 + 支付宝公钥齐备；公开布尔，无敏感信息；前端按它决定是否显示「开通会员」入口） |
 | GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** / **OJ 爬虫账号** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`） |
-| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`（运维磁盘统计目录，数据盘挂载点；空=默认 /data，未挂载回退 /）；密钥空串表示不修改。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
+| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ **支付宝**（`alipayAppId`/`alipayPrivateKey`/`clearAlipayPrivateKey`/`alipayPublicKey`/`clearAlipayPublicKey`/`alipaySandbox`/`setAlipaySandbox`；私钥/公钥加密存储，密钥空串表示不修改）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`（运维磁盘统计目录，数据盘挂载点；空=默认 /data，未挂载回退 /）；密钥空串表示不修改。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
 | POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
 | GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |
@@ -723,7 +723,7 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 
 **支付宝支付**：回调 `POST /v1/payment/notify`（网关免 JWT，表单 x-www-form-urlencoded，RSA2 验签；金额相等校验；行锁幂等履约；回调地址常量 `https://algo.zhiyuansofts.cn/v1/payment/notify`，环境变量 `PAYMENT_NOTIFY_URL` 可覆盖）。支付宝配置存 `site_configs`（`alipay_app_id` / 私钥 / 公钥加密存储 / `alipay_sandbox`），未配置时下单报「支付未配置」。
 
-**AI 分析月配额语义**（`GetAiAnalyzeQuota` 服务间，core_data 入队前逐提交者检查 + Redis 月计数）：Pro 订阅 → 套餐 `aiAnalyzeMonth`（默认 400）；非订阅但有组织 → 跟随组织套餐配额（`plan_quota.AISummaryPerMonth`，取最高档组织）；无组织免费用户 → 0（不能触发 AI 分析）。
+**AI 分析月配额语义**（`GetAiAnalyzeQuota` 服务间，core_data 入队前逐提交者检查 + Redis 月计数）：组织开通 AI 分析（任一非公共域 active 组织 `enable_ai_summary=true`）→ `unlimited=true` 无限配额（组织成员优先消耗组织，不扣个人配额）；否则 Pro 订阅 → 套餐 `aiAnalyzeMonth`（默认 400）；否则 0（不能触发 AI 分析）。`MyAiStatus` 同步标记 `aiAnalyzeSource`（pro/org/pro_org/none）与 `aiAnalyzeUnlimited`。
 
 **间隔/配额合并语义**：自动同步间隔 = min(站管覆盖, 组织 MIN, 订阅档, 免费默认 180)；每日手动刷新 = 覆盖 0 永久禁止、正覆盖与订阅档取最大、无覆盖订阅档优先否则默认 2。
 

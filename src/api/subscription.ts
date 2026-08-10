@@ -84,6 +84,7 @@ export async function getMyAiStatus(): Promise<ApiResult<MyAiStatusRes | null>> 
       aiAnalyzeSource: str(raw.aiAnalyzeSource),
       aiDailyOrgAllowed: bool(raw.aiDailyOrgAllowed),
       aiDailyEnabled: bool(raw.aiDailyEnabled),
+      aiAnalyzeUnlimited: bool(raw.aiAnalyzeUnlimited),
     },
   }
 }

@@ -894,7 +894,7 @@ export interface MySubscription {
 export interface MyAiStatusRes {
   code: number
   message: string
-  /** AI 分析落地月配额（>0=可分析；Pro 订阅/组织开通） */
+  /** AI 分析落地月配额（>0=可分析；unlimited 时不适用） */
   aiAnalyzeQuota: number
   /** AI 分析权限来源：pro | org | pro_org | none */
   aiAnalyzeSource: string
@@ -902,6 +902,8 @@ export interface MyAiStatusRes {
   aiDailyOrgAllowed: boolean
   /** AI 日报当前是否生效（Pro 订阅 + 套餐开启 + 个人开关） */
   aiDailyEnabled: boolean
+  /** 组织开通 AI 分析：无限配额（组织成员优先消耗组织，不受 aiAnalyzeQuota 限制） */
+  aiAnalyzeUnlimited: boolean
 }
 
 /** 支付订单（创建返回） */
