@@ -1028,6 +1028,10 @@ export interface OrgInfo {
   aiEmailSchedule?: string
   /** 站管：强制同步（跳过成员休眠） */
   forceSync?: boolean
+  /** 题面爬取开关（组织级能力） */
+  enableFetchProblem?: boolean
+  /** AI 分析开关（组织级能力） */
+  enableAiAnalyze?: boolean
   myRole?: OrgRoleValue | string
   /** 我在该组织内的对外称呼（org_members.org_display_name） */
   orgDisplayName?: string

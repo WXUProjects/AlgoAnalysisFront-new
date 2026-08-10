@@ -589,10 +589,10 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 | POST | `/user/auth/refresh` | 是 | 按 DB 重签 JWT（任命后 F5 同步权限） |
 | POST | `/user/auth/logout` | 否 | 清除 HttpOnly 会话 Cookie |
 | GET | `/user/org/discover` | 否（可选 JWT） | 组织广场：`page`/`pageSize`/`q` → `{id,name,brandLogo,memberCount,isSystem,isMember?,isCurrent?}` 无识别码 |
-| GET | `/user/org/list` | 是 | 我的组织；项含 `myRole`、`orgDisplayName`、`isCurrent`、`seatLimit`、`memberCount`；`?all=1` 站点管理员看全部 |
-| GET | `/user/org/get` | 是 | query: `id`（默认当前组织）；含 `seatLimit`、`memberCount`；若本人是成员则含 `myRole`、`orgDisplayName` |
+| GET | `/user/org/list` | 是 | 我的组织；项含 `myRole`、`orgDisplayName`、`isCurrent`、`seatLimit`、`memberCount`、`enableFetchProblem`、`enableAiAnalyze`；`?all=1` 站点管理员看全部 |
+| GET | `/user/org/get` | 是 | query: `id`（默认当前组织）；含 `seatLimit`、`memberCount`、`enableFetchProblem`、`enableAiAnalyze`；若本人是成员则含 `myRole`、`orgDisplayName` |
 | POST | `/user/org/create` | 站点管理员 | `{ name, slug?, adminUserId?, joinMode?, seatLimit? }`；默认 `seatLimit=50` |
-| POST | `/user/org/update` | 组织/站点管理员 | 品牌/开关/joinMode；间隔与 **seatLimit（用户数上限）仅站点管理员** |
+| POST | `/user/org/update` | 组织/站点管理员 | 品牌/开关/joinMode（含 `enableFetchProblem`、`enableAiAnalyze`）；间隔与 **seatLimit（用户数上限）仅站点管理员** |
 | POST | `/user/org/delete` | 站点管理员 | `{ id }` **硬删除**；**公共域不可删**；成员迁回公共域；挂在该组织分组上的用户迁到公共域默认分组 |
 | POST | `/user/org/switch` | 是 | `{ orgId }` → 新 `jwtToken`；**同时写入默认组织**（下次打开自动进入，无需单独设默认） |
 | POST | `/user/org/join` | 是 | `{ inviteCode, orgDisplayName }` 团队识别码 + **组织内名称（必填）**；**不改**默认组织 |
