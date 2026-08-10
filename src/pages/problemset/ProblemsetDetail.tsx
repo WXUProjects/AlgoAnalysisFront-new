@@ -135,6 +135,8 @@ export function ProblemsetDetail() {
   const [unlocking, setUnlocking] = useState(false)
   /** 竞态守卫：丢弃过期的题单详情响应 */
   const loadRequestId = useRef(0)
+  /** 静默刷新节流：防止 visibilitychange 与轮询在切回瞬间重复请求 */
+  const lastSilentRefreshAt = useRef(0)
 
   useDocumentMeta(
     set
@@ -214,10 +216,10 @@ export function ProblemsetDetail() {
     navigate(`/problemset/${set.id}/add-problem${q}`)
   }
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!id) return
     const rid = ++loadRequestId.current
-    setLoading(true)
+    if (!opts?.silent) setLoading(true)
     const token = safeSessionStorage.get(unlockKey(id)) || undefined
     const res = await getProblemset(id, token)
     // 快速切换题单时丢弃旧响应，避免旧数据覆盖新题单
@@ -228,6 +230,9 @@ export function ProblemsetDetail() {
     } else if (res.data?.locked || res.message?.includes('密码')) {
       setSet(res.data)
       setLocked(true)
+    } else if (opts?.silent) {
+      // 静默刷新失败：保留已有数据，不打扰用户
+      return
     } else {
       setSet(null)
       if (res.message) toast.error(res.message)
@@ -238,6 +243,20 @@ export function ProblemsetDetail() {
   useEffect(() => {
     void load()
   }, [load])
+
+  // 已登录时：从其他标签页/窗口切回本页时静默刷新一次 userStatus
+  useEffect(() => {
+    if (!isLogin) return
+    const onVis = () => {
+      if (document.visibilityState !== 'visible') return
+      const now = Date.now()
+      if (now - (lastSilentRefreshAt.current || 0) < 5000) return
+      lastSilentRefreshAt.current = now
+      void load({ silent: true })
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [isLogin, load])
 
   // 题单切换 / 列表刷新后清掉勾选，避免指向已不存在的题
   useEffect(() => {
