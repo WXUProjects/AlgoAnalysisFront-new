@@ -39,7 +39,7 @@ function authorOf(raw: Record<string, unknown> | undefined): BlogAuthor | undefi
     username: str(raw.username),
     name: str(raw.name),
     avatar: str(raw.avatar) || undefined,
-    subTier: str(r.subTier) || undefined,
+    subTier: str(raw.subTier) || undefined,
   }
 }
 
@@ -359,7 +359,7 @@ function normalizePlazaAuthor(raw: Record<string, unknown>): BlogPlazaAuthor {
     id: num(raw.id),
     username: str(raw.username),
     name: str(raw.name),
-    subTier: str(r.subTier) || undefined,
+    subTier: str(raw.subTier) || undefined,
     avatar: str(raw.avatar) || undefined,
     articleCount: num(raw.articleCount),
     lastPublishedAt: num(raw.lastPublishedAt) || undefined,
