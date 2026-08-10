@@ -1090,6 +1090,12 @@ export function DashboardSiteSettings() {
           title="支付FM（在线支付）"
           description="用户赞助：跳转支付FM完成赞助；赞助费用用于维持基本运维与 AI 需求。未配置完整时「赞助支持」入口不展示"
           defaultOpen={!payfmSecretSet}
+          footer={
+            <Button type="submit" disabled={saving || !canWrite}>
+              {saving ? <Spinner data-icon="inline-start" /> : null}
+              保存支付配置
+            </Button>
+          }
         >
           <FieldGroup className="gap-3">
             <div className="flex items-center gap-1.5 text-xs">
