@@ -991,8 +991,6 @@ export interface RbacRoleMember {
   username: string
   name: string
   avatar?: string
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
 }
 
 /** GET /user/rbac/my-permissions（查库实时值） */
@@ -1030,10 +1028,6 @@ export interface OrgInfo {
   aiEmailSchedule?: string
   /** 站管：强制同步（跳过成员休眠） */
   forceSync?: boolean
-  /** 站管：题面爬取开关 */
-  enableFetchProblem?: boolean
-  /** 站管：题面AI分析开关 */
-  enableAiAnalyze?: boolean
   myRole?: OrgRoleValue | string
   /** 我在该组织内的对外称呼（org_members.org_display_name） */
   orgDisplayName?: string
@@ -1048,10 +1042,6 @@ export interface OrgMemberInfo {
   /** 组织内名称 org_members.org_display_name */
   orgDisplayName?: string
   avatar?: string
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
   role: OrgRoleValue | string
   groupId?: number | null
   joinedAt?: number
@@ -1129,9 +1119,9 @@ export interface ContestRankingItem {
   userId: number
   name: string
   avatar: string
-  /** C 端订阅档 plus|pro @omitempty */
+  score: number  /** C 端订阅档 plus|pro */
   subTier?: string
-  score: number
+
   acCount: number
   totalCount: number
 }
@@ -1158,8 +1148,6 @@ export interface ContestBoardProblemCol {
 
 export interface ContestBoardRow {
   userId: number
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
   name: string
   avatar: string
   rankOfficial: number
@@ -1260,8 +1248,6 @@ export interface StatisticRankItem {
 
 /** 关注用户对本题状态 */
 export interface ProblemFollowingStatusItem {
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
   userId: number
   username: string
   name: string
@@ -1363,8 +1349,6 @@ export interface ProblemContributor {
   name: string
   username: string
   avatar?: string
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
 }
 
 export interface ProblemInfo {
@@ -1587,17 +1571,15 @@ export type CommunityTargetType = 'comment' | 'solution'
 export interface ProblemCommentItem {
   id: number
   problemId: number
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
   /** 所属用户题解；0/缺省=题目讨论 */
   solutionId?: number
   userId: number
   username: string
   name: string
   avatar?: string
-  /** C 端订阅档 plus|pro @omitempty */
+  content: string  /** C 端订阅档 plus|pro */
   subTier?: string
-  content: string
+
   /** 直接父评论 id；0 为顶层 */
   parentId?: number
   /** 根评论 id */
@@ -1623,12 +1605,10 @@ export interface ProblemUserSolutionItem {
   username: string
   name: string
   avatar?: string
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
   title: string
-  excerpt?: string
+  excerpt  /** C 端订阅档 plus|pro */
+  subTier?: string
+?: string
   contentMd?: string
   likeCount?: number
   liked?: boolean
@@ -1721,8 +1701,6 @@ export interface ActivityFeedItem {
   username: string
   name: string
   avatar?: string
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
   type: ActivityFeedType
   refId: number
   problemId: number
@@ -1800,8 +1778,6 @@ export interface BlogAdminAuthor {
   username: string
   name: string
   avatar?: string
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
   activated: boolean
   activatedAt?: number
   agreementAcceptedAt?: number
@@ -1872,8 +1848,6 @@ export interface BlogImageUploadRequestItem {
   username: string
   name?: string
   avatar?: string
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
   reason: string
   status: BlogImageUploadRequestStatus | string
   createdAt: number
@@ -1897,8 +1871,6 @@ export interface BlogAdminArticle {
   moderationNote?: string
   userId: number
   username: string
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
   authorName?: string
   createdAt: number
   publishedAt?: number
@@ -1911,11 +1883,13 @@ export interface BlogAuthor {
   username: string
   name: string
   avatar?: string
-  /** C 端订阅档 plus|pro @omitempty */
+  /** C 端订阅档 plus|pro */
   subTier?: string
 }
 
-/** 博客壳主题：mizuki 默认 | chirpy | simple 简约（https://github.com/LyraVoid/Mizuki） */
+/** 博客壳主题  /** C 端订阅档 plus|pro */
+  subTier?: string
+：mizuki 默认 | chirpy | simple 简约（https://github.com/LyraVoid/Mizuki） */
 export type BlogThemeId = 'chirpy' | 'simple' | 'mizuki'
 
 /** 侧栏社交链接（Chirpy 左下角） */
@@ -2032,8 +2006,6 @@ export interface BlogAnalytics {
     title: string
     viewCount: number
     likeCount: number
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
     commentCount: number
     visibility: string
   }>
@@ -2048,9 +2020,9 @@ export interface BlogPlazaAuthor {
   username: string
   name: string
   avatar?: string
-  /** C 端订阅档 plus|pro @omitempty */
+  articleCount  /** C 端订阅档 plus|pro */
   subTier?: string
-  articleCount: number
+: number
   lastPublishedAt?: number
   latestTitle?: string
 }
