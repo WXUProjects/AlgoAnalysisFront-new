@@ -58,6 +58,7 @@ function normalizeRank(r: Record<string, unknown>): ContestRankingItem {
     userId: num(r.userId),
     name: str(r.name),
     avatar: normalizeStaticUrl(str(r.avatar)),
+    subTier: str(r.subTier) || undefined,
     score: num(r.score ?? r.acCount),
     acCount: num(r.acCount),
     totalCount: num(r.totalCount),
@@ -190,6 +191,7 @@ function normalizeBoardRow(r: Record<string, unknown>): ContestBoardRow {
   return {
     userId: num(r.userId),
     name,
+    subTier: str(r.subTier) || undefined,
     avatar: normalizeStaticUrl(str(r.avatar)),
     rankOfficial: num(r.rankOfficial),
     rankLocal: num(r.rankLocal),

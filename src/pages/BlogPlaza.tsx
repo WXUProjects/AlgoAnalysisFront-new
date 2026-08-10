@@ -21,6 +21,7 @@ import { MarkdownSummary } from '@/components/markdown-summary'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { MembershipAvatar } from '@/components/membership-avatar'
 import { Button } from '@/components/ui/button'
 import {
   Empty,
@@ -362,14 +363,16 @@ export function BlogPlaza() {
                         'hover:bg-muted/80',
                       )}
                     >
-                      <Avatar size="sm" className="shrink-0">
-                        {a.avatar ? <AvatarImage src={a.avatar} alt="" /> : null}
-                        <AvatarFallback>
-                          {(a.name || a.username || '?')
-                            .slice(0, 1)
-                            .toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <MembershipAvatar tier={(a as any).subTier ?? null}>
+                        <Avatar size="sm" className="shrink-0">
+                          {a.avatar ? <AvatarImage src={a.avatar} alt="" /> : null}
+                          <AvatarFallback>
+                            {(a.name || a.username || '?')
+                              .slice(0, 1)
+                              .toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </MembershipAvatar>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">
                           {a.name || a.username}
@@ -413,14 +416,16 @@ function PlazaArticleCard({ article: a }: { article: BlogArticle }) {
               className="inline-flex min-w-0 max-w-full items-center gap-1.5 hover:text-foreground"
               onClick={(e) => e.stopPropagation()}
             >
-              <Avatar size="sm" className="size-5 shrink-0">
-                {a.author?.avatar ? (
-                  <AvatarImage src={a.author.avatar} alt="" />
-                ) : null}
-                <AvatarFallback className="text-[10px]">
-                  {authorName.slice(0, 1).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <MembershipAvatar tier={(a.author as any)?.subTier ?? null}>
+                <Avatar size="sm" className="size-5 shrink-0">
+                  {a.author?.avatar ? (
+                    <AvatarImage src={a.author.avatar} alt="" />
+                  ) : null}
+                  <AvatarFallback className="text-[10px]">
+                    {authorName.slice(0, 1).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </MembershipAvatar>
               <span className="truncate">{authorName}</span>
             </BlogLink>
             <span className="opacity-50" aria-hidden>

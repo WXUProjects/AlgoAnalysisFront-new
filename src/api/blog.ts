@@ -39,6 +39,7 @@ function authorOf(raw: Record<string, unknown> | undefined): BlogAuthor | undefi
     username: str(raw.username),
     name: str(raw.name),
     avatar: str(raw.avatar) || undefined,
+    subTier: str(raw.subTier) || undefined,
   }
 }
 
@@ -358,6 +359,7 @@ function normalizePlazaAuthor(raw: Record<string, unknown>): BlogPlazaAuthor {
     id: num(raw.id),
     username: str(raw.username),
     name: str(raw.name),
+    subTier: str(raw.subTier) || undefined,
     avatar: str(raw.avatar) || undefined,
     articleCount: num(raw.articleCount),
     lastPublishedAt: num(raw.lastPublishedAt) || undefined,
@@ -872,6 +874,7 @@ export async function listBlogAdminAuthors(params?: {
       list: listRaw.map((r) => ({
         userId: num(r.userId),
         username: str(r.username),
+    subTier: str(raw.subTier) || undefined,
         name: str(r.name),
         avatar: str(r.avatar) || undefined,
         activated: Boolean(r.activated),
@@ -971,6 +974,7 @@ export async function listBlogImageUploadRequests(params?: {
         return {
           id: num(r.id),
           userId: num(r.userId),
+    subTier: str(raw.subTier) || undefined,
           username: str(r.username),
           name: str(r.name) || undefined,
           avatar: str(r.avatar) || undefined,

@@ -51,6 +51,7 @@ import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AlgoProfileChart } from '@/components/charts/algo-profile-chart'
 import { HeatmapSimple } from '@/components/heatmap-simple'
 import { PageShell } from '@/components/page-shell'
+import { MembershipAvatar } from '@/components/membership-avatar'
 import { SubscriptionDialog } from '@/components/subscription-dialog'
 import {
   UserIdentity,
@@ -402,9 +403,12 @@ export function Profile() {
     username: profile.username,
     name: profile.name,
     avatar: profile.avatar,
+    subTier: mySub?.tier || undefined,
   }
   const displayName = resolveDisplayName(identityView)
   const avatarSrc = profile.avatar || '/images/defaultAvatar.png'
+  /** 会员档位：identity 优先（公开视图），mySub 兜底（本人登录后） */
+  const membershipTier = identityView.subTier || mySub?.tier || null
 
   async function handleToggleFollow() {
     if (!isLogin || !profile || isSelf) return
@@ -538,15 +542,25 @@ export function Profile() {
                 <Link to="/change-profile">编辑个人资料</Link>
               </Button>
               {siteConfig.payfmConfigured ? (
-                <Button
-                  type="button"
-                  variant={mySub?.tier ? 'outline' : 'default'}
-                  onClick={() => setSubDialogOpen(true)}
-                >
-                  {mySub?.tier
-                    ? `续费赞助（剩余 ${mySub.daysLeft} 天）`
-                    : '赞助支持'}
-                </Button>
+                mySub?.tier ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setSubDialogOpen(true)}
+                    className="border-amber-500/60 text-amber-700 hover:bg-amber-50 dark:border-amber-400/50 dark:text-amber-300 dark:hover:bg-amber-950/30 font-medium"
+                  >
+                    续费赞助（剩余 {mySub.daysLeft} 天）
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={() => setSubDialogOpen(true)}
+                    className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 transition-all font-semibold"
+                  >
+                    <svg className="mr-1.5 size-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    成为赞助会员
+                  </Button>
+                )
               ) : null}
               <Button
                 type="button"
@@ -657,12 +671,14 @@ export function Profile() {
           <Card className="gap-0 py-3 lg:gap-0 lg:py-5">
             <CardContent className="flex flex-col gap-3 px-3 lg:gap-4 lg:px-4">
               <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-3">
-                <Avatar className="size-14 shrink-0 border-2 border-background shadow-md sm:size-16 lg:size-36 lg:border-4">
-                  <AvatarImage src={avatarSrc} alt="" />
-                  <AvatarFallback className="text-lg lg:text-2xl">
-                    {displayName.slice(0, 1)}
-                  </AvatarFallback>
-                </Avatar>
+                <MembershipAvatar tier={membershipTier}>
+                  <Avatar className="size-14 shrink-0 sm:size-16 lg:size-36">
+                    <AvatarImage src={avatarSrc} alt="" />
+                    <AvatarFallback className="text-lg lg:text-2xl">
+                      {displayName.slice(0, 1)}
+                    </AvatarFallback>
+                  </Avatar>
+                </MembershipAvatar>
                 <div className="min-w-0 flex-1 lg:w-full lg:text-center">
                   <UserIdentity
                     user={identityView}
@@ -739,17 +755,26 @@ export function Profile() {
                     {isSelf ? (
                       <>
                         {siteConfig.payfmConfigured ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            variant={mySub?.tier ? 'outline' : 'default'}
-                            onClick={() => setSubDialogOpen(true)}
-                          >
-                            {mySub?.tier
-                              ? `续费赞助（剩 ${mySub.daysLeft} 天）`
-                              : '赞助支持'}
-                          </Button>
+                          mySub?.tier ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-7 px-2 text-xs border-amber-500/60 text-amber-700 hover:bg-amber-50 dark:border-amber-400/50 dark:text-amber-300 dark:hover:bg-amber-950/30 font-medium"
+                              variant="outline"
+                              onClick={() => setSubDialogOpen(true)}
+                            >
+                              续费赞助（剩 {mySub.daysLeft} 天）
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-7 px-2 text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-sm shadow-amber-500/20 font-semibold"
+                              onClick={() => setSubDialogOpen(true)}
+                            >
+                              成为赞助会员
+                            </Button>
+                          )
                         ) : null}
                         <Button
                           type="button"

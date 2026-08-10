@@ -71,11 +71,11 @@ export function UserIdentity({
     }
   }
   // C 端会员 badge：与视图无关，只要会员就显示（资料页 showSubBadge=true）
-  const subBadge: { key: string; label: string; variant: 'default' | 'secondary' } | null =
+  const subBadge: { key: string; label: string; className: string } | null =
     showSubBadge && user.subTier === 'pro'
-      ? { key: 'sub_pro', label: 'Pro 会员', variant: 'default' }
+      ? { key: 'sub_pro', label: 'Pro 会员', className: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700/50' }
       : showSubBadge && user.subTier === 'plus'
-        ? { key: 'sub_plus', label: 'Plus 会员', variant: 'secondary' }
+        ? { key: 'sub_plus', label: 'Plus 会员', className: 'bg-zinc-100 text-zinc-700 border-zinc-300 dark:bg-zinc-800/60 dark:text-zinc-300 dark:border-zinc-600/50' }
         : null
 
   const nameEl = linkToProfile && user.username ? (
@@ -124,8 +124,8 @@ export function UserIdentity({
         {subBadge ? (
           <Badge
             key={subBadge.key}
-            variant={subBadge.variant}
-            className="max-w-[8rem] truncate font-normal"
+            variant="outline"
+            className={`max-w-[8rem] truncate font-medium text-[11px] ${subBadge.className}`}
           >
             {subBadge.label}
           </Badge>

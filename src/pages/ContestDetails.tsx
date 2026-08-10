@@ -36,6 +36,7 @@ import { MarkdownBody } from '@/components/markdown-body'
 import { ProblemSolutionsPanel } from '@/components/problem-community'
 import { StatusBadge } from '@/components/status-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { MembershipAvatar } from '@/components/membership-avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -652,12 +653,14 @@ export function ContestDetails() {
                                 to={`/profile?id=${row.userId}`}
                                 className="inline-flex items-center gap-2 hover:underline"
                               >
-                                <Avatar className="size-7">
-                                  <AvatarImage src={row.avatar || undefined} />
-                                  <AvatarFallback>
-                                    {(row.name || '?').slice(0, 1)}
-                                  </AvatarFallback>
-                                </Avatar>
+                                <MembershipAvatar tier={(row as any).subTier ?? null}>
+                                  <Avatar className="size-7">
+                                    <AvatarImage src={row.avatar || undefined} />
+                                    <AvatarFallback>
+                                      {(row.name || '?').slice(0, 1)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </MembershipAvatar>
                                 <span className="max-w-[10rem] truncate">
                                   {row.name?.trim() || '未知选手'}
                                 </span>

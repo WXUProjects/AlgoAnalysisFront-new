@@ -1,6 +1,7 @@
 import type { KeyboardEvent, MouseEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { MembershipAvatar } from '@/components/membership-avatar'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge, formatSubmitStatus } from '@/components/status-badge'
 import { MarkdownSummary } from '@/components/markdown-summary'
@@ -136,13 +137,15 @@ export function FeedCard({ item, onPreview }: FeedCardProps) {
       )}
     >
       <div className="flex items-center gap-2">
-        <Avatar size="sm" className="size-6">
-          <AvatarImage
-            src={item.authorAvatar || '/images/defaultAvatar.png'}
-            alt=""
-          />
-          <AvatarFallback>{item.authorName.slice(0, 1)}</AvatarFallback>
-        </Avatar>
+        <MembershipAvatar tier={(item as any).subTier ?? null}>
+          <Avatar size="sm" className="size-6">
+            <AvatarImage
+              src={item.authorAvatar || '/images/defaultAvatar.png'}
+              alt=""
+            />
+            <AvatarFallback>{item.authorName.slice(0, 1)}</AvatarFallback>
+          </Avatar>
+        </MembershipAvatar>
         <div className="min-w-0 flex-1 truncate text-xs sm:text-sm">
           <Link to={profileTo} className="font-medium hover:underline">
             {item.authorName}

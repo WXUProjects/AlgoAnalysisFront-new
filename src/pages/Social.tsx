@@ -21,6 +21,7 @@ import {
   resolveDisplayName,
 } from '@/components/user-identity'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { MembershipAvatar } from '@/components/membership-avatar'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -361,13 +362,15 @@ export function Social() {
                   key={u.userId}
                   className="flex items-center gap-3 px-4 py-3"
                 >
-                  <Avatar className="size-10">
-                    <AvatarImage
-                      src={u.avatar || '/images/defaultAvatar.png'}
-                      alt=""
-                    />
-                    <AvatarFallback>{display.slice(0, 1)}</AvatarFallback>
-                  </Avatar>
+                  <MembershipAvatar tier={u.subTier ?? null}>
+                    <Avatar className="size-10">
+                      <AvatarImage
+                        src={u.avatar || '/images/defaultAvatar.png'}
+                        alt=""
+                      />
+                      <AvatarFallback>{display.slice(0, 1)}</AvatarFallback>
+                    </Avatar>
+                  </MembershipAvatar>
                   <UserIdentity
                     user={u}
                     className="flex-1"

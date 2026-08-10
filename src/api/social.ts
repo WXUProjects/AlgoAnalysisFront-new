@@ -42,6 +42,7 @@ function normalizeUser(raw: Record<string, unknown>): SocialUser {
     isSiteAdmin:
       raw.isSiteAdmin === undefined ? undefined : bool(raw.isSiteAdmin),
     siteRoles: normalizeSiteRoles(raw.siteRoles),
+    subTier: raw.subTier ? str(raw.subTier) : undefined,
   }
 }
 

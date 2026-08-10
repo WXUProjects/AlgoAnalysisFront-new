@@ -17,6 +17,7 @@ import {
 import { useAuth } from '@/auth/AuthContext'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { MembershipAvatar } from '@/components/membership-avatar'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
@@ -368,13 +369,15 @@ function BlogCommentNode({
         className="flex gap-3 py-3"
         style={{ paddingLeft: depth > 0 ? indent : 0 }}
       >
-        <Avatar size="sm" className="size-8 shrink-0">
-          <AvatarImage
-            src={c.author?.avatar || '/images/defaultAvatar.png'}
-            alt=""
-          />
-          <AvatarFallback>{displayName.slice(0, 1)}</AvatarFallback>
-        </Avatar>
+        <MembershipAvatar tier={(c.author as any)?.subTier ?? null}>
+          <Avatar size="sm" className="size-8 shrink-0">
+            <AvatarImage
+              src={c.author?.avatar || '/images/defaultAvatar.png'}
+              alt=""
+            />
+            <AvatarFallback>{displayName.slice(0, 1)}</AvatarFallback>
+          </Avatar>
+        </MembershipAvatar>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             {profileTo ? (
