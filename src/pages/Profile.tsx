@@ -45,6 +45,10 @@ import type {
   BlogArticle,
 } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
+
+/** 会员开通入口暂隐藏（恢复时改回 false） */
+const SUBSCRIBE_ENTRY_HIDDEN = true
+
 import { AlgoProfileChart } from '@/components/charts/algo-profile-chart'
 import { HeatmapSimple } from '@/components/heatmap-simple'
 import { PageShell } from '@/components/page-shell'
@@ -511,15 +515,17 @@ export function Profile() {
               <Button type="button" asChild>
                 <Link to="/change-profile">编辑个人资料</Link>
               </Button>
-              <Button
-                type="button"
-                variant={mySub?.tier ? 'outline' : 'default'}
-                onClick={() => setSubDialogOpen(true)}
-              >
-                {mySub?.tier
-                  ? `续费会员（剩余 ${mySub.daysLeft} 天）`
-                  : '开通会员'}
-              </Button>
+              {SUBSCRIBE_ENTRY_HIDDEN ? null : (
+                <Button
+                  type="button"
+                  variant={mySub?.tier ? 'outline' : 'default'}
+                  onClick={() => setSubDialogOpen(true)}
+                >
+                  {mySub?.tier
+                    ? `续费会员（剩余 ${mySub.daysLeft} 天）`
+                    : '开通会员'}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
