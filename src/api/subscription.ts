@@ -1,5 +1,6 @@
 import {
   endpoints,
+  type MyAiStatusRes,
   type MySubscription,
   type SubscriptionOrder,
   type SubscriptionPlan,
@@ -67,6 +68,24 @@ export async function getMySubscription(): Promise<ApiResult<MySubscription | nu
   const res = await get<Record<string, unknown>>(endpoints.user.subscription.my)
   if (!res.success || !res.data) return { ...res, data: null }
   return { ...res, data: normalizeMySubscription(res.data) }
+}
+
+/** 我的 AI 能力落地状态（AI 分析配额/来源 + AI 日报权限） */
+export async function getMyAiStatus(): Promise<ApiResult<MyAiStatusRes | null>> {
+  const res = await get<Record<string, unknown>>(endpoints.user.subscription.myAiStatus)
+  if (!res.success || !res.data) return { ...res, data: null }
+  const raw = res.data
+  return {
+    ...res,
+    data: {
+      code: num(raw.code),
+      message: str(raw.message),
+      aiAnalyzeQuota: num(raw.aiAnalyzeQuota),
+      aiAnalyzeSource: str(raw.aiAnalyzeSource),
+      aiDailyOrgAllowed: bool(raw.aiDailyOrgAllowed),
+      aiDailyEnabled: bool(raw.aiDailyEnabled),
+    },
+  }
 }
 
 /** 创建订单（支付宝预下单，返回二维码内容） */

@@ -21,10 +21,11 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
 import {
   Dialog,
   DialogContent,
@@ -82,6 +83,7 @@ export function DashboardSubscriptions() {
   const keyword = (searchParams.get('keyword') || '').trim()
   const [keywordDraft, setKeywordDraft] = useState(keyword)
 
+  const [tab, setTab] = useState<'users' | 'plans'>('users')
   const [total, setTotal] = useState(0)
   const [list, setList] = useState<SubUser[]>([])
   const [loading, setLoading] = useState(false)
@@ -92,7 +94,7 @@ export function DashboardSubscriptions() {
   const [editDays, setEditDays] = useState('30')
   const [savingGrant, setSavingGrant] = useState(false)
 
-  // 套餐配置草稿（打开折叠区时从 plans 快照）
+  // 套餐配置草稿（首次进入「套餐配置」tab 时从 plans 快照）
   const [planDrafts, setPlanDrafts] = useState<SubscriptionPlan[]>([])
   const [savingPlans, setSavingPlans] = useState(false)
 
@@ -112,6 +114,13 @@ export function DashboardSubscriptions() {
     void load()
   }, [load])
 
+  // 首次进入「套餐配置」tab 时拉取模板
+  useEffect(() => {
+    if (tab === 'plans' && planDrafts.length === 0) {
+      void loadPlans()
+    }
+  }, [tab, planDrafts.length])
+
   async function loadPlans() {
     const res = await listPlans()
     if (res.success && res.data) {
@@ -123,7 +132,6 @@ export function DashboardSubscriptions() {
     setDetailUser(u)
     setEditTier(u.tier || '')
     setEditDays('30')
-    void loadPlans()
   }
 
   async function handleGrant() {
@@ -189,14 +197,21 @@ export function DashboardSubscriptions() {
 
   return (
     <PageShell>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            会员管理
-            <Badge variant="outline" className="font-normal">
-              {total}
-            </Badge>
-          </CardTitle>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as 'users' | 'plans')}>
+        <TabsList>
+          <TabsTrigger value="users">订阅用户</TabsTrigger>
+          <TabsTrigger value="plans">套餐配置</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                会员管理
+                <Badge variant="outline" className="font-normal">
+                  {total}
+                </Badge>
+              </CardTitle>
           <form
             className="flex gap-2"
             onSubmit={(e) => {
@@ -289,8 +304,102 @@ export function DashboardSubscriptions() {
             onChange={setPage}
             onPageSizeChange={setPageSize}
           />
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="plans" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">套餐配置</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                调整各档位价格与配额（即时生效）。免费档价格必须为 0；手动刷新 0–100；
+                同步间隔 5–10080 分钟；AI 分析 0–10000 题/月。
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {planDrafts.length === 0 ? (
+                <Skeleton className="h-40 w-full" />
+              ) : (
+                planDrafts.map((p) => (
+                  <div key={p.plan} className="space-y-2 rounded-lg border p-3">
+                    <p className="text-sm font-medium">
+                      {p.plan === 'free' ? '免费' : p.plan === 'plus' ? 'Plus' : 'Pro'}
+                      <Badge variant="outline" className="ml-2 font-normal">
+                        {p.enabled ? '上架' : '下架'}
+                      </Badge>
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field>
+                        <FieldLabel>价格（分）</FieldLabel>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={p.priceCents}
+                          disabled={p.plan === 'free'}
+                          onChange={(e) => patchPlan(p.plan, 'priceCents', Number(e.target.value))}
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel>手动刷新（次/日）</FieldLabel>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={p.manualRefreshDaily}
+                          onChange={(e) =>
+                            patchPlan(p.plan, 'manualRefreshDaily', Number(e.target.value))
+                          }
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel>同步间隔（分钟）</FieldLabel>
+                        <Input
+                          type="number"
+                          min={5}
+                          max={10080}
+                          value={p.syncIntervalMin}
+                          onChange={(e) =>
+                            patchPlan(p.plan, 'syncIntervalMin', Number(e.target.value))
+                          }
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel>AI 分析（题/月）</FieldLabel>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={10000}
+                          value={p.aiAnalyzeMonth}
+                          onChange={(e) =>
+                            patchPlan(p.plan, 'aiAnalyzeMonth', Number(e.target.value))
+                          }
+                        />
+                      </Field>
+                    </div>
+                    <FieldDescription>
+                      能力开关：爬题面 {p.enableFetchProblem ? '开' : '关'} · AI 分析{' '}
+                      {p.enableAiAnalyze ? '开' : '关'} · AI 日报 {p.enableAiDaily ? '开' : '关'} ·{' '}
+                      常规日报 {p.enableRegularDaily ? '开' : '关'} · 时长 {p.days} 天
+                      （能力开关与时长建议保持默认，仅在有明确调整需求时修改）
+                    </FieldDescription>
+                  </div>
+                ))
+              )}
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={savingPlans}
+                  onClick={() => void handleSavePlans()}
+                >
+                  {savingPlans ? '保存中…' : '保存套餐配置'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={!!detailUser} onOpenChange={(open) => !open && setDetailUser(null)}>
         <DialogContent className="max-h-[min(90vh,44rem)] overflow-y-auto sm:max-w-lg">
@@ -362,96 +471,6 @@ export function DashboardSubscriptions() {
                   </Button>
                 </div>
               </FieldGroup>
-
-              <Separator />
-
-              <Collapsible>
-                <CollapsibleTrigger asChild>
-                  <Button type="button" variant="outline" size="sm">
-                    套餐配置（价格 / 配额）
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-4 pt-4">
-                  <p className="text-xs text-muted-foreground">
-                    调整各档位价格与配额（即时生效）。免费档价格必须为 0；手动刷新 0–100；
-                    同步间隔 5–10080 分钟；AI 分析 0–10000 题/月。
-                  </p>
-                  {planDrafts.map((p) => (
-                    <div key={p.plan} className="space-y-2 rounded-lg border p-3">
-                      <p className="text-sm font-medium">
-                        {p.plan === 'free' ? '免费' : p.plan === 'plus' ? 'Plus' : 'Pro'}
-                        <Badge variant="outline" className="ml-2 font-normal">
-                          {p.enabled ? '上架' : '下架'}
-                        </Badge>
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Field>
-                          <FieldLabel>价格（分）</FieldLabel>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={p.priceCents}
-                            disabled={p.plan === 'free'}
-                            onChange={(e) => patchPlan(p.plan, 'priceCents', Number(e.target.value))}
-                          />
-                        </Field>
-                        <Field>
-                          <FieldLabel>手动刷新（次/日）</FieldLabel>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={p.manualRefreshDaily}
-                            onChange={(e) =>
-                              patchPlan(p.plan, 'manualRefreshDaily', Number(e.target.value))
-                            }
-                          />
-                        </Field>
-                        <Field>
-                          <FieldLabel>同步间隔（分钟）</FieldLabel>
-                          <Input
-                            type="number"
-                            min={5}
-                            max={10080}
-                            value={p.syncIntervalMin}
-                            onChange={(e) =>
-                              patchPlan(p.plan, 'syncIntervalMin', Number(e.target.value))
-                            }
-                          />
-                        </Field>
-                        <Field>
-                          <FieldLabel>AI 分析（题/月）</FieldLabel>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={10000}
-                            value={p.aiAnalyzeMonth}
-                            onChange={(e) =>
-                              patchPlan(p.plan, 'aiAnalyzeMonth', Number(e.target.value))
-                            }
-                          />
-                        </Field>
-                      </div>
-                      <FieldDescription>
-                        能力开关：爬题面 {p.enableFetchProblem ? '开' : '关'} · AI 分析{' '}
-                        {p.enableAiAnalyze ? '开' : '关'} · AI 日报 {p.enableAiDaily ? '开' : '关'} ·{' '}
-                        常规日报 {p.enableRegularDaily ? '开' : '关'} · 时长 {p.days} 天
-                        （能力开关与时长建议保持默认，仅在有明确调整需求时修改）
-                      </FieldDescription>
-                    </div>
-                  ))}
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={savingPlans}
-                      onClick={() => void handleSavePlans()}
-                    >
-                      {savingPlans ? '保存中…' : '保存套餐配置'}
-                    </Button>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
 
               <DialogFooter className="sm:justify-start">
                 <Button type="button" variant="outline" onClick={() => setDetailUser(null)}>

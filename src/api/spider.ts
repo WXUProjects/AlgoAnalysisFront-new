@@ -1,5 +1,10 @@
-import { endpoints, type Platform, type RefreshSpiderRes } from '@shared/api'
-import { post, num, str, type ApiResult } from '@/lib/http'
+import {
+  endpoints,
+  type Platform,
+  type RefreshSpiderRes,
+  type RefreshSpiderStatusRes,
+} from '@shared/api'
+import { post, get, num, str, type ApiResult } from '@/lib/http'
 
 export async function setSpider(body: {
   userId: number
@@ -28,6 +33,24 @@ export async function refreshSpider(): Promise<ApiResult<RefreshSpiderRes>> {
       code: num(raw.code),
       message: str(raw.message),
       remaining: num(raw.remaining),
+    },
+  }
+}
+
+/** 今日手动刷新做题记录状态（配额/剩余/冷却/生效同步间隔；只读） */
+export async function getRefreshStatus(): Promise<ApiResult<RefreshSpiderStatusRes>> {
+  const res = await get<Record<string, unknown>>(endpoints.core.spider.refreshStatus)
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
+  return {
+    ...res,
+    data: {
+      code: num(raw.code),
+      message: str(raw.message),
+      limit: num(raw.limit),
+      remaining: num(raw.remaining),
+      nextAvailableAt: num(raw.nextAvailableAt),
+      syncIntervalMin: num(raw.syncIntervalMin),
     },
   }
 }

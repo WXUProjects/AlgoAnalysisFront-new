@@ -18,7 +18,7 @@ import { toast } from 'sonner'
 import { listBlogByUsername } from '@/api/blog'
 import { getProfileById, getProfileByUsername } from '@/api/profile'
 import { getMySubscription } from '@/api/subscription'
-import { refreshSpider } from '@/api/spider'
+import { getRefreshStatus, refreshSpider } from '@/api/spider'
 import {
   followUser,
   getSocialCounts,
@@ -39,6 +39,7 @@ import type {
   MySubscription,
   PeriodData,
   ProblemUserProfile,
+  RefreshSpiderStatusRes,
   SocialUser,
   UserProfile,
   UserRecentCommentItem,
@@ -128,6 +129,9 @@ export function Profile() {
   const [recentBlogs, setRecentBlogs] = useState<BlogArticle[]>([])
   const [refreshing, setRefreshing] = useState(false)
   const [refreshConfirmOpen, setRefreshConfirmOpen] = useState(false)
+  /** 今日手动刷新做题记录状态（配额/剩余/冷却；打开确认框时拉取） */
+  const [refreshStatus, setRefreshStatus] =
+    useState<RefreshSpiderStatusRes | null>(null)
   const [contests, setContests] = useState<ContestItem[]>([])
   const [algo, setAlgo] = useState<ProblemUserProfile | null>(null)
   const [period, setPeriod] = useState<PeriodData | null>(null)
@@ -481,6 +485,17 @@ export function Profile() {
     )
   }
 
+  const loadRefreshStatus = useCallback(() => {
+    void getRefreshStatus().then((res) => {
+      if (res.success && res.data) setRefreshStatus(res.data)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!refreshConfirmOpen) return
+    loadRefreshStatus()
+  }, [refreshConfirmOpen, loadRefreshStatus])
+
   async function handleRefresh() {
     setRefreshConfirmOpen(false)
     setRefreshing(true)
@@ -490,12 +505,17 @@ export function Profile() {
       // 后端 message 已含剩余次数提示：成功「已开始刷新做题记录，今日剩余 N 次」/ 用完「每个用户每日拥有两次手动刷新做题记录次数，当前还剩下 N 次」
       if (res.data.code === 0) toast.success(res.data.message)
       else toast.error(res.data.message)
+      loadRefreshStatus()
     } else {
       toast.error(res.message || '刷新失败，稍后再试')
     }
   }
 
   function renderProfileActions(opts: { desktopOnlySelfActions?: boolean }) {
+    const refreshCooldown =
+      refreshStatus !== null &&
+      refreshStatus.nextAvailableAt > 0 &&
+      refreshStatus.nextAvailableAt > Math.floor(Date.now() / 1000)
     return (
       <div className="flex flex-col gap-2">
         {blogActivated && profile?.username ? (
@@ -546,14 +566,23 @@ export function Profile() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>刷新做题记录？</AlertDialogTitle>
                     <AlertDialogDescription>
-                      将重新拉取你各 OJ 的最新提交记录（增量）。每次会消耗今日 2 次机会之一，
-                      且 5 分钟内只能刷新一次。
+                      将重新拉取你各 OJ 的最新提交记录（增量）。
+                      {refreshStatus
+                        ? refreshStatus.limit <= 0
+                          ? '今日手动刷新已禁用。'
+                          : `每次消耗今日 1 次机会，今日剩余 ${refreshStatus.remaining}/${refreshStatus.limit} 次；且 5 分钟内只能刷新一次。`
+                        : '每次刷新消耗今日次数，且 5 分钟内只能刷新一次。'}
+                      {refreshCooldown ? '（冷却中，请稍后再试）' : null}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel disabled={refreshing}>取消</AlertDialogCancel>
                     <AlertDialogAction
-                      disabled={refreshing}
+                      disabled={
+                        refreshing ||
+                        refreshCooldown ||
+                        refreshStatus?.limit === 0
+                      }
                       onClick={(e) => {
                         e.preventDefault()
                         void handleRefresh()

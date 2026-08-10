@@ -58,6 +58,8 @@ export const endpoints = {
       getOrder: `${API_PREFIX}/user/subscription/order`,
       /** 我的订阅状态（登录） */
       my: `${API_PREFIX}/user/subscription/my`,
+      /** 我的 AI 能力落地状态（AI 分析配额/来源 + AI 日报权限） */
+      myAiStatus: `${API_PREFIX}/user/subscription/my-ai-status`,
       /** 站管：人工赋予/更新订阅 */
       grant: `${API_PREFIX}/user/subscription/grant`,
       /** 站管：取消订阅 */
@@ -250,6 +252,8 @@ export const endpoints = {
       platformUsers: `${API_PREFIX}/core/spider/platform-users`,
       /** 用户：手动增量刷新自己的 OJ 做题记录（每日限 2 次） */
       refresh: `${API_PREFIX}/core/spider/refresh`,
+      /** 用户：今日手动刷新做题记录状态（配额/剩余/冷却；只读） */
+      refreshStatus: `${API_PREFIX}/core/spider/refresh-status`,
       /** 站管：暂停/恢复某 OJ 的爬虫同步 body: { platform, enabled } */
       togglePlatform: `${API_PREFIX}/core/spider/toggle-platform`,
     },
@@ -527,6 +531,20 @@ export interface RefreshSpiderRes {
   message: string
   /** 今日剩余手动刷新次数（0=已用完） */
   remaining: number
+}
+
+/** 今日手动刷新做题记录状态（GET /core/spider/refresh-status） */
+export interface RefreshSpiderStatusRes {
+  code: number
+  message: string
+  /** 今日有效总配额（已合并订阅/站管覆盖；0=禁止） */
+  limit: number
+  /** 今日剩余次数（0=已用完） */
+  remaining: number
+  /** 下次可刷新 unix 秒（0=立即可刷新） */
+  nextAvailableAt: number
+  /** 当前生效自动同步间隔（分钟；min(站管覆盖, 组织 MIN, 订阅档)；失败回落默认） */
+  syncIntervalMin: number
 }
 
 /** 题单系统类型 */
@@ -870,6 +888,20 @@ export interface MySubscription {
   source: string
   /** 剩余天数（已过期按 0） */
   daysLeft: number
+}
+
+/** 我的 AI 能力落地状态（GET /user/subscription/my-ai-status） */
+export interface MyAiStatusRes {
+  code: number
+  message: string
+  /** AI 分析落地月配额（>0=可分析；Pro 订阅/组织开通） */
+  aiAnalyzeQuota: number
+  /** AI 分析权限来源：pro | org | pro_org | none */
+  aiAnalyzeSource: string
+  /** AI 日报：组织是否已授权日报 */
+  aiDailyOrgAllowed: boolean
+  /** AI 日报当前是否生效（Pro 订阅 + 套餐开启 + 个人开关） */
+  aiDailyEnabled: boolean
 }
 
 /** 支付订单（创建返回） */

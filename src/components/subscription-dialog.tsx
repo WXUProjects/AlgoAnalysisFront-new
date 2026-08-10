@@ -3,11 +3,18 @@ import { QRCodeSVG } from 'qrcode.react'
 import { toast } from 'sonner'
 import {
   createOrder,
+  getMyAiStatus,
   getMySubscription,
   getOrder,
   listPlans,
 } from '@/api/subscription'
-import type { MySubscription, SubscriptionPlan } from '@shared/api'
+import { getRefreshStatus } from '@/api/spider'
+import type {
+  MyAiStatusRes,
+  MySubscription,
+  RefreshSpiderStatusRes,
+  SubscriptionPlan,
+} from '@shared/api'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -58,6 +65,11 @@ const FEATURE_ROWS: {
 export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [mySub, setMySub] = useState<MySubscription | null>(null)
+  /** 今日手动刷新做题记录状态（配额/剩余/生效同步间隔） */
+  const [refreshStatus, setRefreshStatus] =
+    useState<RefreshSpiderStatusRes | null>(null)
+  /** 我的 AI 能力落地状态（AI 分析/日报实际权限） */
+  const [myAiStatus, setMyAiStatus] = useState<MyAiStatusRes | null>(null)
   const [selected, setSelected] = useState<string>('plus')
   const [orderNo, setOrderNo] = useState('')
   const [qrCode, setQrCode] = useState('')
@@ -82,15 +94,22 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
     }
   }, [stopPoll])
 
-  // 打开时拉套餐 + 我的订阅
+  // 打开时拉套餐 + 我的订阅 + 今日刷新状态 + AI 能力落地状态
   useEffect(() => {
     if (!open) return
     setError('')
     void (async () => {
-      const [plansRes, myRes] = await Promise.all([listPlans(), getMySubscription()])
+      const [plansRes, myRes, statusRes, aiRes] = await Promise.all([
+        listPlans(),
+        getMySubscription(),
+        getRefreshStatus(),
+        getMyAiStatus(),
+      ])
       if (!mountedRef.current) return
       if (plansRes.success && plansRes.data) setPlans(plansRes.data)
       if (myRes.success) setMySub(myRes.data)
+      if (statusRes.success) setRefreshStatus(statusRes.data)
+      if (aiRes.success) setMyAiStatus(aiRes.data)
       // 默认选中当前未订阅的第一个可购档（plus）
       const buyable = plansRes.data?.filter((p) => p.enabled && p.priceCents > 0) ?? []
       if (buyable.length > 0) {
@@ -153,7 +172,7 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
         <DialogHeader>
           <DialogTitle>开通会员</DialogTitle>
           <DialogDescription>
-            GoAlgo 会员提供更多每日刷新次数与 AI 能力。支持你的独立开发，功能与套餐见下。
+            GoAlgo 会员提供更多每日刷新次数与 AI 能力，功能与套餐见下。
           </DialogDescription>
         </DialogHeader>
 
@@ -198,13 +217,62 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
                     {mySub.tier === 'pro' ? 'Pro 会员' : 'Plus 会员'}
                   </Badge>
                   <span className="ml-2 text-xs text-muted-foreground">
-                    剩余 {mySub.daysLeft} 天{mySub.expireAt > 0 ? '（到期自动回落免费）' : ''}
+                    剩余 {mySub.daysLeft} 天
                   </span>
+                  {refreshStatus && refreshStatus.syncIntervalMin > 0 ? (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      同步间隔 {refreshStatus.syncIntervalMin} 分钟
+                    </span>
+                  ) : null}
+                  {refreshStatus && refreshStatus.limit > 0 ? (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      今日剩余刷新 {refreshStatus.remaining}/{refreshStatus.limit} 次
+                    </span>
+                  ) : null}
                 </TableCell>
               </TableRow>
             ) : null}
           </TableBody>
         </Table>
+
+        {mySub?.tier ? (
+          <div className="space-y-1 rounded-lg border p-3 text-xs leading-relaxed text-muted-foreground">
+            <p className="text-sm font-medium text-foreground">当前 AI 权限</p>
+            {myAiStatus ? (
+              <>
+                <p>
+                  AI 分析题目：
+                  {myAiStatus.aiAnalyzeQuota > 0 ? (
+                    <span className="font-medium text-foreground">
+                      ✓ 已开通 · {myAiStatus.aiAnalyzeQuota} 题/月（
+                      {myAiStatus.aiAnalyzeSource === 'pro_org'
+                        ? 'Pro 会员 + 组织'
+                        : myAiStatus.aiAnalyzeSource === 'pro'
+                          ? 'Pro 会员'
+                          : '组织已开通'}
+                      ）
+                    </span>
+                  ) : (
+                    '✗ 未开通'
+                  )}
+                </p>
+                <p>
+                  AI 日报：
+                  {myAiStatus.aiDailyEnabled ? (
+                    <span className="font-medium text-foreground">✓ 已生效（Pro 会员）</span>
+                  ) : myAiStatus.aiDailyOrgAllowed ? (
+                    <span className="font-medium text-foreground">
+                      组织已授权 · 尚未开启
+                    </span>
+                  ) : (
+                    '✗ 未开通'
+                  )}
+                </p>
+              </>
+            ) : null}
+            <p>AI 分析题目，可以让画像更精准。</p>
+          </div>
+        ) : null}
 
         {qrCode ? (
           <div className="flex flex-col items-center gap-3 py-4">
@@ -246,8 +314,6 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
         )}
 
         <p className="text-center text-xs leading-relaxed text-muted-foreground">
-          本站由个人独立开发维护，你的付费是对持续开发最大的支持。
-          <br />
           赞助或开通遇到问题，请联系站长微信 <span className="font-medium text-foreground">srcenchen</span>
           ，或加入 QQ 群 <span className="font-medium text-foreground">925338346</span>。
         </p>
