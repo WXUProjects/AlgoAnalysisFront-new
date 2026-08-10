@@ -1121,9 +1121,9 @@ export interface ContestRankingItem {
   userId: number
   name: string
   avatar: string
-  score: number  /** C 端订阅档 plus|pro */
+  /** C 端订阅档 plus|pro */
   subTier?: string
-
+  score: number
   acCount: number
   totalCount: number
 }
@@ -1152,6 +1152,8 @@ export interface ContestBoardRow {
   userId: number
   name: string
   avatar: string
+  /** C 端订阅档 plus|pro */
+  subTier?: string
   rankOfficial: number
   rankLocal: number
   solved: number
@@ -1581,9 +1583,9 @@ export interface ProblemCommentItem {
   username: string
   name: string
   avatar?: string
-  content: string  /** C 端订阅档 plus|pro */
+  /** C 端订阅档 plus|pro */
   subTier?: string
-
+  content: string
   /** 直接父评论 id；0 为顶层 */
   parentId?: number
   /** 根评论 id */
@@ -1609,10 +1611,10 @@ export interface ProblemUserSolutionItem {
   username: string
   name: string
   avatar?: string
-  title: string
-  excerpt  /** C 端订阅档 plus|pro */
+  /** C 端订阅档 plus|pro */
   subTier?: string
-?: string
+  title: string
+  excerpt?: string
   contentMd?: string
   likeCount?: number
   liked?: boolean
@@ -1891,9 +1893,7 @@ export interface BlogAuthor {
   subTier?: string
 }
 
-/** 博客壳主题  /** C 端订阅档 plus|pro */
-  subTier?: string
-：mizuki 默认 | chirpy | simple 简约（https://github.com/LyraVoid/Mizuki） */
+/** 博客壳主题：mizuki 默认 | chirpy | simple 简约（https://github.com/LyraVoid/Mizuki） */
 export type BlogThemeId = 'chirpy' | 'simple' | 'mizuki'
 
 /** 侧栏社交链接（Chirpy 左下角） */
@@ -2024,9 +2024,9 @@ export interface BlogPlazaAuthor {
   username: string
   name: string
   avatar?: string
-  articleCount  /** C 端订阅档 plus|pro */
+  /** C 端订阅档 plus|pro */
   subTier?: string
-: number
+  articleCount: number
   lastPublishedAt?: number
   latestTitle?: string
 }
