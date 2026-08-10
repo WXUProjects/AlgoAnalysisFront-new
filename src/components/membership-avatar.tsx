@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-export type MembershipTier = 'plus' | 'pro' | null
+export type MembershipTier = 'plus' | 'pro' | null | string
 
 /** 会员光环：纯辉光无实心边框，大范围光晕 */
 const tierGlow: Record<string, string> = {

@@ -1028,6 +1028,10 @@ export interface OrgInfo {
   aiEmailSchedule?: string
   /** 站管：强制同步（跳过成员休眠） */
   forceSync?: boolean
+  /** 站管：题面爬取开关 */
+  enableFetchProblem?: boolean
+  /** 站管：题面AI分析开关 */
+  enableAiAnalyze?: boolean
   myRole?: OrgRoleValue | string
   /** 我在该组织内的对外称呼（org_members.org_display_name） */
   orgDisplayName?: string
@@ -1042,6 +1046,8 @@ export interface OrgMemberInfo {
   /** 组织内名称 org_members.org_display_name */
   orgDisplayName?: string
   avatar?: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   role: OrgRoleValue | string
   groupId?: number | null
   joinedAt?: number
@@ -1119,6 +1125,8 @@ export interface ContestRankingItem {
   userId: number
   name: string
   avatar: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   score: number
   acCount: number
   totalCount: number
@@ -1146,6 +1154,8 @@ export interface ContestBoardProblemCol {
 
 export interface ContestBoardRow {
   userId: number
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   name: string
   avatar: string
   rankOfficial: number
@@ -1246,6 +1256,8 @@ export interface StatisticRankItem {
 
 /** 关注用户对本题状态 */
 export interface ProblemFollowingStatusItem {
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   userId: number
   username: string
   name: string
@@ -1569,6 +1581,8 @@ export type CommunityTargetType = 'comment' | 'solution'
 export interface ProblemCommentItem {
   id: number
   problemId: number
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   /** 所属用户题解；0/缺省=题目讨论 */
   solutionId?: number
   userId: number
@@ -1593,6 +1607,8 @@ export interface ProblemCommentItem {
   replies?: ProblemCommentItem[]
 }
 
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
 /** 用户题解列表项（非 AI SolutionMeta） */
 export interface ProblemUserSolutionItem {
   id: number
@@ -1685,6 +1701,8 @@ export interface BlogReportAdminItem {
   }
 }
 
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
 /** 发现页动态类型（公共域全站聚合；私有域按组织隔离） */
 export type ActivityFeedType = 'comment' | 'solution' | string
 
@@ -1865,6 +1883,8 @@ export interface BlogAdminArticle {
   moderationNote?: string
   userId: number
   username: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   authorName?: string
   createdAt: number
   publishedAt?: number
@@ -1996,6 +2016,8 @@ export interface BlogAnalytics {
     title: string
     viewCount: number
     likeCount: number
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
     commentCount: number
     visibility: string
   }>
