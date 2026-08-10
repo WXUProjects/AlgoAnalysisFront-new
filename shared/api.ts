@@ -991,6 +991,8 @@ export interface RbacRoleMember {
   username: string
   name: string
   avatar?: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
 }
 
 /** GET /user/rbac/my-permissions（查库实时值） */
@@ -1046,6 +1048,8 @@ export interface OrgMemberInfo {
   /** 组织内名称 org_members.org_display_name */
   orgDisplayName?: string
   avatar?: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   /** C 端订阅档 plus|pro @omitempty */
   subTier?: string
   role: OrgRoleValue | string
@@ -1359,6 +1363,8 @@ export interface ProblemContributor {
   name: string
   username: string
   avatar?: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
 }
 
 export interface ProblemInfo {
@@ -1589,6 +1595,8 @@ export interface ProblemCommentItem {
   username: string
   name: string
   avatar?: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   content: string
   /** 直接父评论 id；0 为顶层 */
   parentId?: number
@@ -1615,6 +1623,8 @@ export interface ProblemUserSolutionItem {
   username: string
   name: string
   avatar?: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   /** C 端订阅档 plus|pro @omitempty */
   subTier?: string
   title: string
@@ -1711,6 +1721,8 @@ export interface ActivityFeedItem {
   username: string
   name: string
   avatar?: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   type: ActivityFeedType
   refId: number
   problemId: number
@@ -1788,6 +1800,8 @@ export interface BlogAdminAuthor {
   username: string
   name: string
   avatar?: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   activated: boolean
   activatedAt?: number
   agreementAcceptedAt?: number
@@ -1858,6 +1872,8 @@ export interface BlogImageUploadRequestItem {
   username: string
   name?: string
   avatar?: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   reason: string
   status: BlogImageUploadRequestStatus | string
   createdAt: number
@@ -1895,6 +1911,8 @@ export interface BlogAuthor {
   username: string
   name: string
   avatar?: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
 }
 
 /** 博客壳主题：mizuki 默认 | chirpy | simple 简约（https://github.com/LyraVoid/Mizuki） */
@@ -2030,6 +2048,8 @@ export interface BlogPlazaAuthor {
   username: string
   name: string
   avatar?: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   articleCount: number
   lastPublishedAt?: number
   latestTitle?: string
