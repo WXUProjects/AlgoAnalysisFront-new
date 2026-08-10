@@ -53,6 +53,13 @@ export type SiteAdminConfig = SiteConfig & {
   ojQojUsername: string
   ojQojPasswordMasked: string
   ojQojPasswordSet: boolean
+  /** 支付宝支付 */
+  alipayAppId: string
+  alipayPrivateKeyMasked: string
+  alipayPrivateKeySet: boolean
+  alipayPublicKeyMasked: string
+  alipayPublicKeySet: boolean
+  alipaySandbox: boolean
   ojLuoguStatus: string
   ojLuoguStatusAt: number
   ojLuoguErrMsg: string
@@ -120,6 +127,12 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     ojQojStatus: str(d.ojQojStatus, 'unchecked'),
     ojQojStatusAt: num(d.ojQojStatusAt, 0),
     ojQojErrMsg: str(d.ojQojErrMsg),
+    alipayAppId: str(d.alipayAppId),
+    alipayPrivateKeyMasked: str(d.alipayPrivateKeyMasked),
+    alipayPrivateKeySet: Boolean(d.alipayPrivateKeySet),
+    alipayPublicKeyMasked: str(d.alipayPublicKeyMasked),
+    alipayPublicKeySet: Boolean(d.alipayPublicKeySet),
+    alipaySandbox: Boolean(d.alipaySandbox),
     agentStatus: str(d.agentStatus, 'unchecked'),
     agentStatusAt: num(d.agentStatusAt, 0),
     agentErrMsg: str(d.agentErrMsg),
@@ -202,6 +215,13 @@ export async function updateSiteConfig(body: {
   ojQojUsername?: string
   ojQojPassword?: string
   clearOjQojPassword?: boolean
+  alipayAppId?: string
+  alipayPrivateKey?: string
+  clearAlipayPrivateKey?: boolean
+  alipayPublicKey?: string
+  clearAlipayPublicKey?: boolean
+  alipaySandbox?: boolean
+  setAlipaySandbox?: boolean
 }): Promise<ApiResult<SiteConfig>> {
   const res = await post<Record<string, unknown>>(endpoints.user.site.config, body)
   if (!res.success) return { ...res, data: null }

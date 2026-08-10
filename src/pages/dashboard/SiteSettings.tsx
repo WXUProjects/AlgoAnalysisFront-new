@@ -116,7 +116,7 @@ export function DashboardSiteSettings() {
   const canWrite = can(Perm.SiteConfigWrite)
   const canRead = can(Perm.SiteConfigRead) || canWrite
   const canBackup = can(Perm.SiteBackup)
-  const { refresh } = useSiteConfig()
+  const { config: siteConfig, refresh } = useSiteConfig()
 
   const [title, setTitle] = useState('')
   const [logo, setLogo] = useState('')
@@ -164,6 +164,12 @@ export function DashboardSiteSettings() {
   const [ojQojStatus, setOjQojStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
   const [ojQojStatusAt, setOjQojStatusAt] = useState(0)
   const [ojQojErrMsg, setOjQojErrMsg] = useState('')
+  const [alipayAppId, setAlipayAppId] = useState('')
+  const [alipayPrivateKey, setAlipayPrivateKey] = useState('')
+  const [alipayPrivateKeySet, setAlipayPrivateKeySet] = useState(false)
+  const [alipayPublicKey, setAlipayPublicKey] = useState('')
+  const [alipayPublicKeySet, setAlipayPublicKeySet] = useState(false)
+  const [alipaySandbox, setAlipaySandbox] = useState(false)
   const [agentStatus, setAgentStatus] = useState('unchecked')
   const [agentStatusAt, setAgentStatusAt] = useState(0)
   const [agentErrMsg, setAgentErrMsg] = useState('')
@@ -312,6 +318,12 @@ export function DashboardSiteSettings() {
       setOjQojStatus((d.ojQojStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
       setOjQojStatusAt(d.ojQojStatusAt || 0)
       setOjQojErrMsg(d.ojQojErrMsg || '')
+      setAlipayAppId(d.alipayAppId || '')
+      setAlipayPrivateKey(d.alipayPrivateKeySet ? SECRET_PLACEHOLDER : '')
+      setAlipayPrivateKeySet(d.alipayPrivateKeySet)
+      setAlipayPublicKey(d.alipayPublicKeySet ? SECRET_PLACEHOLDER : '')
+      setAlipayPublicKeySet(d.alipayPublicKeySet)
+      setAlipaySandbox(Boolean(d.alipaySandbox))
       setAgentStatus(d.agentStatus || 'unchecked')
       setAgentStatusAt(d.agentStatusAt || 0)
       setAgentErrMsg(d.agentErrMsg || '')
@@ -376,6 +388,8 @@ export function DashboardSiteSettings() {
     const upyunPw = secretPayload(upyunPassword, upyunPasswordSet)
     const ojLgPw = secretPayload(ojLuoguPassword, ojLuoguPasswordSet)
     const ojQojPw = secretPayload(ojQojPassword, ojQojPasswordSet)
+    const alipayPri = secretPayload(alipayPrivateKey, alipayPrivateKeySet)
+    const alipayPub = secretPayload(alipayPublicKey, alipayPublicKeySet)
 
     const days = Math.max(1, Math.min(365, Number(inactiveDays) || 14))
     setSaving(true)
@@ -414,6 +428,13 @@ export function DashboardSiteSettings() {
       ojQojUsername: ojQojUsername.trim(),
       ojQojPassword: ojQojPw.secret,
       clearOjQojPassword: ojQojPw.clear,
+      alipayAppId: alipayAppId.trim(),
+      alipayPrivateKey: alipayPri.secret,
+      clearAlipayPrivateKey: alipayPri.clear,
+      alipayPublicKey: alipayPub.secret,
+      clearAlipayPublicKey: alipayPub.clear,
+      alipaySandbox: alipaySandbox,
+      setAlipaySandbox: true,
     })
     setSaving(false)
     if (res.success) {
@@ -434,6 +455,10 @@ export function DashboardSiteSettings() {
         setOjLuoguPasswordSet(again.data.ojLuoguPasswordSet)
         setOjQojPassword(again.data.ojQojPasswordSet ? SECRET_PLACEHOLDER : '')
         setOjQojPasswordSet(again.data.ojQojPasswordSet)
+        setAlipayPrivateKey(again.data.alipayPrivateKeySet ? SECRET_PLACEHOLDER : '')
+        setAlipayPrivateKeySet(again.data.alipayPrivateKeySet)
+        setAlipayPublicKey(again.data.alipayPublicKeySet ? SECRET_PLACEHOLDER : '')
+        setAlipayPublicKeySet(again.data.alipayPublicKeySet)
       }
     } else {
       toast.error(res.message || '保存失败，稍后重试')
@@ -1063,6 +1088,102 @@ export function DashboardSiteSettings() {
                 </CollapsibleContent>
               </Collapsible>
             ))}
+          </FieldGroup>
+        </CollapsibleCard>
+
+        <CollapsibleCard
+          title="支付宝支付"
+          description="会员在线支付：开通 / 续费会员扫码付款；未配置完整时会员入口不展示"
+          defaultOpen={!alipayPrivateKeySet}
+        >
+          <FieldGroup className="gap-3">
+            <div className="flex items-center gap-1.5 text-xs">
+              <span
+                className={`inline-block size-2 rounded-full ${
+                  siteConfig.alipayConfigured
+                    ? 'bg-green-500'
+                    : alipayAppId || alipayPrivateKeySet || alipayPublicKeySet
+                      ? 'bg-amber-500'
+                      : 'bg-muted-foreground/30'
+                }`}
+              />
+              支付状态：
+              {siteConfig.alipayConfigured
+                ? '已配置（会员入口已开放）'
+                : alipayAppId || alipayPrivateKeySet || alipayPublicKeySet
+                  ? '未配置完整（APPID + 应用私钥 + 支付宝公钥 缺一不可）'
+                  : '未配置'}
+              {alipaySandbox && (
+                <span className="text-muted-foreground">· 沙箱环境</span>
+              )}
+            </div>
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="alipay-app-id">支付宝 APPID</FieldLabel>
+              <Input
+                id="alipay-app-id"
+                value={alipayAppId}
+                onChange={(e) => setAlipayAppId(e.target.value)}
+                placeholder="2021 开头、19 位"
+                autoComplete="off"
+              />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="alipay-private-key">应用私钥（RSA2）</FieldLabel>
+                <textarea
+                  id="alipay-private-key"
+                  value={alipayPrivateKey}
+                  onChange={(e) => setAlipayPrivateKey(e.target.value)}
+                  placeholder={
+                    alipayPrivateKeySet
+                      ? '已保存；留空表示不修改'
+                      : '-----BEGIN PRIVATE KEY-----…'
+                  }
+                  rows={5}
+                  className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full min-w-0 rounded-md border px-3 py-2 font-mono text-xs shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+                  autoComplete="off"
+                  onFocus={() => {
+                    if (alipayPrivateKey === SECRET_PLACEHOLDER) setAlipayPrivateKey('')
+                  }}
+                />
+              </Field>
+              <Field className="gap-1.5">
+                <FieldLabel htmlFor="alipay-public-key">支付宝公钥</FieldLabel>
+                <textarea
+                  id="alipay-public-key"
+                  value={alipayPublicKey}
+                  onChange={(e) => setAlipayPublicKey(e.target.value)}
+                  placeholder={
+                    alipayPublicKeySet
+                      ? '已保存；留空表示不修改'
+                      : '-----BEGIN PUBLIC KEY-----…'
+                  }
+                  rows={5}
+                  className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full min-w-0 rounded-md border px-3 py-2 font-mono text-xs shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+                  autoComplete="off"
+                  onFocus={() => {
+                    if (alipayPublicKey === SECRET_PLACEHOLDER) setAlipayPublicKey('')
+                  }}
+                />
+              </Field>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={alipaySandbox}
+                onChange={(e) => setAlipaySandbox(e.target.checked)}
+                disabled={!canWrite}
+              />
+              支付宝沙箱环境（测试支付用；正式环境请勿开启）
+            </label>
+            <p className="text-xs text-muted-foreground">
+              密钥加密存储，仅显示脱敏占位；支付回调固定为
+              <span className="font-medium text-foreground">
+                https://algo.zhiyuansofts.cn/v1/payment/notify
+              </span>
+              （无需在支付宝后台填回调域名之外的配置）。APPID + 应用私钥 + 支付宝公钥
+              三者齐全后，个人资料页才显示「开通会员」入口。
+            </p>
           </FieldGroup>
         </CollapsibleCard>
         </fieldset>

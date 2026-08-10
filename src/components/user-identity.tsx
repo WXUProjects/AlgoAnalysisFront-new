@@ -40,6 +40,8 @@ export function UserIdentity({
   size = 'default',
   /** 公共域下展示全站特殊身份 badge */
   showRoleBadges = false,
+  /** C 端会员 badge（Pro/Plus 会员；不受视图限制，始终可显） */
+  showSubBadge = false,
 }: {
   user: UserIdentityData
   className?: string
@@ -52,6 +54,7 @@ export function UserIdentity({
   showUsername?: boolean
   size?: 'default' | 'lg' | 'sm'
   showRoleBadges?: boolean
+  showSubBadge?: boolean
 }) {
   const display = resolveDisplayName(user)
   // 主名已是队内名时仍可展示「组织名」；displayName 与主名相同则只标组织
@@ -61,18 +64,19 @@ export function UserIdentity({
     if (user.isSiteAdmin) {
       roleBadges.push({ key: 'site_admin', label: '站点管理员', variant: 'default' })
     }
-    // C 端订阅 badge（与站点管理员并列）：Pro 高亮，Plus 次要
-    if (user.subTier === 'pro') {
-      roleBadges.push({ key: 'sub_pro', label: 'Pro 会员', variant: 'default' })
-    } else if (user.subTier === 'plus') {
-      roleBadges.push({ key: 'sub_plus', label: 'Plus 会员', variant: 'secondary' })
-    }
     // 自定义站点角色：站管已有专属徽章，这里只补角色名
     for (const name of user.siteRoles || []) {
       const label = (name || '').trim()
       if (label) roleBadges.push({ key: `site_role:${label}`, label, variant: 'secondary' })
     }
   }
+  // C 端会员 badge：与视图无关，只要会员就显示（资料页 showSubBadge=true）
+  const subBadge: { key: string; label: string; variant: 'default' | 'secondary' } | null =
+    showSubBadge && user.subTier === 'pro'
+      ? { key: 'sub_pro', label: 'Pro 会员', variant: 'default' }
+      : showSubBadge && user.subTier === 'plus'
+        ? { key: 'sub_plus', label: 'Plus 会员', variant: 'secondary' }
+        : null
 
   const nameEl = linkToProfile && user.username ? (
     <Link
@@ -117,6 +121,15 @@ export function UserIdentity({
             {b.label}
           </Badge>
         ))}
+        {subBadge ? (
+          <Badge
+            key={subBadge.key}
+            variant={subBadge.variant}
+            className="max-w-[8rem] truncate font-normal"
+          >
+            {subBadge.label}
+          </Badge>
+        ) : null}
         {badges.length > 0 &&
           badges.slice(0, 3).map((a) => (
             <SharedOrgBadge key={a.orgId || a.orgName} alias={a} primary={display} />

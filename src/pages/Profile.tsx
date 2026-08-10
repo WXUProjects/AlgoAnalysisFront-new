@@ -46,9 +46,7 @@ import type {
   BlogArticle,
 } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
-
-/** 会员开通入口暂隐藏（恢复时改回 false） */
-const SUBSCRIBE_ENTRY_HIDDEN = true
+import { useSiteConfig } from '@/site/SiteConfigContext'
 
 import { AlgoProfileChart } from '@/components/charts/algo-profile-chart'
 import { HeatmapSimple } from '@/components/heatmap-simple'
@@ -102,6 +100,8 @@ import {
 
 export function Profile() {
   const { user, isLogin, logout, currentOrg } = useAuth()
+  /** 支付是否完整配置（决定会员入口显隐） */
+  const { config: siteConfig } = useSiteConfig()
   const { username: routeUsername } = useParams<{ username?: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -535,7 +535,7 @@ export function Profile() {
               <Button type="button" asChild>
                 <Link to="/change-profile">编辑个人资料</Link>
               </Button>
-              {SUBSCRIBE_ENTRY_HIDDEN ? null : (
+              {siteConfig.alipayConfigured ? (
                 <Button
                   type="button"
                   variant={mySub?.tier ? 'outline' : 'default'}
@@ -545,7 +545,7 @@ export function Profile() {
                     ? `续费会员（剩余 ${mySub.daysLeft} 天）`
                     : '开通会员'}
                 </Button>
-              )}
+              ) : null}
               <Button
                 type="button"
                 variant="outline"
@@ -674,6 +674,7 @@ export function Profile() {
                       currentOrg?.slug === 'public' ||
                       !isLogin
                     }
+                    showSubBadge
                   />
                   <div className="mt-2 flex flex-wrap items-center gap-3 text-xs sm:text-sm lg:justify-center">
                     <Link
@@ -735,6 +736,19 @@ export function Profile() {
                     ) : null}
                     {isSelf ? (
                       <>
+                        {siteConfig.alipayConfigured ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            variant={mySub?.tier ? 'outline' : 'default'}
+                            onClick={() => setSubDialogOpen(true)}
+                          >
+                            {mySub?.tier
+                              ? `续费会员（剩 ${mySub.daysLeft} 天）`
+                              : '开通会员'}
+                          </Button>
+                        ) : null}
                         <Button
                           type="button"
                           size="sm"
