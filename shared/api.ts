@@ -49,6 +49,24 @@ export const endpoints = {
       /** 单用户域感知展示名 + 共属组织徽章 */
       identity: `${API_PREFIX}/user/social/identity`,
     },
+    subscription: {
+      /** 套餐列表（公开；前端对比表） */
+      plans: `${API_PREFIX}/user/subscription/plans`,
+      /** 创建订单（登录；返回二维码） */
+      createOrder: `${API_PREFIX}/user/subscription/create-order`,
+      /** 查订单状态（登录；回流轮询） */
+      getOrder: `${API_PREFIX}/user/subscription/order`,
+      /** 我的订阅状态（登录） */
+      my: `${API_PREFIX}/user/subscription/my`,
+      /** 站管：人工赋予/更新订阅 */
+      grant: `${API_PREFIX}/user/subscription/grant`,
+      /** 站管：取消订阅 */
+      revoke: `${API_PREFIX}/user/subscription/revoke`,
+      /** 站管：订阅用户列表 */
+      adminList: `${API_PREFIX}/user/subscription/admin/list`,
+      /** 站管：更新套餐配额模板 */
+      updatePlans: `${API_PREFIX}/user/subscription/admin/plans`,
+    },
     privacy: {
       get: `${API_PREFIX}/user/privacy/get`,
       update: `${API_PREFIX}/user/privacy/update`,
@@ -696,6 +714,8 @@ export interface UserProfile {
   spiders: SpiderBinding[]
   /** 最近一次 OJ 数据同步成功时间（unix 秒；0/缺省=尚无记录） */
   lastSyncAt?: number
+  /** 个人 AI 日报开关（仅 Pro 订阅生效；默认关；隐私字段） */
+  aiDailyEnabled?: boolean
 }
 
 /** 双方共属的其他组织内称呼（仅公共域视图返回；观众须同属该组织） */
@@ -724,6 +744,8 @@ export interface SocialUser {
   isSiteAdmin?: boolean
   /** 持有的自定义站点角色名（公共域 badge；内置角色不在其中） */
   siteRoles?: string[]
+  /** C 端订阅档 plus|pro（过期返回空） */
+  subTier?: string
 }
 
 export interface SocialListRes {
@@ -803,11 +825,75 @@ export interface UserListItem {
   adminForceDormant?: boolean
   /** 账号是否被禁用（禁止登录） */
   disabled?: boolean
+  /** C 端订阅档 plus|pro（过期返回空） */
+  subTier?: string
+  /** C 端订阅到期 unix 秒（0=未订阅/长期） */
+  subExpireAt?: number
 }
 
 export interface UserListRes {
   list: UserListItem[]
   total: number
+}
+
+/** C 端订阅套餐档（plan = free|plus|pro） */
+export interface SubscriptionPlan {
+  plan: string
+  /** 价格（分）；free=0 */
+  priceCents: number
+  /** 每日手动刷新次数 */
+  manualRefreshDaily: number
+  /** 自动同步间隔（分钟） */
+  syncIntervalMin: number
+  /** AI 分析题目次数/月（0=无） */
+  aiAnalyzeMonth: number
+  /** 爬题面 */
+  enableFetchProblem: boolean
+  /** AI 分析题目 */
+  enableAiAnalyze: boolean
+  /** AI 日报（Pro 专属，默认关） */
+  enableAiDaily: boolean
+  /** 常规日报（无 AI） */
+  enableRegularDaily: boolean
+  /** 购买时长（天） */
+  days: number
+  /** 上架 */
+  enabled: boolean
+}
+
+/** 我的订阅状态（tier 空=未订阅） */
+export interface MySubscription {
+  tier: string
+  /** 到期 unix 秒（0=长期） */
+  expireAt: number
+  /** alipay|manager */
+  source: string
+  /** 剩余天数（已过期按 0） */
+  daysLeft: number
+}
+
+/** 支付订单（创建返回） */
+export interface SubscriptionOrder {
+  orderNo: string
+  /** 支付宝预下单二维码内容（前端渲染） */
+  qrCode: string
+  /** 应付金额（分） */
+  amountCents: number
+  /** 订单失效 unix 秒 */
+  expireAt: number
+}
+
+/** 订阅用户列表项（站管） */
+export interface SubUser {
+  userId: number
+  username: string
+  name: string
+  /** plus|pro；空=未订阅 */
+  tier: string
+  /** 到期 unix 秒（0=长期） */
+  expireAt: number
+  /** alipay|manager */
+  source: string
 }
 
 export interface GroupInfo {

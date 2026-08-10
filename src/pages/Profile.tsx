@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner'
 import { listBlogByUsername } from '@/api/blog'
 import { getProfileById, getProfileByUsername } from '@/api/profile'
+import { getMySubscription } from '@/api/subscription'
 import { refreshSpider } from '@/api/spider'
 import {
   followUser,
@@ -35,6 +36,7 @@ import { getProblemUserProfile } from '@/api/problem'
 import type {
   ContestItem,
   HeatmapItem,
+  MySubscription,
   PeriodData,
   ProblemUserProfile,
   SocialUser,
@@ -46,6 +48,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { AlgoProfileChart } from '@/components/charts/algo-profile-chart'
 import { HeatmapSimple } from '@/components/heatmap-simple'
 import { PageShell } from '@/components/page-shell'
+import { SubscriptionDialog } from '@/components/subscription-dialog'
 import {
   UserIdentity,
   resolveDisplayName,
@@ -104,6 +107,9 @@ export function Profile() {
   /** 域感知主展示名 + 共属组织徽章 */
   const [identity, setIdentity] = useState<SocialUser | null>(null)
   const [targetId, setTargetId] = useState(0)
+  /** C 端订阅：我的订阅状态（开通入口/badge 用） */
+  const [mySub, setMySub] = useState<MySubscription | null>(null)
+  const [subDialogOpen, setSubDialogOpen] = useState(false)
   const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
   const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
   const [acHeatLoaded, setAcHeatLoaded] = useState(false)
@@ -270,6 +276,12 @@ export function Profile() {
           ? { ...prev, name: idRes.data!.name || prev.name }
           : prev,
       )
+    }
+
+    // 本人：加载 C 端订阅状态（开通入口按钮文案 / 状态展示）
+    if (isLogin && user?.userId === uid) {
+      const myRes = await getMySubscription()
+      if (!signal?.cancelled && myRes.success) setMySub(myRes.data)
     }
 
     // 次要块：不阻塞首屏
@@ -501,6 +513,15 @@ export function Profile() {
               </Button>
               <Button
                 type="button"
+                variant={mySub?.tier ? 'outline' : 'default'}
+                onClick={() => setSubDialogOpen(true)}
+              >
+                {mySub?.tier
+                  ? `续费会员（剩余 ${mySub.daysLeft} 天）`
+                  : '开通会员'}
+              </Button>
+              <Button
+                type="button"
                 variant="outline"
                 disabled={refreshing}
                 onClick={() => setRefreshConfirmOpen(true)}
@@ -587,6 +608,7 @@ export function Profile() {
   }
 
   return (
+    <>
     <PageShell className="gap-4">
       {/*
         移动端顺序：身份 Card（含 OJ）→ 刷题数据/主内容
@@ -1037,6 +1059,18 @@ export function Profile() {
 
       </div>
     </PageShell>
+    {isSelf ? (
+      <SubscriptionDialog
+        open={subDialogOpen}
+        onOpenChange={setSubDialogOpen}
+        onSubscribed={() => {
+          void getMySubscription().then((res) => {
+            if (res.success) setMySub(res.data)
+          })
+        }}
+      />
+    ) : null}
+    </>
   )
 }
 

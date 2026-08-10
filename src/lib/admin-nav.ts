@@ -2,6 +2,7 @@ import {
   BarChart3Icon,
   Building2Icon,
   ClipboardCheckIcon,
+  CrownIcon,
   FlagIcon,
   MegaphoneIcon,
   NewspaperIcon,
@@ -149,6 +150,14 @@ export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[]
       anyOf: [Perm.SiteUserList],
       section: 'site',
       isActive: (p) => pathActive(p, '/admin/site-users'),
+    },
+    {
+      to: '/admin/subscriptions',
+      label: '会员管理',
+      icon: CrownIcon,
+      anyOf: [Perm.SiteUserSync],
+      section: 'site',
+      isActive: (p) => pathActive(p, '/admin/subscriptions'),
     },
     {
       to: '/admin/orgs',

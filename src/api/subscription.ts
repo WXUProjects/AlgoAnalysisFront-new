@@ -1,0 +1,129 @@
+import {
+  endpoints,
+  type MySubscription,
+  type SubscriptionOrder,
+  type SubscriptionPlan,
+  type SubUser,
+} from '@shared/api'
+import { get, post, num, str, bool, type ApiResult } from '@/lib/http'
+
+function normalizePlan(raw: Record<string, unknown>): SubscriptionPlan {
+  return {
+    plan: str(raw.plan),
+    priceCents: num(raw.priceCents),
+    manualRefreshDaily: num(raw.manualRefreshDaily),
+    syncIntervalMin: num(raw.syncIntervalMin),
+    aiAnalyzeMonth: num(raw.aiAnalyzeMonth),
+    enableFetchProblem: bool(raw.enableFetchProblem),
+    enableAiAnalyze: bool(raw.enableAiAnalyze),
+    enableAiDaily: bool(raw.enableAiDaily),
+    enableRegularDaily: bool(raw.enableRegularDaily),
+    days: num(raw.days),
+    enabled: bool(raw.enabled),
+  }
+}
+
+function normalizeMySubscription(raw: Record<string, unknown>): MySubscription {
+  return {
+    tier: str(raw.tier),
+    expireAt: num(raw.expireAt),
+    source: str(raw.source),
+    daysLeft: num(raw.daysLeft),
+  }
+}
+
+function normalizeOrder(raw: Record<string, unknown>): SubscriptionOrder {
+  return {
+    orderNo: str(raw.orderNo),
+    qrCode: str(raw.qrCode),
+    amountCents: num(raw.amountCents),
+    expireAt: num(raw.expireAt),
+  }
+}
+
+function normalizeSubUser(raw: Record<string, unknown>): SubUser {
+  return {
+    userId: num(raw.userId),
+    username: str(raw.username),
+    name: str(raw.name),
+    tier: str(raw.tier),
+    expireAt: num(raw.expireAt),
+    source: str(raw.source),
+  }
+}
+
+/** 套餐列表（公开；前端对比表） */
+export async function listPlans(): Promise<ApiResult<SubscriptionPlan[]>> {
+  const res = await get<Record<string, unknown>>(endpoints.user.subscription.plans)
+  if (!res.success || !res.data) return { ...res, data: [] }
+  const plans = Array.isArray(res.data.plans)
+    ? (res.data.plans as Record<string, unknown>[]).map(normalizePlan)
+    : []
+  return { ...res, data: plans }
+}
+
+/** 我的订阅状态（tier 空=未订阅） */
+export async function getMySubscription(): Promise<ApiResult<MySubscription | null>> {
+  const res = await get<Record<string, unknown>>(endpoints.user.subscription.my)
+  if (!res.success || !res.data) return { ...res, data: null }
+  return { ...res, data: normalizeMySubscription(res.data) }
+}
+
+/** 创建订单（支付宝预下单，返回二维码内容） */
+export async function createOrder(plan: string): Promise<ApiResult<SubscriptionOrder | null>> {
+  const res = await post<Record<string, unknown>>(endpoints.user.subscription.createOrder, { plan })
+  if (!res.success || !res.data) return { ...res, data: null }
+  return { ...res, data: normalizeOrder(res.data) }
+}
+
+/** 查订单状态（支付回流轮询） */
+export async function getOrder(
+  orderNo: string,
+): Promise<ApiResult<{ status: string; paidAt: number } | null>> {
+  const res = await get<Record<string, unknown>>(endpoints.user.subscription.getOrder, { orderNo })
+  if (!res.success || !res.data) return { ...res, data: null }
+  return {
+    ...res,
+    data: {
+      status: str(res.data.status),
+      paidAt: num(res.data.paidAt),
+    },
+  }
+}
+
+/** 站管：人工赋予/更新订阅 */
+export async function grantSubscription(
+  userId: number,
+  tier: string,
+  days: number,
+): Promise<ApiResult<unknown>> {
+  return post(endpoints.user.subscription.grant, { userId, tier, days })
+}
+
+/** 站管：取消订阅 */
+export async function revokeSubscription(userId: number): Promise<ApiResult<unknown>> {
+  return post(endpoints.user.subscription.revoke, { userId })
+}
+
+/** 站管：订阅用户列表（keyword 模糊） */
+export async function listSubscriptions(
+  page: number,
+  pageSize: number,
+  keyword: string,
+): Promise<ApiResult<{ list: SubUser[]; total: number }>> {
+  const res = await get<Record<string, unknown>>(endpoints.user.subscription.adminList, {
+    page,
+    pageSize,
+    keyword,
+  })
+  if (!res.success || !res.data) return { ...res, data: { list: [], total: 0 } }
+  const list = Array.isArray(res.data.list)
+    ? (res.data.list as Record<string, unknown>[]).map(normalizeSubUser)
+    : []
+  return { ...res, data: { list, total: num(res.data.total) } }
+}
+
+/** 站管：更新套餐配额模板 */
+export async function updatePlans(plans: SubscriptionPlan[]): Promise<ApiResult<unknown>> {
+  return post(endpoints.user.subscription.updatePlans, { plans })
+}

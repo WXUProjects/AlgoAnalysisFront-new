@@ -17,6 +17,7 @@ import {
   setUserDisabled,
 } from '@/api/profile'
 import { assignRole, listRoles, listUserRoles, unassignRole } from '@/api/rbac'
+import { grantSubscription, revokeSubscription } from '@/api/subscription'
 import { updateSpider } from '@/api/spider'
 import type { GroupInfo, RbacRole, UserListItem } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
@@ -155,6 +156,10 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [savingIntervals, setSavingIntervals] = useState(false)
   const [refreshQuotaDraft, setRefreshQuotaDraft] = useState('')
   const [savingQuota, setSavingQuota] = useState(false)
+  /** C 端会员编辑（详情 Dialog） */
+  const [subTierDraft, setSubTierDraft] = useState('')
+  const [subDaysDraft, setSubDaysDraft] = useState('30')
+  const [savingSub, setSavingSub] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
   const [clearingDormant, setClearingDormant] = useState(false)
   const [freezingDormant, setFreezingDormant] = useState(false)
@@ -668,6 +673,64 @@ function UserListPage({ scope }: { scope: UserScope }) {
       if (next) {
         setDetailUser(next)
         setRefreshQuotaDraft(String(next.dailyRefreshQuota ?? 2))
+      }
+    }
+  }
+
+  /** 会员：赋予/续期（从当前到期叠加）或取消订阅；成功后重拉列表回填详情 */
+  async function handleGrantSub() {
+    if (!detailUser || !canSiteSync) return
+    if (!subTierDraft) {
+      toast.error('请选择会员档位')
+      return
+    }
+    const days = Number(subDaysDraft)
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      toast.error('天数须为 1–365 的整数')
+      return
+    }
+    setSavingSub(true)
+    const res = await grantSubscription(detailUser.userId, subTierDraft, days)
+    setSavingSub(false)
+    if (!res.success) {
+      toast.error(res.message || '赋予失败，稍后重试')
+      return
+    }
+    toast.success(res.message || '已赋予会员')
+    const listRes = await listProfiles(page, pageSize, scope, keyword || undefined, {
+      dormantOnly,
+    })
+    if (listRes.success && listRes.data) {
+      setList(listRes.data.list)
+      setTotal(listRes.data.total)
+      const next = listRes.data.list.find((x) => x.userId === detailUser.userId)
+      if (next) {
+        setDetailUser(next)
+        setSubTierDraft(next.subTier || '')
+      }
+    }
+  }
+
+  async function handleRevokeSub() {
+    if (!detailUser || !canSiteSync) return
+    setSavingSub(true)
+    const res = await revokeSubscription(detailUser.userId)
+    setSavingSub(false)
+    if (!res.success) {
+      toast.error(res.message || '取消失败，稍后重试')
+      return
+    }
+    toast.success('已取消订阅')
+    const listRes = await listProfiles(page, pageSize, scope, keyword || undefined, {
+      dormantOnly,
+    })
+    if (listRes.success && listRes.data) {
+      setList(listRes.data.list)
+      setTotal(listRes.data.total)
+      const next = listRes.data.list.find((x) => x.userId === detailUser.userId)
+      if (next) {
+        setDetailUser(next)
+        setSubTierDraft(next.subTier || '')
       }
     }
   }
@@ -1758,6 +1821,73 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     onClick={() => void saveRefreshQuota('clear')}
                   >
                     清除配额覆盖
+                  </Button>
+                </div>
+              </FieldGroup>
+
+              <Separator />
+
+              <FieldGroup className="gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">会员（C 端订阅）</p>
+                  <p className="text-xs text-muted-foreground">
+                    人工赋予/更新 Plus/Pro 会员：从当前到期时间起叠加天数（已过期从今天起算）；
+                    取消订阅立即回落免费。开通入口在个人资料页（支付宝支付）
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-end gap-3">
+                  <Field>
+                    <FieldLabel htmlFor="sub-tier-select">会员档位</FieldLabel>
+                    <Select
+                      value={subTierDraft}
+                      onValueChange={setSubTierDraft}
+                    >
+                      <SelectTrigger id="sub-tier-select" className="w-40">
+                        <SelectValue placeholder="无 / Plus / Pro" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">无（取消订阅）</SelectItem>
+                        <SelectItem value="plus">Plus 会员（2 元/月）</SelectItem>
+                        <SelectItem value="pro">Pro 会员（7 元/月）</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="sub-days">天数（1–365）</FieldLabel>
+                    <Input
+                      id="sub-days"
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={subDaysDraft}
+                      onChange={(e) => setSubDaysDraft(e.target.value)}
+                      disabled={savingSub}
+                    />
+                  </Field>
+                </div>
+                {detailUser.subTier ? (
+                  <p className="text-xs text-muted-foreground">
+                    当前：{detailUser.subTier === 'pro' ? 'Pro 会员' : 'Plus 会员'}
+                    {detailUser.subExpireAt ? ` · 到期 ${new Date(detailUser.subExpireAt * 1000).toLocaleDateString('zh-CN')}` : ''}
+                  </p>
+                ) : null}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={savingSub || !subTierDraft}
+                    onClick={() => void handleGrantSub()}
+                  >
+                    {savingSub ? '处理中…' : detailUser.subTier ? '续期 / 更新' : '赋予会员'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={savingSub || !detailUser.subTier}
+                    onClick={() => void handleRevokeSub()}
+                  >
+                    取消订阅
                   </Button>
                 </div>
               </FieldGroup>

@@ -112,6 +112,11 @@ export const DashboardSiteUser = lazy(() =>
     default: m.DashboardSiteUser,
   })),
 )
+export const DashboardSubscriptions = lazy(() =>
+  import('@/pages/dashboard/Subscriptions').then((m) => ({
+    default: m.DashboardSubscriptions,
+  })),
+)
 export const DashboardOrgBulletinManage = lazy(() =>
   import('@/pages/dashboard/BulletinManage').then((m) => ({
     default: m.DashboardOrgBulletinManage,

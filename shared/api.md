@@ -690,6 +690,42 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 { "userId": 1 }
 ```
 
+### Subscription（C 端订阅付费）
+
+套餐档位：`free` / `plus`（2 元/月）/ `pro`（7 元/月）。配额模板存 `subscription_plans`（站管可改），生效点：每日手动刷新次数、自动同步间隔、题面爬取/AI 分析资格、AI 分析月配额、AI 日报、会员 badge。开通方式：**支付宝在线支付**（create-order → 二维码 → 回调履约）或**站管人工赋予**（grant）。到期惰性回落（读取时判过期），不自动扣款。
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| GET | `/user/subscription/plans` | 否 | 套餐列表（含价格与配额，前端对比表）→ `{ code, message, plans: Plan[] }` |
+| POST | `/user/subscription/create-order` | 是 | body: `{ plan: plus\|pro }`；支付宝预下单，返回 `{ orderNo, qrCode, amountCents, expireAt }`；**未配置支付宝时返回「支付未配置」明确错误** |
+| GET | `/user/subscription/order` | 是 | query: `orderNo`（本人或站管）→ `{ orderNo, status: pending\|paid\|closed, paidAt }` |
+| GET | `/user/subscription/my` | 是 | 我的订阅 → `{ tier, expireAt, source: alipay\|manager, daysLeft }`（tier 空=未订阅） |
+| POST | `/user/subscription/grant` | 是(站点管理员, `site.user.sync`) | body: `{ userId, tier: plus\|pro, days: 1–365 }`；人工赋予/更新（从 `max(now, 当前到期)` 起叠加） |
+| POST | `/user/subscription/revoke` | 是(站点管理员, `site.user.sync`) | body: `{ userId }`；取消订阅立即回落免费（保留 AI 日报偏好） |
+| GET | `/user/subscription/admin/list` | 是(站点管理员, `site.user.sync`) | query: `page`, `pageSize`, `keyword`（**模糊** username/name，服务端过滤与 total 一致）→ `{ list: SubUser[], total }` |
+| POST | `/user/subscription/admin/plans` | 是(站点管理员, `site.user.sync`) | body: `{ plans: Plan[] }`；逐档 upsert 套餐模板（free 价格必须 0；manualRefreshDaily 0–100；syncIntervalMin 5–10080；aiAnalyzeMonth 0–10000） |
+
+**Plan**
+```json
+{
+  "plan": "plus", "priceCents": 200, "manualRefreshDaily": 15,
+  "syncIntervalMin": 60, "aiAnalyzeMonth": 0, "enableFetchProblem": false,
+  "enableAiAnalyze": false, "enableAiDaily": false, "enableRegularDaily": true,
+  "days": 30, "enabled": true
+}
+```
+
+**SubUser**
+```json
+{ "userId": 1, "username": "string", "name": "string", "tier": "pro", "expireAt": 0, "source": "manager" }
+```
+
+**支付宝支付**：回调 `POST /v1/payment/notify`（网关免 JWT，表单 x-www-form-urlencoded，RSA2 验签；金额相等校验；行锁幂等履约；回调地址常量 `https://algo.zhiyuansofts.cn/v1/payment/notify`，环境变量 `PAYMENT_NOTIFY_URL` 可覆盖）。支付宝配置存 `site_configs`（`alipay_app_id` / 私钥 / 公钥加密存储 / `alipay_sandbox`），未配置时下单报「支付未配置」。
+
+**AI 分析月配额语义**（`GetAiAnalyzeQuota` 服务间，core_data 入队前逐提交者检查 + Redis 月计数）：Pro 订阅 → 套餐 `aiAnalyzeMonth`（默认 400）；非订阅但有组织 → 跟随组织套餐配额（`plan_quota.AISummaryPerMonth`，取最高档组织）；无组织免费用户 → 0（不能触发 AI 分析）。
+
+**间隔/配额合并语义**：自动同步间隔 = min(站管覆盖, 组织 MIN, 订阅档, 免费默认 180)；每日手动刷新 = 覆盖 0 永久禁止、正覆盖与订阅档取最大、无覆盖订阅档优先否则默认 2。
+
 ### Group
 
 | Method | Path | Auth | 说明 |

@@ -44,6 +44,7 @@ function normalizeProfile(raw: Record<string, unknown>): UserProfile {
     roleId: num(raw.roleId),
     spiders,
     lastSyncAt,
+    aiDailyEnabled: raw.aiDailyEnabled === undefined ? undefined : bool(raw.aiDailyEnabled),
   }
 }
 
@@ -122,15 +123,21 @@ export async function updateProfile(body: {
   avatar?: string
   /** 修改/绑定邮箱时必填：发往新邮箱的验证码 */
   emailCode?: string
+  /** AI 日报开关（仅 Pro 订阅可开；省略=不改） */
+  aiDailyEnabled?: boolean
   /** @deprecated 昵称请在「我的组织」修改，服务端已忽略 */
   name?: string
 }): Promise<ApiResult<unknown>> {
-  return post(endpoints.user.profile.update, {
+  const payload: Record<string, unknown> = {
     userId: body.userId,
     email: body.email,
     avatar: body.avatar ?? '',
     emailCode: body.emailCode ?? '',
-  })
+  }
+  if (body.aiDailyEnabled !== undefined) {
+    payload.aiDailyEnabled = body.aiDailyEnabled
+  }
+  return post(endpoints.user.profile.update, payload)
 }
 
 export async function setEmailEnabled(

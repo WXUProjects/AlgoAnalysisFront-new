@@ -12,6 +12,8 @@ export type UserIdentityData = {
   isSiteAdmin?: boolean | null
   /** 自定义站点角色名（仅公共域视图展示 badge） */
   siteRoles?: string[] | null
+  /** C 端订阅档 plus|pro（badge 数据源） */
+  subTier?: string | null
 }
 
 /** 解析主展示文案：name 优先，否则 @username */
@@ -54,15 +56,21 @@ export function UserIdentity({
   const display = resolveDisplayName(user)
   // 主名已是队内名时仍可展示「组织名」；displayName 与主名相同则只标组织
   const badges = (user.sharedOrgs || []).filter((a) => a.orgName || a.displayName)
-  const roleBadges: { key: string; label: string }[] = []
+  const roleBadges: { key: string; label: string; variant: 'default' | 'secondary' | 'outline' }[] = []
   if (showRoleBadges) {
     if (user.isSiteAdmin) {
-      roleBadges.push({ key: 'site_admin', label: '站点管理员' })
+      roleBadges.push({ key: 'site_admin', label: '站点管理员', variant: 'default' })
+    }
+    // C 端订阅 badge（与站点管理员并列）：Pro 高亮，Plus 次要
+    if (user.subTier === 'pro') {
+      roleBadges.push({ key: 'sub_pro', label: 'Pro 会员', variant: 'default' })
+    } else if (user.subTier === 'plus') {
+      roleBadges.push({ key: 'sub_plus', label: 'Plus 会员', variant: 'secondary' })
     }
     // 自定义站点角色：站管已有专属徽章，这里只补角色名
     for (const name of user.siteRoles || []) {
       const label = (name || '').trim()
-      if (label) roleBadges.push({ key: `site_role:${label}`, label })
+      if (label) roleBadges.push({ key: `site_role:${label}`, label, variant: 'secondary' })
     }
   }
 
@@ -103,7 +111,7 @@ export function UserIdentity({
         {roleBadges.map((b) => (
           <Badge
             key={b.key}
-            variant={b.key === 'site_admin' ? 'default' : 'secondary'}
+            variant={b.variant}
             className="max-w-[8rem] truncate font-normal"
           >
             {b.label}

@@ -6,6 +6,7 @@ import type { SpiderBinding } from '@shared/api'
 import { sendCode } from '@/api/auth'
 import { getProblemUserProfile } from '@/api/problem'
 import { setEmailEnabled, updateProfile } from '@/api/profile'
+import { getMySubscription } from '@/api/subscription'
 import { getPrivacy, updatePrivacy } from '@/api/social'
 import { setSpider } from '@/api/spider'
 import { uploadImage } from '@/api/upload'
@@ -234,6 +235,10 @@ export function ChangeProfile() {
   const [avatar, setAvatar] = useState('')
   const [emailOn, setEmailOn] = useState(false)
   const [weeklyOn, setWeeklyOn] = useState(false)
+  /** AI 日报（仅 Pro 订阅显示；默认关） */
+  const [aiDailyOn, setAiDailyOn] = useState(false)
+  const [isPro, setIsPro] = useState(false)
+  const [aiDailyLoading, setAiDailyLoading] = useState(false)
   const [bindOpen, setBindOpen] = useState(false)
   const [bindLocked, setBindLocked] = useState<OjPlatform | ''>(preOj || '')
   const [acCounts, setAcCounts] = useState<Map<string, number>>(new Map())
@@ -260,8 +265,21 @@ export function ChangeProfile() {
       setAvatar(profile.avatar || '')
       setEmailOn(profile.emailEnabled ?? false)
       setWeeklyOn(profile.emailWeeklyEnabled ?? false)
+      setAiDailyOn(profile.aiDailyEnabled ?? false)
     }
   }, [profile])
+
+  // AI 日报仅 Pro 会员显示：拉我的订阅判断档位
+  useEffect(() => {
+    let cancelled = false
+    void getMySubscription().then((res) => {
+      if (cancelled) return
+      if (res.success && res.data?.tier === 'pro') setIsPro(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (preOj) {
@@ -401,6 +419,28 @@ export function ChangeProfile() {
     } else {
       if (kind === 'daily') setEmailOn(!checked)
       else setWeeklyOn(!checked)
+      toast.error(res.message || '没设置成，过会儿再试')
+    }
+  }
+
+  async function handleAiDailyToggle(checked: boolean) {
+    if (!user) return
+    if (!isPro) {
+      toast.error('AI 日报仅 Pro 会员可用')
+      return
+    }
+    setAiDailyOn(checked)
+    setAiDailyLoading(true)
+    const res = await updateProfile({
+      userId: user.userId,
+      email: boundEmail,
+      aiDailyEnabled: checked,
+    })
+    setAiDailyLoading(false)
+    if (res.success) {
+      toast.success(checked ? '已开启 AI 日报' : '已关闭 AI 日报')
+    } else {
+      setAiDailyOn(!checked)
       toast.error(res.message || '没设置成，过会儿再试')
     }
   }
@@ -615,6 +655,22 @@ export function ChangeProfile() {
                   </p>
                 )}
               </Field>
+              {isPro ? (
+                <Field className="gap-1.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <FieldLabel htmlFor="ai-daily-on">AI 日报</FieldLabel>
+                    <Switch
+                      id="ai-daily-on"
+                      checked={aiDailyOn}
+                      disabled={aiDailyLoading}
+                      onCheckedChange={(v) => void handleAiDailyToggle(v)}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Pro 会员专属：日报由 AI 生成点评与建议（比常规日报更详细）。
+                  </p>
+                </Field>
+              ) : null}
             </FieldGroup>
           </CardContent>
           <CardFooter className="flex gap-2 px-4">

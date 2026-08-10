@@ -22,6 +22,7 @@ import {
   DashboardSiteNotices,
   DashboardSiteSettings,
   DashboardSiteUser,
+  DashboardSubscriptions,
 } from '@/routes/lazy-pages'
 
 function CoachOutlet() {
@@ -53,6 +54,7 @@ const ADMIN_INDEX_CANDIDATES: { path: string; anyOf: string[] }[] = [
   { path: 'reports', anyOf: [Perm.ContentReportHandle] },
   { path: 'site-statistics', anyOf: [Perm.SiteStatsRead] },
   { path: 'site-users', anyOf: [Perm.SiteUserList] },
+  { path: 'subscriptions', anyOf: [Perm.SiteUserSync] },
   { path: 'site-bulletin', anyOf: [Perm.SiteBulletin, Perm.SiteEmergency] },
   { path: 'site', anyOf: [Perm.SiteConfigRead, Perm.SiteConfigWrite] },
 ]
@@ -130,6 +132,16 @@ export const adminRoutes: RouteObject = {
         <RequirePerm anyOf={[Perm.SiteUserList]}>
           <Lazy>
             <DashboardSiteUser />
+          </Lazy>
+        </RequirePerm>
+      ),
+    },
+    {
+      path: 'subscriptions',
+      element: (
+        <RequirePerm anyOf={[Perm.SiteUserSync]}>
+          <Lazy>
+            <DashboardSubscriptions />
           </Lazy>
         </RequirePerm>
       ),
