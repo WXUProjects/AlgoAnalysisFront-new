@@ -723,7 +723,7 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 
 **支付FM支付**：回调 `GET/POST /v1/payment/notify`（网关免 JWT，MD5 验签 `md5(state+商户号+订单号+金额+密钥)`，state=1 才成功；金额相等校验；行锁幂等履约；回调地址常量 `https://algo.zhiyuansofts.cn/v1/payment/notify`，环境变量 `PAYMENT_NOTIFY_URL` 可覆盖）。支付FM配置存 `site_configs`（`payfm_api_base` / `payfm_merchant_no` / `payfm_secret` 加密存储 / `payfm_pay_type`），未配置时下单报「支付未配置」。
 
-**AI 分析月配额语义**（`GetAiAnalyzeQuota` 服务间，core_data 入队前逐提交者检查 + Redis 月计数）：组织开通 AI 分析（任一非公共域 active 组织 `enable_ai_summary=true`）→ `unlimited=true` 无限配额（组织成员优先消耗组织，不扣个人配额）；否则 Pro 订阅 → 套餐 `aiAnalyzeMonth`（默认 400）；否则 0（不能触发 AI 分析）。`MyAiStatus` 同步标记 `aiAnalyzeSource`（pro/org/pro_org/none）与 `aiAnalyzeUnlimited`。
+**AI 分析月配额语义**（`GetAiAnalyzeQuota` 服务间，core_data 入队前逐提交者检查 + Redis 月计数）：组织开通题面 AI 分析（任一非公共域 active 组织 `enable_ai_analyze=true`，即 OrgsManage 的「题面 AI 分析开关」）→ `unlimited=true` 无限配额（组织成员优先消耗组织，不扣个人配额）；否则 Pro 订阅 → 套餐 `aiAnalyzeMonth`（默认 400）；否则 0（不能触发 AI 分析）。`MyAiStatus` 同步标记 `aiAnalyzeSource`（pro/org/pro_org/none）与 `aiAnalyzeUnlimited`。
 
 **间隔/配额合并语义**：自动同步间隔 = min(站管覆盖, 组织 MIN, 订阅档, 免费默认 180)；每日手动刷新 = 覆盖 0 永久禁止、正覆盖与订阅档取最大、无覆盖订阅档优先否则默认 2。
 
