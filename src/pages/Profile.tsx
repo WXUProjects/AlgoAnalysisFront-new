@@ -349,6 +349,19 @@ export function Profile() {
     }
   }, [targetId, loading, acHeatLoaded])
 
+  // 打开「刷新做题记录」确认框时拉取配额/冷却状态。
+  // 注意：hook 必须在下方 early return 之前注册，否则首帧 hook 数与加载完成后不一致 → React #310。
+  const loadRefreshStatus = useCallback(() => {
+    void getRefreshStatus().then((res) => {
+      if (res.success && res.data) setRefreshStatus(res.data)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!refreshConfirmOpen) return
+    loadRefreshStatus()
+  }, [refreshConfirmOpen, loadRefreshStatus])
+
   function handleLogout() {
     logout()
     toast.success('已退出登录')
@@ -484,17 +497,6 @@ export function Profile() {
       </div>
     )
   }
-
-  const loadRefreshStatus = useCallback(() => {
-    void getRefreshStatus().then((res) => {
-      if (res.success && res.data) setRefreshStatus(res.data)
-    })
-  }, [])
-
-  useEffect(() => {
-    if (!refreshConfirmOpen) return
-    loadRefreshStatus()
-  }, [refreshConfirmOpen, loadRefreshStatus])
 
   async function handleRefresh() {
     setRefreshConfirmOpen(false)
