@@ -178,6 +178,23 @@ export async function setSyncExempt(
   return post(endpoints.user.profile.setSyncExempt, { userId, exempt })
 }
 
+/**
+ * 站点管理员：个人每日手动刷新做题记录配额覆盖
+ * quota：0=禁止手动刷新；1-100=每日次数
+ * clear=true 时忽略 quota，清除覆盖回落全局默认（2 次/日）
+ */
+export async function setRefreshQuota(body: {
+  userId: number
+  quota?: number
+  clear?: boolean
+}): Promise<ApiResult<unknown>> {
+  return post(endpoints.user.profile.setRefreshQuota, {
+    userId: body.userId,
+    quota: body.quota ?? 0,
+    clear: body.clear ?? false,
+  })
+}
+
 /** 站点管理员：批量解除不活跃（刷新最近活跃为当前时间；超时后仍会再休眠） */
 export async function clearDormant(
   userIds: number[],

@@ -123,13 +123,14 @@
 | GET | `/user/profile/get-by-id` | 否 | query: `userId`；公共域受隐私约束，私人域组织内隐私配置失效 |
 | GET | `/user/profile/get-by-username` | 否 | query: `username` 精确匹配；返回同 get-by-id |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` 模糊（用户名/昵称） |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称），**`dormantOnly=true`（或 `dormant=true`）仅「已暂停同步」用户**（含站管强制冻结/禁用，或超时且无豁免）；**`inactiveDays=N`（1–365）「最近 N 天未登录」**（优先于 dormantOnly；**不排除豁免**，便于站管预览后强制冻结）；**org 视图 `name`=组织内名称**；**site 视图 `name`=公共域外显名称**（≡站内昵称）；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`、`problemFetchEnabled`/`problemAiEnabled`、`createdAt`、`spiderIntervalMin`/`aiSummaryIntervalMin`、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`、`syncExempt`/`lastLoginAt`/`dormant`/`adminForceDormant`/`disabled` |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称），**`dormantOnly=true`（或 `dormant=true`）仅「已暂停同步」用户**（含站管强制冻结/禁用，或超时且无豁免）；**`inactiveDays=N`（1–365）「最近 N 天未登录」**（优先于 dormantOnly；**不排除豁免**，便于站管预览后强制冻结）；**org 视图 `name`=组织内名称**；**site 视图 `name`=公共域外显名称**（≡站内昵称）；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`、`problemFetchEnabled`/`problemAiEnabled`、`createdAt`、`spiderIntervalMin`/`aiSummaryIntervalMin`、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`、`dailyRefreshQuota`（每日手动刷新有效配额，0=禁止，默认 2）/`dailyRefreshQuotaOverridden`、`syncExempt`/`lastLoginAt`/`dormant`/`adminForceDormant`/`disabled` |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新头像/邮箱；`name` 已忽略（昵称改「我的组织」）；邮箱变更须 `emailCode`（`purpose=change_email`） |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
 | POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；本人 / 站点管理员 / **当前组织 staff 管理本组织成员**；无组织授权时不可开启日报/周报 |
 | POST | `/user/profile/set-problem-pipeline` | 是(站点管理员) | body: `{ userId, enabled, kind: fetch\|ai }`；个人覆盖：近窗提交是否触发题面爬取 / 题面 AI（默认按是否非公共域组织） |
 | POST | `/user/profile/set-sync-intervals` | 是(站点管理员) | body: `{ userId, setSpider?, spiderIntervalMin?, setAi?, aiSummaryIntervalMin? }`；个人覆盖爬取/AI 总结间隔（分钟，**优先级最高**）；间隔 `0` 表示清除覆盖回落组织 MIN；范围 5–10080 |
+| POST | `/user/profile/set-refresh-quota` | 是(站点管理员) | body: `{ userId, quota, clear? }`；个人每日手动刷新做题记录配额覆盖：`clear=true` 清除覆盖回落全局默认（2 次/日）；否则 `quota` `0`=禁止手动刷新、`1–100`=每日次数 |
 | POST | `/user/profile/set-sync-exempt` | 是(站点管理员) | body: `{ userId, exempt }`；永不休眠（跳过不活跃判定） |
 | POST | `/user/profile/clear-dormant` | 是(站点管理员) | body: `{ userIds: number[] }`（单次最多 200）；**一次性**解除不活跃：将 `last_login_at` 刷新为当前时间并清除 `admin_force_dormant`；超时后仍会再休眠（≠ `sync_exempt`）；返回 `{ code, message, updated }` |
 | POST | `/user/profile/force-dormant` | 是(站点管理员) | body: `{ userIds?: number[] }` **或** `{ inactiveDays: number }`（1–365，一键模式）；回拨 `last_login_at` + 标记 `admin_force_dormant`；**不遵循组织约定等豁免**（不可冻自己）；登录或 clear-dormant 后清除强制标记；返回 `{ code, message, updated, skipped }` |
@@ -222,11 +223,11 @@
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc\|blog\|blog_cover`。本地用途 ≤3MB（jpg/png/gif/webp/ico/**svg**；svg 拒脚本）。**`blog`/`blog_cover`**：走又拍云（需站点配置又拍云 + 站管在 `/admin/blog` 授权该用户），清晰度优先压缩，≤约 12MB 原图，返回公网 `{ url, hash }`（`hash`=落库字节 SHA-256，内容寻址 key `/blog/{uid}/{hash}{ext}`）；未授权或未配置则 403。本地 url 带真实扩展名 |
+| POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc\|blog\|blog_cover`。本地用途（`site\|bulletin\|misc`）≤3MB（jpg/png/gif/webp/ico/**svg**；svg 拒脚本），本地 url 带真实扩展名。**`blog`/`blog_cover`**：走又拍云（需站点配置又拍云 + 站管在 `/admin/blog` 授权该用户），清晰度优先压缩，≤约 12MB 原图，返回公网 `{ url, hash }`（`hash`=落库字节 SHA-256，内容寻址 key `/blog/{uid}/{hash}{ext}`）；未授权或未配置则 403。**`avatar`**：也走又拍云（仅需站点配置又拍云，无需博客授权），≤3MB（jpg/png/gif/webp/ico，**拒 svg**），清晰度优先压缩，返回公网 `{ url, hash }`（key `/avatar/{uid}/{hash}{ext}`），未配置则 403；`users.avatar` 落库为 path-only key，读取时按当前图床域名扩展（换域/切 https 即时生效） |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
 | GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo） |
-| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** / **OJ 爬虫账号** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails` + `opsNotifyEmails`） |
-| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails` + `opsNotifyEmails`；密钥空串表示不修改。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
+| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** / **OJ 爬虫账号** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`） |
+| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`（运维磁盘统计目录，数据盘挂载点；空=默认 /data，未挂载回退 /）；密钥空串表示不修改。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
 | POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
 | GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |
@@ -347,7 +348,7 @@
 
 ### Paste（粘贴板 / Pastebin）
 
-HTTP 手写路由。创建需登录；公开查看不需登录。
+Proto 生成（`cwxu-algo/api/user/v1/paste/paste.proto`）。创建需登录；公开查看不需登录。
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
@@ -376,7 +377,7 @@ HTTP 手写路由。创建需登录；公开查看不需登录。
 
 ### Blog（个人博客）
 
-HTTP 手写路由。文章为**单一数据源**（博客壳与主站推荐共用同一条记录）。路径前缀 `/user/blog/*`。
+Proto 生成（`cwxu-algo/api/user/v1/blog/blog.proto`）。文章为**单一数据源**（博客壳与主站推荐共用同一条记录）。路径前缀 `/user/blog/*`。
 
 **可见性**
 
@@ -569,7 +570,7 @@ nginx：**首版策略**——上述公开页 **一律** 反代 SEO HTML（不�
 
 ### Org（GoAlgo 多租户）
 
-HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`（`member|captain|group_leader|coach|org_admin`）/ `pm`（细粒度权限位图，见「RBAC 角色与权限」一节）。
+Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` / `orgId` / `orgRole`（`member|captain|group_leader|coach|org_admin`）/ `pm`（细粒度权限位图，见「RBAC 角色与权限」一节）。
 
 **组织内角色层级（严格）**：`org_admin`（组织管理员）> `coach`（教练）> `group_leader`（组长）> `captain`（队长）> `member`（成员）。
 
@@ -605,6 +606,7 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/user/org/members/set-display-name` | 本人或组织/站点管理员 | `{ orgId, userId?, orgDisplayName }` 改组织内名称 |
 | GET | `/user/org/member-ids` | 否/登录 | query: `orgId` → `{ userIds }`（core 隔离用） |
 | GET | `/user/profile/ids-by-org` | 否 | query: `orgId` → 组织成员 ids（gRPC/HTTP） |
+| GET | `/user/profile/org-coach-ids` | 否（内部） | query: `orgId` → 组织教练 userId 列表（agent 训练报告/周报排除教练） |
 | GET | `/user/profile/non-public-org-user-ids` | 否（内部） | 非公共域组织用户 ids（题面 AI：仅这些用户的提交触发分析） |
 | GET | `/user/org/invite` | 组织管理员 | query: `orgId` → 团队识别码 |
 | GET | `/user/org/invite/preview` | 否 | query: `code` → `{ orgId, orgName, name, brandTitle, brandLogo, joinMode }` 邀请页欢迎信息（不返回识别码以外的敏感配置） |
@@ -777,6 +779,8 @@ HTTP 手写路由（非 proto）+ Auth proto。JWT 含 `isSiteAdmin` / `orgId` /
 | POST | `/core/spider/update-platform` | 是(站点管理员) | 仅某平台全量回填；body `{ platform: "LeetCode" }`；清该平台 pending/inflight 后 needAll 入队 |
 | GET | `/core/spider/submit-inventory` | 是(站点管理员) | 真实入库库存：`submitLogsTotal` / `submitLogsRealTotal` / `oldestTime` / `newestTime`（`countedSubmitIdsTotal` 已废弃恒为 0） |
 | GET | `/core/spider/monitor` | 是(站点管理员) | 各 OJ 爬虫模块监控（提交/题库/比赛/账号），返回 `platforms[]` + `collectedAt` |
+| GET | `/core/spider/platform-users` | 是(站点管理员) | 某 OJ 的绑定用户列表，query `platform`、`offset?`、`limit?`（默认 20，最大 100）；返回 `total` + `list[{userId,name,username,ojUsername,rating,hasRating}]`（name 为站内展示名，无则回退站内用户名；ojUsername 为绑定的 OJ 账号） |
+| POST | `/core/spider/refresh` | 是 | 用户手动**增量**刷新自己的 OJ 做题记录（**每日限 2 次**，按上海自然日，Redis 计数）；返回 `{ code, message, remaining }`；超出限额 code=1，message 提示「每个用户每日拥有两次手动刷新做题记录次数，当前还剩下 N 次」且不入队 |
 | POST | `/core/spider/toggle-platform` | 是(站点管理员) | 暂停/恢复某 OJ 爬虫同步；body `{ platform, enabled }`。暂停**不清空**绑定/历史数据，仅不再入队/消费该平台 |
 | POST | `/core/spider/purge-submits-and-recrawl` | 是(站点管理员) | **硬清**训练数据并全量重爬；body `{ confirm: "PURGE_SUBMITS" }`。删：`submit_logs`（真假全删）、账本、日汇总、AC 预聚合、`contest_logs`、提醒发送日志 + 相关 Redis。**保留**：`platforms`、题库、公告/紧急通知、比赛日历赛程与订阅；用户账号在 user 库不动 |
 
@@ -1491,6 +1495,6 @@ GET    /api/agent/training-report/download
 
 ## 来源
 
-- Proto: `cwxu-algo/api/{user,core,agent}/v1/**/*.proto`
+- Proto: `cwxu-algo/api/{user,core,agent}/v1/**/*.proto`（**2026-08-08 起业务接口全部由 proto 生成**；仅文件上传 `/user/upload`、静态 `/user/static/*`、备份导入/下载、SEO HTML/sitemap、训练报告下载等二进制/非 JSON 接口保留手写路由）
 - OpenAPI: `cwxu-algo/openapi.yaml`
 - 网关路由: `cwxu-algo/app/gateway/cmd/gateway/config.yaml`

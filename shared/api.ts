@@ -26,6 +26,7 @@ export const endpoints = {
       setEmailEnabled: `${API_PREFIX}/user/profile/set-email-enabled`,
       setProblemPipeline: `${API_PREFIX}/user/profile/set-problem-pipeline`,
       setSyncIntervals: `${API_PREFIX}/user/profile/set-sync-intervals`,
+      setRefreshQuota: `${API_PREFIX}/user/profile/set-refresh-quota`,
       setSyncExempt: `${API_PREFIX}/user/profile/set-sync-exempt`,
       clearDormant: `${API_PREFIX}/user/profile/clear-dormant`,
       forceDormant: `${API_PREFIX}/user/profile/force-dormant`,
@@ -125,6 +126,8 @@ export const endpoints = {
       joinReview: `${API_PREFIX}/user/org/join-requests/review`,
     },
     profileIdsByOrg: `${API_PREFIX}/user/profile/ids-by-org`,
+    /** agent 训练报告/周报排除教练用（内部） */
+    orgCoachIds: `${API_PREFIX}/user/profile/org-coach-ids`,
     platform: {
       setSiteAdmin: `${API_PREFIX}/user/platform/set-site-admin`,
     },
@@ -786,6 +789,10 @@ export interface UserListItem {
   spiderIntervalOverridden?: boolean
   /** 是否存在站点管理员 AI 总结间隔覆盖 */
   aiSummaryIntervalOverridden?: boolean
+  /** 每日手动刷新做题记录有效配额（0=禁止；默认 2） */
+  dailyRefreshQuota?: number
+  /** 是否存在站点管理员每日刷新配额覆盖 */
+  dailyRefreshQuotaOverridden?: boolean
   /** 站管：永不休眠 */
   syncExempt?: boolean
   /** 最近活跃 unix 秒 */

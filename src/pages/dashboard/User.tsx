@@ -10,6 +10,7 @@ import {
   moveGroup,
   setEmailEnabled,
   setProblemPipeline,
+  setRefreshQuota,
   setSiteAdmin,
   setSyncExempt,
   setSyncIntervals,
@@ -152,6 +153,8 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [detailUser, setDetailUser] = useState<UserListItem | null>(null)
   const [spiderIntervalDraft, setSpiderIntervalDraft] = useState('')
   const [savingIntervals, setSavingIntervals] = useState(false)
+  const [refreshQuotaDraft, setRefreshQuotaDraft] = useState('')
+  const [savingQuota, setSavingQuota] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
   const [clearingDormant, setClearingDormant] = useState(false)
   const [freezingDormant, setFreezingDormant] = useState(false)
@@ -587,6 +590,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
   function openDetail(u: UserListItem) {
     setDetailUser(u)
     setSpiderIntervalDraft(String(u.spiderIntervalMin ?? 60))
+    setRefreshQuotaDraft(String(u.dailyRefreshQuota ?? 2))
   }
 
   async function saveSyncIntervals(mode: 'save' | 'clearSpider') {
@@ -627,6 +631,43 @@ function UserListPage({ scope }: { scope: UserScope }) {
       if (next) {
         setDetailUser(next)
         setSpiderIntervalDraft(String(next.spiderIntervalMin ?? 60))
+      }
+    }
+  }
+
+  async function saveRefreshQuota(mode: 'save' | 'clear') {
+    if (!detailUser || !canSiteSync) return
+    let quota = Number(refreshQuotaDraft)
+    if (mode === 'save') {
+      if (!Number.isInteger(quota) || quota < 0 || quota > 100) {
+        toast.error('每日刷新配额须为 0（禁止）或 1–100 次')
+        return
+      }
+    } else {
+      quota = 0
+    }
+    setSavingQuota(true)
+    const res =
+      mode === 'clear'
+        ? await setRefreshQuota({ userId: detailUser.userId, clear: true })
+        : await setRefreshQuota({ userId: detailUser.userId, quota })
+    setSavingQuota(false)
+    if (!res.success) {
+      toast.error(res.message || '配额保存失败，稍后重试')
+      return
+    }
+    toast.success(res.message || '已更新每日刷新配额')
+    // 刷新列表以拿有效配额
+    const listRes = await listProfiles(page, pageSize, scope, keyword || undefined, {
+      dormantOnly,
+    })
+    if (listRes.success && listRes.data) {
+      setList(listRes.data.list)
+      setTotal(listRes.data.total)
+      const next = listRes.data.list.find((x) => x.userId === detailUser.userId)
+      if (next) {
+        setDetailUser(next)
+        setRefreshQuotaDraft(String(next.dailyRefreshQuota ?? 2))
       }
     }
   }
@@ -1664,6 +1705,59 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     onClick={() => void saveSyncIntervals('clearSpider')}
                   >
                     清除同步覆盖
+                  </Button>
+                </div>
+              </FieldGroup>
+
+              <Separator />
+
+              <FieldGroup className="gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">每日刷新配额</p>
+                  <p className="text-xs text-muted-foreground">
+                    用户手动刷新 OJ 做题记录的次数上限（次/日）。站管指定后优先于全局默认；0 = 禁止手动刷新
+                  </p>
+                </div>
+                <Field>
+                  <FieldLabel htmlFor="refresh-quota">
+                    每日手动刷新次数
+                    {detailUser.dailyRefreshQuotaOverridden ? (
+                      <Badge variant="secondary" className="ml-2 font-normal">
+                        站管指定
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="ml-2 font-normal">
+                        全局默认
+                      </Badge>
+                    )}
+                  </FieldLabel>
+                  <Input
+                    id="refresh-quota"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={refreshQuotaDraft}
+                    onChange={(e) => setRefreshQuotaDraft(e.target.value)}
+                    disabled={savingQuota}
+                  />
+                </Field>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={savingQuota}
+                    onClick={() => void saveRefreshQuota('save')}
+                  >
+                    {savingQuota ? '保存中…' : '保存配额'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={savingQuota || !detailUser.dailyRefreshQuotaOverridden}
+                    onClick={() => void saveRefreshQuota('clear')}
+                  >
+                    清除配额覆盖
                   </Button>
                 </div>
               </FieldGroup>
