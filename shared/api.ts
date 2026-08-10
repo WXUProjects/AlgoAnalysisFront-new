@@ -1042,6 +1042,8 @@ export interface OrgMemberInfo {
   /** 组织内名称 org_members.org_display_name */
   orgDisplayName?: string
   avatar?: string
+  /** C 端订阅档 plus|pro */
+  subTier?: string
   role: OrgRoleValue | string
   groupId?: number | null
   joinedAt?: number
@@ -1252,6 +1254,8 @@ export interface ProblemFollowingStatusItem {
   username: string
   name: string
   avatar: string
+  /** C 端订阅档 plus|pro */
+  subTier?: string
   /** AC | TRIED | NONE */
   status: string
 }
