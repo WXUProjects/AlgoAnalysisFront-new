@@ -200,7 +200,10 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
           <DialogTitle>赞助支持</DialogTitle>
           <DialogDescription>
             GoAlgo 的持续运营离不开大家的支持——赞助费用将用于维持基本运维与 AI 服务成本。
-            作为回馈，赞助用户可解锁更多每日刷新次数与 AI 能力。
+            <br />
+            <span className="font-semibold">
+              作为回馈，赞助用户可解锁更多每日刷新次数与 AI 能力。
+            </span>
           </DialogDescription>
         </DialogHeader>
 
@@ -237,16 +240,22 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
                 })}
               </TableRow>
             ))}
-            {mySub?.tier ? (
+            {mySub?.tier || refreshStatus ? (
               <TableRow>
                 <TableCell className="text-sm">当前状态</TableCell>
                 <TableCell colSpan={3} className="text-center">
-                  <Badge variant={mySub.tier === 'pro' ? 'default' : 'secondary'}>
-                    {mySub.tier === 'pro' ? 'Pro 会员' : 'Plus 会员'}
-                  </Badge>
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    剩余 {mySub.daysLeft} 天
-                  </span>
+                  {mySub?.tier ? (
+                    <>
+                      <Badge variant={mySub.tier === 'pro' ? 'default' : 'secondary'}>
+                        {mySub.tier === 'pro' ? 'Pro 会员' : 'Plus 会员'}
+                      </Badge>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        剩余 {mySub.daysLeft} 天
+                      </span>
+                    </>
+                  ) : (
+                    <Badge variant="secondary">免费版</Badge>
+                  )}
                   {refreshStatus && refreshStatus.syncIntervalMin > 0 ? (
                     <span className="ml-2 text-xs text-muted-foreground">
                       同步间隔 {refreshStatus.syncIntervalMin} 分钟
@@ -262,6 +271,10 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
             ) : null}
           </TableBody>
         </Table>
+
+        <p className="text-center text-xs leading-relaxed text-muted-foreground">
+          AI 分析题目，可以让画像更精准。
+        </p>
 
         {mySub?.tier ? (
           <div className="space-y-1 rounded-lg border p-3 text-xs leading-relaxed text-muted-foreground">
@@ -300,7 +313,6 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
                 </p>
               </>
             ) : null}
-            <p>AI 分析题目，可以让画像更精准。</p>
           </div>
         ) : null}
 
