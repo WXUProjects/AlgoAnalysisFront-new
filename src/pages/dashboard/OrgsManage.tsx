@@ -78,6 +78,8 @@ export function DashboardOrgsManage() {
   const [enableAiWeeklyEmail, setEnableAiWeeklyEmail] = useState(true)
   const [enableSpider, setEnableSpider] = useState(true)
   const [forceSync, setForceSync] = useState(false)
+  const [enableFetchProblem, setEnableFetchProblem] = useState(true)
+  const [enableAiAnalyze, setEnableAiAnalyze] = useState(true)
   const [spiderInterval, setSpiderInterval] = useState(60)
   const [emailSchedule, setEmailSchedule] = useState('30 7 * * *')
   const [status, setStatus] = useState('active')
@@ -133,6 +135,8 @@ export function DashboardOrgsManage() {
     setJoinMode(selected.joinMode || 'auto')
     setEnableAiEmail(selected.enableAiEmail !== false)
     setEnableAiWeeklyEmail(selected.enableAiWeeklyEmail !== false)
+    setEnableFetchProblem(selected.enableFetchProblem !== false)
+    setEnableAiAnalyze(selected.enableAiAnalyze !== false)
     setEnableSpider(selected.enableSpider !== false)
     setForceSync(!!selected.forceSync)
     setSpiderInterval(selected.spiderIntervalMin || 60)
@@ -168,6 +172,8 @@ export function DashboardOrgsManage() {
       joinMode,
       enableAiEmail,
       enableAiWeeklyEmail,
+      enableFetchProblem,
+      enableAiAnalyze,
       enableSpider,
       forceSync,
       spiderIntervalMin: spiderInterval,
@@ -437,6 +443,24 @@ export function DashboardOrgsManage() {
                           </span>
                         </div>
                         <Switch checked={forceSync} onCheckedChange={setForceSync} />
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                          <Label>题面爬取</Label>
+                          <span className="text-xs text-muted-foreground">
+                            近窗提交时自动爬取题面内容（管理端覆盖优先）
+                          </span>
+                        </div>
+                        <Switch checked={enableFetchProblem} onCheckedChange={setEnableFetchProblem} />
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                          <Label>题面 AI 分析</Label>
+                          <span className="text-xs text-muted-foreground">
+                            近窗提交时自动调用大模型分析题面（管理端覆盖优先）
+                          </span>
+                        </div>
+                        <Switch checked={enableAiAnalyze} onCheckedChange={setEnableAiAnalyze} />
                       </div>
                       <div className="space-y-2">
                         <Label>数据同步间隔（分钟）</Label>
