@@ -1607,8 +1607,6 @@ export interface ProblemCommentItem {
   replies?: ProblemCommentItem[]
 }
 
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
 /** 用户题解列表项（非 AI SolutionMeta） */
 export interface ProblemUserSolutionItem {
   id: number
@@ -1617,6 +1615,8 @@ export interface ProblemUserSolutionItem {
   username: string
   name: string
   avatar?: string
+  /** C 端订阅档 plus|pro @omitempty */
+  subTier?: string
   title: string
   excerpt?: string
   contentMd?: string
@@ -1701,8 +1701,6 @@ export interface BlogReportAdminItem {
   }
 }
 
-  /** C 端订阅档 plus|pro @omitempty */
-  subTier?: string
 /** 发现页动态类型（公共域全站聚合；私有域按组织隔离） */
 export type ActivityFeedType = 'comment' | 'solution' | string
 
