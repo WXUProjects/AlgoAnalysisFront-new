@@ -225,9 +225,9 @@
 |--------|------|------|------|
 | POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc\|blog\|blog_cover`。本地用途（`site\|bulletin\|misc`）≤3MB（jpg/png/gif/webp/ico/**svg**；svg 拒脚本），本地 url 带真实扩展名。**`blog`/`blog_cover`**：走又拍云（需站点配置又拍云 + 站管在 `/admin/blog` 授权该用户），清晰度优先压缩，≤约 12MB 原图，返回公网 `{ url, hash }`（`hash`=落库字节 SHA-256，内容寻址 key `/blog/{uid}/{hash}{ext}`）；未授权或未配置则 403。**`avatar`**：也走又拍云（仅需站点配置又拍云，无需博客授权），≤3MB（jpg/png/gif/webp/ico，**拒 svg**），清晰度优先压缩，返回公网 `{ url, hash }`（key `/avatar/{uid}/{hash}{ext}`），未配置则 403；`users.avatar` 落库为 path-only key，读取时按当前图床域名扩展（换域/切 https 即时生效） |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
-| GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo）+ **`alipayConfigured`**（支付是否已完整配置：appId + 应用私钥 + 支付宝公钥齐备；公开布尔，无敏感信息；前端按它决定是否显示「开通会员」入口） |
+| GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo）+ **`payfmConfigured`**（支付是否已完整配置：接口根地址 + 商户号 + 接入密钥齐备；公开布尔，无敏感信息；前端按它决定是否显示「赞助支持」入口） |
 | GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** / **OJ 爬虫账号** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`） |
-| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ **支付宝**（`alipayAppId`/`alipayPrivateKey`/`clearAlipayPrivateKey`/`alipayPublicKey`/`clearAlipayPublicKey`/`alipaySandbox`/`setAlipaySandbox`；私钥/公钥加密存储，密钥空串表示不修改）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`（运维磁盘统计目录，数据盘挂载点；空=默认 /data，未挂载回退 /）；密钥空串表示不修改。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
+| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ **支付FM**（`payfmApiBase`/`payfmMerchantNo`/`payfmSecret`/`clearPayfmSecret`/`payfmPayType`；密钥加密存储，密钥空串表示不修改）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`（运维磁盘统计目录，数据盘挂载点；空=默认 /data，未挂载回退 /）；密钥空串表示不修改。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
 | POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
 | GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |
@@ -692,14 +692,14 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 
 ### Subscription（C 端订阅付费）
 
-套餐档位：`free` / `plus`（2 元/月）/ `pro`（7 元/月）。配额模板存 `subscription_plans`（站管可改），生效点：每日手动刷新次数、自动同步间隔、题面爬取/AI 分析资格、AI 分析月配额、AI 日报、会员 badge。开通方式：**支付宝在线支付**（create-order → 二维码 → 回调履约）或**站管人工赋予**（grant）。到期惰性回落（读取时判过期），不自动扣款。
+套餐档位：`free` / `plus`（2 元/月）/ `pro`（7 元/月）。配额模板存 `subscription_plans`（站管可改），生效点：每日手动刷新次数、自动同步间隔、题面爬取/AI 分析资格、AI 分析月配额、AI 日报、会员 badge。开通方式：**支付FM在线支付**（create-order → 支付链接跳转 → 回调履约）或**站管人工赋予**（grant）。到期惰性回落（读取时判过期），不自动扣款。
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
 | GET | `/user/subscription/plans` | 否 | 套餐列表（含价格与配额，前端对比表）→ `{ code, message, plans: Plan[] }` |
-| POST | `/user/subscription/create-order` | 是 | body: `{ plan: plus\|pro }`；支付宝预下单，返回 `{ orderNo, qrCode, amountCents, expireAt }`；**未配置支付宝时返回「支付未配置」明确错误** |
+| POST | `/user/subscription/create-order` | 是 | body: `{ plan: plus\|pro }`；支付FM下单，返回 `{ orderNo, payUrl, amountCents, expireAt }`（前端跳转 payUrl 支付）；**未配置支付时返回「支付未配置」明确错误** |
 | GET | `/user/subscription/order` | 是 | query: `orderNo`（本人或站管）→ `{ orderNo, status: pending\|paid\|closed, paidAt }` |
-| GET | `/user/subscription/my` | 是 | 我的订阅 → `{ tier, expireAt, source: alipay\|manager, daysLeft }`（tier 空=未订阅） |
+| GET | `/user/subscription/my` | 是 | 我的订阅 → `{ tier, expireAt, source: payfm\|manager, daysLeft }`（tier 空=未订阅） |
 | GET | `/user/subscription/my-ai-status` | 是 | 我的 AI 能力**落地状态**（会员页标记实际权限）：`{ code, message, aiAnalyzeQuota, aiAnalyzeSource: pro\|org\|pro_org\|none, aiDailyOrgAllowed, aiDailyEnabled }`；`aiAnalyzeQuota`=AI 分析落地月配额（Pro 取套餐值、否则组织套餐、都无=0）、`aiAnalyzeSource`=权限来源（组织已开通独立标记）、`aiDailyOrgAllowed`=组织是否授权 AI 日报、`aiDailyEnabled`=AI 日报是否生效（Pro + 套餐开启 + 个人开关） |
 | POST | `/user/subscription/grant` | 是(站点管理员, `site.user.sync`) | body: `{ userId, tier: plus\|pro, days: 1–365 }`；人工赋予/更新（从 `max(now, 当前到期)` 起叠加） |
 | POST | `/user/subscription/revoke` | 是(站点管理员, `site.user.sync`) | body: `{ userId }`；取消订阅立即回落免费（保留 AI 日报偏好） |
@@ -721,7 +721,7 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 { "userId": 1, "username": "string", "name": "string", "tier": "pro", "expireAt": 0, "source": "manager" }
 ```
 
-**支付宝支付**：回调 `POST /v1/payment/notify`（网关免 JWT，表单 x-www-form-urlencoded，RSA2 验签；金额相等校验；行锁幂等履约；回调地址常量 `https://algo.zhiyuansofts.cn/v1/payment/notify`，环境变量 `PAYMENT_NOTIFY_URL` 可覆盖）。支付宝配置存 `site_configs`（`alipay_app_id` / 私钥 / 公钥加密存储 / `alipay_sandbox`），未配置时下单报「支付未配置」。
+**支付FM支付**：回调 `GET/POST /v1/payment/notify`（网关免 JWT，MD5 验签 `md5(state+商户号+订单号+金额+密钥)`，state=1 才成功；金额相等校验；行锁幂等履约；回调地址常量 `https://algo.zhiyuansofts.cn/v1/payment/notify`，环境变量 `PAYMENT_NOTIFY_URL` 可覆盖）。支付FM配置存 `site_configs`（`payfm_api_base` / `payfm_merchant_no` / `payfm_secret` 加密存储 / `payfm_pay_type`），未配置时下单报「支付未配置」。
 
 **AI 分析月配额语义**（`GetAiAnalyzeQuota` 服务间，core_data 入队前逐提交者检查 + Redis 月计数）：组织开通 AI 分析（任一非公共域 active 组织 `enable_ai_summary=true`）→ `unlimited=true` 无限配额（组织成员优先消耗组织，不扣个人配额）；否则 Pro 订阅 → 套餐 `aiAnalyzeMonth`（默认 400）；否则 0（不能触发 AI 分析）。`MyAiStatus` 同步标记 `aiAnalyzeSource`（pro/org/pro_org/none）与 `aiAnalyzeUnlimited`。
 

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { QRCodeSVG } from 'qrcode.react'
 import { toast } from 'sonner'
 import {
   createOrder,
@@ -72,7 +71,7 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
   const [myAiStatus, setMyAiStatus] = useState<MyAiStatusRes | null>(null)
   const [selected, setSelected] = useState<string>('plus')
   const [orderNo, setOrderNo] = useState('')
-  const [qrCode, setQrCode] = useState('')
+  const [payUrl, setPayUrl] = useState('')
   const [amountCents, setAmountCents] = useState(0)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
@@ -128,7 +127,7 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
         if (!mountedRef.current) return
         if (res.success && res.data?.status === 'paid') {
           stopPoll()
-          toast.success('支付成功，会员已开通')
+          toast.success('赞助成功，感谢支持！')
           onSubscribed?.()
           const myRes = await getMySubscription()
           if (mountedRef.current && myRes.success) setMySub(myRes.data)
@@ -137,7 +136,7 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
         }
         if (res.success && (res.data?.status === 'closed' || Date.now() - startedAt > POLL_MAX_MS)) {
           stopPoll()
-          setQrCode('')
+          setPayUrl('')
           setOrderNo('')
           toast.error('订单已过期，请重新下单')
         }
@@ -154,13 +153,17 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
     setCreating(false)
     if (!mountedRef.current) return
     if (!res.success || !res.data) {
-      // 未配置支付宝 / 下单失败：保留对比表并提示赞助方式
+      // 未配置支付 / 下单失败：保留对比表并提示赞助方式
       setError(res.message || '下单失败，请稍后再试')
       return
     }
     setOrderNo(res.data.orderNo)
-    setQrCode(res.data.qrCode)
+    setPayUrl(res.data.payUrl)
     setAmountCents(res.data.amountCents)
+    // 跳转支付FM支付页（新窗口）
+    if (res.data.payUrl) {
+      window.open(res.data.payUrl, '_blank', 'noopener,noreferrer')
+    }
     startPoll(res.data.orderNo)
   }
 
@@ -170,9 +173,10 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(90vh,46rem)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>开通会员</DialogTitle>
+          <DialogTitle>赞助支持</DialogTitle>
           <DialogDescription>
-            GoAlgo 会员提供更多每日刷新次数与 AI 能力，功能与套餐见下。
+            GoAlgo 的持续运营离不开大家的支持——赞助费用将用于维持基本运维与 AI 服务成本。
+            作为回馈，赞助用户可解锁更多每日刷新次数与 AI 能力。
           </DialogDescription>
         </DialogHeader>
 
@@ -276,20 +280,23 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
           </div>
         ) : null}
 
-        {qrCode ? (
+        {payUrl ? (
           <div className="flex flex-col items-center gap-3 py-4">
-            <div className="rounded-xl border bg-white p-4">
-              <QRCodeSVG value={qrCode} size={208} />
-            </div>
             <div className="text-center text-sm">
-              <p className="font-medium">请用支付宝扫码支付</p>
+              <p className="font-medium">感谢你的支持，请在新打开的页面完成付款</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                应付 ¥{(amountCents / 100).toFixed(2)} · 订单 {orderNo.slice(0, 12)}…
+                赞助 ¥{(amountCents / 100).toFixed(2)} · 订单 {orderNo.slice(0, 12)}…
                 <br />
-                支付完成后本页会自动刷新，请勿关闭
+                赞助费用将用于维持基本运维与 AI 需求；支付完成后本页会自动刷新，请勿关闭
               </p>
             </div>
-          </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => window.open(payUrl, '_blank', 'noopener,noreferrer')}
+            >
+              重新打开支付页
+            </Button>          </div>
         ) : (
           <>
             <div className="flex items-center justify-center gap-2">
@@ -310,13 +317,13 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
               <p className={cn('text-center text-sm', 'text-destructive')}>{error}</p>
             ) : null}
             <Button type="button" disabled={creating} onClick={() => void handlePay()}>
-              {creating ? '下单中…' : '扫码支付'}
+              {creating ? '下单中…' : '去赞助'}
             </Button>
           </>
         )}
 
         <p className="text-center text-xs leading-relaxed text-muted-foreground">
-          赞助或开通遇到问题，请联系站长微信 <span className="font-medium text-foreground">srcenchen</span>
+          赞助遇到问题，请联系站长微信 <span className="font-medium text-foreground">srcenchen</span>
           ，或加入 QQ 群 <span className="font-medium text-foreground">925338346</span>。
         </p>
       </DialogContent>

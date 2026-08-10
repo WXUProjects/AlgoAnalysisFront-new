@@ -1832,7 +1832,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                   <p className="text-sm font-medium">会员（C 端订阅）</p>
                   <p className="text-xs text-muted-foreground">
                     人工赋予/更新 Plus/Pro 会员：从当前到期时间起叠加天数（已过期从今天起算）；
-                    取消订阅立即回落免费。开通入口在个人资料页（支付宝支付）
+                    取消订阅立即回落免费。赞助入口在个人资料页（赞助支持）
                   </p>
                 </div>
                 <div className="flex flex-wrap items-end gap-3">

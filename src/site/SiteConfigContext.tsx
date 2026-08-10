@@ -14,7 +14,7 @@ const DEFAULT: SiteConfig = {
   siteLogo: '',
   favicon: '',
   footerIcp: '',
-  alipayConfigured: false,
+  payfmConfigured: false,
 }
 
 type Ctx = {

@@ -537,15 +537,15 @@ export function Profile() {
               <Button type="button" asChild>
                 <Link to="/change-profile">编辑个人资料</Link>
               </Button>
-              {siteConfig.alipayConfigured ? (
+              {siteConfig.payfmConfigured ? (
                 <Button
                   type="button"
                   variant={mySub?.tier ? 'outline' : 'default'}
                   onClick={() => setSubDialogOpen(true)}
                 >
                   {mySub?.tier
-                    ? `续费会员（剩余 ${mySub.daysLeft} 天）`
-                    : '开通会员'}
+                    ? `续费赞助（剩余 ${mySub.daysLeft} 天）`
+                    : '赞助支持'}
                 </Button>
               ) : null}
               <Button
@@ -738,7 +738,7 @@ export function Profile() {
                     ) : null}
                     {isSelf ? (
                       <>
-                        {siteConfig.alipayConfigured ? (
+                        {siteConfig.payfmConfigured ? (
                           <Button
                             type="button"
                             size="sm"
@@ -747,8 +747,8 @@ export function Profile() {
                             onClick={() => setSubDialogOpen(true)}
                           >
                             {mySub?.tier
-                              ? `续费会员（剩 ${mySub.daysLeft} 天）`
-                              : '开通会员'}
+                              ? `续费赞助（剩 ${mySub.daysLeft} 天）`
+                              : '赞助支持'}
                           </Button>
                         ) : null}
                         <Button

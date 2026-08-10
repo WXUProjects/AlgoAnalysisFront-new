@@ -284,7 +284,7 @@ export function DashboardSubscriptions() {
                         {fmtDate(u.expireAt)}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {u.source === 'alipay' ? '支付宝' : u.source === 'manager' ? '管理员' : '—'}
+                        {u.source === 'payfm' ? '支付FM' : u.source === 'manager' ? '管理员' : '—'}
                       </TableCell>
                       <TableCell>
                         <Button type="button" size="sm" variant="outline" onClick={() => openDetail(u)}>

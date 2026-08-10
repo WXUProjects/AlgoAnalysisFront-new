@@ -12,8 +12,8 @@ export type SiteConfig = {
   favicon: string
   /** 页脚备案号；空则前端用默认 */
   footerIcp: string
-  /** 支付是否已完整配置（appId + 应用私钥 + 支付宝公钥齐备） */
-  alipayConfigured: boolean
+  /** 支付是否已完整配置（接口根地址 + 商户号 + 接入密钥齐备） */
+  payfmConfigured: boolean
 }
 
 export type SiteAdminConfig = SiteConfig & {
@@ -53,13 +53,15 @@ export type SiteAdminConfig = SiteConfig & {
   ojQojUsername: string
   ojQojPasswordMasked: string
   ojQojPasswordSet: boolean
-  /** 支付宝支付 */
-  alipayAppId: string
-  alipayPrivateKeyMasked: string
-  alipayPrivateKeySet: boolean
-  alipayPublicKeyMasked: string
-  alipayPublicKeySet: boolean
-  alipaySandbox: boolean
+  /** 支付FM（聚合支付；https://docs.zhifux.com） */
+  payfmApiBase: string
+  payfmMerchantNo: string
+  payfmSecretMasked: string
+  payfmSecretSet: boolean
+  /** 支付方式（如 aloop=支付宝轮循池；空=默认 aloop） */
+  payfmPayType: string
+  /** 回调地址（展示用） */
+  payfmNotifyUrl: string
   ojLuoguStatus: string
   ojLuoguStatusAt: number
   ojLuoguErrMsg: string
@@ -84,7 +86,7 @@ function normalizeBrand(raw: Record<string, unknown> | null | undefined): SiteCo
     siteLogo: normalizeStaticUrl(str(d.siteLogo)),
     favicon: normalizeStaticUrl(str(d.favicon)),
     footerIcp: str(d.footerIcp),
-    alipayConfigured: Boolean(d.alipayConfigured),
+    payfmConfigured: Boolean(d.payfmConfigured),
   }
 }
 
@@ -127,12 +129,12 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     ojQojStatus: str(d.ojQojStatus, 'unchecked'),
     ojQojStatusAt: num(d.ojQojStatusAt, 0),
     ojQojErrMsg: str(d.ojQojErrMsg),
-    alipayAppId: str(d.alipayAppId),
-    alipayPrivateKeyMasked: str(d.alipayPrivateKeyMasked),
-    alipayPrivateKeySet: Boolean(d.alipayPrivateKeySet),
-    alipayPublicKeyMasked: str(d.alipayPublicKeyMasked),
-    alipayPublicKeySet: Boolean(d.alipayPublicKeySet),
-    alipaySandbox: Boolean(d.alipaySandbox),
+    payfmApiBase: str(d.payfmApiBase),
+    payfmMerchantNo: str(d.payfmMerchantNo),
+    payfmSecretMasked: str(d.payfmSecretMasked),
+    payfmSecretSet: Boolean(d.payfmSecretSet),
+    payfmPayType: str(d.payfmPayType),
+    payfmNotifyUrl: str(d.payfmNotifyUrl),
     agentStatus: str(d.agentStatus, 'unchecked'),
     agentStatusAt: num(d.agentStatusAt, 0),
     agentErrMsg: str(d.agentErrMsg),
@@ -215,13 +217,11 @@ export async function updateSiteConfig(body: {
   ojQojUsername?: string
   ojQojPassword?: string
   clearOjQojPassword?: boolean
-  alipayAppId?: string
-  alipayPrivateKey?: string
-  clearAlipayPrivateKey?: boolean
-  alipayPublicKey?: string
-  clearAlipayPublicKey?: boolean
-  alipaySandbox?: boolean
-  setAlipaySandbox?: boolean
+  payfmApiBase?: string
+  payfmMerchantNo?: string
+  payfmSecret?: string
+  clearPayfmSecret?: boolean
+  payfmPayType?: string
 }): Promise<ApiResult<SiteConfig>> {
   const res = await post<Record<string, unknown>>(endpoints.user.site.config, body)
   if (!res.success) return { ...res, data: null }

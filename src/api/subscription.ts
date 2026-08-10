@@ -36,7 +36,7 @@ function normalizeMySubscription(raw: Record<string, unknown>): MySubscription {
 function normalizeOrder(raw: Record<string, unknown>): SubscriptionOrder {
   return {
     orderNo: str(raw.orderNo),
-    qrCode: str(raw.qrCode),
+    payUrl: str(raw.payUrl),
     amountCents: num(raw.amountCents),
     expireAt: num(raw.expireAt),
   }
@@ -89,7 +89,7 @@ export async function getMyAiStatus(): Promise<ApiResult<MyAiStatusRes | null>> 
   }
 }
 
-/** 创建订单（支付宝预下单，返回二维码内容） */
+/** 创建订单（支付FM下单，返回支付链接 payUrl） */
 export async function createOrder(plan: string): Promise<ApiResult<SubscriptionOrder | null>> {
   const res = await post<Record<string, unknown>>(endpoints.user.subscription.createOrder, { plan })
   if (!res.success || !res.data) return { ...res, data: null }

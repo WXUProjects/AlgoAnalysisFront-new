@@ -884,7 +884,7 @@ export interface MySubscription {
   tier: string
   /** 到期 unix 秒（0=长期） */
   expireAt: number
-  /** alipay|manager */
+  /** payfm|manager */
   source: string
   /** 剩余天数（已过期按 0） */
   daysLeft: number
@@ -909,8 +909,8 @@ export interface MyAiStatusRes {
 /** 支付订单（创建返回） */
 export interface SubscriptionOrder {
   orderNo: string
-  /** 支付宝预下单二维码内容（前端渲染） */
-  qrCode: string
+  /** 支付FM支付链接（前端跳转支付页） */
+  payUrl: string
   /** 应付金额（分） */
   amountCents: number
   /** 订单失效 unix 秒 */
@@ -926,7 +926,7 @@ export interface SubUser {
   tier: string
   /** 到期 unix 秒（0=长期） */
   expireAt: number
-  /** alipay|manager */
+  /** payfm|manager */
   source: string
 }
 
