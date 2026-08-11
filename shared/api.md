@@ -818,7 +818,7 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 | GET | `/core/spider/monitor` | 是(站点管理员) | 各 OJ 爬虫模块监控（提交/题库/比赛/账号），返回 `platforms[]` + `collectedAt` |
 | GET | `/core/spider/platform-users` | 是(站点管理员) | 某 OJ 的绑定用户列表，query `platform`、`offset?`、`limit?`（默认 20，最大 100）；返回 `total` + `list[{userId,name,username,ojUsername,rating,hasRating}]`（name 为站内展示名，无则回退站内用户名；ojUsername 为绑定的 OJ 账号） |
 | POST | `/core/spider/refresh` | 是 | 用户手动**增量**刷新自己的 OJ 做题记录（**每日限 2 次**，按上海自然日，Redis 计数）；返回 `{ code, message, remaining }`；超出限额 code=1，message 提示「每个用户每日拥有两次手动刷新做题记录次数，当前还剩下 N 次」且不入队 |
-| GET | `/core/spider/refresh-status` | 是 | 今日手动刷新做题记录状态（只读）：`{ code, message, limit, remaining, nextAvailableAt, syncIntervalMin }`；`limit`=今日有效总配额（已合并订阅/站管覆盖；0=禁止）、`remaining`=今日剩余（0=用完）、`nextAvailableAt`=下次可刷新 unix 秒（0=立即可，5 分钟冷却中为截止时间）、`syncIntervalMin`=当前生效自动同步间隔（min(站管覆盖, 组织 MIN, 订阅档)；失败回落默认 180） |
+| GET | `/core/spider/refresh-status` | 是 | 今日手动刷新做题记录状态（只读）：query `userId?`（缺省/0=查自己；**站点管理员**可传任意 `userId` 查他人）；返回 `{ code, message, limit, remaining, nextAvailableAt, syncIntervalMin }`；`limit`=今日有效总配额（已合并订阅/站管覆盖；0=禁止）、`remaining`=今日剩余（0=用完）、`nextAvailableAt`=下次可刷新 unix 秒（0=立即可，5 分钟冷却中为截止时间）、`syncIntervalMin`=当前生效自动同步间隔（min(站管覆盖, 组织 MIN, 订阅档)；失败回落默认 180） |
 | POST | `/core/spider/toggle-platform` | 是(站点管理员) | 暂停/恢复某 OJ 爬虫同步；body `{ platform, enabled }`。暂停**不清空**绑定/历史数据，仅不再入队/消费该平台 |
 | POST | `/core/spider/purge-submits-and-recrawl` | 是(站点管理员) | **硬清**训练数据并全量重爬；body `{ confirm: "PURGE_SUBMITS" }`。删：`submit_logs`（真假全删）、账本、日汇总、AC 预聚合、`contest_logs`、提醒发送日志 + 相关 Redis。**保留**：`platforms`、题库、公告/紧急通知、比赛日历赛程与订阅；用户账号在 user 库不动 |
 

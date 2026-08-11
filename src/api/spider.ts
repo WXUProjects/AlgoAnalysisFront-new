@@ -39,7 +39,23 @@ export async function refreshSpider(): Promise<ApiResult<RefreshSpiderRes>> {
 
 /** 今日手动刷新做题记录状态（配额/剩余/冷却/生效同步间隔；只读） */
 export async function getRefreshStatus(): Promise<ApiResult<RefreshSpiderStatusRes>> {
-  const res = await get<Record<string, unknown>>(endpoints.core.spider.refreshStatus)
+  return requestRefreshStatus()
+}
+
+/** 站点管理员：查任意用户的今日手动刷新状态与生效同步间隔（传 userId） */
+export async function getAdminRefreshStatus(
+  userId: number,
+): Promise<ApiResult<RefreshSpiderStatusRes>> {
+  return requestRefreshStatus(userId)
+}
+
+async function requestRefreshStatus(
+  userId?: number,
+): Promise<ApiResult<RefreshSpiderStatusRes>> {
+  const res = await get<Record<string, unknown>>(
+    endpoints.core.spider.refreshStatus,
+    userId && userId > 0 ? { userId } : {},
+  )
   if (!res.success) return { ...res, data: null }
   const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
   return {

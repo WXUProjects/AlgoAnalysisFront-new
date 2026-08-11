@@ -18,8 +18,13 @@ import {
 } from '@/api/profile'
 import { assignRole, listRoles, listUserRoles, unassignRole } from '@/api/rbac'
 import { grantSubscription, revokeSubscription } from '@/api/subscription'
-import { updateSpider } from '@/api/spider'
-import type { GroupInfo, RbacRole, UserListItem } from '@shared/api'
+import { getAdminRefreshStatus, updateSpider } from '@/api/spider'
+import type {
+  GroupInfo,
+  RbacRole,
+  RefreshSpiderStatusRes,
+  UserListItem,
+} from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageShell } from '@/components/page-shell'
@@ -80,6 +85,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Perm } from '@/lib/permissions'
+import { formatTime } from '@/lib/format'
 import { orgRoleName } from '@/lib/roles'
 
 const DEFAULT_PAGE_SIZE = 10
@@ -156,6 +162,12 @@ function UserListPage({ scope }: { scope: UserScope }) {
   const [savingIntervals, setSavingIntervals] = useState(false)
   const [refreshQuotaDraft, setRefreshQuotaDraft] = useState('')
   const [savingQuota, setSavingQuota] = useState(false)
+  /** 详情内：该用户真实的刷新状态（今日已用/剩余/下次可刷新/生效间隔；站管按用户查） */
+  const [detailRefreshStatus, setDetailRefreshStatus] =
+    useState<RefreshSpiderStatusRes | null>(null)
+  const [refreshStatusLoading, setRefreshStatusLoading] = useState(false)
+  /** 竞态守卫：丢弃过期的按用户刷新状态响应 */
+  const refreshStatusRequestId = useRef(0)
   /** C 端会员编辑（详情 Dialog） */
   const [subTierDraft, setSubTierDraft] = useState('')
   const [subDaysDraft, setSubDaysDraft] = useState('30')
@@ -596,6 +608,21 @@ function UserListPage({ scope }: { scope: UserScope }) {
     setDetailUser(u)
     setSpiderIntervalDraft(String(u.spiderIntervalMin ?? 60))
     setRefreshQuotaDraft(String(u.dailyRefreshQuota ?? 2))
+    void loadDetailRefreshStatus(u.userId)
+  }
+
+  /** 拉取该用户真实的今日刷新状态（站管按 userId 查；失败静默，不影响其他展示） */
+  async function loadDetailRefreshStatus(userId: number) {
+    const rid = ++refreshStatusRequestId.current
+    setRefreshStatusLoading(true)
+    const res = await getAdminRefreshStatus(userId)
+    if (rid !== refreshStatusRequestId.current) return
+    setRefreshStatusLoading(false)
+    if (res.success && res.data) {
+      setDetailRefreshStatus(res.data)
+    } else {
+      setDetailRefreshStatus(null)
+    }
   }
 
   async function saveSyncIntervals(mode: 'save' | 'clearSpider') {
@@ -1389,7 +1416,11 @@ function UserListPage({ scope }: { scope: UserScope }) {
       <Dialog
         open={!!detailUser}
         onOpenChange={(o) => {
-          if (!o) setDetailUser(null)
+          if (!o) {
+            setDetailUser(null)
+            setDetailRefreshStatus(null)
+            refreshStatusRequestId.current++
+          }
         }}
       >
         <DialogContent className="flex max-h-[min(90vh,40rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
@@ -1718,6 +1749,16 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     站点管理员指定后优先于组织设置；清除后回落组织最短间隔
                   </p>
                 </div>
+                {refreshStatusLoading ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : detailRefreshStatus ? (
+                  <div className="flex items-center justify-between rounded-lg border border-border p-3 text-xs">
+                    <span className="text-muted-foreground">当前真实生效间隔</span>
+                    <span className="font-medium text-foreground">
+                      {detailRefreshStatus.syncIntervalMin || '—'} 分钟
+                    </span>
+                  </div>
+                ) : null}
                 <Field>
                   <FieldLabel htmlFor="spider-interval">
                     数据同步间隔（分钟）
@@ -1771,6 +1812,33 @@ function UserListPage({ scope }: { scope: UserScope }) {
                     用户手动刷新 OJ 做题记录的次数上限（次/日）。站管指定后优先于全局默认；0 = 禁止手动刷新
                   </p>
                 </div>
+                {refreshStatusLoading ? (
+                  <Skeleton className="h-24 w-full" />
+                ) : detailRefreshStatus ? (
+                  <div className="space-y-1.5 rounded-lg border border-border p-3 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">当前生效配额</span>
+                      <span className="font-medium text-foreground">
+                        {detailRefreshStatus.limit} 次/日
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">今日已用 / 剩余</span>
+                      <span className="font-medium text-foreground">
+                        {Math.max(0, detailRefreshStatus.limit - detailRefreshStatus.remaining)}{' '}
+                        / {detailRefreshStatus.remaining} 次
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">下次可刷新</span>
+                      <span className="font-medium text-foreground">
+                        {detailRefreshStatus.nextAvailableAt > 0
+                          ? formatTime(detailRefreshStatus.nextAvailableAt)
+                          : '现在即可'}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
                 <Field>
                   <FieldLabel htmlFor="refresh-quota">
                     每日手动刷新次数
@@ -2026,6 +2094,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                         onClick={() => {
                           void handleDelete(detailUser.userId)
                           setDetailUser(null)
+                          setDetailRefreshStatus(null)
                         }}
                       >
                         确认删除
@@ -2038,7 +2107,14 @@ function UserListPage({ scope }: { scope: UserScope }) {
             </div>
           ) : null}
           <DialogFooter className="shrink-0 border-t px-6 py-4">
-            <Button type="button" variant="outline" onClick={() => setDetailUser(null)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDetailUser(null)
+                setDetailRefreshStatus(null)
+              }}
+            >
               关闭
             </Button>
           </DialogFooter>

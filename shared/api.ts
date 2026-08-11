@@ -252,7 +252,7 @@ export const endpoints = {
       platformUsers: `${API_PREFIX}/core/spider/platform-users`,
       /** 用户：手动增量刷新自己的 OJ 做题记录（每日限 2 次） */
       refresh: `${API_PREFIX}/core/spider/refresh`,
-      /** 用户：今日手动刷新做题记录状态（配额/剩余/冷却；只读） */
+      /** 今日手动刷新做题记录状态（配额/剩余/冷却/生效间隔；只读）；userId 可选，站管可查他人 */
       refreshStatus: `${API_PREFIX}/core/spider/refresh-status`,
       /** 站管：暂停/恢复某 OJ 的爬虫同步 body: { platform, enabled } */
       togglePlatform: `${API_PREFIX}/core/spider/toggle-platform`,
@@ -533,7 +533,7 @@ export interface RefreshSpiderRes {
   remaining: number
 }
 
-/** 今日手动刷新做题记录状态（GET /core/spider/refresh-status） */
+/** 今日手动刷新做题记录状态（GET /core/spider/refresh-status；userId=0 查自己，站管可传 userId 查他人） */
 export interface RefreshSpiderStatusRes {
   code: number
   message: string
