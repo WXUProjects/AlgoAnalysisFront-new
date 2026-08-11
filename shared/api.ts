@@ -888,6 +888,10 @@ export interface MySubscription {
   source: string
   /** 剩余天数（已过期按 0） */
   daysLeft: number
+  /** 排队档 plus|pro（当前档到期后自动生效；空=无排队） */
+  pendingTier?: string
+  /** 排队档剩余/购买天数 */
+  pendingDaysLeft?: number
 }
 
 /** 我的 AI 能力落地状态（GET /user/subscription/my-ai-status） */
@@ -915,6 +919,10 @@ export interface SubscriptionOrder {
   amountCents: number
   /** 订单失效 unix 秒 */
   expireAt: number
+  /** 购买月数（1–12） */
+  months?: number
+  /** 履约天数（套餐 days × months） */
+  days?: number
 }
 
 /** 订阅用户列表项（站管） */
@@ -928,6 +936,12 @@ export interface SubUser {
   expireAt: number
   /** payfm|manager */
   source: string
+  /** 头像（已扩展为完整 URL；空=未设置） */
+  avatar?: string
+  /** 排队档 plus|pro（空=无排队） */
+  pendingTier?: string
+  /** 排队档剩余/购买天数 */
+  pendingDays?: number
 }
 
 export interface GroupInfo {

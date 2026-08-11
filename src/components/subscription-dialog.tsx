@@ -40,6 +40,9 @@ const POLL_MAX_MS = 120_000
 /** 套餐档位行（对比表顺序） */
 const PLAN_ORDER = ['free', 'plus', 'pro'] as const
 
+/** 可选购月数（线性定价：月费 × 月数） */
+const MONTH_OPTIONS = [1, 3, 6, 12] as const
+
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -70,6 +73,8 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
   /** 我的 AI 能力落地状态（AI 分析/日报实际权限） */
   const [myAiStatus, setMyAiStatus] = useState<MyAiStatusRes | null>(null)
   const [selected, setSelected] = useState<string>('plus')
+  /** 购买月数（1/3/6/12） */
+  const [months, setMonths] = useState(1)
   const [orderNo, setOrderNo] = useState('')
   const [payUrl, setPayUrl] = useState('')
   const [amountCents, setAmountCents] = useState(0)
@@ -111,11 +116,12 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
       if (myRes.success) setMySub(myRes.data)
       if (statusRes.success) setRefreshStatus(statusRes.data)
       if (aiRes.success) setMyAiStatus(aiRes.data)
-      // 默认选中当前未订阅的第一个可购档（plus）
+      // 默认选中当前未订阅的第一个可购档（plus），月数重置为 1
       const buyable = plansRes.data?.filter((p) => p.enabled && p.priceCents > 0) ?? []
       if (buyable.length > 0) {
         setSelected(buyable[0].plan)
       }
+      setMonths(1)
     })()
   }, [open])
 
@@ -173,7 +179,7 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
     if (creating) return
     setCreating(true)
     setError('')
-    const res = await createOrder(selected)
+    const res = await createOrder(selected, months)
     setCreating(false)
     if (!mountedRef.current) return
     if (!res.success || !res.data) {
@@ -192,6 +198,20 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
   }
 
   const planOf = (plan: string) => plans.find((p) => p.plan === plan)
+
+  /** 当前选中档位（对比表里的套餐模板） */
+  const selectedPlan = planOf(selected)
+  /** 应付总价（分）= 月价 × 月数 */
+  const totalCents = (selectedPlan?.priceCents ?? 0) * months
+
+  /** 档位叠加提示：Pro 有效时选 Plus → 排队；Plus 有效时选 Pro → 升级 */
+  const stackingHint = mySub?.tier
+    ? mySub.tier === 'pro' && selected === 'plus'
+      ? `Plus 权益将在 Pro 到期后生效（当前 Pro 剩余 ${mySub.daysLeft} 天）`
+      : mySub.tier === 'plus' && selected === 'pro'
+        ? '升级 Pro 立即生效，当前 Plus 剩余天数将在 Pro 到期后继续使用'
+        : ''
+    : ''
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -252,6 +272,11 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
                       <span className="ml-2 text-xs text-muted-foreground">
                         剩余 {mySub.daysLeft} 天
                       </span>
+                      {mySub.pendingTier ? (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          · {mySub.pendingTier === 'pro' ? 'Pro' : 'Plus'} 排队 {mySub.pendingDaysLeft} 天
+                        </span>
+                      ) : null}
                     </>
                   ) : (
                     <Badge variant="secondary">免费版</Badge>
@@ -342,25 +367,58 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-center gap-2">
-              {plans
-                .filter((p) => p.enabled && p.priceCents > 0)
-                .map((p) => (
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center justify-center gap-2">
+                {plans
+                  .filter((p) => p.enabled && p.priceCents > 0)
+                  .map((p) => (
+                    <Button
+                      key={p.plan}
+                      type="button"
+                      variant={selected === p.plan ? 'default' : 'outline'}
+                      onClick={() => setSelected(p.plan)}
+                    >
+                      {p.plan === 'plus' ? 'Plus' : 'Pro'} · ¥{(p.priceCents / 100).toFixed(2)}/月
+                    </Button>
+                  ))}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">开通时长</span>
+                {MONTH_OPTIONS.map((m) => (
                   <Button
-                    key={p.plan}
+                    key={m}
                     type="button"
-                    variant={selected === p.plan ? 'default' : 'outline'}
-                    onClick={() => setSelected(p.plan)}
+                    size="sm"
+                    variant={months === m ? 'default' : 'outline'}
+                    onClick={() => setMonths(m)}
                   >
-                    {p.plan === 'plus' ? 'Plus' : 'Pro'} · ¥{(p.priceCents / 100).toFixed(2)}/月
+                    {m} 个月
                   </Button>
                 ))}
+              </div>
+
+              {stackingHint ? (
+                <p className="rounded-lg border border-amber-500/40 bg-amber-50 px-3 py-2 text-center text-xs leading-relaxed text-amber-800 dark:border-amber-400/30 dark:bg-amber-950/30 dark:text-amber-300">
+                  {stackingHint}
+                </p>
+              ) : null}
+
+              {selectedPlan && totalCents > 0 ? (
+                <p className="text-sm">
+                  共 <span className="font-semibold">¥{(totalCents / 100).toFixed(2)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {' '}
+                    · {months} 个月 × ¥{(selectedPlan.priceCents / 100).toFixed(2)}
+                  </span>
+                </p>
+              ) : null}
             </div>
             {error ? (
               <p className={cn('text-center text-sm', 'text-destructive')}>{error}</p>
             ) : null}
             <Button type="button" disabled={creating} onClick={() => void handlePay()}>
-              {creating ? '下单中…' : '去赞助'}
+              {creating ? '下单中…' : totalCents > 0 ? `去赞助 ¥${(totalCents / 100).toFixed(2)}` : '去赞助'}
             </Button>
           </>
         )}

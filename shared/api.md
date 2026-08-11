@@ -694,17 +694,28 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 
 套餐档位：`free` / `plus`（2 元/月）/ `pro`（7 元/月）。配额模板存 `subscription_plans`（站管可改），生效点：每日手动刷新次数、自动同步间隔、题面爬取/AI 分析资格、AI 分析月配额、AI 日报、会员 badge。开通方式：**支付FM在线支付**（create-order → 支付链接跳转 → 回调履约）或**站管人工赋予**（grant）。到期惰性回落（读取时判过期），不自动扣款。
 
+**档位叠加语义**（支付履约与 grant 一致）：
+- 无有效订阅/已过期 → 直接开通，`expire = now + days`
+- 有效同档续费 → `expire = max(now, 当前到期) + days`（现有天数叠加）
+- **Pro 有效买 Plus** → Plus 全量时长**排队**（`pendingTier=plus`），Pro 到期后自动生效（下单时前端提示）
+- **Plus 有效买 Pro（升级）** → Pro 立即生效；Plus 剩余天数**暂停计时**，Pro 到期后自动续上 Plus
+- 到期且有排队档：读取时**懒晋升**（自动切换），后端每日 sweep 兜底批量晋升
+
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
 | GET | `/user/subscription/plans` | 否 | 套餐列表（含价格与配额，前端对比表）→ `{ code, message, plans: Plan[] }` |
-| POST | `/user/subscription/create-order` | 是 | body: `{ plan: plus\|pro }`；支付FM下单，返回 `{ orderNo, payUrl, amountCents, expireAt }`（前端跳转 payUrl 支付）；**未配置支付时返回「支付未配置」明确错误** |
+| POST | `/user/subscription/create-order` | 是 | body: `{ plan: plus\|pro, months: 1–12（默认 1） }`；支付FM下单，返回 `{ orderNo, payUrl, amountCents, expireAt, months, days }`（金额 = 月价 × months；履约天数 = 套餐 days × months；前端跳转 payUrl 支付）；**未配置支付时返回「支付未配置」明确错误** |
 | GET | `/user/subscription/order` | 是 | query: `orderNo`（本人或站管）→ `{ orderNo, status: pending\|paid\|closed, paidAt }` |
-| GET | `/user/subscription/my` | 是 | 我的订阅 → `{ tier, expireAt, source: payfm\|manager, daysLeft }`（tier 空=未订阅） |
+| GET | `/user/subscription/my` | 是 | 我的订阅 → `{ tier, expireAt, source: payfm\|manager, daysLeft, pendingTier?, pendingDaysLeft? }`（tier 空=未订阅；pendingTier=排队档，当前档到期后自动生效） |
 | GET | `/user/subscription/my-ai-status` | 是 | 我的 AI 能力**落地状态**（会员页标记实际权限）：`{ code, message, aiAnalyzeQuota, aiAnalyzeSource: pro\|org\|pro_org\|none, aiDailyOrgAllowed, aiDailyEnabled }`；`aiAnalyzeQuota`=AI 分析落地月配额（Pro 取套餐值、否则组织套餐、都无=0）、`aiAnalyzeSource`=权限来源（组织已开通独立标记）、`aiDailyOrgAllowed`=组织是否授权 AI 日报、`aiDailyEnabled`=AI 日报是否生效（Pro + 套餐开启 + 个人开关） |
-| POST | `/user/subscription/grant` | 是(站点管理员, `site.user.sync`) | body: `{ userId, tier: plus\|pro, days: 1–365 }`；人工赋予/更新（从 `max(now, 当前到期)` 起叠加） |
-| POST | `/user/subscription/revoke` | 是(站点管理员, `site.user.sync`) | body: `{ userId }`；取消订阅立即回落免费（保留 AI 日报偏好） |
-| GET | `/user/subscription/admin/list` | 是(站点管理员, `site.user.sync`) | query: `page`, `pageSize`, `keyword`（**模糊** username/name，服务端过滤与 total 一致）→ `{ list: SubUser[], total }` |
+| POST | `/user/subscription/grant` | 是(站点管理员, `site.user.sync`) | body: `{ userId, tier: plus\|pro, days: 1–365 }`；人工赋予/更新（走与支付相同的档位叠加语义） |
+| POST | `/user/subscription/revoke` | 是(站点管理员, `site.user.sync`) | body: `{ userId }`；取消订阅立即回落免费（含排队档；保留 AI 日报偏好） |
+| GET | `/user/subscription/admin/list` | 是(站点管理员, `site.user.sync`) | query: `page`, `pageSize`, `keyword`（**模糊** username/name，服务端过滤与 total 一致）→ `{ list: SubUser[], total }`（SubUser 含 `pendingTier`/`pendingDays`） |
 | POST | `/user/subscription/admin/plans` | 是(站点管理员, `site.user.sync`) | body: `{ plans: Plan[] }`；逐档 upsert 套餐模板（free 价格必须 0；manualRefreshDaily 0–100；syncIntervalMin 5–10080；aiAnalyzeMonth 0–10000） |
+
+**邮件通知**：
+- **到期提醒**：后台每日扫描，对「3 天内到期」的用户发提醒邮件（**到期前 3 天 + 1 天各一次**，`users.sub_reminded` 去重；续费/升级/晋升后重置重新计时）
+- **支付成功感谢信**：支付FM回调履约成功后异步发送，含档位、月数、有效期至日期
 
 **Plan**
 ```json
@@ -718,7 +729,7 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 
 **SubUser**
 ```json
-{ "userId": 1, "username": "string", "name": "string", "tier": "pro", "expireAt": 0, "source": "manager" }
+{ "userId": 1, "username": "string", "name": "string", "tier": "pro", "expireAt": 0, "source": "manager", "pendingTier": "", "pendingDays": 0 }
 ```
 
 **支付FM支付**：回调 `GET/POST /v1/payment/notify`（网关免 JWT，MD5 验签 `md5(state+商户号+订单号+金额+密钥)`，state=1 才成功；金额相等校验；行锁幂等履约；回调地址常量 `https://algo.zhiyuansofts.cn/v1/payment/notify`，环境变量 `PAYMENT_NOTIFY_URL` 可覆盖）。支付FM配置存 `site_configs`（`payfm_api_base` / `payfm_merchant_no` / `payfm_secret` 加密存储 / `payfm_pay_type`），未配置时下单报「支付未配置」。

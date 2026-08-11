@@ -550,6 +550,7 @@ export function Profile() {
                     className="border-amber-500/60 text-amber-700 hover:bg-amber-50 dark:border-amber-400/50 dark:text-amber-300 dark:hover:bg-amber-950/30 font-medium"
                   >
                     续费赞助（剩余 {mySub.daysLeft} 天）
+                    {mySub.pendingTier ? ` · ${mySub.pendingTier === 'pro' ? 'Pro' : 'Plus'} 排队中` : ''}
                   </Button>
                 ) : (
                   <Button

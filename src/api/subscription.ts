@@ -25,24 +25,32 @@ function normalizePlan(raw: Record<string, unknown>): SubscriptionPlan {
 }
 
 function normalizeMySubscription(raw: Record<string, unknown>): MySubscription {
+  const pendingDaysLeft = num(raw.pendingDaysLeft)
   return {
     tier: str(raw.tier),
     expireAt: num(raw.expireAt),
     source: str(raw.source),
     daysLeft: num(raw.daysLeft),
+    pendingTier: str(raw.pendingTier) || undefined,
+    pendingDaysLeft: pendingDaysLeft > 0 ? pendingDaysLeft : undefined,
   }
 }
 
 function normalizeOrder(raw: Record<string, unknown>): SubscriptionOrder {
+  const months = num(raw.months)
+  const days = num(raw.days)
   return {
     orderNo: str(raw.orderNo),
     payUrl: str(raw.payUrl),
     amountCents: num(raw.amountCents),
     expireAt: num(raw.expireAt),
+    months: months > 0 ? months : undefined,
+    days: days > 0 ? days : undefined,
   }
 }
 
 function normalizeSubUser(raw: Record<string, unknown>): SubUser {
+  const pendingDays = num(raw.pendingDays)
   return {
     userId: num(raw.userId),
     username: str(raw.username),
@@ -51,6 +59,8 @@ function normalizeSubUser(raw: Record<string, unknown>): SubUser {
     expireAt: num(raw.expireAt),
     source: str(raw.source),
     avatar: str(raw.avatar) || undefined,
+    pendingTier: str(raw.pendingTier) || undefined,
+    pendingDays: pendingDays > 0 ? pendingDays : undefined,
   }
 }
 
@@ -90,9 +100,15 @@ export async function getMyAiStatus(): Promise<ApiResult<MyAiStatusRes | null>> 
   }
 }
 
-/** 创建订单（支付FM下单，返回支付链接 payUrl） */
-export async function createOrder(plan: string): Promise<ApiResult<SubscriptionOrder | null>> {
-  const res = await post<Record<string, unknown>>(endpoints.user.subscription.createOrder, { plan })
+/** 创建订单（支付FM下单，返回支付链接 payUrl；months 1–12 默认 1） */
+export async function createOrder(
+  plan: string,
+  months = 1,
+): Promise<ApiResult<SubscriptionOrder | null>> {
+  const res = await post<Record<string, unknown>>(endpoints.user.subscription.createOrder, {
+    plan,
+    months,
+  })
   if (!res.success || !res.data) return { ...res, data: null }
   return { ...res, data: normalizeOrder(res.data) }
 }
