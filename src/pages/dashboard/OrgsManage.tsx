@@ -74,7 +74,6 @@ export function DashboardOrgsManage() {
 
   const [brandTitle, setBrandTitle] = useState('')
   const [joinMode, setJoinMode] = useState('auto')
-  const [enableAiEmail, setEnableAiEmail] = useState(true)
   const [enableAiWeeklyEmail, setEnableAiWeeklyEmail] = useState(true)
   const [enableSpider, setEnableSpider] = useState(true)
   const [forceSync, setForceSync] = useState(false)
@@ -133,7 +132,6 @@ export function DashboardOrgsManage() {
     }
     setBrandTitle(selected.brandTitle || '')
     setJoinMode(selected.joinMode || 'auto')
-    setEnableAiEmail(selected.enableAiEmail !== false)
     setEnableAiWeeklyEmail(selected.enableAiWeeklyEmail !== false)
     setEnableFetchProblem(selected.enableFetchProblem !== false)
     setEnableAiAnalyze(selected.enableAiAnalyze !== false)
@@ -170,7 +168,6 @@ export function DashboardOrgsManage() {
       brandLogo: selected.brandLogo || '',
       brandFavicon: selected.brandFavicon || '',
       joinMode,
-      enableAiEmail,
       enableAiWeeklyEmail,
       enableFetchProblem,
       enableAiAnalyze,
@@ -409,14 +406,6 @@ export function DashboardOrgsManage() {
                       </p>
                     </div>
                   )}
-                  <div className="flex items-center justify-between">
-                    <Label>日报邮件</Label>
-                    <Switch
-                      checked={enableAiEmail}
-                      disabled={!canOrgPolicy}
-                      onCheckedChange={setEnableAiEmail}
-                    />
-                  </div>
                   <div className="flex items-center justify-between">
                     <Label>周报邮件</Label>
                     <Switch

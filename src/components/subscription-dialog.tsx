@@ -303,12 +303,8 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
                   AI 日报：
                   {myAiStatus.aiDailyEnabled ? (
                     <span className="font-medium text-foreground">✓ 已生效（Pro 会员）</span>
-                  ) : myAiStatus.aiDailyOrgAllowed ? (
-                    <span className="font-medium text-foreground">
-                      组织已授权 · 尚未开启
-                    </span>
                   ) : (
-                    '✗ 未开通'
+                    '尚未开启'
                   )}
                 </p>
               </>

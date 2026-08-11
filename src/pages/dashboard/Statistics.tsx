@@ -856,12 +856,6 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
               </Badge>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">日报邮件</span>
-              <Badge variant={currentOrg.enableAiEmail !== false ? 'default' : 'secondary'}>
-                {currentOrg.enableAiEmail !== false ? '已开启' : '已关闭'}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">周报邮件</span>
               <Badge
                 variant={currentOrg.enableAiWeeklyEmail !== false ? 'default' : 'secondary'}

@@ -57,7 +57,6 @@ export function DashboardOrgSettings() {
   const [brandLogo, setBrandLogo] = useState('')
   const [logoUploading, setLogoUploading] = useState(false)
   const [joinMode, setJoinMode] = useState('auto')
-  const [enableAiEmail, setEnableAiEmail] = useState(true)
   const [enableAiWeeklyEmail, setEnableAiWeeklyEmail] = useState(true)
   const [enableSpider, setEnableSpider] = useState(true)
   const [spiderInterval, setSpiderInterval] = useState(60)
@@ -98,7 +97,6 @@ export function DashboardOrgSettings() {
     setBrandTitle(currentOrg?.brandTitle || '')
     setBrandLogo(currentOrg?.brandLogo || '')
     setJoinMode(currentOrg?.joinMode || 'auto')
-    setEnableAiEmail(currentOrg?.enableAiEmail !== false)
     setEnableAiWeeklyEmail(currentOrg?.enableAiWeeklyEmail !== false)
     setEnableSpider(currentOrg?.enableSpider !== false)
     setSpiderInterval(currentOrg?.spiderIntervalMin || 60)
@@ -156,7 +154,6 @@ export function DashboardOrgSettings() {
       brandLogo,
       brandFavicon: currentOrg?.brandFavicon || '',
       joinMode,
-      enableAiEmail,
       enableAiWeeklyEmail,
       enableSpider,
     }
@@ -222,10 +219,6 @@ export function DashboardOrgSettings() {
           )}
           {canTogglePolicy && (
             <>
-              <div className="flex items-center justify-between">
-                <Label>日报邮件</Label>
-                <Switch checked={enableAiEmail} onCheckedChange={setEnableAiEmail} />
-              </div>
               <div className="flex items-center justify-between">
                 <Label>周报邮件</Label>
                 <Switch
