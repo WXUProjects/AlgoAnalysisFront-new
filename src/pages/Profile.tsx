@@ -406,7 +406,7 @@ export function Profile() {
     subTier: mySub?.tier || undefined,
   }
   const displayName = resolveDisplayName(identityView)
-  const avatarSrc = profile.avatar || '/images/defaultAvatar.png'
+  const avatarSrc = profile.avatar || undefined
   /** 会员档位：identity 优先（公开视图），mySub 兜底（本人登录后） */
   const membershipTier = identityView.subTier || mySub?.tier || null
 

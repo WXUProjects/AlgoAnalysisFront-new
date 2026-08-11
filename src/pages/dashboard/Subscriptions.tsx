@@ -258,7 +258,7 @@ export function DashboardSubscriptions() {
                         <div className="flex items-center gap-2">
                           <Avatar className="size-8">
                             <AvatarImage
-                              src={u.avatar || '/images/defaultAvatar.png'}
+                              src={u.avatar || undefined}
                               alt=""
                             />
                             <AvatarFallback>

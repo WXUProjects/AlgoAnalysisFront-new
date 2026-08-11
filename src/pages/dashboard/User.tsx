@@ -1161,7 +1161,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                         <div className="flex items-center gap-3">
                         <Avatar className="hidden size-8 sm:flex">
                           <AvatarImage
-                            src={u.avatar || '/images/defaultAvatar.png'}
+                            src={u.avatar || undefined}
                             alt=""
                           />
                           <AvatarFallback>
@@ -1456,7 +1456,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
               <div className="flex items-center gap-3">
                 <Avatar className="size-10">
                   <AvatarImage
-                    src={detailUser.avatar || '/images/defaultAvatar.png'}
+                    src={detailUser.avatar || undefined}
                     alt=""
                   />
                   <AvatarFallback>

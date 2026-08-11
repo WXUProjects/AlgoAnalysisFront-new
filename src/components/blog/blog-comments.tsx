@@ -372,7 +372,7 @@ function BlogCommentNode({
         <MembershipAvatar tier={(c.author as any)?.subTier ?? null}>
           <Avatar size="sm" className="size-8 shrink-0">
             <AvatarImage
-              src={c.author?.avatar || '/images/defaultAvatar.png'}
+              src={c.author?.avatar || undefined}
               alt=""
             />
             <AvatarFallback>{displayName.slice(0, 1)}</AvatarFallback>

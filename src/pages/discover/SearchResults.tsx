@@ -182,7 +182,7 @@ export function DiscoverSearchResults({
                   <MembershipAvatar tier={u.subTier ?? null}>
                     <Avatar className="size-10">
                       <AvatarImage
-                        src={u.avatar || '/images/defaultAvatar.png'}
+                        src={u.avatar || undefined}
                         alt=""
                       />
                       <AvatarFallback>{display.slice(0, 1)}</AvatarFallback>

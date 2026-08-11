@@ -164,7 +164,7 @@ export function FeedEmptyState({
                   className="flex items-center gap-3 py-3"
                 >
                   <Avatar className="size-9">
-                    <AvatarImage src="/images/defaultAvatar.png" alt="" />
+                    <AvatarImage src={undefined} alt="" />
                     <AvatarFallback>
                       {(c.name || '?').slice(0, 1)}
                     </AvatarFallback>

@@ -576,7 +576,7 @@ export function ChangeProfile() {
                 <FieldLabel>头像</FieldLabel>
                 <div className="flex items-center gap-3">
                   <Avatar className="size-14 border">
-                    <AvatarImage src={avatar || '/images/defaultAvatar.png'} alt="" />
+                    <AvatarImage src={avatar || undefined} alt="" />
                     <AvatarFallback>{displayName.slice(0, 1)}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col gap-1.5">

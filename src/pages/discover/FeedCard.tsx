@@ -140,7 +140,7 @@ export function FeedCard({ item, onPreview }: FeedCardProps) {
         <MembershipAvatar tier={(item as any).subTier ?? null}>
           <Avatar size="sm" className="size-6">
             <AvatarImage
-              src={item.authorAvatar || '/images/defaultAvatar.png'}
+              src={item.authorAvatar || undefined}
               alt=""
             />
             <AvatarFallback>{item.authorName.slice(0, 1)}</AvatarFallback>
