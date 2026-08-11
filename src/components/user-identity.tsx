@@ -42,6 +42,8 @@ export function UserIdentity({
   showRoleBadges = false,
   /** C 端会员 badge（Pro/Plus 会员；不受视图限制，始终可显） */
   showSubBadge = false,
+  /** 单行模式：所有徽章与用户名同一行（用于关注/粉丝等紧凑列表） */
+  singleRow = false,
 }: {
   user: UserIdentityData
   className?: string
@@ -55,6 +57,7 @@ export function UserIdentity({
   size?: 'default' | 'lg' | 'sm'
   showRoleBadges?: boolean
   showSubBadge?: boolean
+  singleRow?: boolean
 }) {
   const display = resolveDisplayName(user)
   // 主名已是队内名时仍可展示「组织名」；displayName 与主名相同则只标组织
@@ -111,6 +114,63 @@ export function UserIdentity({
       : null)
   const secondaryRoleBadges = subBadge ? roleBadges : roleBadges.slice(1)
 
+  const renderOrgBadges = () => (
+    <>
+      {badges.slice(0, 3).map((a) => (
+        <SharedOrgBadge key={a.orgId || a.orgName} alias={a} primary={display} />
+      ))}
+      {badges.length > 3 && (
+        <Badge variant="outline" className="max-w-[8rem] truncate font-normal">
+          +{badges.length - 3}
+        </Badge>
+      )}
+    </>
+  )
+
+  if (singleRow) {
+    return (
+      <div className={cn('min-w-0 flex flex-col gap-0.5', className)}>
+        <div
+          className={cn(
+            'flex min-w-0 flex-wrap items-center gap-1.5',
+            nameRowClassName,
+          )}
+        >
+          {nameEl}
+          {roleBadges.map((b) => (
+            <Badge
+              key={b.key}
+              variant={b.variant}
+              className="max-w-[8rem] truncate font-normal"
+            >
+              {b.label}
+            </Badge>
+          ))}
+          {subBadge ? (
+            <Badge
+              key={subBadge.key}
+              variant="outline"
+              className={`max-w-[8rem] truncate font-medium text-[11px] ${subBadge.className}`}
+            >
+              {subBadge.label}
+            </Badge>
+          ) : null}
+          {renderOrgBadges()}
+        </div>
+        {showUsername && user.username ? (
+          <p
+            className={cn(
+              'truncate text-muted-foreground',
+              size === 'lg' ? 'text-xs sm:text-sm' : 'text-xs',
+            )}
+          >
+            @{user.username}
+          </p>
+        ) : null}
+      </div>
+    )
+  }
+
   return (
     <div className={cn('min-w-0 flex flex-col gap-0.5', className)}>
       <div
@@ -156,14 +216,7 @@ export function UserIdentity({
               {b.label}
             </Badge>
           ))}
-          {badges.slice(0, 3).map((a) => (
-            <SharedOrgBadge key={a.orgId || a.orgName} alias={a} primary={display} />
-          ))}
-          {badges.length > 3 && (
-            <Badge variant="outline" className="max-w-[8rem] truncate font-normal">
-              +{badges.length - 3}
-            </Badge>
-          )}
+          {renderOrgBadges()}
         </div>
       ) : null}
       {showUsername && user.username ? (

@@ -192,6 +192,7 @@ export function DiscoverSearchResults({
                     user={u}
                     className="flex-1"
                     showRoleBadges={showRoleBadges}
+                    singleRow
                   />
                   {isLogin && !selfRow && (
                     <Button
