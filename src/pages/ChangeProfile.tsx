@@ -11,6 +11,7 @@ import { getPrivacy, updatePrivacy } from '@/api/social'
 import { setSpider } from '@/api/spider'
 import { uploadImage } from '@/api/upload'
 import { useAuth } from '@/auth/AuthContext'
+import { AvatarCropDialog } from '@/components/avatar-crop-dialog'
 import { PageShell } from '@/components/page-shell'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -244,6 +245,9 @@ export function ChangeProfile() {
   const [acCounts, setAcCounts] = useState<Map<string, number>>(new Map())
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  /** 头像裁切：待裁切图片 object URL 与弹窗开关 */
+  const [cropOpen, setCropOpen] = useState(false)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
   const [sendingCode, setSendingCode] = useState(false)
   const [codeCooldown, setCodeCooldown] = useState(0)
   const [privacyLoading, setPrivacyLoading] = useState(true)
@@ -393,6 +397,39 @@ export function ChangeProfile() {
     }
   }
 
+  /** 选择图片后打开裁切弹窗（生成 object URL，关闭时释放） */
+  function openAvatarCrop(file: File) {
+    if (cropSrc) URL.revokeObjectURL(cropSrc)
+    const url = URL.createObjectURL(file)
+    setCropSrc(url)
+    setCropOpen(true)
+  }
+
+  function closeAvatarCrop() {
+    setCropOpen(false)
+    if (cropSrc) {
+      URL.revokeObjectURL(cropSrc)
+      setCropSrc(null)
+    }
+  }
+
+  /** 裁切确认：上传压缩后的 JPEG 头像 */
+  async function handleAvatarCropConfirm(file: File) {
+    setUploading(true)
+    try {
+      const res = await uploadImage(file, 'avatar')
+      if (!res.success || !res.data?.url) {
+        toast.error(res.message || '没传上去，过会儿再试')
+        return
+      }
+      setAvatar(res.data.url)
+      toast.success('头像传好啦，记得点保存资料')
+      closeAvatarCrop()
+    } finally {
+      setUploading(false)
+    }
+  }
+
   async function handleEmailToggle(checked: boolean, kind: 'daily' | 'weekly') {
     if (!user) return
     if (!boundEmail) {
@@ -539,24 +576,22 @@ export function ChangeProfile() {
                           type="file"
                           accept="image/jpeg,image/png,image/gif,image/webp"
                           className="hidden"
-                          onChange={async (e) => {
+                          onChange={(e) => {
                             const file = e.target.files?.[0]
                             e.target.value = ''
                             if (!file) return
-                            setUploading(true)
-                            const res = await uploadImage(file, 'avatar')
-                            setUploading(false)
-                            if (!res.success || !res.data?.url) {
-                              toast.error(res.message || '没传上去，过会儿再试')
+                            if (!file.type.startsWith('image/')) {
+                              toast.error('请选择图片文件')
                               return
                             }
-                            setAvatar(res.data.url)
-                            toast.success('头像传好啦，记得点保存资料')
+                            openAvatarCrop(file)
                           }}
                         />
                       </label>
                     </Button>
-                    <p className="text-xs text-muted-foreground">支持 jpg / png / webp，不超过 3MB</p>
+                    <p className="text-xs text-muted-foreground">
+                      支持 jpg / png / webp，不超过 3MB；上传时会先裁剪再压缩
+                    </p>
                   </div>
                 </div>
               </Field>
@@ -850,6 +885,15 @@ export function ChangeProfile() {
           返回个人资料
         </Button>
       </div>
+
+      <AvatarCropDialog
+        open={cropOpen}
+        src={cropSrc}
+        onOpenChange={(o) => {
+          if (!o) closeAvatarCrop()
+        }}
+        onConfirm={(file) => handleAvatarCropConfirm(file)}
+      />
     </PageShell>
   )
 }
