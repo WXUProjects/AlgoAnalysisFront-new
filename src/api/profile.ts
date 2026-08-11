@@ -131,8 +131,11 @@ export async function updateProfile(body: {
   const payload: Record<string, unknown> = {
     userId: body.userId,
     email: body.email,
-    avatar: body.avatar ?? '',
     emailCode: body.emailCode ?? '',
+  }
+  // avatar 只在有值时才发送：避免空值把后端已有头像清空
+  if (body.avatar) {
+    payload.avatar = body.avatar
   }
   if (body.aiDailyEnabled !== undefined) {
     payload.aiDailyEnabled = body.aiDailyEnabled

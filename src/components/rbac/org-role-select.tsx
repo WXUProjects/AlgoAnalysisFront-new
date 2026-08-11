@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/select'
 import {
   appointableRoles,
+  canGrantOrgRole,
   OrgRole,
   OrgRoleLabel,
   type OrgRoleValue,
@@ -54,9 +55,13 @@ export function OrgRoleSelect({
   if (allowedRoles && allowedRoles.length > 0) {
     options = ORG_ROLE_ORDER.filter((r) => allowedRoles.includes(r))
   } else if (isSiteAdmin || actorRole) {
+    // 按操作者等级 + 目标当前角色过滤（同级别不可降、更高不可动）
     const can = new Set(appointableRoles(actorRole, { isSiteAdmin }))
-    // 始终展示当前角色（便于看现状），但若当前不在可任命列表仍显示
-    options = ORG_ROLE_ORDER.filter((r) => can.has(r) || r === current)
+    options = ORG_ROLE_ORDER.filter(
+      (r) =>
+        can.has(r) &&
+        canGrantOrgRole(actorRole, current, r, { isSiteAdmin }),
+    )
   }
   // 保证当前值在列表中
   if (!options.includes(current)) {

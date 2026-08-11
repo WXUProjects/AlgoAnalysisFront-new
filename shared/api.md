@@ -164,6 +164,8 @@
 | `sharedOrgs` | 双方共属、且**非当前观看域**的组织列表 `{ orgId, orgName, displayName }`（**含公共域**；切换到校队后仍会标公共域与其他共属校队）；观众不在的组织**绝不**出现（隐私边界） |
 | `username` / `avatar` | 账号与头像 |
 | `isSiteAdmin` / `siteRoles` | 全站角色 badge（仅公共域视图展示）：`isSiteAdmin` 为内置「站点管理员」，`siteRoles` 为持有的自建站点角色名数组（内置角色不在其中） |
+| `subTier` | C 端订阅档 `plus`/`pro`（已过期返回空），用于会员 badge |
+| `orgRole` | 目标在**观众当前组织**内的角色 `member`/`captain`/`group_leader`/`coach`/`org_admin`；非当前域成员为空。前端据此展示「组织管理员」等组织角色 badge（不受公共域视图限制） |
 | GET | `/user/privacy/get` | 是 | 本人隐私：`privacyConfigured`, `allowPublicProfile`(默认 true), `allowPublicFeed`(默认 true) |
 | POST | `/user/privacy/update` | 是 | body: `{ allowPublicProfile?, allowPublicFeed? }`；保存后 `privacyConfigured=true` |
 | GET | `/user/privacy/status` | 否（可选 JWT） | `{ privacyConfigured }`；未登录视为 true（不弹窗） |
@@ -576,11 +578,13 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 
 | 角色 | 数据范围 | 任命 |
 |------|----------|------|
-| 组织管理员 | 全组织 | 可任命全部组织角色 |
-| 教练 | **始终全组织**（不受分组限制） | 可任命组长/队长/成员（不可任命组织管理员/教练） |
-| 组长 | 绑定的分组（及组内分队） | 可任命本组内队长/成员 |
+| 组织管理员 | 全组织 | 可任命自己同级及以下（含 `org_admin`）；**不能降级/移除同级组织管理员**（需站管） |
+| 教练 | **始终全组织**（不受分组限制） | 可任命自己同级及以下（含教练）；**不能降级同级教练**；不可任命组织管理员 |
+| 组长 | 绑定的分组（及组内分队） | 可任命自己同级及以下（含组长）；**不能降级同级组长** |
 | 队长 | 绑定的分队 | 无任命权 |
 | 成员 | — | — |
+
+**任命等级规则（统一收紧，含组织管理员）**：高角色可随便调整低角色（提/降/移除）；同级别可**提高到自己级别**（把下级提到与自己同级）但**不能降级同级别**；**不能移除同级别**；不可动比自己高的人。站管旁路全部校验。
 
 以下「组织/站点管理员」权限均已细化为对应权限点（org.member.\* / org.invite.\* / org.join.review / site.org.\* 等），管理员为默认持有者。
 
@@ -598,11 +602,15 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 | POST | `/user/org/join` | 是 | `{ inviteCode, orgDisplayName }` 团队识别码 + **组织内名称（必填）**；**不改**默认组织 |
 | POST | `/user/org/leave` | 是 | `{ orgId }`；**公共域不可退出**；若离开的是默认组织则回落公共域 |
 | GET | `/user/org/members` | 成员 | query: `orgId`、`page`（默认 1）、`pageSize`（默认 20，最大 100）、`keyword` 模糊；排序 **组织管理员 > 教练 > 组长 > 队长 > 成员**；返回 `name`、`orgDisplayName`、`scopes?`（组长/队长管理范围）、`total`/`page`/`pageSize` |
-| POST | `/user/org/members/set-role` | 持 `org.member.role` 且等级足够 | `{ orgId, userId, role: member\|captain\|group_leader\|coach\|org_admin, scopeType?, scopeId? }`；**任命队长必填** `scopeType=squad`+`scopeId`；**任命组长必填** `scopeType=group`+`scopeId`；**站管 / 组织管理员**可任命全部五档（含 `org_admin`）；其余只能任命**严格低于自己**的角色；教练/组织管理员清空 scope；若不在组织则加入并 **设为默认组织** |
+| POST | `/user/org/members/set-role` | 持 `org.member.role` 且等级足够 | `{ orgId, userId, role: member\|captain\|group_leader\|coach\|org_admin, scopeType?, scopeId? }`；**任命队长必填** `scopeType=squad`+`scopeId`；**任命组长必填** `scopeType=group`+`scopeId`；可任命**自己同级及以下**角色，**不可降级同级别**，不可动更高（站管可任命全部）；教练/组织管理员清空 scope；若不在组织则加入并 **设为默认组织** |
+| POST | `/user/org/members/remove` | 持 `org.member.remove` 且等级足够 | `{ orgId, userId }`；**只能移除严格低于自己的成员**（站管除外）；不可移除同级别或更高；最后一位组织管理员不可移除 |
 | GET/POST | `/user/org/squads*` | staff | 分队 CRUD 与成员；写权限：组织管理员/教练全组织，组长限本组，队长仅本分队成员调整 |
 | GET/POST | `/user/org/scopes*` | 组织管理员/站管 | 手动改管理范围；**禁止**给教练写入限制；组长/队长范围以任命为准 |
-| POST | `/user/org/members/remove` | 组织/站点管理员 | `{ orgId, userId }`；不可移出公共域；若移出默认组织则回落公共域 |
-| POST | `/user/org/members/add` | 站点/组织管理员 | `{ orgId, userId?\|username?, role?, orgDisplayName? }` 搜索加入；**设为默认组织**；组织内名称可填，默认用对方全局昵称 |
+| POST | `/user/org/members/add` | **仅站点管理员** | `{ orgId, userId?\|username?, role?, orgDisplayName? }` 搜索**直接加入**（跳过同意）；**设为默认组织**；组织内名称可填，默认用对方全局昵称。组织管理员请用 `members/invite`（需被邀请人同意） |
+| POST | `/user/org/members/invite` | 持 `org.member.add` | `{ orgId, userId?\|username?, role?, orgDisplayName? }` 发送加入邀请；**不直接加入**，被邀请人同意（`invites/review`）后才成为成员并设为默认组织；重复邀请返回「已发送邀请，等待对方同意」；已在组织则报错 |
+| GET | `/user/org/invites` | 登录 | 带 `orgId`（且有 `org.member.add`）→ 该组织**未决邀请**（组织侧撤回用）；不带 → **我收到的邀请**（含历史，最近 50 条） |
+| POST | `/user/org/invites/review` | 被邀请人本人 | `{ id, approve }` 同意/拒绝；同意后成为成员（校验座位数）并设为默认组织 |
+| POST | `/user/org/invites/cancel` | 持 `org.member.add` | `{ id }` 组织侧撤回未决邀请 |
 | POST | `/user/org/members/set-display-name` | 本人或组织/站点管理员 | `{ orgId, userId?, orgDisplayName }` 改组织内名称 |
 | GET | `/user/org/member-ids` | 否/登录 | query: `orgId` → `{ userIds }`（core 隔离用） |
 | GET | `/user/profile/ids-by-org` | 否 | query: `orgId` → 组织成员 ids（gRPC/HTTP） |
@@ -618,14 +626,14 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 > `/user/platform/set-resource-reviewer` 已随「资源审核员」内置身份下线移除；内容审核权限改由站点自定义角色（`content.*` 权限点）授予。
 
 默认组织（`users.current_org_id`）：注册时为 **公共域** `slug=public`（全员自动加入，不可退出）。  
-**管理员拉入**某组织后，该组织成为用户默认组织（下次打开自动进入）。用户之后只需 **switch 切换**，切换即记忆，无需刻意「修改默认组织」。
+**管理员直接拉入**或**被邀请人同意邀请**后，该组织成为用户默认组织（下次打开自动进入）。用户之后只需 **switch 切换**，切换即记忆，无需刻意「修改默认组织」。
 
 **用户数上限（seatLimit）**
 
 | 规则 | 说明 |
 |------|------|
 | 默认 | 每个组织默认 **50** 人；站点管理员可在创建/更新时设置 |
-| 普通组织 | `memberCount` = 组织成员总数；达上限后无法 join / add / 审批通过 / set-role 拉入 |
+| 普通组织 | `memberCount` = 组织成员总数；达上限后无法 join / add / 审批通过 / set-role 拉入 / 接受邀请 |
 | 公共域 | `memberCount` 仅统计 **只属于公共域、未加入其它组织** 的用户；注册占用公共域席位 |
 | 权限 | 仅 **站点管理员** 可改 `seatLimit` |
 
@@ -1471,6 +1479,11 @@ POST   /api/user/org/leave
 GET    /api/user/org/members
 POST   /api/user/org/members/set-role
 POST   /api/user/org/members/remove
+POST   /api/user/org/members/add
+POST   /api/user/org/members/invite
+GET    /api/user/org/invites
+POST   /api/user/org/invites/review
+POST   /api/user/org/invites/cancel
 GET    /api/user/org/invite
 GET    /api/user/org/invite/preview
 POST   /api/user/org/invite/rotate

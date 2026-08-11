@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/table'
 import { Perm } from '@/lib/permissions'
 import {
+  canRemoveOrgRole,
   OrgRole,
   orgRoleName,
   roleNeedsScope,
@@ -248,8 +249,12 @@ export function DashboardOrgMemberRoles() {
                 {members.map((m) => {
                   const label =
                     m.name || m.orgDisplayName || m.username || String(m.userId)
+                  // 收紧：只能移除严格低于自己的成员（站管除外）
                   const canRemove =
-                    canRemoveMember && !isSystemOrg && m.userId !== myUserId
+                    canRemoveMember &&
+                    !isSystemOrg &&
+                    m.userId !== myUserId &&
+                    canRemoveOrgRole(actorRole, m.role, { isSiteAdmin })
                   const scopes = m.scopes || []
                   const scopeHint =
                     scopes.length > 0

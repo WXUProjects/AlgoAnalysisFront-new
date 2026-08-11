@@ -384,7 +384,7 @@ export function ChangeProfile() {
     const res = await updateProfile({
       userId: user.userId,
       email: email.trim(),
-      avatar: avatar || '',
+      avatar: avatar || undefined,
       emailCode: emailChanged ? emailCode.trim() : undefined,
     })
     setSaving(false)
@@ -745,7 +745,7 @@ export function ChangeProfile() {
             </FieldGroup>
           </CardContent>
           <CardFooter className="flex gap-2 px-4">
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || !profile}>
               {saving ? <Spinner data-icon="inline-start" /> : null}
               保存资料
             </Button>

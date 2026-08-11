@@ -476,7 +476,7 @@ export function DashboardOrgsManage() {
                   )}
 
                   <div className="border-t pt-4">
-                    <Label className="mb-2 block">搜索用户加入本组织</Label>
+                    <Label className="mb-2 block">搜索用户直接加入本组织</Label>
                     <div className="flex gap-2">
                       <Input
                         placeholder="用户名或昵称"

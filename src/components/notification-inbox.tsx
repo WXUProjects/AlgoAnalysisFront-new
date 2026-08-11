@@ -100,6 +100,13 @@ function notifLink(n: NotificationItem): string | null {
   if (n.type === 'org_join_approved' || n.type === 'org_join_rejected') {
     return '/orgs'
   }
+  // 邀请你加入 → 去「我的组织」同意/拒绝；对方同意/拒绝 → 组织管理员回去看
+  if (n.type === 'org_invited') {
+    return '/org'
+  }
+  if (n.type === 'org_invite_accepted' || n.type === 'org_invite_declined') {
+    return '/admin/org'
+  }
   if (n.problemId > 0) {
     if (n.refType === 'solution' && n.refId > 0) {
       return `/question-bank/detail/${n.problemId}/solution/${n.refId}`

@@ -45,9 +45,10 @@ const ALL_ORG_ROLES: OrgRoleValue[] = [
 ]
 
 /**
- * 操作者可任命的角色列表。
+ * 操作者可任命的角色列表（按操作者等级粗筛）。
  * - 站管 / 组织管理员：本组织全部五档（含组织管理员）
- * - 其余：严格低于自己；队长及以下无任命权
+ * - 其余：自己同级及以下（可把下级提高到与自己同级）；队长及以下无任命权
+ * 是否可改某个具体成员仍要叠加目标当前角色判定（见 canGrantOrgRole）。
  */
 export function appointableRoles(
   actorRole?: string | null,
@@ -58,7 +59,37 @@ export function appointableRoles(
   }
   const ar = orgRoleRank(actorRole)
   if (ar < OrgRoleRank.group_leader) return []
-  return ALL_ORG_ROLES.filter((r) => orgRoleRank(r) < ar)
+  return ALL_ORG_ROLES.filter((r) => orgRoleRank(r) <= ar)
+}
+
+/**
+ * 操作者能否把某目标改到 newRole（对齐后端 model.CanAppointOrgRole）：
+ * 高可随便动低；同级别可提到自己同级但不许降；不可动更高/授予更高。
+ */
+export function canGrantOrgRole(
+  actorRole?: string | null,
+  targetCurrentRole?: string | null,
+  newRole?: string | null,
+  opts?: { isSiteAdmin?: boolean },
+): boolean {
+  if (opts?.isSiteAdmin) return true
+  const ar = orgRoleRank(actorRole)
+  if (ar < OrgRoleRank.group_leader) return false
+  if (orgRoleRank(newRole) > ar) return false
+  const tr = orgRoleRank(targetCurrentRole)
+  if (tr > ar) return false
+  if (tr === ar && orgRoleRank(newRole) < ar) return false
+  return true
+}
+
+/** 操作者能否移除某成员：只能移除严格低于自己的（站管除外） */
+export function canRemoveOrgRole(
+  actorRole?: string | null,
+  targetRole?: string | null,
+  opts?: { isSiteAdmin?: boolean },
+): boolean {
+  if (opts?.isSiteAdmin) return true
+  return orgRoleRank(targetRole) < orgRoleRank(actorRole)
 }
 
 /** 该角色任命时是否需要绑定范围 */

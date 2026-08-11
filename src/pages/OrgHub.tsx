@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
-import { joinOrg, leaveOrg, setOrgDisplayName } from '@/api/org'
+import { joinOrg, leaveOrg, listOrgInvites, reviewOrgInvite, setOrgDisplayName } from '@/api/org'
 import type { OrgInfo } from '@shared/api'
 import { orgRoleName } from '@/lib/roles'
 import {
@@ -32,6 +32,42 @@ export function OrgHub() {
   const [code, setCode] = useState('')
   const [orgDisplayName, setOrgDisplayNameInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [pendingInvites, setPendingInvites] = useState<
+    { id: number; orgName: string; inviterName?: string }[]
+  >([])
+
+  async function loadPendingInvites() {
+    const res = await listOrgInvites()
+    if (res.success) {
+      setPendingInvites(
+        res.list
+          .filter((i) => i.status === 'pending')
+          .map((i) => ({
+            id: i.id,
+            orgName: i.orgName || '本组织',
+            inviterName: i.inviterName || i.name,
+          })),
+      )
+    }
+  }
+
+  async function handleInviteReview(id: number, approve: boolean) {
+    const res = await reviewOrgInvite(id, approve)
+    if (!res.success) {
+      toast.error(res.message || '操作失败，稍后重试')
+      return
+    }
+    toast.success(approve ? '已同意，欢迎加入' : '已拒绝')
+    await loadPendingInvites()
+    if (approve) {
+      await refreshOrgs()
+      await sync()
+    }
+  }
+
+  useEffect(() => {
+    void loadPendingInvites()
+  }, [])
 
   const [editOrg, setEditOrg] = useState<OrgInfo | null>(null)
   const [editName, setEditName] = useState('')
@@ -197,6 +233,44 @@ export function OrgHub() {
           ))}
         </CardContent>
       </Card>
+
+      {pendingInvites.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">待处理的邀请</CardTitle>
+            <CardDescription>有人邀请你加入组织，同意后才成为成员。</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {pendingInvites.map((inv) => (
+              <div
+                key={inv.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"
+              >
+                <div className="min-w-0">
+                  <div className="font-medium">「{inv.orgName}」邀请你加入</div>
+                  {inv.inviterName ? (
+                    <div className="text-xs text-muted-foreground">
+                      邀请人：{inv.inviterName}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void handleInviteReview(inv.id, false)}
+                  >
+                    拒绝
+                  </Button>
+                  <Button size="sm" onClick={() => void handleInviteReview(inv.id, true)}>
+                    同意加入
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

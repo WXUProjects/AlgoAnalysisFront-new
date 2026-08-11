@@ -12,7 +12,7 @@ import {
   unfollowUser,
 } from '@/api/social'
 import { getProfileByUsername } from '@/api/profile'
-import type { SocialUser } from '@shared/api'
+import type { SocialRelation, SocialUser } from '@shared/api'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
@@ -37,8 +37,8 @@ import { cn } from '@/lib/utils'
 
 const DEFAULT_PAGE_SIZE = 20
 
-/** userId → 是否已关注；同一用户不重复请求（关注/取关时同步更新） */
-const relationCache = new Map<number, boolean>()
+/** userId → 关注关系（是否已关注 + 是否被对方关注）；同一用户不重复请求（关注/取关时同步更新） */
+const relationCache = new Map<number, SocialRelation>()
 
 type TabKey = 'following' | 'followers' | 'search'
 
@@ -66,7 +66,7 @@ export function Social() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [qInput, setQInput] = useState(qParam)
-  const [relationMap, setRelationMap] = useState<Record<number, boolean>>({})
+  const [relationMap, setRelationMap] = useState<Record<number, SocialRelation>>({})
   const [busyId, setBusyId] = useState(0)
   /** 竞态守卫：丢弃过期的列表响应 */
   const loadRequestId = useRef(0)
@@ -179,7 +179,7 @@ export function Social() {
     }
     let cancelled = false
     async function fill() {
-      const next: Record<number, boolean> = {}
+      const next: Record<number, SocialRelation> = {}
       await Promise.all(
         list.map(async (u) => {
           if (user && u.userId === user.userId) return
@@ -191,8 +191,12 @@ export function Social() {
           }
           const r = await getSocialRelation(u.userId)
           if (r.success && r.data) {
-            next[u.userId] = r.data.isFollowing
-            relationCache.set(u.userId, r.data.isFollowing)
+            const rel: SocialRelation = {
+              isFollowing: r.data.isFollowing,
+              isFollower: r.data.isFollower,
+            }
+            next[u.userId] = rel
+            relationCache.set(u.userId, rel)
           }
         }),
       )
@@ -260,7 +264,8 @@ export function Social() {
     }
     if (user && u.userId === user.userId) return
     setBusyId(u.userId)
-    const following = relationMap[u.userId]
+    const rel = relationMap[u.userId]
+    const following = rel?.isFollowing ?? false
     const res = following
       ? await unfollowUser(u.userId)
       : await followUser(u.userId)
@@ -269,8 +274,12 @@ export function Social() {
       toast.error(res.message || '没弄成，过会儿再试试')
       return
     }
-    relationCache.set(u.userId, !following)
-    setRelationMap((m) => ({ ...m, [u.userId]: !following }))
+    const nextRel: SocialRelation = {
+      isFollowing: !following,
+      isFollower: rel?.isFollower ?? false,
+    }
+    relationCache.set(u.userId, nextRel)
+    setRelationMap((m) => ({ ...m, [u.userId]: nextRel }))
     toast.success(following ? '已取消关注' : '已关注')
   }
 
@@ -355,7 +364,9 @@ export function Social() {
           {!loading &&
             list.map((u) => {
               const display = resolveDisplayName(u)
-              const following = relationMap[u.userId]
+              const rel = relationMap[u.userId]
+              const following = rel?.isFollowing ?? false
+              const mutual = Boolean(rel && rel.isFollowing && rel.isFollower)
               const selfRow = Boolean(user && u.userId === user.userId)
               return (
                 <div
@@ -389,7 +400,7 @@ export function Social() {
                       {following ? (
                         <>
                           <UserMinusIcon data-icon="inline-start" />
-                          已关注
+                          {mutual ? '互相关注' : '已关注'}
                         </>
                       ) : (
                         <>

@@ -2,6 +2,7 @@ import {
   endpoints,
   type OrgDiscoverItem,
   type OrgInfo,
+  type OrgInviteInfo,
   type OrgMemberInfo,
 } from '@shared/api'
 import { get, post, num, str, bool } from '@/lib/http'
@@ -107,6 +108,75 @@ export async function addOrgMember(payload: {
     success: res.success && bizOk(body?.code),
     message: body?.message || res.message,
     userId: body?.userId,
+  }
+}
+
+/** 组织管理员发送加入邀请（需被邀请人同意后才成为成员） */
+export async function inviteOrgMember(payload: {
+  orgId: number
+  userId?: number
+  username?: string
+  role?: string
+  orgDisplayName?: string
+}) {
+  const res = await post<{ code?: number; message?: string; inviteId?: number }>(
+    endpoints.user.org.inviteUser,
+    payload,
+  )
+  const body = res.data as { code?: number; message?: string; inviteId?: number }
+  return {
+    success: res.success && bizOk(body?.code),
+    message: body?.message || res.message,
+    inviteId: body?.inviteId,
+  }
+}
+
+function normalizeInvite(raw: OrgInviteInfo): OrgInviteInfo {
+  return {
+    ...raw,
+    id: num(raw.id),
+    orgId: num(raw.orgId),
+    userId: num(raw.userId),
+    inviterId: raw.inviterId === undefined || raw.inviterId === null ? undefined : num(raw.inviterId),
+    createdAt: raw.createdAt === undefined || raw.createdAt === null ? undefined : num(raw.createdAt),
+  }
+}
+
+/** 邀请列表：orgId（且有权限）→ 组织的未决邀请；否则 → 我收到的邀请 */
+export async function listOrgInvites(opts?: { orgId?: number }) {
+  const res = await get<{ code?: number; message?: string; list?: OrgInviteInfo[] }>(
+    endpoints.user.org.invites,
+    opts?.orgId ? { orgId: opts.orgId } : undefined,
+  )
+  const raw = (res.data ?? res.raw ?? {}) as {
+    code?: number
+    message?: string
+    list?: OrgInviteInfo[]
+  }
+  return {
+    success: res.success && bizOk(raw.code),
+    message: raw.message || res.message,
+    list: asList<OrgInviteInfo>(raw.list ?? res.data).map(normalizeInvite),
+  }
+}
+
+/** 被邀请人接受/拒绝 */
+export async function reviewOrgInvite(id: number, approve: boolean) {
+  const res = await post(endpoints.user.org.inviteReview, { id, approve })
+  const body = res.data as { code?: number; message?: string }
+  return {
+    success: res.success && bizOk(body?.code),
+    message: body?.message || res.message,
+  }
+}
+
+/** 组织侧撤回未决邀请 */
+export async function cancelOrgInvite(id: number) {
+  const res = await post(endpoints.user.org.inviteCancel, { id })
+  const body = res.data as { code?: number; message?: string }
+  return {
+    success: res.success && bizOk(body?.code),
+    message: body?.message || res.message,
   }
 }
 

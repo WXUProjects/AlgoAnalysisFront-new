@@ -127,6 +127,10 @@ export const endpoints = {
       setRole: `${API_PREFIX}/user/org/members/set-role`,
       removeMember: `${API_PREFIX}/user/org/members/remove`,
       addMember: `${API_PREFIX}/user/org/members/add`,
+      inviteUser: `${API_PREFIX}/user/org/members/invite`,
+      invites: `${API_PREFIX}/user/org/invites`,
+      inviteReview: `${API_PREFIX}/user/org/invites/review`,
+      inviteCancel: `${API_PREFIX}/user/org/invites/cancel`,
       setDisplayName: `${API_PREFIX}/user/org/members/set-display-name`,
       memberIds: `${API_PREFIX}/user/org/member-ids`,
       invite: `${API_PREFIX}/user/org/invite`,
@@ -764,6 +768,8 @@ export interface SocialUser {
   siteRoles?: string[]
   /** C 端订阅档 plus|pro（过期返回空） */
   subTier?: string
+  /** 目标在当前观众组织内的角色（member/captain/group_leader/coach/org_admin；非当前域成员为空） */
+  orgRole?: string
 }
 
 export interface SocialListRes {
@@ -1067,6 +1073,22 @@ export interface OrgMemberInfo {
   joinedAt?: number
   /** 组长/队长的管理范围（任命时绑定） */
   scopes?: ScopeGrant[]
+}
+
+export interface OrgInviteInfo {
+  id: number
+  orgId: number
+  orgName: string
+  userId: number
+  username?: string
+  name?: string
+  inviterId?: number
+  inviterName?: string
+  role?: string
+  orgDisplayName?: string
+  /** pending | accepted | rejected | cancelled */
+  status?: string
+  createdAt?: number
 }
 
 export interface SubmitLogItem {

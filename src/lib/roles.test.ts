@@ -4,6 +4,8 @@ import {
   appointableRoles,
   bottomNavStaffLabel,
   canAccessAdminFromPayload,
+  canGrantOrgRole,
+  canRemoveOrgRole,
   isSiteAdminFromPayload,
   OrgRole,
   orgRoleName,
@@ -162,23 +164,113 @@ describe('appointableRoles', () => {
     ])
   })
 
-  it('教练只能任命严格低于自己的角色', () => {
+  it('教练可任命自己同级及以下（含教练）', () => {
     assert.deepEqual(appointableRoles(OrgRole.Coach), [
+      OrgRole.Member,
+      OrgRole.Captain,
+      OrgRole.GroupLeader,
+      OrgRole.Coach,
+    ])
+  })
+
+  it('组长可任命自己同级及以下（含组长）', () => {
+    assert.deepEqual(appointableRoles(OrgRole.GroupLeader), [
       OrgRole.Member,
       OrgRole.Captain,
       OrgRole.GroupLeader,
     ])
   })
 
-  it('组长只能任命队长与成员', () => {
-    assert.deepEqual(appointableRoles(OrgRole.GroupLeader), [
-      OrgRole.Member,
-      OrgRole.Captain,
-    ])
-  })
-
   it('队长及以下无任命权', () => {
     assert.deepEqual(appointableRoles(OrgRole.Captain), [])
     assert.deepEqual(appointableRoles(OrgRole.Member), [])
+  })
+})
+
+describe('canGrantOrgRole（同级别不可降，高可动低，不可动更高）', () => {
+  it('组织管理员统一受限：不可降同级组织管理员', () => {
+    assert.equal(
+      canGrantOrgRole(OrgRole.OrgAdmin, OrgRole.OrgAdmin, OrgRole.Member),
+      false,
+    )
+    assert.equal(
+      canGrantOrgRole(OrgRole.OrgAdmin, OrgRole.Member, OrgRole.OrgAdmin),
+      true,
+    )
+    assert.equal(
+      canGrantOrgRole(OrgRole.OrgAdmin, OrgRole.Member, OrgRole.Coach),
+      true,
+    )
+  })
+
+  it('教练可动低级别（提/降），不可降同级教练，不可动组织管理员', () => {
+    assert.equal(
+      canGrantOrgRole(OrgRole.Coach, OrgRole.Member, OrgRole.Coach),
+      true,
+    )
+    assert.equal(
+      canGrantOrgRole(OrgRole.Coach, OrgRole.Member, OrgRole.GroupLeader),
+      true,
+    )
+    assert.equal(
+      canGrantOrgRole(OrgRole.Coach, OrgRole.GroupLeader, OrgRole.Member),
+      true,
+    )
+    assert.equal(
+      canGrantOrgRole(OrgRole.Coach, OrgRole.Coach, OrgRole.Member),
+      false,
+    )
+    assert.equal(
+      canGrantOrgRole(OrgRole.Coach, OrgRole.OrgAdmin, OrgRole.Member),
+      false,
+    )
+    assert.equal(
+      canGrantOrgRole(OrgRole.Coach, OrgRole.Member, OrgRole.OrgAdmin),
+      false,
+    )
+  })
+
+  it('组长可动队长/成员，不可降同级组长', () => {
+    assert.equal(
+      canGrantOrgRole(OrgRole.GroupLeader, OrgRole.Member, OrgRole.GroupLeader),
+      true,
+    )
+    assert.equal(
+      canGrantOrgRole(OrgRole.GroupLeader, OrgRole.Captain, OrgRole.Member),
+      true,
+    )
+    assert.equal(
+      canGrantOrgRole(OrgRole.GroupLeader, OrgRole.GroupLeader, OrgRole.Member),
+      false,
+    )
+  })
+
+  it('站管可任命全部', () => {
+    assert.equal(
+      canGrantOrgRole(OrgRole.Member, OrgRole.Member, OrgRole.OrgAdmin, {
+        isSiteAdmin: true,
+      }),
+      true,
+    )
+  })
+})
+
+describe('canRemoveOrgRole（只能移除严格低于自己，站管除外）', () => {
+  it('组织管理员不能移除同级组织管理员', () => {
+    assert.equal(canRemoveOrgRole(OrgRole.OrgAdmin, OrgRole.OrgAdmin), false)
+    assert.equal(canRemoveOrgRole(OrgRole.OrgAdmin, OrgRole.Coach), true)
+  })
+
+  it('教练不能移除教练/更高，可移除更低', () => {
+    assert.equal(canRemoveOrgRole(OrgRole.Coach, OrgRole.Coach), false)
+    assert.equal(canRemoveOrgRole(OrgRole.Coach, OrgRole.OrgAdmin), false)
+    assert.equal(canRemoveOrgRole(OrgRole.Coach, OrgRole.Member), true)
+  })
+
+  it('站管可移除任何人', () => {
+    assert.equal(
+      canRemoveOrgRole(OrgRole.Member, OrgRole.OrgAdmin, { isSiteAdmin: true }),
+      true,
+    )
   })
 })

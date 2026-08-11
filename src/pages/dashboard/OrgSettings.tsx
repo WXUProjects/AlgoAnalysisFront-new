@@ -4,14 +4,16 @@ import { Link2Icon, Share2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
 import {
-  addOrgMember,
+  cancelOrgInvite,
   getInvite,
+  inviteOrgMember,
+  listOrgInvites,
   rotateInvite,
   updateOrg,
 } from '@/api/org'
 import { getProfileByName } from '@/api/profile'
 import { uploadImage } from '@/api/upload'
-import type { UserProfile } from '@shared/api'
+import type { OrgInviteInfo, UserProfile } from '@shared/api'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ImageUploadTile } from '@/components/image-upload-tile'
 import { Button } from '@/components/ui/button'
@@ -65,6 +67,8 @@ export function DashboardOrgSettings() {
   const [addSearch, setAddSearch] = useState('')
   const [addCandidates, setAddCandidates] = useState<UserProfile[]>([])
   const [addSearching, setAddSearching] = useState(false)
+  const [sentInvites, setSentInvites] = useState<OrgInviteInfo[]>([])
+  const [invitesLoading, setInvitesLoading] = useState(false)
   /** 本域入口链接弹窗（非邀请） */
   const [domainShareOpen, setDomainShareOpen] = useState(false)
 
@@ -107,12 +111,18 @@ export function DashboardOrgSettings() {
         if (r.inviteCode) setInviteCode(r.inviteCode)
       })
     }
+    if (canAddMember) {
+      void listOrgInvites({ orgId }).then((r) => {
+        if (cancelled) return
+        if (r.success) setSentInvites(r.list)
+      })
+    }
     return () => {
       cancelled = true
     }
     // 仅在切换组织时重置草稿；依赖整个 currentOrg 会因对象引用变化反复重跑
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId, currentOrg?.id, canViewInvite])
+  }, [orgId, currentOrg?.id, canViewInvite, canAddMember])
 
   useEffect(() => {
     if (!addSearch.trim()) {
@@ -166,6 +176,22 @@ export function DashboardOrgSettings() {
       toast.success('已保存')
       await refreshOrgs()
     } else toast.error(res.message || '保存失败，稍后重试')
+  }
+
+  async function refreshSentInvites() {
+    if (!orgId) return
+    setInvitesLoading(true)
+    const res = await listOrgInvites({ orgId })
+    setInvitesLoading(false)
+    if (res.success) setSentInvites(res.list)
+  }
+
+  async function onCancelInvite(inviteId: number) {
+    const res = await cancelOrgInvite(inviteId)
+    if (res.success) {
+      toast.success(res.message || '已撤回邀请')
+      await refreshSentInvites()
+    } else toast.error(res.message || '撤回失败，稍后重试')
   }
 
   // 按持有的权限决定可见区块；一个都没有则拒绝访问
@@ -426,10 +452,11 @@ export function DashboardOrgSettings() {
       ) : null}
 
       {canAddMember ? (
+      <>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">搜索用户加入本组织</CardTitle>
-          <CardDescription>按昵称或用户名搜索，将用户加入本组织。</CardDescription>
+          <CardTitle className="text-base">邀请加入本组织</CardTitle>
+          <CardDescription>按昵称或用户名搜索，发送加入邀请；对方同意后才成为成员。</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           <Input
@@ -454,21 +481,61 @@ export function DashboardOrgSettings() {
               <Button
                 size="sm"
                 onClick={() =>
-                  void addOrgMember({ orgId, userId: c.userId }).then((r) => {
+                  void inviteOrgMember({ orgId, userId: c.userId }).then((r) => {
                     if (r.success) {
-                      toast.success(r.message || '已加入')
+                      toast.success(r.message || '已发送邀请')
                       setAddSearch('')
                       setAddCandidates([])
+                      void refreshSentInvites()
                     } else toast.error(r.message)
                   })
                 }
               >
-                加入
+                邀请
               </Button>
             </div>
           ))}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">发出的邀请</CardTitle>
+          <CardDescription>等待对方同意的邀请；不需要了可以撤回。</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {invitesLoading && (
+            <p className="text-sm text-muted-foreground">加载中…</p>
+          )}
+          {!invitesLoading && sentInvites.length === 0 && (
+            <p className="text-sm text-muted-foreground">还没有待同意的邀请</p>
+          )}
+          {sentInvites.map((inv) => (
+            <div
+              key={inv.id}
+              className="flex items-center justify-between rounded border px-3 py-2 text-sm"
+            >
+              <span className="min-w-0 truncate">
+                {inv.name || inv.username}
+                {inv.username ? (
+                  <span className="ml-1 text-muted-foreground">@{inv.username}</span>
+                ) : null}
+              </span>
+              <ConfirmDialog
+                title="撤回这条邀请？"
+                description="对方将收不到这条邀请，之后需要可以重新邀请。"
+                confirmLabel="撤回"
+                onConfirm={() => void onCancelInvite(inv.id)}
+              >
+                <Button variant="outline" size="sm">
+                  撤回
+                </Button>
+              </ConfirmDialog>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      </>
       ) : null}
 
     </div>
