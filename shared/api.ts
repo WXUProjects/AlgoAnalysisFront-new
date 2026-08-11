@@ -252,7 +252,7 @@ export const endpoints = {
       platformUsers: `${API_PREFIX}/core/spider/platform-users`,
       /** 用户：手动增量刷新自己的 OJ 做题记录（每日限 2 次） */
       refresh: `${API_PREFIX}/core/spider/refresh`,
-      /** 今日手动刷新做题记录状态（配额/剩余/冷却/生效间隔；只读）；userId 可选，站管可查他人 */
+      /** 用户：今日手动刷新做题记录状态（配额/剩余/冷却；只读） */
       refreshStatus: `${API_PREFIX}/core/spider/refresh-status`,
       /** 站管：暂停/恢复某 OJ 的爬虫同步 body: { platform, enabled } */
       togglePlatform: `${API_PREFIX}/core/spider/toggle-platform`,
@@ -533,7 +533,7 @@ export interface RefreshSpiderRes {
   remaining: number
 }
 
-/** 今日手动刷新做题记录状态（GET /core/spider/refresh-status；userId=0 查自己，站管可传 userId 查他人） */
+/** 今日手动刷新做题记录状态（GET /core/spider/refresh-status） */
 export interface RefreshSpiderStatusRes {
   code: number
   message: string
@@ -726,7 +726,6 @@ export interface UserProfile {
   avatar: string
   emailEnabled?: boolean
   emailWeeklyEnabled?: boolean
-  /** 日报默认授权（历史字段，不再拦截开启） */
   emailAllowedByOrg?: boolean
   emailWeeklyAllowedByOrg?: boolean
   roleId?: number
@@ -812,7 +811,7 @@ export interface UserListItem {
   emailEnabled?: boolean
   /** 个人周报邮件偏好 */
   emailWeeklyEnabled?: boolean
-  /** 历史字段：日报默认授权，不再拦截开启 */
+  /** 是否有组织授权日报（可开启） */
   emailAllowedByOrg?: boolean
   /** 是否有组织授权周报且为 staff（可开启） */
   emailWeeklyAllowedByOrg?: boolean
@@ -929,8 +928,6 @@ export interface SubUser {
   expireAt: number
   /** payfm|manager */
   source: string
-  /** 头像（已扩展为完整 URL；空=未设置） */
-  avatar?: string
 }
 
 export interface GroupInfo {
@@ -1487,6 +1484,7 @@ export interface HotProblemRes {
 }
 
 export interface ProblemUserProfile {
+  /** 能力雷达：score=掌握度 0–100（难度加权题量 + 饱和锚定），acCount=去重 AC 题数 */
   radar: { tag: string; score: number; acCount: number }[]
   /** 平台过题；牛客统一为 NowCoder（不再拆竞赛站 / Tracker） */
   platforms: { name: string; count: number }[]
