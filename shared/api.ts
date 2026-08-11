@@ -929,6 +929,8 @@ export interface SubUser {
   expireAt: number
   /** payfm|manager */
   source: string
+  /** 头像（已扩展为完整 URL；空=未设置） */
+  avatar?: string
 }
 
 export interface GroupInfo {

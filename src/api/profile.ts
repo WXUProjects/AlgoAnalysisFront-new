@@ -397,6 +397,20 @@ export async function listProfiles(
               ? undefined
               : bool(u.adminForceDormant),
           disabled: u.disabled === undefined ? undefined : bool(u.disabled),
+          dailyRefreshQuota:
+            u.dailyRefreshQuota === undefined
+              ? undefined
+              : num(u.dailyRefreshQuota),
+          dailyRefreshQuotaOverridden:
+            u.dailyRefreshQuotaOverridden === undefined
+              ? undefined
+              : bool(u.dailyRefreshQuotaOverridden),
+          subTier:
+            u.subTier === undefined ? undefined : str(u.subTier) || undefined,
+          subExpireAt:
+            u.subExpireAt === undefined || u.subExpireAt === null
+              ? undefined
+              : num(u.subExpireAt) || undefined,
           orgs: orgsRaw.map((o) => ({
             orgId: num(o.orgId),
             name: str(o.name),

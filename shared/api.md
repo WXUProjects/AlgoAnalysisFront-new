@@ -718,8 +718,9 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 
 **SubUser**
 ```json
-{ "userId": 1, "username": "string", "name": "string", "tier": "pro", "expireAt": 0, "source": "manager" }
+{ "userId": 1, "username": "string", "name": "string", "tier": "pro", "expireAt": 0, "source": "manager", "avatar": "https://.../avatar/1/xxx.jpg" }
 ```
+`avatar` 已扩展为完整 URL；空=未设置。
 
 **支付FM支付**：回调 `GET/POST /v1/payment/notify`（网关免 JWT，MD5 验签 `md5(state+商户号+订单号+金额+密钥)`，state=1 才成功；金额相等校验；行锁幂等履约；回调地址常量 `https://algo.zhiyuansofts.cn/v1/payment/notify`，环境变量 `PAYMENT_NOTIFY_URL` 可覆盖）。支付FM配置存 `site_configs`（`payfm_api_base` / `payfm_merchant_no` / `payfm_secret` 加密存储 / `payfm_pay_type`），未配置时下单报「支付未配置」。
 

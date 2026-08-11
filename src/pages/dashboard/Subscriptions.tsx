@@ -257,7 +257,10 @@ export function DashboardSubscriptions() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar className="size-8">
-                            <AvatarImage src="" alt="" />
+                            <AvatarImage
+                              src={u.avatar || '/images/defaultAvatar.png'}
+                              alt=""
+                            />
                             <AvatarFallback>
                               {(u.name || u.username || '?').slice(0, 1)}
                             </AvatarFallback>

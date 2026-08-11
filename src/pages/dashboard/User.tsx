@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { listAllGroups } from '@/api/group'
@@ -1160,7 +1160,10 @@ function UserListPage({ scope }: { scope: UserScope }) {
                       <TableCell>
                         <div className="flex items-center gap-3">
                         <Avatar className="hidden size-8 sm:flex">
-                          <AvatarImage src={u.avatar || undefined} />
+                          <AvatarImage
+                            src={u.avatar || '/images/defaultAvatar.png'}
+                            alt=""
+                          />
                           <AvatarFallback>
                             {(u.name || u.username || '?').slice(0, 1)}
                           </AvatarFallback>
@@ -1177,6 +1180,21 @@ function UserListPage({ scope }: { scope: UserScope }) {
                           >
                             {u.name || u.username}
                           </Link>
+                          {u.subTier === 'pro' ? (
+                            <Badge
+                              variant="outline"
+                              className="border-amber-300 bg-amber-100 font-medium text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/50 dark:text-amber-300"
+                            >
+                              Pro 会员
+                            </Badge>
+                          ) : u.subTier === 'plus' ? (
+                            <Badge
+                              variant="outline"
+                              className="border-zinc-300 bg-zinc-100 font-medium text-zinc-700 dark:border-zinc-600/50 dark:bg-zinc-800/60 dark:text-zinc-300"
+                            >
+                              Plus 会员
+                            </Badge>
+                          ) : null}
                           {u.isSiteAdmin && (
                             <Badge variant="default" className="text-[10px]">
                               站点管理员
@@ -1437,64 +1455,16 @@ function UserListPage({ scope }: { scope: UserScope }) {
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
               <div className="flex items-center gap-3">
                 <Avatar className="size-10">
-                  <AvatarImage src={detailUser.avatar || undefined} />
+                  <AvatarImage
+                    src={detailUser.avatar || '/images/defaultAvatar.png'}
+                    alt=""
+                  />
                   <AvatarFallback>
                     {(detailUser.name || detailUser.username || '?').slice(0, 1)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex flex-col gap-0.5">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-medium truncate">
-                      {detailUser.name || detailUser.username}
-                    </span>
-                    {detailUser.isSiteAdmin && (
-                      <Badge variant="default" className="text-[10px]">
-                        站点管理员
-                      </Badge>
-                    )}
-                    {(detailUser.siteRoles || []).map((r) => (
-                      <Badge
-                        key={r}
-                        variant="secondary"
-                        className="max-w-[8rem] truncate text-[10px]"
-                      >
-                        {r}
-                      </Badge>
-                    ))}
-                    {detailUser.disabled ? (
-                      <Badge
-                        variant="destructive"
-                        className="text-[10px]"
-                        title="账号已被禁用，无法登录"
-                      >
-                        已禁用
-                      </Badge>
-                    ) : null}
-                    {detailUser.dormant ? (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] border-destructive/40 text-destructive"
-                        title="已暂停自动同步"
-                      >
-                        已暂停同步
-                      </Badge>
-                    ) : !detailUser.lastLoginAt ? (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px]"
-                        title="还没记录最近活跃时间"
-                      >
-                        未记录活跃
-                      </Badge>
-                    ) : null}
-                    {detailUser.syncExempt &&
-                      !detailUser.disabled &&
-                      !detailUser.dormant && (
-                        <Badge variant="secondary" className="text-[10px]">
-                          始终同步
-                        </Badge>
-                      )}
-                  </div>
+                  <UserBadgeRows u={detailUser} />
                   <span className="text-sm text-muted-foreground truncate">
                     @{detailUser.username}
                   </span>
@@ -2247,5 +2217,106 @@ function UserListPage({ scope }: { scope: UserScope }) {
         </DialogContent>
       </Dialog>
     </PageShell>
+  )
+}
+
+/**
+ * 用户名 + 徽章两行：第一行用户名旁至多一个 badge（优先会员档位），
+ * 其余身份/状态 badge 自动换到第二行，避免把名字行撑乱。
+ */
+function UserBadgeRows({ u }: { u: UserListItem }) {
+  const badges: ReactNode[] = []
+  if (u.subTier === 'pro') {
+    badges.push(
+      <Badge
+        key="sub_pro"
+        variant="outline"
+        className="border-amber-300 bg-amber-100 font-medium text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/50 dark:text-amber-300"
+      >
+        Pro 会员
+      </Badge>,
+    )
+  } else if (u.subTier === 'plus') {
+    badges.push(
+      <Badge
+        key="sub_plus"
+        variant="outline"
+        className="border-zinc-300 bg-zinc-100 font-medium text-zinc-700 dark:border-zinc-600/50 dark:bg-zinc-800/60 dark:text-zinc-300"
+      >
+        Plus 会员
+      </Badge>,
+    )
+  }
+  if (u.isSiteAdmin) {
+    badges.push(
+      <Badge key="site_admin" variant="default" className="text-[10px]">
+        站点管理员
+      </Badge>,
+    )
+  }
+  for (const r of u.siteRoles || []) {
+    badges.push(
+      <Badge
+        key={`role:${r}`}
+        variant="secondary"
+        className="max-w-[8rem] truncate text-[10px]"
+      >
+        {r}
+      </Badge>,
+    )
+  }
+  if (u.disabled) {
+    badges.push(
+      <Badge
+        key="disabled"
+        variant="destructive"
+        className="text-[10px]"
+        title="账号已被禁用，无法登录"
+      >
+        已禁用
+      </Badge>,
+    )
+  }
+  if (u.dormant) {
+    badges.push(
+      <Badge
+        key="dormant"
+        variant="outline"
+        className="border-destructive/40 text-[10px] text-destructive"
+        title="已暂停自动同步"
+      >
+        已暂停同步
+      </Badge>,
+    )
+  } else if (!u.lastLoginAt) {
+    badges.push(
+      <Badge
+        key="no-active"
+        variant="outline"
+        className="text-[10px]"
+        title="还没记录最近活跃时间"
+      >
+        未记录活跃
+      </Badge>,
+    )
+  }
+  if (u.syncExempt && !u.disabled && !u.dormant) {
+    badges.push(
+      <Badge key="sync-exempt" variant="secondary" className="text-[10px]">
+        始终同步
+      </Badge>,
+    )
+  }
+  const [primary, ...rest] = badges
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="truncate font-medium">{u.name || u.username}</span>
+        {primary}
+      </div>
+      {rest.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5">{rest}</div>
+      ) : null}
+    </>
   )
 }

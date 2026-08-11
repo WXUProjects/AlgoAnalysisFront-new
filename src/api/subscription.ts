@@ -50,6 +50,7 @@ function normalizeSubUser(raw: Record<string, unknown>): SubUser {
     tier: str(raw.tier),
     expireAt: num(raw.expireAt),
     source: str(raw.source),
+    avatar: str(raw.avatar) || undefined,
   }
 }
 
