@@ -161,6 +161,15 @@ export function QuestionBankDetail() {
   )
   const [followStatusLoading, setFollowStatusLoading] = useState(false)
   const [subTab, setSubTab] = useState<'history' | 'following'>('history')
+  /** 关注进度：点击状态徽章查看某用户本题提交记录 */
+  const [followSubsUser, setFollowSubsUser] =
+    useState<ProblemFollowingStatusItem | null>(null)
+  const [followSubs, setFollowSubs] = useState<Record<string, unknown>[]>([])
+  const [followSubsTotal, setFollowSubsTotal] = useState(0)
+  const [followSubsPage, setFollowSubsPage] = useState(1)
+  const [followSubsPageSize, setFollowSubsPageSize] = useState(20)
+  const [followSubsLoading, setFollowSubsLoading] = useState(false)
+  const followSubsRequestId = useRef(0)
 
   const [tagsOpen, setTagsOpen] = useState(false)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -351,6 +360,39 @@ export function QuestionBankDetail() {
       cancelled = true
     }
   }, [id, isLogin, subTab])
+
+  /** 某位关注用户的本题提交记录 */
+  const loadFollowSubs = useCallback(async () => {
+    if (!id || !followSubsUser) return
+    const rid = ++followSubsRequestId.current
+    setFollowSubsLoading(true)
+    const res = await getProblemSubmissions({
+      problemId: id,
+      userId: followSubsUser.userId,
+      page: followSubsPage,
+      pageSize: followSubsPageSize,
+    })
+    if (rid !== followSubsRequestId.current) return
+    setFollowSubsLoading(false)
+    if (res.success && res.data) {
+      setFollowSubs(res.data.list || [])
+      setFollowSubsTotal(res.data.total || 0)
+    } else {
+      setFollowSubs([])
+      setFollowSubsTotal(0)
+      if (!res.success)
+        toast.error(res.message || '提交记录没加载出来，过会儿再试')
+    }
+  }, [id, followSubsUser, followSubsPage, followSubsPageSize])
+
+  useEffect(() => {
+    void loadFollowSubs()
+  }, [loadFollowSubs])
+
+  function openFollowSubs(u: ProblemFollowingStatusItem) {
+    setFollowSubsPage(1)
+    setFollowSubsUser(u)
+  }
 
   function openTagsEdit() {
     if (!problem) return
@@ -1124,17 +1166,22 @@ export function QuestionBankDetail() {
                               </Link>
                             </TableCell>
                             <TableCell>
-                              <Badge
-                                variant={
-                                  u.status === 'AC'
-                                    ? 'default'
-                                    : u.status === 'TRIED'
-                                      ? 'secondary'
-                                      : 'outline'
-                                }
-                              >
-                                {label}
-                              </Badge>
+                              {u.status === 'AC' || u.status === 'TRIED' ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant={
+                                    u.status === 'AC' ? 'default' : 'secondary'
+                                  }
+                                  className="h-6 px-2 text-xs"
+                                  title="查看 TA 的提交记录"
+                                  onClick={() => openFollowSubs(u)}
+                                >
+                                  {label}
+                                </Button>
+                              ) : (
+                                <Badge variant="outline">{label}</Badge>
+                              )}
                             </TableCell>
                           </TableRow>
                         )
@@ -1157,6 +1204,105 @@ export function QuestionBankDetail() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={followSubsUser != null}
+        onOpenChange={(o) => {
+          if (!o) setFollowSubsUser(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {followSubsUser
+                ? `${followSubsUser.name || followSubsUser.username || `用户${followSubsUser.userId}`} 的提交记录`
+                : '提交记录'}
+            </DialogTitle>
+            <DialogDescription>
+              该用户在本题的全部提交记录
+            </DialogDescription>
+          </DialogHeader>
+          <div className="relative">
+            {followSubsLoading ? (
+              <div className="flex flex-col gap-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-9 w-full" />
+                ))}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>语言</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead>时间</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {followSubs.map((s, i) => {
+                    const status = str(s.status)
+                    const submitUrl = getSubmitLink(
+                      str(s.platform || problem.platform),
+                      str(s.contest),
+                      str(s.submitId),
+                    )
+                    return (
+                      <TableRow key={i}>
+                        <TableCell>{str(s.lang, '-')}</TableCell>
+                        <TableCell>
+                          {submitUrl ? (
+                            <StatusBadge status={status} asChild>
+                              <a
+                                href={submitUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="hover:underline"
+                                title="查看原站提交"
+                              >
+                                {formatSubmitStatus(status)}
+                              </a>
+                            </StatusBadge>
+                          ) : (
+                            <StatusBadge status={status} />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {formatTime(s.time || s.submittedAt || s.createdAt)}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                  {!followSubs.length && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={3}
+                        className="text-center text-muted-foreground"
+                      >
+                        未尝试
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          {followSubsTotal > 0 && (
+            <div className="border-t px-3 py-2">
+              <Pagination
+                page={followSubsPage}
+                total={followSubsTotal}
+                pageSize={followSubsPageSize}
+                disabled={followSubsLoading}
+                onChange={setFollowSubsPage}
+                onPageSizeChange={(n) => {
+                  setFollowSubsPageSize(n)
+                  setFollowSubsPage(1)
+                }}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={tagsOpen} onOpenChange={setTagsOpen}>
         <DialogContent className="sm:max-w-md">
