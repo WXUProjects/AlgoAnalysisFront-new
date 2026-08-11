@@ -1095,6 +1095,7 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 ```
 | GET | `/core/user/recent-comments` | 否 | query: `userId`, `limit?` → 用户近期评论（资料页） |
 | GET | `/core/user/recent-solutions` | 否 | query: `userId`, `limit?` → 用户近期题解（资料页） |
+| POST | `/core/problem/rebuild-profiles` | 是(**站点管理员**) | 全站**仅重建能力画像**（不重爬 OJ）：对有 AC 用户强制入队画像重建，队列内重算难度加权 `weight`（评分模型升级后回填用）；返回 `{ code, message, candidates, published }` |
 | GET | `/core/problem/user-profile` | 否 | query: `userId` 做题画像；`radar[].score`=掌握度（0–100），= `100×weight/(weight+30)`，weight=该标签下 AC 题按难度加权（简单1/中等3/困难8/未知2）之和；`acCount`=去重 AC 题数 |
 | GET | `/core/problem/related-contests` | 否 | query: `problemId` → 本题出现过的比赛（`contest_problems` 反查，含站内 `contestLogId` / 题号 label） |
 | GET | `/core/problem/progress` | 是(管理员) | 爬取/分析进度 |
