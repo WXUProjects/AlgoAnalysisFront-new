@@ -103,6 +103,14 @@ export function UserIdentity({
     </span>
   )
 
+  // 第一行：用户名旁至多一个 badge，优先会员档位；其余身份/组织徽章放第二行
+  const primaryBadge =
+    subBadge ??
+    (roleBadges.length > 0
+      ? { key: roleBadges[0].key, label: roleBadges[0].label, variant: roleBadges[0].variant }
+      : null)
+  const secondaryRoleBadges = subBadge ? roleBadges : roleBadges.slice(1)
+
   return (
     <div className={cn('min-w-0 flex flex-col gap-0.5', className)}>
       <div
@@ -112,34 +120,52 @@ export function UserIdentity({
         )}
       >
         {nameEl}
-        {roleBadges.map((b) => (
-          <Badge
-            key={b.key}
-            variant={b.variant}
-            className="max-w-[8rem] truncate font-normal"
-          >
-            {b.label}
-          </Badge>
-        ))}
-        {subBadge ? (
-          <Badge
-            key={subBadge.key}
-            variant="outline"
-            className={`max-w-[8rem] truncate font-medium text-[11px] ${subBadge.className}`}
-          >
-            {subBadge.label}
-          </Badge>
+        {primaryBadge ? (
+          'className' in primaryBadge ? (
+            <Badge
+              key={primaryBadge.key}
+              variant="outline"
+              className={`max-w-[8rem] truncate font-medium text-[11px] ${primaryBadge.className}`}
+            >
+              {primaryBadge.label}
+            </Badge>
+          ) : (
+            <Badge
+              key={primaryBadge.key}
+              variant={primaryBadge.variant}
+              className="max-w-[8rem] truncate font-normal"
+            >
+              {primaryBadge.label}
+            </Badge>
+          )
         ) : null}
-        {badges.length > 0 &&
-          badges.slice(0, 3).map((a) => (
+      </div>
+      {secondaryRoleBadges.length > 0 || badges.length > 0 ? (
+        <div
+          className={cn(
+            'flex min-w-0 flex-wrap items-center gap-1.5',
+            nameRowClassName,
+          )}
+        >
+          {secondaryRoleBadges.map((b) => (
+            <Badge
+              key={b.key}
+              variant={b.variant}
+              className="max-w-[8rem] truncate font-normal"
+            >
+              {b.label}
+            </Badge>
+          ))}
+          {badges.slice(0, 3).map((a) => (
             <SharedOrgBadge key={a.orgId || a.orgName} alias={a} primary={display} />
           ))}
-        {badges.length > 3 && (
-          <Badge variant="outline" className="max-w-[8rem] truncate font-normal">
-            +{badges.length - 3}
-          </Badge>
-        )}
-      </div>
+          {badges.length > 3 && (
+            <Badge variant="outline" className="max-w-[8rem] truncate font-normal">
+              +{badges.length - 3}
+            </Badge>
+          )}
+        </div>
+      ) : null}
       {showUsername && user.username ? (
         <p
           className={cn(
