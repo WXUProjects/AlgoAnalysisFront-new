@@ -413,8 +413,9 @@ export function ChangeProfile() {
     }
   }
 
-  /** 裁切确认：上传压缩后的 JPEG 头像 */
+  /** 裁切确认：上传压缩后的 JPEG 头像，并立即保存（无需再点保存资料） */
   async function handleAvatarCropConfirm(file: File) {
+    if (!user) return
     setUploading(true)
     try {
       const res = await uploadImage(file, 'avatar')
@@ -422,8 +423,19 @@ export function ChangeProfile() {
         toast.error(res.message || '没传上去，过会儿再试')
         return
       }
-      setAvatar(res.data.url)
-      toast.success('头像传好啦，记得点保存资料')
+      const newUrl = res.data.url
+      const save = await updateProfile({
+        userId: user.userId,
+        // 只更新头像，邮箱保持当前已绑定的值，不影响页面上未保存的邮箱编辑
+        email: boundEmail,
+        avatar: newUrl,
+      })
+      if (!save.success) {
+        toast.error(save.message || '头像没保存成功，过会儿再试')
+        return
+      }
+      setAvatar(newUrl)
+      toast.success('头像已保存')
       closeAvatarCrop()
     } finally {
       setUploading(false)
