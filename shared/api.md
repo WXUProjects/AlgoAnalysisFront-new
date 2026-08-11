@@ -127,7 +127,7 @@
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新头像/邮箱；`name` 已忽略（昵称改「我的组织」）；邮箱变更须 `emailCode`（`purpose=change_email`） |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
-| POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；本人 / 站点管理员 / **当前组织 staff 管理本组织成员**；无组织授权时不可开启日报/周报 |
+| POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；本人 / 站点管理员 / **当前组织 staff 管理本组织成员**；日报默认授权（AI 分析默认关，组织无需额外开通）；周报仍须组织授权且开启人为教练/队长/团队管理员 |
 | POST | `/user/profile/set-problem-pipeline` | 是(站点管理员) | body: `{ userId, enabled, kind: fetch\|ai }`；个人覆盖：近窗提交是否触发题面爬取 / 题面 AI（默认按是否非公共域组织） |
 | POST | `/user/profile/set-sync-intervals` | 是(站点管理员) | body: `{ userId, setSpider?, spiderIntervalMin?, setAi?, aiSummaryIntervalMin? }`；个人覆盖爬取/AI 总结间隔（分钟，**优先级最高**）；间隔 `0` 表示清除覆盖回落组织 MIN；范围 5–10080 |
 | POST | `/user/profile/set-refresh-quota` | 是(站点管理员) | body: `{ userId, quota, clear? }`；个人每日手动刷新做题记录配额覆盖：`clear=true` 清除覆盖回落全局默认（2 次/日）；否则 `quota` `0`=禁止手动刷新、`1–100`=每日次数 |

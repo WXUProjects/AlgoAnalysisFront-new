@@ -726,6 +726,7 @@ export interface UserProfile {
   avatar: string
   emailEnabled?: boolean
   emailWeeklyEnabled?: boolean
+  /** 日报默认授权（历史字段，不再拦截开启） */
   emailAllowedByOrg?: boolean
   emailWeeklyAllowedByOrg?: boolean
   roleId?: number
@@ -811,7 +812,7 @@ export interface UserListItem {
   emailEnabled?: boolean
   /** 个人周报邮件偏好 */
   emailWeeklyEnabled?: boolean
-  /** 是否有组织授权日报（可开启） */
+  /** 历史字段：日报默认授权，不再拦截开启 */
   emailAllowedByOrg?: boolean
   /** 是否有组织授权周报且为 staff（可开启） */
   emailWeeklyAllowedByOrg?: boolean

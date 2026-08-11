@@ -399,28 +399,37 @@ export function ChangeProfile() {
       toast.error('先绑邮箱，才能开邮件通知')
       return
     }
-    if (kind === 'daily') {
-      if (checked && profile && profile.emailAllowedByOrg === false) {
-        toast.error('当前组织没开通日报邮件，开不了')
-        return
-      }
-      setEmailOn(checked)
-    } else {
-      if (checked && profile && profile.emailWeeklyAllowedByOrg === false) {
-        toast.error('当前组织没开通周报（要教练/队长或管理员）')
-        return
-      }
-      setWeeklyOn(checked)
+    if (kind === 'weekly' && checked && profile?.emailWeeklyAllowedByOrg === false) {
+      toast.error('当前组织没开通周报（要教练/队长或管理员）')
+      return
     }
+    if (kind === 'daily') setEmailOn(checked)
+    else setWeeklyOn(checked)
     const res = await setEmailEnabled(user.userId, checked, kind)
-    if (res.success) {
-      toast.success(res.message || '邮件设置更新好啦')
-      await sync()
-    } else {
+    if (!res.success) {
       if (kind === 'daily') setEmailOn(!checked)
       else setWeeklyOn(!checked)
       toast.error(res.message || '没设置成，过会儿再试')
+      return
     }
+    // 关掉日报邮件时，AI 日报也随之关闭（AI 日报靠邮件送达）
+    if (kind === 'daily' && !checked && aiDailyOn) {
+      const aiRes = await updateProfile({
+        userId: user.userId,
+        email: boundEmail,
+        aiDailyEnabled: false,
+      })
+      if (aiRes.success) {
+        setAiDailyOn(false)
+        toast.success('已关闭日报邮件，AI 日报也随之关闭')
+      } else {
+        toast.error(aiRes.message || '日报邮件已关，AI 日报没关成，过会儿再试')
+      }
+      await sync()
+      return
+    }
+    toast.success(res.message || '邮件设置更新好啦')
+    await sync()
   }
 
   async function handleAiDailyToggle(checked: boolean) {
@@ -429,8 +438,25 @@ export function ChangeProfile() {
       toast.error('AI 日报仅 Pro 会员可用')
       return
     }
+    if (!boundEmail) {
+      toast.error('先绑邮箱，才能开启 AI 日报')
+      return
+    }
     setAiDailyOn(checked)
     setAiDailyLoading(true)
+    // 打开 AI 日报 = 同步打开日报邮件（AI 日报以邮件形式送达）
+    let turnedOnEmail = false
+    if (checked && !emailOn) {
+      const emailRes = await setEmailEnabled(user.userId, true, 'daily')
+      if (!emailRes.success) {
+        setAiDailyOn(false)
+        setAiDailyLoading(false)
+        toast.error(emailRes.message || '日报邮件没开成，过会儿再试')
+        return
+      }
+      setEmailOn(true)
+      turnedOnEmail = true
+    }
     const res = await updateProfile({
       userId: user.userId,
       email: boundEmail,
@@ -438,11 +464,18 @@ export function ChangeProfile() {
     })
     setAiDailyLoading(false)
     if (res.success) {
-      toast.success(checked ? '已开启 AI 日报' : '已关闭 AI 日报')
+      toast.success(
+        checked ? '已开启 AI 日报，日报将以邮件形式发送' : '已关闭 AI 日报',
+      )
     } else {
       setAiDailyOn(!checked)
+      if (turnedOnEmail) {
+        setEmailOn(false)
+        await setEmailEnabled(user.userId, false, 'daily')
+      }
       toast.error(res.message || '没设置成，过会儿再试')
     }
+    await sync()
   }
 
   const bound = OJ_PLATFORMS.flatMap((p) => {
@@ -615,22 +648,13 @@ export function ChangeProfile() {
                   <Switch
                     id="email-on"
                     checked={emailOn}
-                    disabled={
-                      (!boundEmail && !emailOn) ||
-                      (profile?.emailAllowedByOrg === false && !emailOn)
-                    }
+                    disabled={!boundEmail && !emailOn}
                     onCheckedChange={(v) => void handleEmailToggle(v, 'daily')}
                   />
                 </div>
-                {profile?.emailAllowedByOrg === false ? (
-                  <p className="text-xs text-muted-foreground">
-                    当前组织没开通日报邮件，开不了。
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    开了就按组织安排收训练日报。
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  开启后，每天会收到一封训练日报。
+                </p>
               </Field>
               <Field className="gap-1.5">
                 <div className="flex items-center justify-between gap-3">
@@ -662,12 +686,12 @@ export function ChangeProfile() {
                     <Switch
                       id="ai-daily-on"
                       checked={aiDailyOn}
-                      disabled={aiDailyLoading}
+                      disabled={aiDailyLoading || (!boundEmail && !aiDailyOn)}
                       onCheckedChange={(v) => void handleAiDailyToggle(v)}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Pro 会员专属：日报由 AI 生成点评与建议（比常规日报更详细）。
+                    Pro 会员专属：日报由 AI 生成点评与建议，开启后以邮件形式发送。
                   </p>
                 </Field>
               ) : null}

@@ -4,11 +4,34 @@ React + Vite + TypeScript 新前端。API 契约见 [`../shared/`](../shared/)�
 
 ## 强制：布局
 
-**全站采用左右分栏布局，规范见 [`layout.md`](./layout.md)。**
+**全站统一左右分栏布局：左侧垂直 Tab 导航，右侧 Title/Header + 当前 Tab 页面内容。规范见下。**
 
-- 左侧：垂直 Tab 导航，品牌默认 **GoAlgo**（可被站点/当前组织品牌覆盖）
-- 右侧：顶部 Title/Header + 下方当前 Tab 页面内容
-- 实现用 shadcn Sidebar 等，壳在 `src/layouts/AppLayout.tsx`
+- 左侧：垂直 Tab 导航，品牌默认 **GoAlgo**（可被站点/当前组织品牌覆盖），当前路由高亮；移动端可折叠 / Sheet
+- 右侧：顶部 Title / Header（页面标题，可选面包屑、操作）+ 下方当前 Tab 页面内容（`src/pages/**`）
+- 加载态、空态用 shadcn `Skeleton` / `Empty`
+- 实现用 shadcn Sidebar，壳在 `src/layouts/AppLayout.tsx`
+
+### 导航项（与旧前端对齐）
+
+| 标签 | 路由 | 可见性 |
+|------|------|--------|
+| 首页 | `/` | 全部 |
+| 发现 | `/discover` | 全部 |
+| 博客 | `/blog-plaza`（个人博客在 `/blog/:username`） | 全部 |
+| 比赛 | `/contest`（子 Tab：比赛记录 / 比赛日历） | 全部 |
+| 公告 | `/bulletin` | 全部 |
+| 动态 | `/all-activities` | 全部 |
+| 题库 | `/question-bank` | 全部 |
+| 工具 | `/tools`（粘贴板创建需登录） | 全部 |
+| 个人资料 | `/profile/:username` | 登录用户 |
+| 我的组织 | `/org` | 登录用户 |
+| 后台 / 教练管理 | `/admin` | 站点管理员 / 组织教练·队长·团队管理员 |
+| 关于 | `/about` | 全部 |
+| 登录 / 注册 | `/login` `/register` | 未登录 |
+| 主题切换 | （控件，非路由） | 全部 |
+
+- 后台入口：PC 侧栏一个可折叠入口（站点管理/团队管理/教练管理/队长管理），展开后按「组织管理 / 站点管理」分组；移动端底栏 +「更多」面板
+- 动态入口主要在「发现」内；`/all-activities` 仍可用
 
 ## 强制：文案面向 C 端用户
 
@@ -220,7 +243,7 @@ Auth 标志：`isAdmin`/`isSiteAdmin` · `isOrgAdmin` · `isCoach` · `isCaptain
 
 | 能力 | 旧组件参考 | 新实现方向 |
 |------|------------|------------|
-| 布局壳 | App + BaseLayout | `AppLayout` + layout.md |
+| 布局壳 | App + BaseLayout | `AppLayout`（见「强制：布局」） |
 | 热力图 | Calendar | 自研或图表库 + Card |
 | 算法画像 | AlgoProfileCharts | shadcn Chart / recharts |
 | 排行列表 | Rank | Table + Avatar |
@@ -280,6 +303,6 @@ agent.summary:    recent
 |------|------|
 | 旧业务逻辑 | `../CWXU-Algo-Frontend/src/views/**`、`utils/api.ts` |
 | API 契约 | `../shared/api.md`、`../shared/api.ts` |
-| 布局 | `./layout.md` |
+| 布局 | 见「强制：布局」 |
 | 脚手架路由 | `src/router.tsx` |
 | 布局壳 | `src/layouts/AppLayout.tsx` |

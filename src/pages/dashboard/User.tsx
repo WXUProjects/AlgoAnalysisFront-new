@@ -796,10 +796,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
     checked: boolean,
   ) {
     if (checked) {
-      if (kind === 'daily' && u.emailAllowedByOrg === false) {
-        toast.error('该成员所在组织未开通日报邮件，无法开启')
-        return
-      }
       if (kind === 'weekly' && u.emailWeeklyAllowedByOrg === false) {
         toast.error(
           '该成员需为教练/队长/团队管理员，且组织已开通周报，才可开启',
@@ -1117,7 +1113,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
                 {list.map((u) => {
                   const dailyOn = !!u.emailEnabled
                   const weeklyOn = !!u.emailWeeklyEnabled
-                  const dailyCanOpen = u.emailAllowedByOrg !== false
                   const weeklyCanOpen = u.emailWeeklyAllowedByOrg !== false
                   const dailyBusy = togglingKey === `${u.userId}:daily`
                   const weeklyBusy = togglingKey === `${u.userId}:weekly`
@@ -1243,7 +1238,7 @@ function UserListPage({ scope }: { scope: UserScope }) {
                             {canToggleEmail ? (
                               <Switch
                                 checked={dailyOn}
-                                disabled={dailyBusy || (!dailyCanOpen && !dailyOn)}
+                                disabled={dailyBusy}
                                 onCheckedChange={(v) =>
                                   void handleEmailToggle(u, 'daily', v)
                                 }
@@ -1257,11 +1252,6 @@ function UserListPage({ scope }: { scope: UserScope }) {
                                 {dailyOn ? '接收中' : '已关闭'}
                               </Badge>
                             )}
-                            {!dailyCanOpen && !dailyOn ? (
-                              <span className="text-[10px] text-muted-foreground">
-                                组织未授权
-                              </span>
-                            ) : null}
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="w-7 shrink-0 text-xs text-muted-foreground">
