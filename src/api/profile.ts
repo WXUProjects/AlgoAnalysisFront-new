@@ -121,6 +121,8 @@ export async function updateProfile(body: {
   userId: number
   email: string
   avatar?: string
+  /** 显式清空头像；空 avatar 本身不清空 */
+  clearAvatar?: boolean
   /** 修改/绑定邮箱时必填：发往新邮箱的验证码 */
   emailCode?: string
   /** AI 日报开关（仅 Pro 订阅可开；省略=不改） */
@@ -136,6 +138,9 @@ export async function updateProfile(body: {
   // avatar 只在有值时才发送：避免空值把后端已有头像清空
   if (body.avatar) {
     payload.avatar = body.avatar
+  }
+  if (body.clearAvatar) {
+    payload.clearAvatar = true
   }
   if (body.aiDailyEnabled !== undefined) {
     payload.aiDailyEnabled = body.aiDailyEnabled
