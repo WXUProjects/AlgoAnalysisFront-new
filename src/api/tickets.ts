@@ -4,7 +4,6 @@ import {
   type CreateMessageRes,
   type CreateTicketReq,
   type CreateTicketRes,
-  type GetCurrentRes,
   type GetMessagesRes,
   type GetTicketRes,
   type ListTicketsReq,
@@ -38,19 +37,6 @@ function normalizeMessage(raw: Record<string, unknown>): TicketMessage {
     contentType: str(raw.contentType),
     content: str(raw.content),
     sentAt: raw.sentAt ? num(raw.sentAt) : undefined,
-  }
-}
-
-function parseCurrent(res: ApiResult<unknown>): ApiResult<GetCurrentRes> {
-  const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
-  return {
-    success: res.success,
-    message: res.message || (res.success ? 'ok' : '请先登录'),
-    data: {
-      success: res.success,
-      message: res.message || '',
-      ticket: raw.ticket ? normalizeTicket(raw.ticket as Record<string, unknown>) : undefined,
-    },
   }
 }
 
@@ -139,11 +125,6 @@ function parsePatchStatus(res: ApiResult<unknown>): ApiResult<PatchStatusRes> {
       ticket: raw.ticket ? normalizeTicket(raw.ticket as Record<string, unknown>) : undefined,
     },
   }
-}
-
-/** 当前活跃工单（success 且无 ticket = 无进行中工单） */
-export async function getCurrentTicket(): Promise<ApiResult<GetCurrentRes>> {
-  return get(endpoints.user.tickets.current).then(parseCurrent)
 }
 
 /** 工单列表（cursor 分页） */

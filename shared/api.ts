@@ -114,7 +114,6 @@ export const endpoints = {
       },
     },
     tickets: {
-      current: `${API_PREFIX}/user/tickets/current`,
       list: `${API_PREFIX}/user/tickets`,
       get: (id: number | string) => `${API_PREFIX}/user/tickets/${id}`,
       messages: (id: number | string) =>
@@ -2273,12 +2272,6 @@ export interface GetMessagesRes {
   message: string
   list: TicketMessage[]
   nextAfterSequence?: number
-}
-
-export interface GetCurrentRes {
-  success: boolean
-  message: string
-  ticket?: Ticket
 }
 
 export interface GetTicketRes {

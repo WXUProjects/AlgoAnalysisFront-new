@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MessageSquarePlusIcon } from 'lucide-react'
 import {
-  getCurrentTicket,
   listTickets,
 } from '@/api/tickets'
 import type { Ticket } from '@shared/api'
@@ -55,7 +54,6 @@ export function TicketList() {
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | undefined>()
-  const [activeTicket, setActiveTicket] = useState<Ticket | null>(null)
   const loadSeq = useRef(0)
 
   const load = useCallback(async (cursor?: string) => {
@@ -89,18 +87,6 @@ export function TicketList() {
     void load()
   }, [load])
 
-  // 进入时查当前活跃工单（有则顶部提示）
-  useEffect(() => {
-    let cancelled = false
-    void getCurrentTicket().then((res) => {
-      if (cancelled) return
-      if (res.success && res.data?.ticket) setActiveTicket(res.data.ticket)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
   async function loadMore() {
     if (!nextCursor || loadingMore) return
     setLoadingMore(true)
@@ -119,20 +105,6 @@ export function TicketList() {
             </Link>
           </Button>
         </div>
-
-        {activeTicket && (
-          <Card className="border-primary/40 bg-primary/5">
-            <CardContent className="flex items-center justify-between gap-3 p-3 text-sm">
-              <span>
-                你有一个进行中的工单
-                {activeTicket.ticketNumber > 0 && `（#${activeTicket.ticketNumber}）`}
-              </span>
-              <Button size="sm" asChild>
-                <Link to={`/tickets/${activeTicket.id}`}>去查看</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
 
         <Tabs value={status} onValueChange={setStatus}>
           <TabsList className="flex w-full flex-wrap justify-start">
