@@ -36,7 +36,12 @@ export const jwt = {
   getUserInfo(): JwtPayload | null {
     if (!this.isValid()) return null
     try {
-      return jwtDecode<JwtPayload>(this.token)
+      const info = jwtDecode<JwtPayload>(this.token)
+      // userId 签发为字符串（客户中心 claim 要求），前端统一归一为 number
+      if (typeof info.userId === 'string') {
+        info.userId = Number(info.userId)
+      }
+      return info
     } catch {
       this.clearToken()
       return null
@@ -65,7 +70,12 @@ export const jwt = {
   decodeUnsafe(): JwtPayload | null {
     if (!this.token) return null
     try {
-      return jwtDecode<JwtPayload>(this.token)
+      const info = jwtDecode<JwtPayload>(this.token)
+      // 与 getUserInfo 一致：userId 统一归一为 number
+      if (typeof info.userId === 'string') {
+        info.userId = Number(info.userId)
+      }
+      return info
     } catch {
       this.clearToken()
       return null
