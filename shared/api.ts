@@ -113,6 +113,18 @@ export const endpoints = {
           `${API_PREFIX}/user/site/backup/jobs/${id}/download`,
       },
     },
+    tickets: {
+      current: `${API_PREFIX}/user/tickets/current`,
+      list: `${API_PREFIX}/user/tickets`,
+      get: (id: number | string) => `${API_PREFIX}/user/tickets/${id}`,
+      messages: (id: number | string) =>
+        `${API_PREFIX}/user/tickets/${id}/messages`,
+      create: `${API_PREFIX}/user/tickets`,
+      createMessage: (id: number | string) =>
+        `${API_PREFIX}/user/tickets/${id}/messages`,
+      patchStatus: (id: number | string) =>
+        `${API_PREFIX}/user/tickets/${id}/status`,
+    },
     org: {
       list: `${API_PREFIX}/user/org/list`,
       discover: `${API_PREFIX}/user/org/discover`,
@@ -2169,3 +2181,109 @@ export interface ScopeGrant {
   /** 展示文案，如「队长 · 算法协会 / A队」 */
   label?: string
 }
+
+// —— 工单（对接外部客户中心；时间字段 unix 秒）——
+export type TicketStatus =
+  | 'pending_agent'
+  | 'pending_customer'
+  | 'resolved'
+  | 'closed'
+  | string
+
+export type TicketSenderType = 'customer' | 'support_agent' | string
+export type TicketContentType = 'text' | string
+
+export interface Ticket {
+  id: string
+  ticketNumber: number
+  title: string
+  status: TicketStatus
+  priority?: string
+  awaitingActor?: string
+  latestMessageAt?: number
+  createdAt?: number
+  updatedAt?: number
+}
+
+export interface TicketMessage {
+  id: string
+  sequenceNo: number
+  senderType: TicketSenderType
+  contentType: TicketContentType
+  content: string
+  sentAt?: number
+}
+
+export interface CreateTicketReq {
+  title: string
+  content: string
+}
+
+export interface CreateTicketRes {
+  success: boolean
+  message: string
+  ticket?: Ticket
+  messageInfo?: TicketMessage
+}
+
+export interface CreateMessageReq {
+  ticketId: string
+  content: string
+}
+
+export interface CreateMessageRes {
+  success: boolean
+  message: string
+  messageInfo?: TicketMessage
+}
+
+export interface PatchStatusReq {
+  ticketId: string
+  status: TicketStatus
+  reason?: string
+}
+
+export interface PatchStatusRes {
+  success: boolean
+  message: string
+  ticket?: Ticket
+}
+
+export interface ListTicketsReq {
+  status?: TicketStatus
+  limit?: number
+  cursor?: string
+}
+
+export interface ListTicketsRes {
+  success: boolean
+  message: string
+  list: Ticket[]
+  nextCursor?: string
+}
+
+export interface GetMessagesReq {
+  ticketId: string
+  afterSequence?: number
+  limit?: number
+}
+
+export interface GetMessagesRes {
+  success: boolean
+  message: string
+  list: TicketMessage[]
+  nextAfterSequence?: number
+}
+
+export interface GetCurrentRes {
+  success: boolean
+  message: string
+  ticket?: Ticket
+}
+
+export interface GetTicketRes {
+  success: boolean
+  message: string
+  ticket?: Ticket
+}
+

@@ -15,6 +15,7 @@ import {
   UserIcon,
   UserPlusIcon,
   WrenchIcon,
+  TicketIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthContext'
@@ -353,6 +354,21 @@ function AppLayoutInner() {
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+
+                  {isLogin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith('/tickets')}
+                        tooltip="工单"
+                      >
+                        <NavLink to="/tickets">
+                          <TicketIcon />
+                          <span>工单</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
                   {isLogin && isMemberLike && user?.username && (
                     <SidebarMenuItem>

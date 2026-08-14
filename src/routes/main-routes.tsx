@@ -34,6 +34,9 @@ import {
   QuestionBankDetail,
   Register,
   Social,
+  TicketCreate,
+  TicketDetail,
+  TicketList,
   ToolsHub,
 } from '@/routes/lazy-pages'
 
@@ -125,6 +128,37 @@ export const mainRouteChildren: RouteObject[] = [
           <Lazy>
             <Social />
           </Lazy>
+        ),
+      },
+      // 工单：列表+创建入口（RequireLogin）
+      {
+        path: 'tickets',
+        element: (
+          <RequireLogin>
+            <Lazy>
+              <TicketList />
+            </Lazy>
+          </RequireLogin>
+        ),
+      },
+      {
+        path: 'tickets/create',
+        element: (
+          <RequireLogin>
+            <Lazy>
+              <TicketCreate />
+            </Lazy>
+          </RequireLogin>
+        ),
+      },
+      {
+        path: 'tickets/:id',
+        element: (
+          <RequireLogin>
+            <Lazy>
+              <TicketDetail />
+            </Lazy>
+          </RequireLogin>
         ),
       },
       {

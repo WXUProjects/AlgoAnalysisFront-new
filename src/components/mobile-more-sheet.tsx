@@ -11,6 +11,7 @@ import {
   LogOutIcon,
   MegaphoneIcon,
   NewspaperIcon,
+  TicketIcon,
   UserIcon,
   UserPlusIcon,
   WrenchIcon,
@@ -399,6 +400,14 @@ export function buildMobileMoreSections(
   ]
 
   const me: MobileMoreLink[] = []
+  if (opts.isLogin) {
+    me.push({
+      to: '/tickets',
+      label: '工单',
+      icon: TicketIcon,
+      match: (p) => p.startsWith('/tickets'),
+    })
+  }
   if (opts.isLogin && opts.isMemberLike && opts.username) {
     me.push({
       to: `/profile/${opts.username}`,

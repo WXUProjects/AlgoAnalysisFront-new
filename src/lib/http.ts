@@ -197,6 +197,14 @@ export function del<T = unknown>(
   return request<T>({ method: 'DELETE', url, params, ...config })
 }
 
+export function patch<T = unknown>(
+  url: string,
+  data?: unknown,
+  config?: AxiosRequestConfig,
+) {
+  return request<T>({ method: 'PATCH', url, data, ...config })
+}
+
 export function num(v: unknown, fallback = 0): number {
   if (typeof v === 'number' && !Number.isNaN(v)) return v
   if (typeof v === 'string' && v.trim() !== '') {
