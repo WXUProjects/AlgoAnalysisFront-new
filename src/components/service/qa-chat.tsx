@@ -123,7 +123,7 @@ export function QaChat({ onOpenConversation }: QaChatProps) {
               <div className="max-w-md text-center">
                 <MessageSquareTextIcon className="mx-auto mb-3 size-8 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  描述一下你遇到的问题，我先帮你智能解答；如果解决不了，可以转人工客服。
+                  描述一下你遇到的问题，我先帮你智能解答。
                 </p>
               </div>
             </div>
