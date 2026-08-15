@@ -173,5 +173,7 @@ export function sectionDirty(
         s.payfmMerchantNo !== base.payfmMerchantNo ||
         s.payfmPayType !== base.payfmPayType ||
         s.payfmSecret.draft !== base.payfmSecret.draft
+    default:
+      return false
   }
 }
