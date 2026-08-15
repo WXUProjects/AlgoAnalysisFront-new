@@ -107,10 +107,10 @@ function notifLink(n: NotificationItem): string | null {
   if (n.type === 'org_invite_accepted' || n.type === 'org_invite_declined') {
     return '/admin/org'
   }
-  // 工单通知：RefID 恒 0（uint 放不下 UUID），跳转读 Payload.ticket_id
+  // 工单通知：RefID 恒 0（uint 放不下 UUID），跳转读 Payload.ticket_id → 服务会话
   if (n.refType === 'ticket') {
     const ticketId = String(p.ticket_id || '').trim()
-    return ticketId ? `/tickets/${ticketId}` : '/tickets'
+    return ticketId ? `/service?ticket=${encodeURIComponent(ticketId)}` : '/service'
   }
   if (n.problemId > 0) {
     if (n.refType === 'solution' && n.refId > 0) {

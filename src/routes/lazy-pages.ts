@@ -27,14 +27,8 @@ export const Profile = lazy(() =>
 export const Social = lazy(() =>
   import('@/pages/Social').then((m) => ({ default: m.Social })),
 )
-export const TicketList = lazy(() =>
-  import('@/pages/TicketList').then((m) => ({ default: m.TicketList })),
-)
-export const TicketCreate = lazy(() =>
-  import('@/pages/TicketCreate').then((m) => ({ default: m.TicketCreate })),
-)
-export const TicketDetail = lazy(() =>
-  import('@/pages/TicketDetail').then((m) => ({ default: m.TicketDetail })),
+export const ServicePage = lazy(() =>
+  import('@/pages/ServicePage').then((m) => ({ default: m.ServicePage })),
 )
 export const PrivacySettings = lazy(() =>
   import('@/pages/PrivacySettings').then((m) => ({

@@ -33,10 +33,8 @@ import {
   QuestionBank,
   QuestionBankDetail,
   Register,
+  ServicePage,
   Social,
-  TicketCreate,
-  TicketDetail,
-  TicketList,
   ToolsHub,
 } from '@/routes/lazy-pages'
 
@@ -130,36 +128,25 @@ export const mainRouteChildren: RouteObject[] = [
           </Lazy>
         ),
       },
-      // 工单：列表+创建入口（RequireLogin）
+      // 服务：智能问答优先的单页聊天流（RequireLogin）
       {
-        path: 'tickets',
+        path: 'service',
         element: (
           <RequireLogin>
             <Lazy>
-              <TicketList />
+              <ServicePage />
             </Lazy>
           </RequireLogin>
         ),
       },
+      // 旧工单路由兼容：跳转到服务
       {
-        path: 'tickets/create',
-        element: (
-          <RequireLogin>
-            <Lazy>
-              <TicketCreate />
-            </Lazy>
-          </RequireLogin>
-        ),
+        path: 'tickets',
+        element: <Navigate to="/service" replace />,
       },
       {
         path: 'tickets/:id',
-        element: (
-          <RequireLogin>
-            <Lazy>
-              <TicketDetail />
-            </Lazy>
-          </RequireLogin>
-        ),
+        element: <Navigate to="/service" replace />,
       },
       {
         path: 'privacy',

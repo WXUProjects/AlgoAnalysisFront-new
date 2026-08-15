@@ -78,6 +78,8 @@ export type MobileMoreLink = {
   match?: (pathname: string) => boolean
   /** 命中任一权限才显示（与 src/router.tsx 路由守卫一致）；缺省不限制 */
   anyOf?: string[]
+  /** 显示待处理小红点（如「服务」待回复） */
+  badge?: boolean
 }
 
 export type MobileMoreSection = {
@@ -213,6 +215,12 @@ export function MobileMoreSheet({
                             <span className="min-w-0 flex-1 truncate">
                               {item.label}
                             </span>
+                            {item.badge && (
+                              <span
+                                className="size-2 shrink-0 rounded-full bg-red-500"
+                                aria-label="待回复"
+                              />
+                            )}
                             <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground/60" />
                           </NavLink>
                         )
@@ -369,6 +377,8 @@ export type BuildMobileMoreOptions = {
   isMemberLike: boolean
   username?: string
   showAbout: boolean
+  /** 「服务」待回复红点 */
+  serviceBadge?: boolean
   /** 可进管理后台：内置角色 / 持有任意管理权限（自定义角色） */
   canAccessAdmin: boolean
   /** 细粒度权限判定（useAuth().can） */
@@ -402,10 +412,11 @@ export function buildMobileMoreSections(
   const me: MobileMoreLink[] = []
   if (opts.isLogin) {
     me.push({
-      to: '/tickets',
-      label: '工单',
+      to: '/service',
+      label: '服务',
       icon: TicketIcon,
-      match: (p) => p.startsWith('/tickets'),
+      match: (p) => p.startsWith('/service') || p.startsWith('/tickets'),
+      badge: Boolean(opts.serviceBadge),
     })
   }
   if (opts.isLogin && opts.isMemberLike && opts.username) {

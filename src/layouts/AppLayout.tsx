@@ -26,6 +26,7 @@ import {
 } from '@/lib/page-title'
 import { getHomePath } from '@/lib/home-path'
 import { trackPageVisit } from '@/lib/visit-tracker'
+import { useServiceBadge, refreshServiceBadge, resetServiceBadge } from '@/lib/service-badge'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { AdminSidebarNavGroups } from '@/components/admin-sidebar-nav'
 import { AnimatedTitle } from '@/components/animated-title'
@@ -104,6 +105,8 @@ function AppLayoutInner() {
     switchOrg,
   } = useAuth()
 
+  const serviceBadge = useServiceBadge()
+
   const brand =
     (currentOrg?.brandTitle && currentOrg.brandTitle.trim()) ||
     config.siteTitle ||
@@ -155,6 +158,7 @@ function AppLayoutInner() {
         isMemberLike,
         username: user?.username,
         showAbout,
+        serviceBadge: serviceBadge.visible,
         canAccessAdmin,
         can,
         orgName: currentOrg?.name,
@@ -164,6 +168,7 @@ function AppLayoutInner() {
       isLogin,
       isMemberLike,
       user,
+      serviceBadge.visible,
       showAbout,
       canAccessAdmin,
       can,
@@ -196,6 +201,23 @@ function AppLayoutInner() {
     }
     trackPageVisit(pathname)
   }, [ready, pathname])
+
+  // 「服务」待回复标记：登录后/回到前台刷新；未登录清空
+  useEffect(() => {
+    if (!ready) return
+    if (!isLogin) {
+      resetServiceBadge()
+      return
+    }
+    void refreshServiceBadge()
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void refreshServiceBadge()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [ready, isLogin])
 
   function handleLogout() {
     logout()
@@ -359,12 +381,20 @@ function AppLayoutInner() {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        isActive={pathname.startsWith('/tickets')}
-                        tooltip="工单"
+                        isActive={
+                          pathname.startsWith('/service') || pathname.startsWith('/tickets')
+                        }
+                        tooltip="服务"
                       >
-                        <NavLink to="/tickets">
+                        <NavLink to="/service" className="relative">
                           <TicketIcon />
-                          <span>工单</span>
+                          <span>服务</span>
+                          {serviceBadge.visible && (
+                            <span
+                              className="absolute right-2 top-1/2 size-2 -translate-y-1/2 rounded-full bg-red-500"
+                              aria-label="待回复"
+                            />
+                          )}
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

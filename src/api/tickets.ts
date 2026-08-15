@@ -1,9 +1,12 @@
 import {
   endpoints,
+  type AiAnswerReq,
+  type AiAnswerRes,
   type CreateMessageReq,
   type CreateMessageRes,
   type CreateTicketReq,
   type CreateTicketRes,
+  type GetCurrentRes,
   type GetMessagesRes,
   type GetTicketRes,
   type ListTicketsReq,
@@ -44,11 +47,53 @@ function parseTicketRes(res: ApiResult<unknown>): ApiResult<GetTicketRes> {
   const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
   return {
     success: res.success,
-    message: res.message || (res.success ? 'ok' : '工单加载失败，过会儿再试'),
+    message: res.message || (res.success ? 'ok' : '服务加载失败，过会儿再试'),
     data: {
       success: res.success,
       message: res.message || '',
       ticket: raw.ticket ? normalizeTicket(raw.ticket as Record<string, unknown>) : undefined,
+    },
+  }
+}
+
+function parseCurrent(res: ApiResult<unknown>): ApiResult<GetCurrentRes> {
+  const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
+  return {
+    success: res.success,
+    message: res.message || (res.success ? 'ok' : '请先登录'),
+    data: {
+      success: res.success,
+      message: res.message || '',
+      ticket: raw.ticket ? normalizeTicket(raw.ticket as Record<string, unknown>) : undefined,
+    },
+  }
+}
+
+function normalizeReference(raw: Record<string, unknown>): AiAnswerRes['references'][number] {
+  return {
+    articleId: str(raw.articleId ?? raw.article_id),
+    title: str(raw.title),
+    question: raw.question ? str(raw.question) : undefined,
+    content: str(raw.content),
+    score: num(raw.score, 0),
+  }
+}
+
+function parseAiAnswer(res: ApiResult<unknown>): ApiResult<AiAnswerRes> {
+  const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
+  const refs = Array.isArray(raw.references)
+    ? (raw.references as Record<string, unknown>[]).map(normalizeReference)
+    : []
+  return {
+    success: res.success,
+    message: res.message || (res.success ? 'ok' : '智能问答暂不可用，过会儿再试'),
+    data: {
+      success: res.success,
+      message: res.message || '',
+      answered: res.success && Boolean(raw.answered),
+      answer: res.success ? str(raw.answer) : '',
+      mode: str(raw.mode),
+      references: refs,
     },
   }
 }
@@ -58,7 +103,7 @@ function parseList(res: ApiResult<unknown>): ApiResult<ListTicketsRes> {
   const listRaw = Array.isArray(raw.list) ? (raw.list as Record<string, unknown>[]) : []
   return {
     success: res.success,
-    message: res.message || (res.success ? 'ok' : '工单列表加载失败，过会儿再试'),
+    message: res.message || (res.success ? 'ok' : '服务记录加载失败，过会儿再试'),
     data: {
       success: res.success,
       message: res.message || '',
@@ -87,7 +132,7 @@ function parseCreate(res: ApiResult<unknown>): ApiResult<CreateTicketRes> {
   const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
   return {
     success: res.success,
-    message: res.message || (res.success ? '工单已创建' : '创建失败，过会儿再试'),
+    message: res.message || (res.success ? '已转人工，请稍候' : '创建失败，过会儿再试'),
     data: {
       success: res.success,
       message: res.message || '',
@@ -125,6 +170,17 @@ function parsePatchStatus(res: ApiResult<unknown>): ApiResult<PatchStatusRes> {
       ticket: raw.ticket ? normalizeTicket(raw.ticket as Record<string, unknown>) : undefined,
     },
   }
+}
+
+/** 当前活跃工单（success 且无 ticket = 无进行中工单，进入 QA 问答） */
+export async function getCurrentTicket(): Promise<ApiResult<GetCurrentRes>> {
+  return get(endpoints.user.tickets.current).then(parseCurrent)
+}
+
+/** 智能问答（不创建工单；question 1–2000 字符） */
+export async function aiAnswer(question: string): Promise<ApiResult<AiAnswerRes>> {
+  const req: AiAnswerReq = { question }
+  return post(endpoints.user.tickets.aiAnswer, req).then(parseAiAnswer)
 }
 
 /** 工单列表（cursor 分页） */

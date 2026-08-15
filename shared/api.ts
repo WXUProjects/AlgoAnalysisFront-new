@@ -114,6 +114,8 @@ export const endpoints = {
       },
     },
     tickets: {
+      current: `${API_PREFIX}/user/tickets/current`,
+      aiAnswer: `${API_PREFIX}/user/tickets/ai/answer`,
       list: `${API_PREFIX}/user/tickets`,
       get: (id: number | string) => `${API_PREFIX}/user/tickets/${id}`,
       messages: (id: number | string) =>
@@ -2278,5 +2280,36 @@ export interface GetTicketRes {
   success: boolean
   message: string
   ticket?: Ticket
+}
+
+export interface GetCurrentReq {
+  // 无入参
+}
+
+export interface GetCurrentRes {
+  success: boolean
+  message: string
+  ticket?: Ticket
+}
+
+export interface AiAnswerReq {
+  question: string
+}
+
+export interface AiAnswerReference {
+  articleId: string
+  title: string
+  question?: string
+  content: string
+  score: number
+}
+
+export interface AiAnswerRes {
+  success: boolean
+  message: string
+  answered: boolean
+  answer: string
+  mode: string
+  references: AiAnswerReference[]
 }
 
