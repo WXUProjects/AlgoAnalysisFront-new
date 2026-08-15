@@ -42,6 +42,14 @@ import { Spinner } from '@/components/ui/spinner'
 import { Perm } from '@/lib/permissions'
 import { formatTime } from '@/lib/format'
 import { ChevronDown } from 'lucide-react'
+import {
+  buildSectionPayload,
+  sectionDirty,
+  secretUpdate,
+  type SiteFormState,
+  type SingleSection,
+} from '@/lib/site-config'
+import type { SiteConfigSection } from '@shared/api'
 
 function formatBytes(n: number): string {
   if (!n || n < 0) return '—'
@@ -66,7 +74,83 @@ function jobStatusLabel(s: string): string {
   }
 }
 
-const SECRET_PLACEHOLDER = '••••••••'
+// buildFormState 从当前 React state 组装 SiteFormState（供 payload 与 dirty 计算）
+function buildFormState(
+  s: {
+    title: string; logo: string; favicon: string; footerIcp: string; inactiveDays: string
+    smtpHost: string; smtpPort: string; smtpUsername: string; smtpFrom: string
+    smtpPassword: string; smtpPasswordSet: boolean; clearSmtpPassword: boolean
+    adminNotifyEmails: string; opsNotifyEmails: string; dataDiskPath: string
+    agentEndpoint: string; agentModel: string; agentSecret: string; agentSecretSet: boolean; clearAgentSecret: boolean
+    aiEndpoint: string; aiModel: string; aiSecret: string; aiSecretSet: boolean; clearAiSecret: boolean
+    upyunBucket: string; upyunOperator: string; upyunPassword: string; upyunPasswordSet: boolean; clearUpyunPassword: boolean
+    upyunDomain: string; upyunScheme: string
+    ojLuoguUsername: string; ojLuoguPassword: string; ojLuoguPasswordSet: boolean; clearOjLuoguPassword: boolean
+    ojQojUsername: string; ojQojPassword: string; ojQojPasswordSet: boolean; clearOjQojPassword: boolean
+    payfmApiBase: string; payfmMerchantNo: string; payfmSecret: string; payfmSecretSet: boolean; clearPayfmSecret: boolean
+    payfmPayType: string
+    configVersion: number
+  },
+): SiteFormState {
+  return {
+    siteTitle: s.title, siteLogo: s.logo, favicon: s.favicon, footerIcp: s.footerIcp,
+    inactiveDays: s.inactiveDays,
+    smtpHost: s.smtpHost, smtpPort: s.smtpPort, smtpUsername: s.smtpUsername, smtpFrom: s.smtpFrom,
+    adminNotifyEmails: s.adminNotifyEmails, opsNotifyEmails: s.opsNotifyEmails, dataDiskPath: s.dataDiskPath,
+    agentEndpoint: s.agentEndpoint, agentModel: s.agentModel,
+    aiEndpoint: s.aiEndpoint, aiModel: s.aiModel,
+    upyunBucket: s.upyunBucket, upyunOperator: s.upyunOperator, upyunDomain: s.upyunDomain, upyunScheme: s.upyunScheme,
+    ojLuoguUsername: s.ojLuoguUsername, ojQojUsername: s.ojQojUsername,
+    payfmApiBase: s.payfmApiBase, payfmMerchantNo: s.payfmMerchantNo, payfmPayType: s.payfmPayType,
+    configVersion: s.configVersion,
+    smtpPassword: { draft: s.smtpPassword, alreadySet: s.smtpPasswordSet, clearRequested: s.clearSmtpPassword },
+    agentSecret: { draft: s.agentSecret, alreadySet: s.agentSecretSet, clearRequested: s.clearAgentSecret },
+    aiSecret: { draft: s.aiSecret, alreadySet: s.aiSecretSet, clearRequested: s.clearAiSecret },
+    upyunPassword: { draft: s.upyunPassword, alreadySet: s.upyunPasswordSet, clearRequested: s.clearUpyunPassword },
+    ojLuoguPassword: { draft: s.ojLuoguPassword, alreadySet: s.ojLuoguPasswordSet, clearRequested: s.clearOjLuoguPassword },
+    ojQojPassword: { draft: s.ojQojPassword, alreadySet: s.ojQojPasswordSet, clearRequested: s.clearOjQojPassword },
+    payfmSecret: { draft: s.payfmSecret, alreadySet: s.payfmSecretSet, clearRequested: s.clearPayfmSecret },
+  }
+}
+
+// buildPristineFromAdmin 从 admin-config 构造初始快照（dirty 基准）
+function buildPristineFromAdmin(d: {
+  siteTitle?: string; siteLogo?: string; favicon?: string; footerIcp?: string; inactiveDays?: number
+  smtpHost?: string; smtpPort?: number; smtpUsername?: string; smtpFrom?: string
+  smtpPasswordSet?: boolean
+  adminNotifyEmails?: string; opsNotifyEmails?: string; dataDiskPath?: string
+  agentEndpoint?: string; agentModel?: string; agentSecretSet?: boolean
+  aiAnalyzeEndpoint?: string; aiAnalyzeModel?: string; aiAnalyzeSecretSet?: boolean
+  upyunBucket?: string; upyunOperator?: string; upyunPasswordSet?: boolean
+  upyunDomain?: string; upyunScheme?: string
+  ojLuoguUsername?: string; ojLuoguPasswordSet?: boolean
+  ojQojUsername?: string; ojQojPasswordSet?: boolean
+  payfmApiBase?: string; payfmMerchantNo?: string; payfmSecretSet?: boolean
+  payfmPayType?: string
+  configVersion?: number
+}): SiteFormState {
+  return {
+    siteTitle: d.siteTitle ?? '', siteLogo: d.siteLogo ?? '', favicon: d.favicon ?? '',
+    footerIcp: d.footerIcp ?? '', inactiveDays: String(d.inactiveDays ?? 14),
+    smtpHost: d.smtpHost ?? '', smtpPort: String(d.smtpPort ?? 465), smtpUsername: d.smtpUsername ?? '',
+    smtpFrom: d.smtpFrom ?? '', adminNotifyEmails: d.adminNotifyEmails ?? '',
+    opsNotifyEmails: d.opsNotifyEmails ?? '', dataDiskPath: d.dataDiskPath ?? '',
+    agentEndpoint: d.agentEndpoint ?? '', agentModel: d.agentModel ?? '',
+    aiEndpoint: d.aiAnalyzeEndpoint ?? '', aiModel: d.aiAnalyzeModel ?? '',
+    upyunBucket: d.upyunBucket ?? '', upyunOperator: d.upyunOperator ?? '',
+    upyunDomain: d.upyunDomain ?? '', upyunScheme: d.upyunScheme ?? 'http',
+    ojLuoguUsername: d.ojLuoguUsername ?? '', ojQojUsername: d.ojQojUsername ?? '',
+    payfmApiBase: d.payfmApiBase ?? '', payfmMerchantNo: d.payfmMerchantNo ?? '',
+    payfmPayType: d.payfmPayType ?? '', configVersion: d.configVersion ?? 0,
+    smtpPassword: { draft: '', alreadySet: Boolean(d.smtpPasswordSet), clearRequested: false },
+    agentSecret: { draft: '', alreadySet: Boolean(d.agentSecretSet), clearRequested: false },
+    aiSecret: { draft: '', alreadySet: Boolean(d.aiAnalyzeSecretSet), clearRequested: false },
+    upyunPassword: { draft: '', alreadySet: Boolean(d.upyunPasswordSet), clearRequested: false },
+    ojLuoguPassword: { draft: '', alreadySet: Boolean(d.ojLuoguPasswordSet), clearRequested: false },
+    ojQojPassword: { draft: '', alreadySet: Boolean(d.ojQojPasswordSet), clearRequested: false },
+    payfmSecret: { draft: '', alreadySet: Boolean(d.payfmSecretSet), clearRequested: false },
+  }
+}
 
 function CollapsibleCard({
   title,
@@ -128,17 +212,21 @@ export function DashboardSiteSettings() {
   const [smtpUsername, setSmtpUsername] = useState('')
   const [smtpPassword, setSmtpPassword] = useState('')
   const [smtpPasswordSet, setSmtpPasswordSet] = useState(false)
+  const [clearSmtpPassword, setClearSmtpPassword] = useState(false)
   const [smtpFrom, setSmtpFrom] = useState('')
   const [testTo, setTestTo] = useState('')
 
   const [agentModel, setAgentModel] = useState('')
+  const [agentEndpoint, setAgentEndpoint] = useState('')
   const [agentSecret, setAgentSecret] = useState('')
   const [agentSecretSet, setAgentSecretSet] = useState(false)
+  const [clearAgentSecret, setClearAgentSecret] = useState(false)
 
   const [aiEndpoint, setAiEndpoint] = useState('')
   const [aiModel, setAiModel] = useState('')
   const [aiSecret, setAiSecret] = useState('')
   const [aiSecretSet, setAiSecretSet] = useState(false)
+  const [clearAiSecret, setClearAiSecret] = useState(false)
 
   const [inactiveDays, setInactiveDays] = useState('14')
   const [adminNotifyEmails, setAdminNotifyEmails] = useState('')
@@ -149,18 +237,21 @@ export function DashboardSiteSettings() {
   const [upyunOperator, setUpyunOperator] = useState('')
   const [upyunPassword, setUpyunPassword] = useState('')
   const [upyunPasswordSet, setUpyunPasswordSet] = useState(false)
+  const [clearUpyunPassword, setClearUpyunPassword] = useState(false)
   const [upyunDomain, setUpyunDomain] = useState('')
   const [upyunScheme, setUpyunScheme] = useState('http')
 
   const [ojLuoguUsername, setOjLuoguUsername] = useState('')
   const [ojLuoguPassword, setOjLuoguPassword] = useState('')
   const [ojLuoguPasswordSet, setOjLuoguPasswordSet] = useState(false)
+  const [clearOjLuoguPassword, setClearOjLuoguPassword] = useState(false)
   const [ojLuoguStatus, setOjLuoguStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
   const [ojLuoguStatusAt, setOjLuoguStatusAt] = useState(0)
   const [ojLuoguErrMsg, setOjLuoguErrMsg] = useState('')
   const [ojQojUsername, setOjQojUsername] = useState('')
   const [ojQojPassword, setOjQojPassword] = useState('')
   const [ojQojPasswordSet, setOjQojPasswordSet] = useState(false)
+  const [clearOjQojPassword, setClearOjQojPassword] = useState(false)
   const [ojQojStatus, setOjQojStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
   const [ojQojStatusAt, setOjQojStatusAt] = useState(0)
   const [ojQojErrMsg, setOjQojErrMsg] = useState('')
@@ -168,6 +259,7 @@ export function DashboardSiteSettings() {
   const [payfmMerchantNo, setPayfmMerchantNo] = useState('')
   const [payfmSecret, setPayfmSecret] = useState('')
   const [payfmSecretSet, setPayfmSecretSet] = useState(false)
+  const [clearPayfmSecret, setClearPayfmSecret] = useState(false)
   const [payfmPayType, setPayfmPayType] = useState('')
   const [payfmNotifyUrl, setPayfmNotifyUrl] = useState('')
   const [agentStatus, setAgentStatus] = useState('unchecked')
@@ -182,8 +274,25 @@ export function DashboardSiteSettings() {
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingSection, setSavingSection] = useState<SiteConfigSection | null>(null)
   const [testing, setTesting] = useState(false)
   const [uploading, setUploading] = useState<'logo' | 'favicon' | null>(null)
+
+  // 配置乐观版本 + 初始快照（dirty 计算基准）
+  const [configVersion, setConfigVersion] = useState(0)
+  const [pristine, setPristine] = useState<SiteFormState | null>(null)
+  /** 每个分区编辑次数，用于保存期间继续编辑时不覆盖 */
+  const revRef = useRef<Record<SingleSection, number>>({
+    basic: 0,
+    email: 0,
+    ai: 0,
+    upyun: 0,
+    oj: 0,
+    payment: 0,
+  })
+  const bump = (section: SingleSection) => {
+    revRef.current[section] += 1
+  }
 
   // —— 数据备份 ——
   const [activeJob, setActiveJob] = useState<BackupJob | null>(null)
@@ -285,43 +394,51 @@ export function DashboardSiteSettings() {
       setSmtpHost(d.smtpHost || '')
       setSmtpPort(String(d.smtpPort || 465))
       setSmtpUsername(d.smtpUsername || '')
-      setSmtpPassword(d.smtpPasswordSet ? SECRET_PLACEHOLDER : '')
+      setSmtpPassword('')
       setSmtpPasswordSet(d.smtpPasswordSet)
+      setClearSmtpPassword(false)
       setSmtpFrom(d.smtpFrom || '')
       setTestTo(d.smtpUsername || d.smtpFrom || '')
       setAgentModel(d.agentModel || '')
-      setAgentSecret(d.agentSecretSet ? SECRET_PLACEHOLDER : '')
+      setAgentEndpoint(d.agentEndpoint || '')
+      setAgentSecret('')
       setAgentSecretSet(d.agentSecretSet)
+      setClearAgentSecret(false)
       setAiEndpoint(d.aiAnalyzeEndpoint || '')
       setAiModel(d.aiAnalyzeModel || '')
-      setAiSecret(d.aiAnalyzeSecretSet ? SECRET_PLACEHOLDER : '')
+      setAiSecret('')
       setAiSecretSet(d.aiAnalyzeSecretSet)
+      setClearAiSecret(false)
       setInactiveDays(String(d.inactiveDays || 14))
       setAdminNotifyEmails(d.adminNotifyEmails || '')
       setOpsNotifyEmails(d.opsNotifyEmails || '')
       setDataDiskPath(d.dataDiskPath || '')
       setUpyunBucket(d.upyunBucket || '')
       setUpyunOperator(d.upyunOperator || '')
-      setUpyunPassword(d.upyunPasswordSet ? SECRET_PLACEHOLDER : '')
+      setUpyunPassword('')
       setUpyunPasswordSet(d.upyunPasswordSet)
+      setClearUpyunPassword(false)
       setUpyunDomain(d.upyunDomain || '')
       setUpyunScheme(d.upyunScheme || 'http')
       setOjLuoguUsername(d.ojLuoguUsername || '')
-      setOjLuoguPassword(d.ojLuoguPasswordSet ? SECRET_PLACEHOLDER : '')
+      setOjLuoguPassword('')
       setOjLuoguPasswordSet(d.ojLuoguPasswordSet)
+      setClearOjLuoguPassword(false)
       setOjLuoguStatus((d.ojLuoguStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
       setOjLuoguStatusAt(d.ojLuoguStatusAt || 0)
       setOjLuoguErrMsg(d.ojLuoguErrMsg || '')
       setOjQojUsername(d.ojQojUsername || '')
-      setOjQojPassword(d.ojQojPasswordSet ? SECRET_PLACEHOLDER : '')
+      setOjQojPassword('')
       setOjQojPasswordSet(d.ojQojPasswordSet)
+      setClearOjQojPassword(false)
       setOjQojStatus((d.ojQojStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
       setOjQojStatusAt(d.ojQojStatusAt || 0)
       setOjQojErrMsg(d.ojQojErrMsg || '')
       setPayfmApiBase(d.payfmApiBase || '')
       setPayfmMerchantNo(d.payfmMerchantNo || '')
-      setPayfmSecret(d.payfmSecretSet ? SECRET_PLACEHOLDER : '')
+      setPayfmSecret('')
       setPayfmSecretSet(d.payfmSecretSet)
+      setClearPayfmSecret(false)
       setPayfmPayType(d.payfmPayType || '')
       setPayfmNotifyUrl(d.payfmNotifyUrl || '')
       setAgentStatus(d.agentStatus || 'unchecked')
@@ -333,6 +450,8 @@ export function DashboardSiteSettings() {
       setSmtpStatus(d.smtpStatus || 'unchecked')
       setSmtpStatusAt(d.smtpStatusAt || 0)
       setSmtpErrMsg(d.smtpErrMsg || '')
+      setConfigVersion(d.configVersion || 0)
+      setPristine(buildPristineFromAdmin(d))
     })()
     return () => {
       cancelled = true
@@ -359,105 +478,148 @@ export function DashboardSiteSettings() {
       toast.error(res.message || '上传失败，稍后重试')
       return
     }
-    if (kind === 'logo') setLogo(res.data.url)
-    else setFavicon(res.data.url)
+    if (kind === 'logo') { setLogo(res.data.url); bump('basic') }
+    else { setFavicon(res.data.url); bump('basic') }
     toast.success('已上传，请点保存生效')
   }
 
-  function secretPayload(
-    value: string,
-    alreadySet: boolean,
-  ): { secret?: string; clear?: boolean } {
-    const v = value.trim()
-    if (v === '' && alreadySet) return { clear: true }
-    if (v === '' || v === SECRET_PLACEHOLDER) return {}
-    return { secret: v }
+  function currentForm(): SiteFormState {
+    return buildFormState({
+      title, logo, favicon, footerIcp, inactiveDays,
+      smtpHost, smtpPort, smtpUsername, smtpFrom,
+      smtpPassword, smtpPasswordSet, clearSmtpPassword,
+      adminNotifyEmails, opsNotifyEmails, dataDiskPath,
+      agentEndpoint, agentModel, agentSecret, agentSecretSet, clearAgentSecret,
+      aiEndpoint, aiModel, aiSecret, aiSecretSet, clearAiSecret,
+      upyunBucket, upyunOperator, upyunPassword, upyunPasswordSet, clearUpyunPassword,
+      upyunDomain, upyunScheme,
+      ojLuoguUsername, ojLuoguPassword, ojLuoguPasswordSet, clearOjLuoguPassword,
+      ojQojUsername, ojQojPassword, ojQojPasswordSet, clearOjQojPassword,
+      payfmApiBase, payfmMerchantNo, payfmSecret, payfmSecretSet, clearPayfmSecret,
+      payfmPayType,
+      configVersion,
+    })
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault()
-    if (!canWrite) return
-    if (!title.trim()) {
-      toast.error('站点标题不能为空')
+  // 保存成功后重新拉取配置并回填该分区；若用户保存期间继续编辑则保留本地输入
+  async function syncFromServer(section: SingleSection, savedRev: number) {
+    const again = await getSiteAdminConfig()
+    if (!again.success || !again.data) {
+      toast.error('配置已保存，但刷新状态失败')
       return
     }
-    const port = Number(smtpPort) || 465
-    const smtpPw = secretPayload(smtpPassword, smtpPasswordSet)
-    const agentSec = secretPayload(agentSecret, agentSecretSet)
-    const aiSec = secretPayload(aiSecret, aiSecretSet)
-    const upyunPw = secretPayload(upyunPassword, upyunPasswordSet)
-    const ojLgPw = secretPayload(ojLuoguPassword, ojLuoguPasswordSet)
-    const ojQojPw = secretPayload(ojQojPassword, ojQojPasswordSet)
-    const payfmSec = secretPayload(payfmSecret, payfmSecretSet)
-
-    const days = Math.max(1, Math.min(365, Number(inactiveDays) || 14))
-    setSaving(true)
-    const res = await updateSiteConfig({
-      siteTitle: title.trim(),
-      siteLogo: logo.trim(),
-      favicon: favicon.trim(),
-      footerIcp: footerIcp.trim(),
-      smtpHost: smtpHost.trim(),
-      smtpPort: port,
-      smtpUsername: smtpUsername.trim(),
-      smtpFrom: smtpFrom.trim(),
-      smtpPassword: smtpPw.secret,
-      clearSmtpPassword: smtpPw.clear,
-      agentModel: agentModel.trim(),
-      agentSecret: agentSec.secret,
-      clearAgentSecret: agentSec.clear,
-      aiAnalyzeEndpoint: aiEndpoint.trim(),
-      aiAnalyzeModel: aiModel.trim(),
-      aiAnalyzeSecret: aiSec.secret,
-      clearAiAnalyzeSecret: aiSec.clear,
-      inactiveDays: days,
-      setInactiveDays: true,
-      adminNotifyEmails: adminNotifyEmails.trim(),
-      opsNotifyEmails: opsNotifyEmails.trim(),
-      dataDiskPath: dataDiskPath.trim(),
-      upyunBucket: upyunBucket.trim(),
-      upyunOperator: upyunOperator.trim(),
-      upyunPassword: upyunPw.secret,
-      clearUpyunPassword: upyunPw.clear,
-      upyunDomain: upyunDomain.trim(),
-      upyunScheme: upyunScheme.trim() || 'http',
-      ojLuoguUsername: ojLuoguUsername.trim(),
-      ojLuoguPassword: ojLgPw.secret,
-      clearOjLuoguPassword: ojLgPw.clear,
-      ojQojUsername: ojQojUsername.trim(),
-      ojQojPassword: ojQojPw.secret,
-      clearOjQojPassword: ojQojPw.clear,
-      payfmApiBase: payfmApiBase.trim(),
-      payfmMerchantNo: payfmMerchantNo.trim(),
-      payfmSecret: payfmSec.secret,
-      clearPayfmSecret: payfmSec.clear,
-      payfmPayType: payfmPayType.trim(),
-    })
-    setSaving(false)
-    if (res.success) {
-      toast.success('站点配置已保存')
-      await refresh()
-      // 刷新密钥状态
-      const again = await getSiteAdminConfig()
-      if (again.success && again.data) {
-        setSmtpPassword(again.data.smtpPasswordSet ? SECRET_PLACEHOLDER : '')
-        setSmtpPasswordSet(again.data.smtpPasswordSet)
-        setAgentSecret(again.data.agentSecretSet ? SECRET_PLACEHOLDER : '')
-        setAgentSecretSet(again.data.agentSecretSet)
-        setAiSecret(again.data.aiAnalyzeSecretSet ? SECRET_PLACEHOLDER : '')
-        setAiSecretSet(again.data.aiAnalyzeSecretSet)
-        setUpyunPassword(again.data.upyunPasswordSet ? SECRET_PLACEHOLDER : '')
-        setUpyunPasswordSet(again.data.upyunPasswordSet)
-        setOjLuoguPassword(again.data.ojLuoguPasswordSet ? SECRET_PLACEHOLDER : '')
-        setOjLuoguPasswordSet(again.data.ojLuoguPasswordSet)
-        setOjQojPassword(again.data.ojQojPasswordSet ? SECRET_PLACEHOLDER : '')
-        setOjQojPasswordSet(again.data.ojQojPasswordSet)
-        setPayfmSecret(again.data.payfmSecretSet ? SECRET_PLACEHOLDER : '')
-        setPayfmSecretSet(again.data.payfmSecretSet)
-      }
-    } else {
-      toast.error(res.message || '保存失败，稍后重试')
+    const d = again.data
+    setConfigVersion(d.configVersion || 0)
+    setPristine(buildPristineFromAdmin(d))
+    if (revRef.current[section] !== savedRev) return
+    if (section === 'basic') {
+      setTitle(d.siteTitle || 'GoAlgo')
+      setLogo(d.siteLogo || '')
+      setFavicon(d.favicon || '')
+      setFooterIcp(d.footerIcp || '苏ICP备2025217901号')
+      setInactiveDays(String(d.inactiveDays || 14))
+    } else if (section === 'email') {
+      setSmtpHost(d.smtpHost || '')
+      setSmtpPort(String(d.smtpPort || 465))
+      setSmtpUsername(d.smtpUsername || '')
+      setSmtpFrom(d.smtpFrom || '')
+      setAdminNotifyEmails(d.adminNotifyEmails || '')
+      setOpsNotifyEmails(d.opsNotifyEmails || '')
+      setDataDiskPath(d.dataDiskPath || '')
+      setSmtpPassword('')
+      setSmtpPasswordSet(d.smtpPasswordSet)
+      setClearSmtpPassword(false)
+      setSmtpStatus(d.smtpStatus || 'unchecked')
+      setSmtpStatusAt(d.smtpStatusAt || 0)
+      setSmtpErrMsg(d.smtpErrMsg || '')
+    } else if (section === 'ai') {
+      setAgentEndpoint(d.agentEndpoint || '')
+      setAgentModel(d.agentModel || '')
+      setAgentSecret('')
+      setAgentSecretSet(d.agentSecretSet)
+      setClearAgentSecret(false)
+      setAiEndpoint(d.aiAnalyzeEndpoint || '')
+      setAiModel(d.aiAnalyzeModel || '')
+      setAiSecret('')
+      setAiSecretSet(d.aiAnalyzeSecretSet)
+      setClearAiSecret(false)
+      setAgentStatus(d.agentStatus || 'unchecked')
+      setAgentStatusAt(d.agentStatusAt || 0)
+      setAgentErrMsg(d.agentErrMsg || '')
+      setAiStatus(d.aiAnalyzeStatus || 'unchecked')
+      setAiStatusAt(d.aiAnalyzeStatusAt || 0)
+      setAiErrMsg(d.aiAnalyzeErrMsg || '')
+    } else if (section === 'upyun') {
+      setUpyunBucket(d.upyunBucket || '')
+      setUpyunOperator(d.upyunOperator || '')
+      setUpyunPassword('')
+      setUpyunPasswordSet(d.upyunPasswordSet)
+      setClearUpyunPassword(false)
+      setUpyunDomain(d.upyunDomain || '')
+      setUpyunScheme(d.upyunScheme || 'http')
+    } else if (section === 'oj') {
+      setOjLuoguUsername(d.ojLuoguUsername || '')
+      setOjLuoguPassword('')
+      setOjLuoguPasswordSet(d.ojLuoguPasswordSet)
+      setClearOjLuoguPassword(false)
+      setOjQojUsername(d.ojQojUsername || '')
+      setOjQojPassword('')
+      setOjQojPasswordSet(d.ojQojPasswordSet)
+      setClearOjQojPassword(false)
+      setOjLuoguStatus((d.ojLuoguStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
+      setOjQojStatus((d.ojQojStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
+    } else if (section === 'payment') {
+      setPayfmApiBase(d.payfmApiBase || '')
+      setPayfmMerchantNo(d.payfmMerchantNo || '')
+      setPayfmSecret('')
+      setPayfmSecretSet(d.payfmSecretSet)
+      setClearPayfmSecret(false)
+      setPayfmPayType(d.payfmPayType || '')
+      setPayfmNotifyUrl(d.payfmNotifyUrl || '')
     }
+  }
+
+  async function handleSaveSection(section: SingleSection) {
+    if (!canWrite || savingSection || saving) return
+    const savedRev = revRef.current[section]
+    setSavingSection(section)
+    const res = await updateSiteConfig(buildSectionPayload(section, currentForm()))
+    setSavingSection(null)
+    if (!res.success) {
+      toast.error(res.message || '保存失败，稍后重试')
+      return
+    }
+    toast.success('已保存')
+    void refresh()
+    await syncFromServer(section, savedRev)
+  }
+
+  async function handleSaveAll() {
+    if (!canWrite || savingSection || saving) return
+    const savedRevs = { ...revRef.current }
+    setSaving(true)
+    const res = await updateSiteConfig(buildSectionPayload('all', currentForm()))
+    setSaving(false)
+    if (!res.success) {
+      toast.error(res.message || '保存失败，稍后重试')
+      return
+    }
+    toast.success('全部配置已保存')
+    void refresh()
+    const again = await getSiteAdminConfig()
+    if (!again.success || !again.data) {
+      toast.error('配置已保存，但刷新状态失败')
+      return
+    }
+    const d = again.data
+    setConfigVersion(d.configVersion || 0)
+    setPristine(buildPristineFromAdmin(d))
+    if (revRef.current.basic === savedRevs.basic) setTitle(d.siteTitle || 'GoAlgo')
+    if (revRef.current.email === savedRevs.email) setSmtpHost(d.smtpHost || '')
+    if (revRef.current.ai === savedRevs.ai) setAgentEndpoint(d.agentEndpoint || '')
+    if (revRef.current.upyun === savedRevs.upyun) setUpyunBucket(d.upyunBucket || '')
+    if (revRef.current.oj === savedRevs.oj) setOjLuoguUsername(d.ojLuoguUsername || '')
+    if (revRef.current.payment === savedRevs.payment) setPayfmApiBase(d.payfmApiBase || '')
   }
 
   async function handleTestEmail() {
@@ -466,7 +628,11 @@ export function DashboardSiteSettings() {
       return
     }
     const port = Number(smtpPort) || 465
-    const smtpPw = secretPayload(smtpPassword, smtpPasswordSet)
+    const smtpPw = secretUpdate({
+      draft: smtpPassword,
+      alreadySet: smtpPasswordSet,
+      clearRequested: clearSmtpPassword,
+    })
     setTesting(true)
     const res = await testSiteEmail({
       to: testTo.trim(),
@@ -538,10 +704,11 @@ export function DashboardSiteSettings() {
     }
     setStatus('loading')
     setErr('')
-    const pw = secretPayload(
-      pass,
-      platform === 'LuoGu' ? ojLuoguPasswordSet : ojQojPasswordSet,
-    )
+    const pw = secretUpdate({
+      draft: pass,
+      alreadySet: platform === 'LuoGu' ? ojLuoguPasswordSet : ojQojPasswordSet,
+      clearRequested: platform === 'LuoGu' ? clearOjLuoguPassword : clearOjQojPassword,
+    })
     const res = await verifyOjCredential({
       platform,
       username: user,
@@ -556,6 +723,32 @@ export function DashboardSiteSettings() {
       setErr(detail)
       toast.error(detail)
     }
+  }
+
+  const isDirty = (section: SingleSection): boolean => {
+    if (!pristine) return false
+    return sectionDirty(section, currentForm(), pristine)
+  }
+
+  const anyDirty =
+    !!pristine &&
+    (['basic', 'email', 'ai', 'upyun', 'oj', 'payment'] as SingleSection[]).some(
+      (section) => sectionDirty(section, currentForm(), pristine!),
+    )
+
+  function CardSaveButton({ section }: { section: SingleSection }) {
+    const busy = savingSection === section
+    return (
+      <Button
+        type="button"
+        size="sm"
+        disabled={!canWrite || savingSection !== null || saving || !isDirty(section)}
+        onClick={() => void handleSaveSection(section)}
+      >
+        {busy ? <Spinner data-icon="inline-start" /> : null}
+        保存
+      </Button>
+    )
   }
 
   if (loading) {
@@ -582,20 +775,17 @@ export function DashboardSiteSettings() {
           你当前只能查看站点配置，无法修改。要调整的话，找站点管理员。
         </p>
       )}
-      <form
-        onSubmit={handleSave}
-        className="flex w-full flex-col gap-3"
-      >
+      <div className="flex w-full flex-col gap-3">
         {/* 只读权限：整表单只读展示 */}
         <fieldset disabled={!canWrite} className="contents">
-        <CollapsibleCard title="基本设置" defaultOpen>
+        <CollapsibleCard title="基本设置" defaultOpen footer={<CardSaveButton section="basic" />}>
           <FieldGroup className="gap-3">
             <Field className="gap-1.5">
               <FieldLabel htmlFor="site-title">站点标题</FieldLabel>
               <Input
                 id="site-title"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => { setTitle(e.target.value); bump('basic') }}
                 placeholder="GoAlgo"
               />
             </Field>
@@ -622,7 +812,7 @@ export function DashboardSiteSettings() {
               <Input
                 id="footer-icp"
                 value={footerIcp}
-                onChange={(e) => setFooterIcp(e.target.value)}
+                onChange={(e) => { setFooterIcp(e.target.value); bump('basic') }}
                 placeholder="苏ICP备2025217901号"
               />
             </Field>
@@ -634,7 +824,7 @@ export function DashboardSiteSettings() {
                 min={1}
                 max={365}
                 value={inactiveDays}
-                onChange={(e) => setInactiveDays(e.target.value)}
+                onChange={(e) => { setInactiveDays(e.target.value); bump('basic') }}
                 placeholder="14"
               />
               <p className="text-xs text-muted-foreground">
@@ -644,7 +834,7 @@ export function DashboardSiteSettings() {
           </FieldGroup>
         </CollapsibleCard>
 
-        <CollapsibleCard title="邮件" description="验证码、找回密码、日报/周报、审核提醒">
+        <CollapsibleCard title="邮件" description="验证码、找回密码、日报/周报、审核提醒" footer={<CardSaveButton section="email" />}>
           <FieldGroup className="gap-3">
             <div className="flex items-center gap-1.5 text-xs">
               <span
@@ -669,7 +859,7 @@ export function DashboardSiteSettings() {
               <textarea
                 id="admin-notify-emails"
                 value={adminNotifyEmails}
-                onChange={(e) => setAdminNotifyEmails(e.target.value)}
+                onChange={(e) => { setAdminNotifyEmails(e.target.value); bump('email') }}
                 placeholder={'admin@example.com\nops@example.com'}
                 rows={2}
                 className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full min-w-0 rounded-md border px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
@@ -685,7 +875,7 @@ export function DashboardSiteSettings() {
               <textarea
                 id="ops-notify-emails"
                 value={opsNotifyEmails}
-                onChange={(e) => setOpsNotifyEmails(e.target.value)}
+                onChange={(e) => { setOpsNotifyEmails(e.target.value); bump('email') }}
                 placeholder={'ops@example.com\nops2@example.com'}
                 rows={2}
                 className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full min-w-0 rounded-md border px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
@@ -699,7 +889,7 @@ export function DashboardSiteSettings() {
               <Input
                 id="data-disk-path"
                 value={dataDiskPath}
-                onChange={(e) => setDataDiskPath(e.target.value)}
+                onChange={(e) => { setDataDiskPath(e.target.value); bump('email') }}
                 placeholder="/data"
                 autoComplete="off"
               />
@@ -713,7 +903,7 @@ export function DashboardSiteSettings() {
                 <Input
                   id="smtp-host"
                   value={smtpHost}
-                  onChange={(e) => setSmtpHost(e.target.value)}
+                  onChange={(e) => { setSmtpHost(e.target.value); bump('email') }}
                   placeholder="smtp.163.com"
                 />
               </Field>
@@ -722,7 +912,7 @@ export function DashboardSiteSettings() {
                 <Input
                   id="smtp-port"
                   value={smtpPort}
-                  onChange={(e) => setSmtpPort(e.target.value)}
+                  onChange={(e) => { setSmtpPort(e.target.value); bump('email') }}
                   placeholder="465"
                   inputMode="numeric"
                 />
@@ -734,36 +924,48 @@ export function DashboardSiteSettings() {
                 <Input
                   id="smtp-username"
                   value={smtpUsername}
-                  onChange={(e) => setSmtpUsername(e.target.value)}
+                  onChange={(e) => { setSmtpUsername(e.target.value); bump('email') }}
                   placeholder="your@email.com"
                   autoComplete="off"
                 />
               </Field>
               <Field className="gap-1.5">
                 <FieldLabel htmlFor="smtp-password">密码 / 授权码</FieldLabel>
-                <Input
-                  id="smtp-password"
-                  type="password"
-                  value={smtpPassword}
-                  onChange={(e) => setSmtpPassword(e.target.value)}
-                  placeholder={
-                    smtpPasswordSet ? '已保存；留空表示不修改' : '邮箱密码或授权码'
-                  }
-                  autoComplete="new-password"
-                  onFocus={() => {
-                    if (smtpPassword === SECRET_PLACEHOLDER) setSmtpPassword('')
-                  }}
-                />
+                <div className="flex flex-col gap-1.5">
+                  <Input
+                    id="smtp-password"
+                    type="password"
+                    value={smtpPassword}
+                    onChange={(e) => {
+                      setSmtpPassword(e.target.value)
+                      if (clearSmtpPassword) setClearSmtpPassword(false)
+                      bump('email')
+                    }}
+                    placeholder={smtpPasswordSet ? '已保存；留空表示不修改' : '邮箱密码或授权码'}
+                    autoComplete="new-password"
+                  />
+                  {smtpPasswordSet && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={clearSmtpPassword}
+                      onClick={() => { setSmtpPassword(''); setClearSmtpPassword(true); bump('email') }}
+                    >
+                      清除已保存密钥
+                    </Button>
+                  )}
+                </div>
               </Field>
             </div>
             <Field className="gap-1.5">
-              <FieldLabel htmlFor="smtp-from">发件人邮箱</FieldLabel>
-              <Input
-                id="smtp-from"
-                value={smtpFrom}
-                onChange={(e) => setSmtpFrom(e.target.value)}
-                placeholder="your@email.com"
-              />
+                <FieldLabel htmlFor="smtp-from">发件人邮箱</FieldLabel>
+                <Input
+                  id="smtp-from"
+                  value={smtpFrom}
+                  onChange={(e) => { setSmtpFrom(e.target.value); bump('email') }}
+                  placeholder="your@email.com"
+                />
             </Field>
             <Field className="gap-1.5">
               <FieldLabel htmlFor="smtp-test-to">测试收件人</FieldLabel>
@@ -789,7 +991,7 @@ export function DashboardSiteSettings() {
           </FieldGroup>
         </CollapsibleCard>
 
-        <CollapsibleCard title="AI 服务" description="日报/周报模型 + 题库分析">
+        <CollapsibleCard title="AI 服务" description="日报/周报模型 + 题库分析" footer={<CardSaveButton section="ai" />}>
           <FieldGroup className="gap-3">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
               <span className="inline-flex items-center gap-1.5">
@@ -825,31 +1027,52 @@ export function DashboardSiteSettings() {
                 {aiErrMsg && <span className="text-muted-foreground truncate max-w-40" title={aiErrMsg}>{aiErrMsg}</span>}
               </span>
             </div>
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="agent-endpoint">日报/周报服务地址</FieldLabel>
+              <Input
+                id="agent-endpoint"
+                value={agentEndpoint}
+                onChange={(e) => { setAgentEndpoint(e.target.value); bump('ai') }}
+                placeholder="https://api.openai.com/v1"
+              />
+            </Field>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field className="gap-1.5">
                 <FieldLabel htmlFor="agent-model">日报/周报模型</FieldLabel>
                 <Input
                   id="agent-model"
                   value={agentModel}
-                  onChange={(e) => setAgentModel(e.target.value)}
+                  onChange={(e) => { setAgentModel(e.target.value); bump('ai') }}
                   placeholder="模型名称"
                 />
               </Field>
               <Field className="gap-1.5">
                 <FieldLabel htmlFor="agent-secret">日报/周报密钥</FieldLabel>
-                <Input
-                  id="agent-secret"
-                  type="password"
-                  value={agentSecret}
-                  onChange={(e) => setAgentSecret(e.target.value)}
-                  placeholder={
-                    agentSecretSet ? '已保存；留空表示不修改' : '填密钥'
-                  }
-                  autoComplete="new-password"
-                  onFocus={() => {
-                    if (agentSecret === SECRET_PLACEHOLDER) setAgentSecret('')
-                  }}
-                />
+                <div className="flex flex-col gap-1.5">
+                  <Input
+                    id="agent-secret"
+                    type="password"
+                    value={agentSecret}
+                    onChange={(e) => {
+                      setAgentSecret(e.target.value)
+                      if (clearAgentSecret) setClearAgentSecret(false)
+                      bump('ai')
+                    }}
+                    placeholder={agentSecretSet ? '已保存；留空表示不修改' : '填密钥'}
+                    autoComplete="new-password"
+                  />
+                  {agentSecretSet && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={clearAgentSecret}
+                      onClick={() => { setAgentSecret(''); setClearAgentSecret(true); bump('ai') }}
+                    >
+                      清除已保存密钥
+                    </Button>
+                  )}
+                </div>
               </Field>
             </div>
             <Field className="gap-1.5">
@@ -857,7 +1080,7 @@ export function DashboardSiteSettings() {
               <Input
                 id="ai-endpoint"
                 value={aiEndpoint}
-                onChange={(e) => setAiEndpoint(e.target.value)}
+                onChange={(e) => { setAiEndpoint(e.target.value); bump('ai') }}
                 placeholder="服务商提供的接口地址"
               />
             </Field>
@@ -867,31 +1090,43 @@ export function DashboardSiteSettings() {
                 <Input
                   id="ai-model"
                   value={aiModel}
-                  onChange={(e) => setAiModel(e.target.value)}
+                  onChange={(e) => { setAiModel(e.target.value); bump('ai') }}
                   placeholder="模型名称"
                 />
               </Field>
               <Field className="gap-1.5">
                 <FieldLabel htmlFor="ai-secret">题库分析密钥</FieldLabel>
-                <Input
-                  id="ai-secret"
-                  type="password"
-                  value={aiSecret}
-                  onChange={(e) => setAiSecret(e.target.value)}
-                  placeholder={
-                    aiSecretSet ? '已保存；留空表示不修改' : '填密钥'
-                  }
-                  autoComplete="new-password"
-                  onFocus={() => {
-                    if (aiSecret === SECRET_PLACEHOLDER) setAiSecret('')
-                  }}
-                />
+                <div className="flex flex-col gap-1.5">
+                  <Input
+                    id="ai-secret"
+                    type="password"
+                    value={aiSecret}
+                    onChange={(e) => {
+                      setAiSecret(e.target.value)
+                      if (clearAiSecret) setClearAiSecret(false)
+                      bump('ai')
+                    }}
+                    placeholder={aiSecretSet ? '已保存；留空表示不修改' : '填密钥'}
+                    autoComplete="new-password"
+                  />
+                  {aiSecretSet && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={clearAiSecret}
+                      onClick={() => { setAiSecret(''); setClearAiSecret(true); bump('ai') }}
+                    >
+                      清除已保存密钥
+                    </Button>
+                  )}
+                </div>
               </Field>
             </div>
           </FieldGroup>
         </CollapsibleCard>
 
-        <CollapsibleCard title="又拍云图床" description="博客与题解图片上传">
+        <CollapsibleCard title="又拍云图床" description="博客与题解图片上传" footer={<CardSaveButton section="upyun" />}>
           <FieldGroup className="gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <Field className="gap-1.5">
@@ -899,7 +1134,7 @@ export function DashboardSiteSettings() {
                 <Input
                   id="upyun-bucket"
                   value={upyunBucket}
-                  onChange={(e) => setUpyunBucket(e.target.value)}
+                  onChange={(e) => { setUpyunBucket(e.target.value); bump('upyun') }}
                   placeholder="如 yangcongxueyuan"
                   autoComplete="off"
                 />
@@ -909,7 +1144,7 @@ export function DashboardSiteSettings() {
                 <Input
                   id="upyun-operator"
                   value={upyunOperator}
-                  onChange={(e) => setUpyunOperator(e.target.value)}
+                  onChange={(e) => { setUpyunOperator(e.target.value); bump('upyun') }}
                   placeholder="操作员用户名"
                   autoComplete="off"
                 />
@@ -917,19 +1152,31 @@ export function DashboardSiteSettings() {
             </div>
             <Field className="gap-1.5">
               <FieldLabel htmlFor="upyun-password">操作员密码</FieldLabel>
-              <Input
-                id="upyun-password"
-                type="password"
-                value={upyunPassword}
-                onChange={(e) => setUpyunPassword(e.target.value)}
-                placeholder={
-                  upyunPasswordSet ? '已保存；留空表示不修改' : '操作员密码'
-                }
-                autoComplete="new-password"
-                onFocus={() => {
-                  if (upyunPassword === SECRET_PLACEHOLDER) setUpyunPassword('')
-                }}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Input
+                  id="upyun-password"
+                  type="password"
+                  value={upyunPassword}
+                  onChange={(e) => {
+                    setUpyunPassword(e.target.value)
+                    if (clearUpyunPassword) setClearUpyunPassword(false)
+                    bump('upyun')
+                  }}
+                  placeholder={upyunPasswordSet ? '已保存；留空表示不修改' : '操作员密码'}
+                  autoComplete="new-password"
+                />
+                {upyunPasswordSet && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={clearUpyunPassword}
+                    onClick={() => { setUpyunPassword(''); setClearUpyunPassword(true); bump('upyun') }}
+                  >
+                    清除已保存密码
+                  </Button>
+                )}
+              </div>
             </Field>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field className="gap-1.5">
@@ -937,7 +1184,7 @@ export function DashboardSiteSettings() {
                 <Input
                   id="upyun-domain"
                   value={upyunDomain}
-                  onChange={(e) => setUpyunDomain(e.target.value)}
+                  onChange={(e) => { setUpyunDomain(e.target.value); bump('upyun') }}
                   placeholder="如 zhiyuansofts.cn"
                   autoComplete="off"
                 />
@@ -947,7 +1194,7 @@ export function DashboardSiteSettings() {
                 <Input
                   id="upyun-scheme"
                   value={upyunScheme}
-                  onChange={(e) => setUpyunScheme(e.target.value)}
+                  onChange={(e) => { setUpyunScheme(e.target.value); bump('upyun') }}
                   placeholder="http 或 https"
                   autoComplete="off"
                 />
@@ -959,12 +1206,7 @@ export function DashboardSiteSettings() {
         <CollapsibleCard
           title="OJ 爬虫账号"
           description="同步用户提交记录"
-          footer={
-            <Button type="submit" disabled={saving || !canWrite}>
-              {saving ? <Spinner data-icon="inline-start" /> : null}
-              保存全部
-            </Button>
-          }
+          footer={<CardSaveButton section="oj" />}
         >
           <FieldGroup className="gap-2">
             {([
@@ -1026,8 +1268,10 @@ export function DashboardSiteSettings() {
                           value={oj.user}
                           onChange={(e) => {
                             oj.setUser(e.target.value)
+                            bump('oj')
                             if (oj.status !== 'unchecked') {
-                              oj.key === 'luogu' ? setOjLuoguStatus('unchecked') : setOjQojStatus('unchecked')
+                              if (oj.key === 'luogu') setOjLuoguStatus('unchecked')
+                              else setOjQojStatus('unchecked')
                             }
                           }}
                           placeholder={`${oj.label}用户名`}
@@ -1036,24 +1280,40 @@ export function DashboardSiteSettings() {
                       </Field>
                       <Field className="gap-1">
                         <FieldLabel htmlFor={`oj-${oj.key}-password`}>密码</FieldLabel>
-                        <Input
-                          id={`oj-${oj.key}-password`}
-                          type="password"
-                          value={oj.pass}
-                          onChange={(e) => {
-                            oj.setPass(e.target.value)
-                            if (oj.status !== 'unchecked') {
-                              oj.key === 'luogu' ? setOjLuoguStatus('unchecked') : setOjQojStatus('unchecked')
-                            }
-                          }}
-                          placeholder={
-                            oj.passSet ? '已保存；留空表示不修改' : `${oj.label}密码`
-                          }
-                          autoComplete="new-password"
-                          onFocus={() => {
-                            if (oj.pass === SECRET_PLACEHOLDER) oj.setPass('')
-                          }}
-                        />
+                        <div className="flex flex-col gap-1.5">
+                          <Input
+                            id={`oj-${oj.key}-password`}
+                            type="password"
+                            value={oj.pass}
+                            onChange={(e) => {
+                              oj.setPass(e.target.value)
+                              if (oj.key === 'luogu' && clearOjLuoguPassword) setClearOjLuoguPassword(false)
+                              if (oj.key === 'qoj' && clearOjQojPassword) setClearOjQojPassword(false)
+                              bump('oj')
+                              if (oj.status !== 'unchecked') {
+                                if (oj.key === 'luogu') setOjLuoguStatus('unchecked')
+                                else setOjQojStatus('unchecked')
+                              }
+                            }}
+                            placeholder={oj.passSet ? '已保存；留空表示不修改' : `${oj.label}密码`}
+                            autoComplete="new-password"
+                          />
+                          {oj.passSet && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={oj.key === 'luogu' ? clearOjLuoguPassword : clearOjQojPassword}
+                              onClick={() => {
+                                if (oj.key === 'luogu') { setOjLuoguPassword(''); setClearOjLuoguPassword(true) }
+                                else { setOjQojPassword(''); setClearOjQojPassword(true) }
+                                bump('oj')
+                              }}
+                            >
+                              清除已保存密码
+                            </Button>
+                          )}
+                        </div>
                       </Field>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1090,12 +1350,7 @@ export function DashboardSiteSettings() {
           title="支付FM（在线支付）"
           description="用户赞助：跳转支付FM完成赞助；赞助费用用于维持基本运维与 AI 需求。未配置完整时「赞助支持」入口不展示"
           defaultOpen={!payfmSecretSet}
-          footer={
-            <Button type="submit" disabled={saving || !canWrite}>
-              {saving ? <Spinner data-icon="inline-start" /> : null}
-              保存支付配置
-            </Button>
-          }
+          footer={<CardSaveButton section="payment" />}
         >
           <FieldGroup className="gap-3">
             <div className="flex items-center gap-1.5 text-xs">
@@ -1121,7 +1376,7 @@ export function DashboardSiteSettings() {
                 <Input
                   id="payfm-api-base"
                   value={payfmApiBase}
-                  onChange={(e) => setPayfmApiBase(e.target.value)}
+                  onChange={(e) => { setPayfmApiBase(e.target.value); bump('payment') }}
                   placeholder="https://…（支付FM后台「用户中心-API开发信息」查看）"
                   autoComplete="off"
                 />
@@ -1131,7 +1386,7 @@ export function DashboardSiteSettings() {
                 <Input
                   id="payfm-merchant-no"
                   value={payfmMerchantNo}
-                  onChange={(e) => setPayfmMerchantNo(e.target.value)}
+                  onChange={(e) => { setPayfmMerchantNo(e.target.value); bump('payment') }}
                   placeholder="支付FM商户号（用户中心查看）"
                   autoComplete="off"
                 />
@@ -1139,29 +1394,39 @@ export function DashboardSiteSettings() {
             </div>
             <Field className="gap-1.5">
               <FieldLabel htmlFor="payfm-secret">接入密钥</FieldLabel>
-              <textarea
-                id="payfm-secret"
-                value={payfmSecret}
-                onChange={(e) => setPayfmSecret(e.target.value)}
-                placeholder={
-                  payfmSecretSet
-                    ? '已保存；留空表示不修改'
-                    : '支付FM接入密钥（用户中心查看）'
-                }
-                rows={3}
-                className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full min-w-0 rounded-md border px-3 py-2 font-mono text-xs shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
-                autoComplete="off"
-                onFocus={() => {
-                  if (payfmSecret === SECRET_PLACEHOLDER) setPayfmSecret('')
-                }}
-              />
+              <div className="flex flex-col gap-1.5">
+                <textarea
+                  id="payfm-secret"
+                  value={payfmSecret}
+                  onChange={(e) => {
+                    setPayfmSecret(e.target.value)
+                    if (clearPayfmSecret) setClearPayfmSecret(false)
+                    bump('payment')
+                  }}
+                  placeholder={payfmSecretSet ? '已保存；留空表示不修改' : '支付FM接入密钥（用户中心查看）'}
+                  rows={3}
+                  className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex w-full min-w-0 rounded-md border px-3 py-2 font-mono text-xs shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+                  autoComplete="off"
+                />
+                {payfmSecretSet && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={clearPayfmSecret}
+                    onClick={() => { setPayfmSecret(''); setClearPayfmSecret(true); bump('payment') }}
+                  >
+                    清除已保存密钥
+                  </Button>
+                )}
+              </div>
             </Field>
             <Field className="gap-1.5">
               <FieldLabel htmlFor="payfm-pay-type">支付方式（payType）</FieldLabel>
               <Input
                 id="payfm-pay-type"
                 value={payfmPayType}
-                onChange={(e) => setPayfmPayType(e.target.value)}
+                onChange={(e) => { setPayfmPayType(e.target.value); bump('payment') }}
                 placeholder="aloop（默认：支付宝轮循池）；可按文档传值，如 alipay / wechat / alipaysign"
                 autoComplete="off"
               />
@@ -1177,7 +1442,32 @@ export function DashboardSiteSettings() {
           </FieldGroup>
         </CollapsibleCard>
         </fieldset>
-      </form>
+
+        {canWrite && (
+          <div className="sticky bottom-3 z-10 rounded-lg border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs text-muted-foreground">
+                {anyDirty ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-block size-1.5 rounded-full bg-amber-500" />
+                    有未保存的修改
+                  </span>
+                ) : (
+                  <span>全部已保存</span>
+                )}
+              </div>
+              <Button
+                type="button"
+                disabled={!canWrite || savingSection !== null || saving || !anyDirty}
+                onClick={() => void handleSaveAll()}
+              >
+                {saving ? <Spinner data-icon="inline-start" /> : null}
+                保存全部配置
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
         {canBackup && (
         <Card className="gap-3 py-4">

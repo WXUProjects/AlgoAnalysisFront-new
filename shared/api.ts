@@ -2125,6 +2125,16 @@ export interface UserRecentSolutionItem {
   createdAt: number
 }
 
+/** 运维配置保存分区：单卡保存用对应分区，缺省按 `all`（整页保存） */
+export type SiteConfigSection =
+  | 'basic'
+  | 'email'
+  | 'ai'
+  | 'upyun'
+  | 'oj'
+  | 'payment'
+  | 'all'
+
 /** 站点备份 scope；`all` 表示全量。后续可在 UI 做多选。 */
 export type BackupScope =
   | 'all'
