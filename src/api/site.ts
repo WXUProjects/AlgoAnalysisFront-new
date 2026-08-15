@@ -1,10 +1,10 @@
-import { endpoints, type BackupJob, type BackupScope } from '@shared/api'
+import { endpoints, type BackupJob, type BackupScope, type SiteConfigSection } from '@shared/api'
 import { get, post, del, str, num, type ApiResult } from '@/lib/http'
 import { jwt } from '@/lib/jwt'
 import { normalizeStaticUrl } from '@/lib/static-url'
 import { UX_UPLOAD_FAILED, sanitizeUserMessage } from '@/lib/ux-copy'
 
-export type { BackupJob, BackupScope }
+export type { BackupJob, BackupScope, SiteConfigSection }
 
 export type SiteConfig = {
   siteTitle: string
@@ -24,8 +24,12 @@ export type SiteAdminConfig = SiteConfig & {
   smtpPasswordSet: boolean
   smtpFrom: string
   agentModel: string
+  /** 日报/周报 OpenAI 兼容服务地址（非敏感） */
+  agentEndpoint: string
   agentSecretMasked: string
   agentSecretSet: boolean
+  /** 配置乐观并发版本（每次更新 +1） */
+  configVersion: number
   aiAnalyzeEndpoint: string
   aiAnalyzeModel: string
   aiAnalyzeSecretMasked: string
@@ -101,8 +105,10 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     smtpPasswordSet: Boolean(d.smtpPasswordSet),
     smtpFrom: str(d.smtpFrom),
     agentModel: str(d.agentModel),
+    agentEndpoint: str(d.agentEndpoint),
     agentSecretMasked: str(d.agentSecretMasked),
     agentSecretSet: Boolean(d.agentSecretSet),
+    configVersion: num(d.configVersion, 0),
     aiAnalyzeEndpoint: str(d.aiAnalyzeEndpoint),
     aiAnalyzeModel: str(d.aiAnalyzeModel),
     aiAnalyzeSecretMasked: str(d.aiAnalyzeSecretMasked),
@@ -180,6 +186,10 @@ export async function getSiteAdminConfig(): Promise<ApiResult<SiteAdminConfig>> 
 }
 
 export async function updateSiteConfig(body: {
+  /** 保存分区：basic | email | ai | upyun | oj | payment | all（缺省 all） */
+  section?: SiteConfigSection
+  /** 期望的 config_version；>0 校验，不匹配返回 409 */
+  expectedConfigVersion?: number
   siteTitle?: string
   siteLogo?: string
   favicon?: string
@@ -190,6 +200,7 @@ export async function updateSiteConfig(body: {
   smtpPassword?: string
   smtpFrom?: string
   clearSmtpPassword?: boolean
+  agentEndpoint?: string
   agentModel?: string
   agentSecret?: string
   clearAgentSecret?: boolean
