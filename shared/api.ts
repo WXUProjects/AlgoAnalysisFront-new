@@ -406,9 +406,6 @@ export const endpoints = {
     },
   },
   agent: {
-    summary: {
-      recent: `${API_PREFIX}/agent/summary/recent`,
-    },
     trainingReport: {
       /** 发起组织训练报告（异步） */
       start: `${API_PREFIX}/agent/training-report/start`,
@@ -842,12 +839,8 @@ export interface UserListItem {
   createdAt?: number
   /** 有效爬取间隔（分钟；站管覆盖优先，否则组织 MIN） */
   spiderIntervalMin?: number
-  /** 有效 AI 总结间隔（分钟） */
-  aiSummaryIntervalMin?: number
   /** 是否存在站点管理员爬取间隔覆盖 */
   spiderIntervalOverridden?: boolean
-  /** 是否存在站点管理员 AI 总结间隔覆盖 */
-  aiSummaryIntervalOverridden?: boolean
   /** 每日手动刷新做题记录有效配额（0=禁止；默认 2） */
   dailyRefreshQuota?: number
   /** 是否存在站点管理员每日刷新配额覆盖 */
@@ -1052,12 +1045,10 @@ export interface OrgInfo {
   brandFavicon?: string
   joinMode?: 'auto' | 'review' | string
   inviteCode?: string
-  enableAiSummary?: boolean
   enableAiEmail?: boolean
   enableAiWeeklyEmail?: boolean
   enableSpider?: boolean
   spiderIntervalMin?: number
-  aiSummaryIntervalMin?: number
   aiEmailSchedule?: string
   /** 站管：强制同步（跳过成员休眠） */
   forceSync?: boolean
@@ -1539,11 +1530,6 @@ export interface ProblemUserProfile {
   platforms: { name: string; count: number }[]
   difficulties: { name: string; count: number }[]
   totalAc: number
-}
-
-export interface AgentSummaryData {
-  msg: string[]
-  updateTime: string
 }
 
 /** Pastebin 粘贴板 */

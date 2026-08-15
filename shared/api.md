@@ -63,7 +63,7 @@
 | 阈值 | `site_configs.inactive_days`，默认 14，站管可改 1–365 |
 | 主信号 | `users.last_login_at`（登录写；VisitPing 登录用户 1h 节流写） |
 | 豁免 | 站管 / `sync_exempt`（站管开始终同步）/ 组织 staff / 组织 `force_sync`（永不冻结）/ plan∈{team,pro}；**任一豁免则不受自动休眠约束**（站管强制冻结/禁用除外） |
-| 休眠效果 | 定时爬虫、AI 总结、邮件、画像预热跳过；登录唤醒全量爬 |
+| 休眠效果 | 定时爬虫、邮件、画像预热跳过；登录唤醒全量爬 |
 | 手动解除（一次） | 站管 `POST /user/profile/clear-dormant` 批量刷新 `last_login_at` 并清除 `admin_force_dormant`；超时后仍会再休眠（≠ 永久豁免） |
 | 手动冻结 | 站管 `POST /user/profile/force-dormant`：勾选 `userIds` 或一键 `inactiveDays`；回拨 `last_login_at` + 标记 `admin_force_dormant`；**不遵循组织约定/始终同步等豁免**（不可冻自己）；登录或解除后清除强制标记 |
 | 禁用账号 | 站管 `POST /user/profile/set-disabled`：`{ userId, disabled }`；禁用后登录/刷新返回「账号已被禁用」；不可禁用自己与其他站管；禁用时一并暂停同步 |
@@ -123,13 +123,13 @@
 | GET | `/user/profile/get-by-id` | 否 | query: `userId`；公共域受隐私约束，私人域组织内隐私配置失效 |
 | GET | `/user/profile/get-by-username` | 否 | query: `username` 精确匹配；返回同 get-by-id |
 | GET | `/user/profile/get-by-name` | 否 | query: `name` 模糊（用户名/昵称） |
-| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称），**`dormantOnly=true`（或 `dormant=true`）仅「已暂停同步」用户**（含站管强制冻结/禁用，或超时且无豁免）；**`inactiveDays=N`（1–365）「最近 N 天未登录」**（优先于 dormantOnly；**不排除豁免**，便于站管预览后强制冻结）；**org 视图 `name`=组织内名称**；**site 视图 `name`=公共域外显名称**（≡站内昵称）；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`、`problemFetchEnabled`/`problemAiEnabled`、`createdAt`、`spiderIntervalMin`/`aiSummaryIntervalMin`、`spiderIntervalOverridden`/`aiSummaryIntervalOverridden`、`dailyRefreshQuota`（每日手动刷新有效配额，0=禁止，默认 2）/`dailyRefreshQuotaOverridden`、`syncExempt`/`lastLoginAt`/`dormant`/`adminForceDormant`/`disabled` |
+| GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称），**`dormantOnly=true`（或 `dormant=true`）仅「已暂停同步」用户**（含站管强制冻结/禁用，或超时且无豁免）；**`inactiveDays=N`（1–365）「最近 N 天未登录」**（优先于 dormantOnly；**不排除豁免**，便于站管预览后强制冻结）；**org 视图 `name`=组织内名称**；**site 视图 `name`=公共域外显名称**（≡站内昵称）；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`、`problemFetchEnabled`/`problemAiEnabled`、`createdAt`、`spiderIntervalMin`/`spiderIntervalOverridden`、`dailyRefreshQuota`（每日手动刷新有效配额，0=禁止，默认 2）/`dailyRefreshQuotaOverridden`、`syncExempt`/`lastLoginAt`/`dormant`/`adminForceDormant`/`disabled` |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
 | POST | `/user/profile/update` | 是 | 更新头像/邮箱；`name` 已忽略（昵称改「我的组织」）；邮箱变更须 `emailCode`（`purpose=change_email`） |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
 | POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；本人 / 站点管理员 / **当前组织 staff 管理本组织成员**；无组织授权时不可开启日报/周报 |
 | POST | `/user/profile/set-problem-pipeline` | 是(站点管理员) | body: `{ userId, enabled, kind: fetch\|ai }`；个人覆盖：近窗提交是否触发题面爬取 / 题面 AI（默认按是否非公共域组织） |
-| POST | `/user/profile/set-sync-intervals` | 是(站点管理员) | body: `{ userId, setSpider?, spiderIntervalMin?, setAi?, aiSummaryIntervalMin? }`；个人覆盖爬取/AI 总结间隔（分钟，**优先级最高**）；间隔 `0` 表示清除覆盖回落组织 MIN；范围 5–10080 |
+| POST | `/user/profile/set-sync-intervals` | 是(站点管理员) | body: `{ userId, setSpider?, spiderIntervalMin? }`；个人覆盖爬取间隔（分钟，**优先级最高**）；间隔 `0` 表示清除覆盖回落组织 MIN；范围 5–10080 |
 | POST | `/user/profile/set-refresh-quota` | 是(站点管理员) | body: `{ userId, quota, clear? }`；个人每日手动刷新做题记录配额覆盖：`clear=true` 清除覆盖回落全局默认（2 次/日）；否则 `quota` `0`=禁止手动刷新、`1–100`=每日次数 |
 | POST | `/user/profile/set-sync-exempt` | 是(站点管理员) | body: `{ userId, exempt }`；永不休眠（跳过不活跃判定） |
 | POST | `/user/profile/clear-dormant` | 是(站点管理员) | body: `{ userIds: number[] }`（单次最多 200）；**一次性**解除不活跃：将 `last_login_at` 刷新为当前时间并清除 `admin_force_dormant`；超时后仍会再休眠（≠ `sync_exempt`）；返回 `{ code, message, updated }` |
@@ -1370,18 +1370,6 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 
 ## Agent Service (`/api/agent`)
 
-### Summary
-
-| Method | Path | Auth | 说明 |
-|--------|------|------|------|
-| GET | `/agent/summary/recent` | 否 | query: `userId` AI 近期总结 |
-
-**Response**
-```json
-{ "code": 0, "msg": "string", "resp": "{\"msg\":[\"...\"],\"updateTime\":\"...\"}" }
-```
-`resp` 为 JSON 字符串，需前端再 `JSON.parse`。
-
 ### Training Report（组织训练报告）
 
 教练 / 队长 / 组织管理员可导出指定日期区间（可选组）的组织训练报告；支持规则模板或 AI 分析。生成在后台异步进行，完成后邮件通知发起人（可附 PDF），下载有效期 **24 小时**。周报即「上周」训练报告，共用此管道。
@@ -1549,7 +1537,6 @@ POST   /api/core/problemset/reorder
 POST   /api/core/problemset/like
 POST   /api/core/problemset/favorite
 GET    /api/core/problemset/favorites
-GET    /api/agent/summary/recent
 POST   /api/agent/training-report/start
 GET    /api/agent/training-report/job
 GET    /api/agent/training-report/jobs

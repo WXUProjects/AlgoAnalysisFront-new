@@ -207,7 +207,7 @@ Auth 标志：`isAdmin`/`isSiteAdmin` · `isOrgAdmin` · `isCoach` · `isCaptain
 
 | 模块 | 必须实现的能力 |
 |------|----------------|
-| **Home** | period 统计卡片（AC/提交切换、生涯/今/年/月/周）；提交/AC 双热力图；登录后算法画像 + AI 总结；OJ 快捷入口；首页公告摘要 |
+| **Home** | period 统计卡片（AC/提交切换、生涯/今/年/月/周）；提交/AC 双热力图；登录后算法画像；OJ 快捷入口；首页公告摘要 |
 | **Login** | 用户名+密码；客户端 SHA256；JWT；跳转 `redirect` 或 `/` |
 | **Register** | 账号/密码/确认/姓名/邮箱；`groupId` 默认 0；成功去登录 |
 | **Profile** | `?id=` 看他人；头像/OJ 绑定与外链；本人：编辑资料、退出；**Admin**：同步该用户 OJ；AC/提交对比；热力图；近期动态；算法画像；最近比赛 |
@@ -280,7 +280,6 @@ core.bulletin:    list, get, create, update, delete
 core.problem:     list, get, submissions, userProfile, progress,
                   backfill, emergencyStop, resume, resetAll, retryFailed,
                   toggleAnalyze, toggleFetch
-agent.summary:    recent
 ```
 
 ### 实现优先级
@@ -288,7 +287,7 @@ agent.summary:    recent
 1. **P0 壳**：shadcn init → AppLayout（GoAlgo 侧栏 + Header）→ 鉴权 → Toast  
 2. **P0 业务**：Login/Register → Home → Profile/ChangeProfile → Contest → Bulletin → QuestionBank → AllActivities  
 3. **P0 后台**：Statistics / Group / User / BulletinManage / ProblemProgress  
-4. **P1**：热力图、算法画像、Markdown 题面、AI 总结  
+4. **P1**：热力图、算法画像、Markdown 题面  
 5. **P2**：Star / Upload / Rank / 装饰动效  
 
 ### 侧栏导航（启用项）

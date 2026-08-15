@@ -58,7 +58,7 @@
 **实测（只读，未改账号数据）**
 
 - period / heatmap / bulletin / contest list+ranking / submit-log
-- problem list/get/submissions / user-profile / agent.summary
+- problem list/get/submissions / user-profile
 
 ---
 
