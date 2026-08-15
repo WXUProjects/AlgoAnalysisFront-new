@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { serializeServiceHandoff } from '@/lib/service-handoff'
 
 const QUESTION_MAX = 2000
 const QA_CONTENT_MAX = 10000
@@ -35,7 +36,7 @@ export interface QaChatProps {
 /**
  * 智能问答：本轮对话仅存内存，不持久化。
  * - 至少完成一轮有效问答（question/answer 均非空）后才允许转人工
- * - 转人工：title = 最后一问；content = 完整 QA 序列化（不包含引用）
+ * - 转人工：title = 最后一问；content = 最近最多 15 轮完整 QA（不包含引用）
  */
 export function QaChat({ onOpenConversation }: QaChatProps) {
   const [turns, setTurns] = useState<QaTurn[]>([])
@@ -76,21 +77,15 @@ export function QaChat({ onOpenConversation }: QaChatProps) {
     ])
   }
 
-  function serializeQa(turnsToSerialize: QaTurn[]): string {
-    return turnsToSerialize
-      .map((t) => `用户：${t.question}\nQA：${t.answer}`)
-      .join('\n')
-  }
-
   async function handleHandoff() {
     if (handingOff) return
     const title = turns[turns.length - 1]?.question.trim() ?? ''
-    const content = serializeQa(turns)
+    const content = serializeServiceHandoff(turns, 15, QA_CONTENT_MAX)
     if (!title) {
       toast.error('请先完成一轮问答再转人工')
       return
     }
-    if (content.length > QA_CONTENT_MAX) {
+    if (!content) {
       toast.error('对话内容过长，请精简后再转人工')
       return
     }
