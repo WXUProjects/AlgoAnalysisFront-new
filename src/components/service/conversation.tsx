@@ -21,9 +21,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { formatTime } from '@/lib/format'
-import { refreshServiceBadge } from '@/lib/service-badge'
+import { refreshServiceBadge, useServiceBadge } from '@/lib/service-badge'
+import {
+  bindConversationRefresh,
+  createRefreshQueue,
+} from '@/lib/service-conversation-refresh'
 
-const POLL_MS = 30_000
+const POLL_MS = 5_000
 
 export function Conversation({ ticketId }: { ticketId: string }) {
   const [ticket, setTicket] = useState<Ticket | null>(null)
@@ -38,9 +42,14 @@ export function Conversation({ ticketId }: { ticketId: string }) {
   const lastSeq = useRef(0) // 仅用于展示层去重
   const bottomRef = useRef<HTMLDivElement>(null)
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  const activeTicketId = useRef(ticketId)
+  const queuedRefresh = useRef<() => Promise<void>>(async () => {})
+  const serviceBadge = useServiceBadge()
+  activeTicketId.current = ticketId
 
   const loadDetail = useCallback(async () => {
     const res = await getTicket(ticketId)
+    if (activeTicketId.current !== ticketId) return false
     if (!res.success) {
       toast.error(res.message || '会话加载失败')
       return false
@@ -53,21 +62,25 @@ export function Conversation({ ticketId }: { ticketId: string }) {
   const loadMessages = useCallback(
     async (showLoading = false) => {
       if (showLoading) setLoading(true)
-      const res = await getTicketMessages(ticketId, nextSeq.current)
-      if (showLoading) setLoading(false)
-      if (!res.success) {
-        if (showLoading) toast.error(res.message || '消息加载失败')
-        return
-      }
-      const fresh = (res.data?.list ?? []).filter(
-        (m) => m.sequenceNo > lastSeq.current,
-      )
-      if (fresh.length > 0) {
-        setMessages((prev) => [...prev, ...fresh])
-        lastSeq.current = Math.max(lastSeq.current, ...fresh.map((m) => m.sequenceNo))
+      try {
+        const res = await getTicketMessages(ticketId, nextSeq.current)
+        if (activeTicketId.current !== ticketId) return
+        if (!res.success) {
+          if (showLoading) toast.error(res.message || '消息加载失败')
+          return
+        }
+        const fresh = (res.data?.list ?? []).filter(
+          (m) => m.sequenceNo > lastSeq.current,
+        )
+        if (fresh.length > 0) {
+          setMessages((prev) => [...prev, ...fresh])
+          lastSeq.current = Math.max(lastSeq.current, ...fresh.map((m) => m.sequenceNo))
+        }
         if (res.data?.nextAfterSequence !== undefined) {
           nextSeq.current = res.data.nextAfterSequence
         }
+      } finally {
+        if (showLoading && activeTicketId.current === ticketId) setLoading(false)
       }
     },
     [ticketId],
@@ -82,7 +95,13 @@ export function Conversation({ ticketId }: { ticketId: string }) {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setTicket(null)
     setMessages([])
+    setDraft('')
+    setSending(false)
+    setReason('')
+    setPatchBusy(false)
+    setCloseOpen(false)
     lastSeq.current = 0
     nextSeq.current = 0
     void (async () => {
@@ -100,16 +119,28 @@ export function Conversation({ ticketId }: { ticketId: string }) {
     }
   }, [ticketId, loadDetail, loadMessages])
 
-  // 30s 轮询详情 + 消息增量（组件卸载清除）
+  // 前台每 5s 轮询详情 + 消息增量（组件卸载清除）
   useEffect(() => {
+    const refresh = createRefreshQueue(refreshAll)
+    queuedRefresh.current = refresh
     if (pollTimer.current) clearInterval(pollTimer.current)
     pollTimer.current = setInterval(() => {
-      void refreshAll()
+      void refresh()
     }, POLL_MS)
     return () => {
       if (pollTimer.current) clearInterval(pollTimer.current)
     }
   }, [refreshAll])
+
+  // 回到会话或收到客服待回复标记时立即同步，5s 轮询仅作兜底。
+  useEffect(
+    () => bindConversationRefresh(window, document, () => void queuedRefresh.current()),
+    [refreshAll],
+  )
+
+  useEffect(() => {
+    if (serviceBadge.visible) void queuedRefresh.current()
+  }, [serviceBadge.visible])
 
   // 新消息滚动到底
   useEffect(() => {
@@ -119,8 +150,10 @@ export function Conversation({ ticketId }: { ticketId: string }) {
   async function handleSend() {
     const c = draft.trim()
     if (!c) return
+    const requestTicketId = ticketId
     setSending(true)
-    const res = await createTicketMessage(ticketId, c)
+    const res = await createTicketMessage(requestTicketId, c)
+    if (activeTicketId.current !== requestTicketId) return
     setSending(false)
     if (!res.success) {
       toast.error(res.message || '发送失败，过会儿再试')
@@ -128,13 +161,15 @@ export function Conversation({ ticketId }: { ticketId: string }) {
     }
     setDraft('')
     // 清空后拉增量（含刚发的消息）
-    await loadMessages()
+    await queuedRefresh.current()
     void refreshServiceBadge()
   }
 
   async function handlePatchStatus(status: string) {
+    const requestTicketId = ticketId
     setPatchBusy(true)
-    const res = await patchTicketStatus(ticketId, status, reason.trim())
+    const res = await patchTicketStatus(requestTicketId, status, reason.trim())
+    if (activeTicketId.current !== requestTicketId) return
     setPatchBusy(false)
     if (!res.success) {
       toast.error(res.message || '操作失败，过会儿再试')
@@ -143,7 +178,7 @@ export function Conversation({ ticketId }: { ticketId: string }) {
     toast.success(status === 'resolved' ? '已标记为已解决' : '会话已关闭')
     setReason('')
     setCloseOpen(false)
-    await refreshAll()
+    await queuedRefresh.current()
     void refreshServiceBadge()
   }
 
@@ -172,7 +207,7 @@ export function Conversation({ ticketId }: { ticketId: string }) {
               variant="ghost"
               size="icon"
               title="刷新"
-              onClick={() => void refreshAll()}
+              onClick={() => void queuedRefresh.current()}
             >
               <RefreshCwIcon className="size-4" />
             </Button>

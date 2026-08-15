@@ -49,3 +49,13 @@ test('returns empty content when the latest turn cannot fit', () => {
 
   assert.equal(content, '')
 })
+
+test('excludes incomplete turns before applying the recent window', () => {
+  const content = serializeServiceHandoff([
+    { question: '完整问题', answer: '完整回答' },
+    { question: '只有参考资料', answer: '' },
+    { question: '', answer: '无问题' },
+  ])
+
+  assert.equal(content, '用户：完整问题\nQA：完整回答')
+})

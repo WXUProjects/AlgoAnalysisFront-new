@@ -213,9 +213,14 @@ function AppLayoutInner() {
     const onVis = () => {
       if (document.visibilityState === 'visible') void refreshServiceBadge()
     }
+    const onFocus = () => void refreshServiceBadge()
+    const timer = window.setInterval(() => void refreshServiceBadge(), 5_000)
     document.addEventListener('visibilitychange', onVis)
+    window.addEventListener('focus', onFocus)
     return () => {
+      window.clearInterval(timer)
       document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('focus', onFocus)
     }
   }, [ready, isLogin])
 

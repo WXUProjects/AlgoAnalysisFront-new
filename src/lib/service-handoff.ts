@@ -9,6 +9,7 @@ export function serializeServiceHandoff(
   maxLength = 10000,
 ): string {
   const serialized = turns
+    .filter((turn) => turn.question.trim() && turn.answer.trim())
     .slice(-maxTurns)
     .map((turn) => `用户：${turn.question}\nQA：${turn.answer}`)
 

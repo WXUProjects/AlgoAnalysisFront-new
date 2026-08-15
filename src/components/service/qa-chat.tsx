@@ -79,8 +79,9 @@ export function QaChat({ onOpenConversation }: QaChatProps) {
 
   async function handleHandoff() {
     if (handingOff) return
-    const title = turns[turns.length - 1]?.question.trim() ?? ''
-    const content = serializeServiceHandoff(turns, 15, QA_CONTENT_MAX)
+    const completedTurns = turns.filter((turn) => turn.question.trim() && turn.answer.trim())
+    const title = completedTurns[completedTurns.length - 1]?.question.trim() ?? ''
+    const content = serializeServiceHandoff(completedTurns, 15, QA_CONTENT_MAX)
     if (!title) {
       toast.error('请先完成一轮问答再转人工')
       return
