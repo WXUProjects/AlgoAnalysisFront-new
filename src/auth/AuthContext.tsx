@@ -26,6 +26,7 @@ import {
 import { setAuthExpiredHandler } from '@/lib/http'
 import { jwt, jwtPayloadEquals, type JwtPayload } from '@/lib/jwt'
 import { hasAnyAdminPerm, permsFromPayload } from '@/lib/permissions'
+import { requireProfileResult } from '@/auth/profile-sync'
 import {
   canAccessAdminFromPayload,
   isCaptainFromPayload,
@@ -72,7 +73,12 @@ interface AuthState {
     } | null
   }>
   logout: () => void
-  sync: () => Promise<void>
+  sync: (opts?: {
+    forceRefresh?: boolean
+    forceProfile?: boolean
+    requireProfile?: boolean
+    applyHint?: boolean
+  }) => Promise<void>
   /**
    * 切换当前组织。
    * - 默认视为用户手动切换：清除 `?domain=` 持久标记
@@ -215,11 +221,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (opts?: {
       forceRefresh?: boolean
       forceProfile?: boolean
+      requireProfile?: boolean
       /** 即使 profile 已缓存也再试 domain 切域 */
       applyHint?: boolean
     }) => {
       const forceRefresh = Boolean(opts?.forceRefresh)
       const forceProfile = Boolean(opts?.forceProfile)
+      const requireProfile = Boolean(opts?.requireProfile)
       const applyHint = opts?.applyHint !== false
 
       if (forceRefresh || !jwt.isValid()) {
@@ -251,7 +259,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(payload)
 
       const needProfile =
-        forceProfile || profileLoadedForRef.current !== payload.userId
+        forceProfile || requireProfile || profileLoadedForRef.current !== payload.userId
       let list: OrgInfo[] = orgsRef.current
       if (needProfile) {
         // profile 与 orgs 互不依赖，并行拉取缩短首屏就绪时间
@@ -259,7 +267,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           fetchProfileById(payload.userId),
           refreshOrgs(),
         ])
-        if (res.success && res.data) {
+        if (requireProfile) {
+          const refreshedProfile = requireProfileResult(res)
+          setProfile(refreshedProfile)
+          profileLoadedForRef.current = payload.userId
+        } else if (res.success && res.data) {
           setProfile(res.data)
           profileLoadedForRef.current = payload.userId
         }

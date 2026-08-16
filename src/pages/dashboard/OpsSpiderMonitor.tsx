@@ -6,6 +6,7 @@ import {
   getSpiderMonitor,
   togglePlatformSync,
   type SpiderPlatformStat,
+  type SpiderSyncModule,
 } from '@/api/ops'
 import { useAuth } from '@/auth/AuthContext'
 import {
@@ -24,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -35,10 +37,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { formatCompactNumber, formatTime } from '@/lib/format'
 import { formatSyncAge, spiderPlatformLabel } from '@/lib/spider-health'
+import {
+  canViewSpiderUsers,
+  getSpiderMonitorView,
+  spiderToggleFailureMessage,
+  type SpiderMonitorTone as Tone,
+} from '@/lib/spider-monitor-state'
 import { Perm } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
-
-type Tone = 'ok' | 'warn' | 'fail' | 'muted' | 'paused'
 
 const TONE_DOT: Record<Tone, string> = {
   ok: 'bg-green-500',
@@ -56,11 +62,6 @@ const TONE_TEXT: Record<Tone, string> = {
   paused: 'text-amber-600',
 }
 
-function worstTone(a: Tone, b: Tone): Tone {
-  const rank: Record<Tone, number> = { muted: 0, paused: 1, ok: 2, warn: 3, fail: 4 }
-  return rank[a] >= rank[b] ? a : b
-}
-
 function StatusDot({ tone, title }: { tone: Tone; title?: string }) {
   return (
     <span
@@ -70,70 +71,27 @@ function StatusDot({ tone, title }: { tone: Tone; title?: string }) {
   )
 }
 
-type ModuleStatus = { tone: Tone; label: string }
-
-function moduleStatuses(p: SpiderPlatformStat): ModuleStatus[] {
-  let submit: ModuleStatus
-  if (p.paused) {
-    submit = { tone: 'muted', label: '暂停同步' }
-  } else if (!p.hasSubmitFetcher) {
-    submit = { tone: 'muted', label: '不支持' }
-  } else if (p.boundUsers <= 0) {
-    submit = { tone: 'muted', label: '无绑定' }
-  } else if (p.lastFailAt > 0 && p.lastFailAt >= p.lastOkAt) {
-    submit = { tone: 'fail', label: '同步异常' }
-  } else if (p.lastOkAt > 0) {
-    submit = { tone: 'ok', label: '正常' }
-  } else {
-    submit = { tone: 'warn', label: '未同步' }
-  }
-
-  const problem: ModuleStatus = !p.hasProblemFetch
-    ? { tone: 'muted', label: '不支持' }
-    : p.problemCount > 0
-      ? { tone: 'ok', label: '正常' }
-      : { tone: 'muted', label: '还没有题目' }
-
-  const contest: ModuleStatus = !p.hasContestCalendar
-    ? { tone: 'muted', label: '不支持' }
-    : p.contestCount > 0
-      ? { tone: 'ok', label: '正常' }
-      : { tone: 'muted', label: '还没有赛程' }
-
-  let account: ModuleStatus
-  if (!p.hasAccount) {
-    account = { tone: 'muted', label: '无需账号' }
-  } else if (p.accountStatus === 'ok') {
-    account = { tone: 'ok', label: '正常' }
-  } else if (p.accountStatus === 'fail') {
-    account = { tone: 'fail', label: '登录异常' }
-  } else {
-    account = { tone: 'muted', label: '未验证' }
-  }
-
-  return [submit, problem, contest, account]
-}
-
-function cardTone(statuses: ModuleStatus[]): Tone {
-  return statuses.reduce<Tone>((acc, s) => worstTone(acc, s.tone), 'muted')
-}
-
 function SpiderMonitorCard({
   stat,
   onToggle,
-  toggling,
+  togglingSubmit,
+  togglingProblem,
+  canToggleSubmit,
+  canToggleProblem,
   onViewUsers,
 }: {
   stat: SpiderPlatformStat
-  onToggle?: (enabled: boolean) => void
-  toggling: boolean
+  onToggle?: (module: SpiderSyncModule, enabled: boolean) => void
+  togglingSubmit: boolean
+  togglingProblem: boolean
+  canToggleSubmit: boolean
+  canToggleProblem: boolean
   onViewUsers?: (platform: string) => void
 }) {
-  const statuses = moduleStatuses(stat)
-  const overall = cardTone(statuses)
+  const view = getSpiderMonitorView(stat)
+  const { statuses, overall, paused } = view
   const moduleLabels = ['提交', '题库', '比赛', '账号']
-  const paused = stat.paused
-  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmModule, setConfirmModule] = useState<SpiderSyncModule | null>(null)
 
   const lastSyncText =
     stat.lastOkAt > 0
@@ -144,11 +102,11 @@ function SpiderMonitorCard({
   const hasRecentFail = stat.lastFailAt > 0 && stat.lastFailAt >= stat.lastOkAt
   const failText = hasRecentFail ? `最近失败 ${formatTime(stat.lastFailAt)}` : null
 
-  function handleSwitchChange(v: boolean) {
+  function handleSwitchChange(module: SpiderSyncModule, v: boolean) {
     if (v) {
-      onToggle?.(true)
+      onToggle?.(module, true)
     } else {
-      setConfirmOpen(true)
+      setConfirmModule(module)
     }
   }
 
@@ -156,63 +114,69 @@ function SpiderMonitorCard({
     <div className={cn('rounded-xl border bg-card p-3.5', paused && 'border-amber-500/40')}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1.5">
-          <StatusDot tone={paused ? 'paused' : overall} />
+          <StatusDot tone={overall} />
           <span className="truncate text-sm font-semibold">
             {spiderPlatformLabel(stat.platform)}
           </span>
-          {paused && (
-            <span className="shrink-0 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
-              暂停同步
-            </span>
-          )}
+          {stat.submitPaused && <Badge variant="outline">提交已暂停</Badge>}
+          {stat.problemPaused && <Badge variant="outline">题面已暂停</Badge>}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {!paused && (
-            <span className={cn('text-xs font-medium', TONE_TEXT[overall])}>
-              {overall === 'fail'
-                ? '异常'
-                : overall === 'warn'
-                  ? '待关注'
-                  : overall === 'ok'
-                    ? '正常'
-                    : '未使用'}
-            </span>
-          )}
-          {onToggle ? (
-            <>
-              <Switch
-                checked={!paused}
-                disabled={toggling}
-                onCheckedChange={handleSwitchChange}
-                aria-label={paused ? '启用同步' : '暂停同步'}
-              />
-              <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      关闭 {spiderPlatformLabel(stat.platform)} 同步？
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      已绑定用户与历史数据都会保留，只是不再同步；绑定该 OJ 的用户仍可继续绑定。
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        setConfirmOpen(false)
-                        onToggle(false)
-                      }}
-                    >
-                      确认关闭
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </>
+          <span className={cn('text-xs font-medium', TONE_TEXT[overall])}>
+            {view.overallLabel}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border p-2.5 text-sm">
+        <div className="flex items-center justify-between gap-2">
+          <span>提交记录</span>
+          {canToggleSubmit ? (
+            <Switch
+              checked={!stat.submitPaused}
+              disabled={!stat.hasSubmitFetcher || togglingSubmit}
+              onCheckedChange={(enabled) => handleSwitchChange('submit', enabled)}
+              aria-label={`${spiderPlatformLabel(stat.platform)}提交记录同步`}
+            />
+          ) : null}
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span>题面</span>
+          {canToggleProblem ? (
+            <Switch
+              checked={!stat.problemPaused}
+              disabled={!stat.hasProblemFetch || togglingProblem}
+              onCheckedChange={(enabled) => handleSwitchChange('problem', enabled)}
+              aria-label={`${spiderPlatformLabel(stat.platform)}题面获取`}
+            />
           ) : null}
         </div>
       </div>
+
+      <AlertDialog
+        open={confirmModule !== null}
+        onOpenChange={(open) => !open && setConfirmModule(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              暂停{confirmModule === 'problem' ? '题面获取' : '提交记录同步'}？
+            </AlertDialogTitle>
+            <AlertDialogDescription>恢复前将不再获取新数据。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmModule) onToggle?.(confirmModule, false)
+                setConfirmModule(null)
+              }}
+            >
+              确认暂停
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
         <Mini
@@ -238,7 +202,7 @@ function SpiderMonitorCard({
               {i === 0
                 ? s.label
                 : i === 1
-                  ? formatCompactNumber(stat.problemCount)
+                  ? view.problem.display
                   : i === 2
                     ? formatCompactNumber(stat.contestCount)
                     : s.label}
@@ -247,7 +211,7 @@ function SpiderMonitorCard({
         ))}
       </div>
 
-      <div className="mt-2.5 space-y-0.5 border-t pt-2 text-[11px] text-muted-foreground">
+      <div className="mt-2.5 flex flex-col gap-0.5 border-t pt-2 text-[11px] text-muted-foreground">
         <p className="flex items-center justify-between gap-2">
           <span className="truncate" title={lastSyncText}>
             {lastSyncText}
@@ -302,12 +266,13 @@ function Mini({
 
 function SpiderMonitorSectionInner() {
   const { can } = useAuth()
+  const canViewUsers = canViewSpiderUsers(can)
   const [data, setData] = useState<SpiderPlatformStat[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [toggling, setToggling] = useState(false)
-  const canToggle =
-    can(Perm.SiteConfigWrite) || can(Perm.SiteSpiderOps)
+  const [toggling, setToggling] = useState<Set<string>>(() => new Set())
+  const canToggleSubmit = can(Perm.SiteSpiderOps)
+  const canToggleProblem = can(Perm.SiteProblemOps)
 
   const [usersOpen, setUsersOpen] = useState(false)
   const [usersPlatform, setUsersPlatform] = useState('')
@@ -342,19 +307,29 @@ function SpiderMonitorSectionInner() {
   }, [])
 
   const handleToggle = useCallback(
-    async (stat: SpiderPlatformStat, enabled: boolean) => {
-      setToggling(true)
-      const res = await togglePlatformSync(stat.platform, enabled)
-      setToggling(false)
-      if (res.success) {
-        toast.success(
-          enabled
-            ? `${spiderPlatformLabel(stat.platform)} 已恢复同步`
-            : `${spiderPlatformLabel(stat.platform)} 已关闭同步`,
-        )
-        void load()
-      } else {
-        toast.error(res.message || '操作失败，稍后重试')
+    async (stat: SpiderPlatformStat, module: SpiderSyncModule, enabled: boolean) => {
+      const toggleKey = `${stat.platform}:${module}`
+      setToggling((current) => new Set(current).add(toggleKey))
+      const platform = spiderPlatformLabel(stat.platform)
+      const feature = module === 'submit' ? '提交记录同步' : '题面获取'
+      const action = enabled ? '恢复' : '暂停'
+      const fallbackMessage = spiderToggleFailureMessage(platform, module, enabled)
+      try {
+        const res = await togglePlatformSync(stat.platform, enabled, module)
+        if (res.success) {
+          toast.success(`${platform}已${action}${feature}`)
+          await load()
+        } else {
+          toast.error(res.message || fallbackMessage)
+        }
+      } catch {
+        toast.error(fallbackMessage)
+      } finally {
+        setToggling((current) => {
+          const next = new Set(current)
+          next.delete(toggleKey)
+          return next
+        })
       }
     },
     [load],
@@ -411,9 +386,12 @@ function SpiderMonitorSectionInner() {
             <SpiderMonitorCard
               key={s.platform}
               stat={s}
-              onToggle={canToggle ? (enabled) => void handleToggle(s, enabled) : undefined}
-              toggling={toggling}
-              onViewUsers={(platform) => void openUsers(platform)}
+              onToggle={(module, enabled) => void handleToggle(s, module, enabled)}
+              togglingSubmit={toggling.has(`${s.platform}:submit`)}
+              togglingProblem={toggling.has(`${s.platform}:problem`)}
+              canToggleSubmit={canToggleSubmit}
+              canToggleProblem={canToggleProblem}
+              onViewUsers={canViewUsers ? (platform) => void openUsers(platform) : undefined}
             />
           ))}
         </div>
@@ -475,7 +453,11 @@ function SpiderMonitorSectionInner() {
 
 export function OpsSpiderMonitor() {
   const { can } = useAuth()
-  if (!can(Perm.SiteConfigRead) && !can(Perm.SiteConfigWrite)) {
+  if (
+    !can(Perm.SiteConfigRead) &&
+    !can(Perm.SiteSpiderOps) &&
+    !can(Perm.SiteProblemOps)
+  ) {
     return null
   }
   return <SpiderMonitorSectionInner />

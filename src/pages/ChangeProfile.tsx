@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PlusIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -34,14 +34,6 @@ import {
 import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
@@ -52,6 +44,18 @@ import {
   normalizeOjQuery,
   type OjPlatform,
 } from '@/lib/link'
+import {
+  getOjBindingChanges,
+  initializeOjBindings,
+  mergeSavedOjBindings,
+  saveOjBindings,
+  shouldCloseOjBindDialog,
+  shouldCloseOjBindDialogAfterSave,
+  type OjBindingSaveResult,
+  shouldInitializeOjBindings,
+  type OjBindingChange,
+  type OjBindingValues,
+} from '@/lib/oj-bindings'
 import { spiderPlatformHealth } from '@/lib/spider-health'
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
@@ -114,110 +118,120 @@ function OjBindDialog({
   lockedPlatform: OjPlatform | ''
   spiders: SpiderBinding[] | undefined
   onClose: () => void
-  onSave: (platform: OjPlatform, username: string) => Promise<boolean>
+  onSave: (changes: OjBindingChange[]) => Promise<OjBindingSaveResult>
 }) {
-  const [platform, setPlatform] = useState<OjPlatform | ''>(lockedPlatform)
-  const [username, setUsername] = useState('')
+  const [initial, setInitial] = useState<OjBindingValues>(() =>
+    initializeOjBindings(spiders),
+  )
+  const [current, setCurrent] = useState<OjBindingValues>(() =>
+    initializeOjBindings(spiders),
+  )
   const [saving, setSaving] = useState(false)
+  const inputRefs = useRef<Partial<Record<OjPlatform, HTMLInputElement | null>>>({})
+  const wasOpenRef = useRef(false)
+  const previousLockedPlatformRef = useRef<OjPlatform | ''>('')
+  const spidersRef = useRef(spiders)
+  spidersRef.current = spiders
 
-  // 打开时初始化：锁定平台直接带入；自由模式先清空，等用户选
   useEffect(() => {
-    if (!open) return
-    setPlatform(lockedPlatform)
+    const shouldInitialize = shouldInitializeOjBindings(
+      open,
+      wasOpenRef.current,
+      lockedPlatform,
+      previousLockedPlatformRef.current,
+    )
+    wasOpenRef.current = open
+    previousLockedPlatformRef.current = lockedPlatform
+    if (!shouldInitialize) return
+
+    const values = initializeOjBindings(spidersRef.current)
+    setInitial(values)
+    setCurrent(values)
     setSaving(false)
-    if (!lockedPlatform) {
-      setUsername('')
-      return
+    if (lockedPlatform) {
+      requestAnimationFrame(() => {
+        const input = inputRefs.current[lockedPlatform]
+        input?.scrollIntoView({ block: 'center' })
+        input?.focus({ preventScroll: true })
+      })
     }
-    setUsername(spiders?.find((s) => s.platform === lockedPlatform)?.username ?? '')
-  }, [open, lockedPlatform, spiders])
+  }, [open, lockedPlatform])
 
-  // 自由模式：选中已绑定平台 → 预填用户名；未绑定 → 清空
-  useEffect(() => {
-    if (!open || lockedPlatform) return
-    if (!platform) {
-      setUsername('')
-      return
-    }
-    setUsername(spiders?.find((s) => s.platform === platform)?.username ?? '')
-  }, [open, lockedPlatform, platform, spiders])
-
-  const guide = platform ? OJ_BIND_GUIDES[platform] : null
-  const bound = platform
-    ? spiders?.find((s) => s.platform === platform)
-    : undefined
-  const health = bound ? spiderPlatformHealth(bound) : null
+  const changes = getOjBindingChanges(initial, current)
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
-      <DialogContent showCloseButton>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (shouldCloseOjBindDialog(nextOpen, saving)) onClose()
+      }}
+    >
+      <DialogContent
+        className="max-h-[min(90vh,44rem)] sm:max-w-xl"
+        showCloseButton={!saving}
+      >
         <DialogHeader>
-          <DialogTitle>{lockedPlatform ? '编辑 OJ 绑定' : '绑定 OJ'}</DialogTitle>
+          <DialogTitle>绑定 OJ</DialogTitle>
           <DialogDescription>
-            绑定常用 OJ 账号后，平台会自动同步你的提交与比赛记录
+            填写需要绑定或修改的账号
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-3 py-2">
-          <Field className="gap-1.5">
-            <FieldLabel>OJ 平台</FieldLabel>
-            <Select
-              value={platform}
-              onValueChange={(v) => setPlatform(v as OjPlatform)}
-              disabled={Boolean(lockedPlatform)}
-            >
-              <SelectTrigger disabled={Boolean(lockedPlatform)}>
-                <SelectValue placeholder="选择 OJ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {OJ_PLATFORMS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {p.label}
-                      {spiders?.some((s) => s.platform === p.value) ? '（已绑定）' : ''}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-
-          {platform && guide ? (
-            <Field className="gap-1.5">
-              <FieldLabel>{guide.fieldLabel}</FieldLabel>
+        <FieldGroup className="gap-3 py-2">
+          {OJ_PLATFORMS.map(({ value: platform, label }) => {
+            const guide = OJ_BIND_GUIDES[platform]
+            const bound = spiders?.find((spider) => spider.platform === platform)
+            const health = bound ? spiderPlatformHealth(bound) : null
+            return (
+              <Field key={platform} className="gap-1.5">
+                <FieldLabel htmlFor={`oj-${platform}`}>
+                  {label} · {guide.fieldLabel}
+                </FieldLabel>
               <Input
-                value={username}
+                  ref={(node) => { inputRefs.current[platform] = node }}
+                  id={`oj-${platform}`}
+                  value={current[platform]}
                 placeholder={guide.placeholder}
                 disabled={saving}
-                onChange={(e) => setUsername(e.target.value)}
+                  onChange={(event) => setCurrent((values) => ({
+                    ...values,
+                    [platform]: event.target.value,
+                  }))}
                 autoComplete="off"
               />
-              <FieldDescription>{guide.tip}</FieldDescription>
-              {guide.example ? (
-                <p className="break-all font-mono text-[11px] text-muted-foreground">
-                  {guide.example}
-                </p>
-              ) : null}
-            </Field>
-          ) : null}
-
-          {health?.kind === 'failed' ? (
-            <p className="text-xs leading-relaxed text-destructive">{health.detail}</p>
-          ) : null}
-        </div>
+                {health?.kind === 'failed' ? (
+                  <FieldDescription className="text-destructive">
+                    {health.detail}
+                  </FieldDescription>
+                ) : null}
+              </Field>
+            )
+          })}
+        </FieldGroup>
         <DialogFooter>
           <Button
             size="sm"
-            disabled={saving || !platform || !username.trim()}
+            disabled={saving || changes.length === 0}
             onClick={async () => {
-              if (!platform) return
               setSaving(true)
-              const ok = await onSave(platform, username.trim())
-              setSaving(false)
-              if (ok) onClose()
+              try {
+                const result = await onSave(changes)
+                if (result.saved.length > 0) {
+                  const merged = mergeSavedOjBindings(initial, current, result.saved)
+                  setInitial(merged.initial)
+                  setCurrent(merged.current)
+                }
+                if (shouldCloseOjBindDialogAfterSave(
+                  changes.length,
+                  result.saved.length,
+                  result.syncError,
+                )) onClose()
+              } finally {
+                setSaving(false)
+              }
             }}
           >
             {saving ? <Spinner data-icon="inline-start" /> : null}
-            {bound ? '保存' : '绑定'}
+            保存
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -532,23 +546,24 @@ export function ChangeProfile() {
     return bind ? [{ platform: p, bind }] : []
   })
 
-  async function handleCardSave(
-    platform: OjPlatform,
-    username: string,
-  ): Promise<boolean> {
-    if (!user) return false
-    const res = await setSpider({
-      userId: user.userId,
-      platform,
-      username,
-    })
-    if (res.success) {
-      toast.success(res.message || '存好啦，正在同步做题数据')
-      await sync()
-      return true
+  async function handleCardSave(changes: OjBindingChange[]): Promise<OjBindingSaveResult> {
+    if (!user) return { saved: [], failed: [] }
+    const result = await saveOjBindings(
+      changes,
+      (change) => setSpider({ userId: user.userId, ...change }),
+      sync,
+    )
+    for (const { change, message } of result.failed) {
+      const label = OJ_PLATFORMS.find(({ value }) => value === change.platform)?.label
+      toast.error(`${label || change.platform} 保存失败：${message || '过会儿再试'}`)
     }
-    toast.error(res.message || '没绑上，过会儿再试')
-    return false
+    if (result.syncError) {
+      toast.error(`账号已保存，但刷新失败：${result.syncError}`)
+    }
+    if (result.saved.length > 0 && result.failed.length === 0 && !result.syncError) {
+      toast.success(changes.length > 1 ? `${changes.length} 个 OJ 账号已保存` : 'OJ 账号已保存')
+    }
+    return result
   }
 
   async function handleSavePrivacy() {

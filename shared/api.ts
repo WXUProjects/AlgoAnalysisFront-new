@@ -505,7 +505,11 @@ export interface SpiderPlatformStat {
   accountAt: number
   /** 账号失败原因 */
   accountErr: string
-  /** 站管是否已暂停该 OJ 的爬虫同步（true=暂停；绑定用户仍在，只是不再同步） */
+  /** 站管是否已暂停该 OJ 的提交记录同步 */
+  submitPaused: boolean
+  /** 站管是否已暂停该 OJ 的题面获取 */
+  problemPaused: boolean
+  /** @deprecated 兼容字段，值与 submitPaused 相同 */
   paused: boolean
 }
 
@@ -2308,4 +2312,3 @@ export interface AiAnswerRes {
   mode: string
   references: AiAnswerReference[]
 }
-

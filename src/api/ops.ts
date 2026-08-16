@@ -11,6 +11,44 @@ export interface SubmitInventory {
 
 export type SpiderPlatformStat = SpiderMonitorRes['platforms'][number]
 
+export type SpiderSyncModule = 'submit' | 'problem'
+
+export function buildTogglePlatformBody(
+  platform: string,
+  enabled: boolean,
+  module: SpiderSyncModule,
+) {
+  return { platform, enabled, module }
+}
+
+export function parseSpiderPlatformStat(p: Record<string, unknown>): SpiderPlatformStat {
+  const submitPaused = p.submitPaused == null ? bool(p.paused) : bool(p.submitPaused)
+  return {
+    platform: str(p.platform),
+    boundUsers: num(p.boundUsers, 0),
+    submitCount: num(p.submitCount, 0),
+    todayEnqueued: num(p.todayEnqueued, 0),
+    todayRows: num(p.todayRows, 0),
+    todayOk: num(p.todayOk, 0),
+    todayFail: num(p.todayFail, 0),
+    lastOkAt: num(p.lastOkAt, 0),
+    lastFailAt: num(p.lastFailAt, 0),
+    lastError: str(p.lastError),
+    problemCount: num(p.problemCount, 0),
+    contestCount: num(p.contestCount, 0),
+    hasSubmitFetcher: bool(p.hasSubmitFetcher),
+    hasProblemFetch: bool(p.hasProblemFetch),
+    hasContestCalendar: bool(p.hasContestCalendar),
+    hasAccount: bool(p.hasAccount),
+    accountStatus: str(p.accountStatus),
+    accountAt: num(p.accountAt, 0),
+    accountErr: str(p.accountErr),
+    submitPaused,
+    problemPaused: bool(p.problemPaused),
+    paused: submitPaused,
+  }
+}
+
 export async function getSpiderMonitor(): Promise<ApiResult<SpiderPlatformStat[]>> {
   const res = await get<Record<string, unknown>>(endpoints.core.spider.monitor)
   if (!res.success) return { ...res, data: null }
@@ -18,36 +56,19 @@ export async function getSpiderMonitor(): Promise<ApiResult<SpiderPlatformStat[]
   const list = Array.isArray(raw.platforms) ? (raw.platforms as Record<string, unknown>[]) : []
   return {
     ...res,
-    data: list.map((p) => ({
-      platform: str(p.platform),
-      boundUsers: num(p.boundUsers, 0),
-      submitCount: num(p.submitCount, 0),
-      todayEnqueued: num(p.todayEnqueued, 0),
-      todayRows: num(p.todayRows, 0),
-      todayOk: num(p.todayOk, 0),
-      todayFail: num(p.todayFail, 0),
-      lastOkAt: num(p.lastOkAt, 0),
-      lastFailAt: num(p.lastFailAt, 0),
-      lastError: str(p.lastError),
-      problemCount: num(p.problemCount, 0),
-      contestCount: num(p.contestCount, 0),
-      hasSubmitFetcher: bool(p.hasSubmitFetcher),
-      hasProblemFetch: bool(p.hasProblemFetch),
-      hasContestCalendar: bool(p.hasContestCalendar),
-      hasAccount: bool(p.hasAccount),
-      accountStatus: str(p.accountStatus),
-      accountAt: num(p.accountAt, 0),
-      accountErr: str(p.accountErr),
-      paused: bool(p.paused),
-    })),
+    data: list.map(parseSpiderPlatformStat),
   }
 }
 
 export async function togglePlatformSync(
   platform: string,
   enabled: boolean,
+  module: SpiderSyncModule,
 ): Promise<ApiResult<unknown>> {
-  return post(endpoints.core.spider.togglePlatform, { platform, enabled })
+  return post(
+    endpoints.core.spider.togglePlatform,
+    buildTogglePlatformBody(platform, enabled, module),
+  )
 }
 
 /** 站管：某 OJ 的绑定用户列表 */
