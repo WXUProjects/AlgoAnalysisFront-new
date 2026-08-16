@@ -282,6 +282,7 @@ export const endpoints = {
     backup: {
       run: `${API_PREFIX}/core/backup/run`,
       status: `${API_PREFIX}/core/backup/status`,
+      key: `${API_PREFIX}/core/backup/key`,
     },
     statistic: {
       heatmap: `${API_PREFIX}/core/statistic/heatmap`,
@@ -595,6 +596,11 @@ export interface RunDisasterBackupRes {
 
 export interface GetDisasterBackupStatusRes {
   status: DisasterBackupStatus
+}
+
+/** 备份加密密钥下载响应（GET /core/backup/key）；base64 编码的 32 原始字节 */
+export interface DownloadBackupKeyRes {
+  key: string
 }
 
 /** 题单系统类型 */

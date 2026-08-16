@@ -4,6 +4,7 @@ import type { AxiosRequestConfig } from 'axios'
 import { endpoints } from '../../../shared/api'
 import { http } from '@/lib/http'
 import {
+  downloadDisasterBackupKey,
   getDisasterBackupStatus,
   parseDisasterBackupStatus,
   runDisasterBackup,
@@ -78,4 +79,40 @@ test('POST uses the shared run endpoint and parses the accepted status', async (
   assert.equal(result.data?.accepted, true)
   assert.equal(result.data?.status.status, 'running')
   assert.equal(result.data?.status.startedAt, 0)
+})
+
+test('GET uses the shared key endpoint and returns the base64 key', async () => {
+  let request: AxiosRequestConfig | undefined
+  http.defaults.adapter = async (config) => {
+    request = config
+    return {
+      data: { key: 'AQID' },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config,
+    }
+  }
+
+  const result = await downloadDisasterBackupKey()
+
+  assert.equal(request?.method, 'get')
+  assert.equal(request?.url, endpoints.core.backup.key)
+  assert.equal(result.success, true)
+  assert.equal(result.data?.key, 'AQID')
+})
+
+test('download key rejects empty payload', async () => {
+  http.defaults.adapter = async (config) => ({
+    data: { key: '' },
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    config,
+  })
+
+  const result = await downloadDisasterBackupKey()
+
+  assert.equal(result.success, true)
+  assert.equal(result.data, null)
 })

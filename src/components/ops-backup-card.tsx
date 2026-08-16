@@ -8,6 +8,7 @@ import type {
 } from '@shared/api'
 import { toast } from 'sonner'
 import {
+  downloadDisasterBackupKey,
   getDisasterBackupStatus,
   runDisasterBackup,
 } from '@/api/backup'
@@ -61,15 +62,18 @@ function statusVariant(status: DisasterBackupState) {
 interface OpsBackupCardProps {
   getStatus?: () => Promise<ApiResult<GetDisasterBackupStatusRes>>
   runBackup?: () => Promise<ApiResult<RunDisasterBackupRes>>
+  downloadKey?: () => Promise<ApiResult<{ key: string }>>
 }
 
 export function OpsBackupCard({
   getStatus = getDisasterBackupStatus,
   runBackup = runDisasterBackup,
+  downloadKey = downloadDisasterBackupKey,
 }: OpsBackupCardProps) {
   const [status, setStatus] = useState<DisasterBackupStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [requesting, setRequesting] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   useEffect(() => {
     let active = true
     async function load() {
@@ -111,6 +115,30 @@ export function OpsBackupCard({
       toast.success('备份已开始')
     } else {
       toast.error(res.data.status.message || '备份未开始')
+    }
+  }
+
+  async function handleDownloadKey() {
+    if (!window.confirm('将下载备份加密密钥，请妥善保管；丢失后无法解密历史备份。')) return
+    setDownloading(true)
+    const res = await downloadKey()
+    setDownloading(false)
+    if (!res.success || !res.data) {
+      toast.error(res.message || '密钥下载失败')
+      return
+    }
+    try {
+      const bytes = Uint8Array.from(atob(res.data.key), (char) => char.charCodeAt(0))
+      const blob = new Blob([bytes], { type: 'application/octet-stream' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = 'goalgo-backup-key.bin'
+      anchor.click()
+      URL.revokeObjectURL(url)
+      toast.success('密钥已下载')
+    } catch {
+      toast.error('密钥解析失败')
     }
   }
 
@@ -157,7 +185,7 @@ export function OpsBackupCard({
           <p className="text-sm text-muted-foreground">暂时无法获取备份状态</p>
         )}
       </CardContent>
-      <CardFooter>
+      <CardFooter className="justify-between">
         <Button
           type="button"
           disabled={loading || unavailable || running || requesting}
@@ -165,6 +193,10 @@ export function OpsBackupCard({
         >
           {requesting || running ? <Spinner data-icon="inline-start" /> : null}
           {requesting || running ? '备份中…' : '立即备份'}
+        </Button>
+        <Button type="button" variant="outline" disabled={loading || downloading} onClick={() => void handleDownloadKey()}>
+          {downloading ? <Spinner data-icon="inline-start" /> : null}
+          下载加密密钥
         </Button>
       </CardFooter>
     </Card>

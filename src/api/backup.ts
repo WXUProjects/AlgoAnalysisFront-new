@@ -3,6 +3,7 @@ import type {
   DisasterBackupState,
   DisasterBackupStatus,
   DisasterBackupTrigger,
+  DownloadBackupKeyRes,
   GetDisasterBackupStatusRes,
   RunDisasterBackupRes,
 } from '@shared/api'
@@ -58,4 +59,13 @@ export async function runDisasterBackup(): Promise<ApiResult<RunDisasterBackupRe
       status: parseDisasterBackupStatus(raw.status),
     },
   }
+}
+
+export async function downloadDisasterBackupKey(): Promise<ApiResult<DownloadBackupKeyRes>> {
+  const res = await get<Record<string, unknown>>(endpoints.core.backup.key)
+  if (!res.success) return { ...res, data: null }
+  const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
+  const key = str(raw.key)
+  if (!key) return { ...res, data: null, message: '备份加密密钥为空' }
+  return { ...res, data: { key } }
 }
