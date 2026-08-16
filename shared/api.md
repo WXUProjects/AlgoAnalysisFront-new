@@ -125,7 +125,7 @@
 | GET | `/user/profile/get-by-name` | 否 | query: `name` 模糊（用户名/昵称） |
 | GET | `/user/profile/list` | 否 | query: `pageNum`, `pageSize`, `scope=org\|site`（org=当前组织；site=全站仅站管；空=兼容旧逻辑），**`keyword` 模糊**（忽略大小写：用户名/昵称；org 另含组织内名称），**`dormantOnly=true`（或 `dormant=true`）仅「已暂停同步」用户**（含站管强制冻结/禁用，或超时且无豁免）；**`inactiveDays=N`（1–365）「最近 N 天未登录」**（优先于 dormantOnly；**不排除豁免**，便于站管预览后强制冻结）；**org 视图 `name`=组织内名称**；**site 视图 `name`=公共域外显名称**（≡站内昵称）；项含 `isSiteAdmin`、`orgs[{orgId,name,role}]`、`emailEnabled`/`emailWeeklyEnabled`/`emailAllowedByOrg`/`emailWeeklyAllowedByOrg`、`problemFetchEnabled`/`problemAiEnabled`、`createdAt`、`spiderIntervalMin`/`spiderIntervalOverridden`、`dailyRefreshQuota`（每日手动刷新有效配额，0=禁止，默认 2）/`dailyRefreshQuotaOverridden`、`syncExempt`/`lastLoginAt`/`dormant`/`adminForceDormant`/`disabled` |
 | POST | `/user/profile/sync-policies` | 否（内部） | body: `{ userIds }` → 每人一条策略：多组织 **MIN 间隔**、开关任一开启 |
-| POST | `/user/profile/update` | 是 | 更新头像/邮箱；`name` 已忽略（昵称改「我的组织」）；邮箱变更须 `emailCode`（`purpose=change_email`） |
+| POST | `/user/profile/update` | 是 | 更新头像/邮箱；`name` 已忽略（昵称改「我的组织」）；邮箱变更须 `emailCode`（`purpose=change_email`）。`avatar` 省略/空字符串表示不改；`clearAvatar=true` 才显式清空并回落默认头像；新头像必须是当前用户已上传且对象仍存在的 `/avatar/{userId}/…` 本站对象 |
 | POST | `/user/profile/move-group` | 是 | 移动用户组 |
 | POST | `/user/profile/set-email-enabled` | 是 | body: `{ userId, enabled, kind?: daily\|weekly }`；本人 / 站点管理员 / **当前组织 staff 管理本组织成员**；无组织授权时不可开启日报/周报 |
 | POST | `/user/profile/set-problem-pipeline` | 是(站点管理员) | body: `{ userId, enabled, kind: fetch\|ai }`；个人覆盖：近窗提交是否触发题面爬取 / 题面 AI（默认按是否非公共域组织） |
@@ -228,8 +228,8 @@
 | POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc\|blog\|blog_cover`。本地用途（`site\|bulletin\|misc`）≤3MB（jpg/png/gif/webp/ico/**svg**；svg 拒脚本），本地 url 带真实扩展名。**`blog`/`blog_cover`**：走又拍云（需站点配置又拍云 + 站管在 `/admin/blog` 授权该用户），清晰度优先压缩，≤约 12MB 原图，返回公网 `{ url, hash }`（`hash`=落库字节 SHA-256，内容寻址 key `/blog/{uid}/{hash}{ext}`）；未授权或未配置则 403。**`avatar`**：也走又拍云（仅需站点配置又拍云，无需博客授权），≤3MB（jpg/png/gif/webp/ico，**拒 svg**），清晰度优先压缩，返回公网 `{ url, hash }`（key `/avatar/{uid}/{hash}{ext}`），未配置则 403；`users.avatar` 落库为 path-only key，读取时按当前图床域名扩展（换域/切 https 即时生效） |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
 | GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo）+ **`payfmConfigured`**（支付是否已完整配置：接口根地址 + 商户号 + 接入密钥齐备；公开布尔，无敏感信息；前端按它决定是否显示「赞助支持」入口） |
-| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** / **OJ 爬虫账号** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`） |
-| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ **支付FM**（`payfmApiBase`/`payfmMerchantNo`/`payfmSecret`/`clearPayfmSecret`/`payfmPayType`；密钥加密存储，密钥空串表示不修改）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`（运维磁盘统计目录，数据盘挂载点；空=默认 /data，未挂载回退 /）；密钥空串表示不修改。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
+| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** / **OJ 爬虫账号** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath` + **`backupEnabled` / `backupTime` / `backupPrefix`** 自动灾备设置 + **`agentEndpoint`** 日报周报 OpenAI 兼容服务地址 + **`configVersion`** 配置乐观版本） |
+| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ **支付FM**（`payfmApiBase`/`payfmMerchantNo`/`payfmSecret`/`clearPayfmSecret`/`payfmPayType`）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`（运维磁盘统计目录，数据盘挂载点；空=默认 /data，未挂载回退 /）+ `backupEnabled` / `backupTime`（严格 `HH:mm`，默认 `02:00`）/ `backupPrefix`（可选，默认空）。**分区保存 `section`**：`basic`\|`email`\|`ai`\|`upyun`\|`oj`\|`payment`\|`backup`\|`all`（空=整页保存 `all`），只更新该分区字段、忽略其他分区字段；`backup` 分区更新上述三个灾备字段，并通过 Runtime Redis 动态传播。**`ai` 分区**含日报周报独立配置 `agentEndpoint`/`agentModel`/`agentSecret`/`clearAgentSecret` 与题库分析 `aiAnalyzeEndpoint`/`aiAnalyzeModel`/`aiAnalyzeSecret`/`clearAiAnalyzeSecret`（两套独立）。**`expectedConfigVersion`**（可选；>0 时校验 `config_version`，不匹配返回 code=409 请刷新）。**密钥规则**：空串=不修改，掩码=不修改，仅显式 `clearXxx=true` 才清除；同时传新密钥+clear 返回参数错误。endpoint 校验：http/https + host，拒绝 userinfo/query/fragment。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
 | POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
 | GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |
@@ -243,7 +243,7 @@
 任务 `done`/`failed` 后保留 **10 分钟**（zip + 任务记录），超时自动清理；请在窗口内下载。
 
 **备份 scope（预留细粒度）**：`all` \| `site` \| `users` \| `orgs` \| `pastes` \| `visits` \| `platforms` \| `submits` \| `contests` \| `problems` \| `bulletins` \| `emergency` \| `daily_stats` \| `files`。  
-需 user 服务能连 `algo_core_data`（默认由 `dbname=algo_user` 推导，或 `CWXU_CORE_DATABASE_SOURCE`）。导入时 `config_encryption_key` 指纹须与导出时一致。
+需 user 服务能连 `algo_core_data`（默认由 `dbname=algo_user` 推导，或 `CWXU_CORE_DATABASE_SOURCE`）。导入包不再校验已废弃的站点配置密钥指纹；`.cwxubak` 整实例灾备仍使用独立备份密钥校验。
 
 **GetAccessStatsRes（审核/运营看板）**
 
@@ -304,6 +304,9 @@
   "siteLogo": "",
   "favicon": "",
   "footerIcp": "苏ICP备2025217901号",
+  "backupEnabled": false,
+  "backupTime": "02:00",
+  "backupPrefix": "",
   "smtpHost": "smtp.163.com",
   "smtpPort": 465,
   "smtpUsername": "xxx@163.com",
@@ -746,6 +749,27 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 
 **间隔/配额合并语义**：自动同步间隔 = min(站管覆盖, 组织 MIN, 订阅档, 免费默认 180)；每日手动刷新 = 覆盖 0 永久禁止、正覆盖与订阅档取最大、无覆盖订阅档优先否则默认 2。
 
+### Ticket（工单，对接外部客户中心）
+
+工单数据**不本地缓存**，客户中心（support-service）是唯一事实来源；本服务为透传 facade + webhook 回调。依赖配置 `support_center.base_url/product_id/sign_key`（user 服务 config.yaml，占位空值时全部接口返回 `success:false` + 「支持中心未配置，请稍后再试」）。用户身份：透传当前 RS256 JWT（客户中心按产品注册的 issuer/audience/公钥验签），写操作自动带 `Idempotency-Key`。时间字段统一 unix 秒。状态：`pending_agent`（待处理）/ `pending_customer`（待你回复）/ `resolved`（已解决）/ `closed`（已关闭）。
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| GET | `/user/tickets/current` | 是 | 当前活跃工单（`pending_agent\|pending_customer`）→ `{ success, message, ticket }`；无活跃工单 → 客户中心 404 → `success:true, ticket` 为空（前端进入 QA 问答）；`SINGLE_ACTIVE_TICKET_DISABLED` → `success:false` 透传「智能客服暂不可用」类文案 |
+| POST | `/user/tickets/ai/answer` | 是 | 智能问答 body: `{ question(1–2000 字符) }` → `{ success, message, answered, answer, mode, references }`；不创建工单、不持久化 QA 对话、不要求 Idempotency-Key；`answered=true` 时 `references` 为最多 3 条已审核知识（`{ articleId, title, question?, content, score }`） |
+| GET | `/user/tickets` | 是 | 列表 query: `status`, `limit`, `cursor`（游标分页）→ `{ success, message, list: Ticket[], nextCursor }` |
+| GET | `/user/tickets/:id` | 是 | 详情 → `{ success, message, ticket }` |
+| GET | `/user/tickets/:id/messages` | 是 | 消息列表 query: `after_sequence`, `limit`（增量拉取）→ `{ success, message, list: TicketMessage[], nextAfterSequence }` |
+| POST | `/user/tickets` | 是 | 创建 body: `{ title(1–500), content(1–10000) }` → `{ success, message, ticket, messageInfo }`；已有进行中工单 → 客户中心 409/code 40900（`OPEN_TICKET_EXISTS`）→ `success:false, message:「已有进行中的工单」, ticket.id = 已有工单 id`（前端跳详情） |
+| POST | `/user/tickets/:id/messages` | 是 | 补充消息 body: `{ content }` → `{ success, message, messageInfo }` |
+| PATCH | `/user/tickets/:id/status` | 是 | 用户改状态 body: `{ status: resolved\|closed, reason? }`（仅 `pending_agent|pending_customer → resolved|closed`）→ `{ success, message, ticket }`（成功后补拉详情） |
+
+错误语义：客户中心非 2xx / code≠0 时 `success:false`，message 透传客户中心文案（截断 200 字符）；网络/超时 → 「支持中心暂时不可用，请稍后再试」。
+
+**智能问答转人工（产品「服务」页）**：进入先查 `current`，无 active 会话时进入 QA 问答（`ai/answer`，对话仅客户端内存持有、不持久化）；至少完成一轮有效问答后才允许「人工服务」。转人工时以最后一问作 `title`、以完整 QA 对话序列化（`用户：…\nQA：…`，1–10000 字符，超限阻止提交）作 `content` 调 `POST /user/tickets`；返回 `OPEN_TICKET_EXISTS`（已有进行中工单）时用返回的 `ticket.id` 恢复已有会话，不报错。
+
+**Webhook 回调（`POST /api/support/events`，网关放行、无 JWT）**：客户中心客服公开回复 / 工单状态变化时回调。验签：`X-Support-Timestamp`（unix 秒，|now−ts|>300s → 403）+ `X-Support-Signature`（`v1=<hex>`，`HMAC-SHA256(sign_key, ts + "." + rawBody)` 恒定时间比较，失败 → 403）；envelope 校验 `product_id`、`event_version == "1.0"`、header `X-Support-Event-ID` == body `event_id`；`event_id` 幂等（重复 → 204）。事件 `ticket.message.created`（客服 public 回复）→ 站内信「客服回复了你的工单」；`ticket.status.changed` → 站内信「工单状态更新」。用户按 `customer_external_user_id`（= userId claim）定位，找不到 → 告警日志 + 204（不创建用户）。成功返回 204；验签/协议错误 403（dead-letter）；DB 错误 500（客户中心重试）。
+
 ### Group
 
 | Method | Path | Auth | 说明 |
@@ -895,14 +919,47 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 - `paused`：兼容字段，值与 `submitPaused` 相同
 - `hasAccount` 仅洛谷/QOJ 为 true（全局账号），`accountStatus` 取 `sitesettings` 登录态（ok/fail/unchecked）
 
+### Backup（PostgreSQL 整实例灾备）
+
+> 与 `/user/site/backup/*` 的业务数据 ZIP 导入导出不同；本模块用于新机迁移和整实例灾难恢复。
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| POST | `/core/backup/run` | 是(`site.backup`) | 异步触发全部非模板 PostgreSQL 数据库备份；立即返回 `accepted` 和当前状态；定时/手动任务正在运行时返回 HTTP 409 |
+| GET | `/core/backup/status` | 是(`site.backup`) | 查询备份是否启用及最近任务状态；状态为 `idle\|running\|succeeded\|failed\|disabled` |
+| GET | `/core/backup/key` | 是(`site.backup`) | 下载备份加密密钥（32 原始字节，JSON 中为 base64 `{ "key": "…" }`）；用于新机恢复时解密 `.cwxubak` |
+
+`core_data` 每分钟按 Asia/Shanghai 检查运行时 `backupTime`（默认 `02:00`），以 Redis 本地日期键保证同日只触发一次，修改配置无需重启。手动与定时任务共用 Redis 分布式锁，不能并发。灾备复用站点又拍云配置；本地 `.cwxubak` 完整校验后上传临时对象并回读校验 size/SHA-256/归档完整性，再通过又拍云服务端 Move 覆盖固定对象 `backupPrefix/algobak`（前缀为空即 `algobak`）并二次回读，最后删除临时对象、`latest.json` 和旧时间戳归档。
+
+**BackupStatus**
+
+```json
+{
+  "enabled": true,
+  "status": "succeeded",
+  "trigger": "manual",
+  "stage": "succeeded",
+  "message": "backup succeeded",
+  "error": "",
+  "startedAt": 1786870000,
+  "finishedAt": 1786870100,
+  "archiveKey": "algobak",
+  "archiveSize": 46526000,
+  "sha256": "...",
+  "databaseCount": 4
+}
+```
+
 ### Health（运维监控，站点管理员）
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| GET | `/core/health/overview` | 是(站点管理员) | 运维总览：服务状态（AI/邮件/OJ）+ 中间件探测（数据库/Redis/注册中心/MQ）+ **服务器资源（CPU/内存/磁盘/负载，读后台 25s 采样缓存，不实时拉取）** + API 延迟/请求 + 容量估算 |
+| GET | `/core/health/overview` | 是(站点管理员) | 运维总览：`backendServices` 后台进程状态 + `services` 外部服务最近调用状态 + 中间件探测（数据库/Redis/注册中心/MQ）+ **服务器资源（CPU/内存/磁盘/负载，读后台 25s 采样缓存，不实时拉取）** + API 延迟/请求 + 容量估算 |
 | GET | `/core/health/resource-series` | 是(站点管理员) | 近 24h CPU/内存占用时序，query `points`（默认 288，服务端降采样，约 5 分钟粒度）；返回 `samples[{t,cpu,mem}]` + `intervalSec` + `hours`（服务刚启动可能不满 24h） |
 
 - 资源监控后台每 **25 秒**采样一次全机 CPU/内存/磁盘/负载，写入 Redis 时序（保留 24h）与快照缓存；运维页访问读缓存，不再实时 gopsutil（避免每次打开页面对 CPU 造成 ~500ms 采样负载）
+- `backendServices` 固定返回 `user` / `core-data` / `agent`。`gateway` 当前不注册 Consul，因此不列入；`core-data` 为当前响应进程，直接标记 `ok`，其余只在 Consul health API 存在 passing 实例时为 `ok`。探测并行执行并受统一短时限约束；技术错误仅供接口诊断，前端不直接展示。
+- `services` 是 AI、SMTP、OJ 的最近业务调用/验证结果，不表示后台进程是否存活。
 - 样例 `resource-series` 响应：
 ```json
 { "code": 0, "intervalSec": 25, "hours": 23.9,
@@ -1490,6 +1547,15 @@ POST   /api/user/rbac/roles/assign
 POST   /api/user/rbac/roles/unassign
 GET    /api/user/rbac/user-roles
 GET    /api/user/rbac/my-permissions
+GET    /api/user/tickets/current
+POST   /api/user/tickets/ai/answer
+GET    /api/user/tickets
+GET    /api/user/tickets/{id}
+GET    /api/user/tickets/{id}/messages
+POST   /api/user/tickets
+POST   /api/user/tickets/{id}/messages
+PATCH  /api/user/tickets/{id}/status
+POST   /api/support/events
 GET    /api/core/submit-log/get-by-id
 POST   /api/core/spider/set
 POST   /api/core/spider/update
@@ -1497,6 +1563,9 @@ POST   /api/core/spider/update-all
 GET    /api/core/spider/submit-inventory
 GET    /api/core/spider/monitor
 POST   /api/core/spider/purge-submits-and-recrawl
+POST   /api/core/backup/run
+GET    /api/core/backup/status
+GET    /api/core/backup/key
 GET    /api/core/health/overview
 GET    /api/core/health/resource-series
 GET    /api/core/statistic/heatmap

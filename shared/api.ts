@@ -275,13 +275,18 @@ export const endpoints = {
       togglePlatform: `${API_PREFIX}/core/spider/toggle-platform`,
     },
     health: {
+      /** 站管运维总览：后台进程、外部服务、中间件、资源与容量 */
       overview: `${API_PREFIX}/core/health/overview`,
       /** 近 24h CPU/内存占用时序（后台 25s 采样缓存） */
       resourceSeries: `${API_PREFIX}/core/health/resource-series`,
     },
+    /** PostgreSQL 整实例灾备（区别于 user/site/backup 业务数据导入导出） */
     backup: {
+      /** 异步触发全量灾备 */
       run: `${API_PREFIX}/core/backup/run`,
+      /** 查询最近一次灾备状态 */
       status: `${API_PREFIX}/core/backup/status`,
+      /** 下载备份加密密钥（32 原始字节，base64 返回） */
       key: `${API_PREFIX}/core/backup/key`,
     },
     statistic: {
@@ -452,6 +457,23 @@ export interface TrainingReportJob {
   fileName?: string
 }
 
+export interface HealthBackendServiceItem {
+	/** 后台服务名：user / core-data / agent */
+  name: string
+  /** ok | unchecked */
+  status: string
+  errMsg: string
+}
+
+export interface HealthExternalServiceItem {
+  /** agent / ai_analyze / smtp / oj_luogu / oj_qoj */
+  name: string
+  /** ok | fail | unchecked */
+  status: string
+  at: number
+  errMsg: string
+}
+
 export interface StartTrainingReportReq {
   startDate: string
   endDate: string
@@ -574,6 +596,7 @@ export type DisasterBackupState = 'idle' | 'running' | 'succeeded' | 'failed' | 
 
 export type DisasterBackupTrigger = 'manual' | 'scheduled' | ''
 
+/** PostgreSQL 整实例灾备状态（GET /core/backup/status） */
 export interface DisasterBackupStatus {
   enabled: boolean
   status: DisasterBackupState
@@ -789,6 +812,16 @@ export interface UserProfile {
   /** 最近一次 OJ 数据同步成功时间（unix 秒；0/缺省=尚无记录） */
   lastSyncAt?: number
   /** 个人 AI 日报开关（仅 Pro 订阅生效；默认关；隐私字段） */
+  aiDailyEnabled?: boolean
+}
+
+/** POST /user/profile/update；avatar 省略/空值不改，clearAvatar=true 才显式清空。 */
+export interface UpdateProfileReq {
+  userId: number
+  email: string
+  avatar?: string
+  clearAvatar?: boolean
+  emailCode?: string
   aiDailyEnabled?: boolean
 }
 
@@ -2161,11 +2194,18 @@ export type SiteConfigSection =
   | 'upyun'
   | 'oj'
   | 'payment'
+  | 'backup'
   | 'all'
 
+/** 自动整实例灾备设置；执行时间按 Asia/Shanghai，prefix 为空时对象固定为 `algobak`。 */
+export interface SiteBackupSettings {
+  backupEnabled: boolean
+  backupTime: string
+  backupPrefix: string
+}
+
 /** 站点备份 scope；`all` 表示全量。后续可在 UI 做多选。 */
-export type BackupScope =
-  | 'all'
+export type BackupScope =  | 'all'
   | 'site'
   | 'users'
   | 'orgs'

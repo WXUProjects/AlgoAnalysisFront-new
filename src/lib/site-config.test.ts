@@ -35,7 +35,7 @@ function allScalars(overrides: Record<string, unknown> = {}) {
     agentEndpoint: '', agentModel: '', aiEndpoint: '', aiModel: '',
     upyunBucket: '', upyunOperator: '', upyunDomain: '', upyunScheme: 'http',
     ojLuoguUsername: '', ojQojUsername: '',
-    payfmApiBase: '', payfmMerchantNo: '', payfmPayType: '',
+    payfmApiBase: '', payfmMerchantNo: '', payfmPayType: '', backupEnabled: false, backupTime: '02:00', backupPrefix: '',
     configVersion: 0,
   }
   return { ...base, ...overrides }
@@ -116,4 +116,21 @@ test('sectionDirty ai 检测 endpoint 变化', () => {
   const cur: any = { agentEndpoint: 'https://b/v1' }
   assert.equal(sectionDirty('ai', cur, base), true)
   assert.equal(sectionDirty('ai', base, base), false)
+})
+
+test('buildSectionPayload backup 发送动态灾备设置', () => {
+  const p = buildSectionPayload('backup', {
+    ...allScalars({ backupEnabled: true, backupTime: '03:15', backupPrefix: 'daily', smtpHost: 'smtp.example.com', configVersion: 4 }),
+    ...allSecs(),
+  } as any)
+  assert.deepEqual(p, {
+    section: 'backup', expectedConfigVersion: 4, backupEnabled: true, backupTime: '03:15', backupPrefix: 'daily',
+  })
+})
+
+test('sectionDirty backup 检测开关变化', () => {
+  const base: any = { backupEnabled: false, backupTime: '02:00', backupPrefix: '' }
+  const current: any = { backupEnabled: true, backupTime: '03:15', backupPrefix: 'daily' }
+  assert.equal(sectionDirty('backup', current, base), true)
+  assert.equal(sectionDirty('backup', base, base), false)
 })

@@ -17,6 +17,9 @@ export type SiteConfig = {
 }
 
 export type SiteAdminConfig = SiteConfig & {
+  backupEnabled: boolean
+  backupTime: string
+  backupPrefix: string
   smtpHost: string
   smtpPort: number
   smtpUsername: string
@@ -98,6 +101,9 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
   const d = raw || {}
   return {
     ...normalizeBrand(d),
+    backupEnabled: Boolean(d.backupEnabled),
+    backupTime: /^([01]\d|2[0-3]):[0-5]\d$/.test(str(d.backupTime)) ? str(d.backupTime) : '02:00',
+    backupPrefix: str(d.backupPrefix),
     smtpHost: str(d.smtpHost),
     smtpPort: num(d.smtpPort, 465) || 465,
     smtpUsername: str(d.smtpUsername),
@@ -186,7 +192,7 @@ export async function getSiteAdminConfig(): Promise<ApiResult<SiteAdminConfig>> 
 }
 
 export async function updateSiteConfig(body: {
-  /** 保存分区：basic | email | ai | upyun | oj | payment | all（缺省 all） */
+  /** 保存分区：basic | email | ai | upyun | oj | payment | backup | all（缺省 all） */
   section?: SiteConfigSection
   /** 期望的 config_version；>0 校验，不匹配返回 409 */
   expectedConfigVersion?: number
@@ -233,6 +239,11 @@ export async function updateSiteConfig(body: {
   payfmSecret?: string
   clearPayfmSecret?: boolean
   payfmPayType?: string
+  backupEnabled?: boolean
+  /** 每日执行时间，HH:mm */
+  backupTime?: string
+  /** 灾备对象所在目录；空表示桶根固定对象 algobak */
+  backupPrefix?: string
 }): Promise<ApiResult<SiteConfig>> {
   const res = await post<Record<string, unknown>>(endpoints.user.site.config, body)
   if (!res.success) return { ...res, data: null }

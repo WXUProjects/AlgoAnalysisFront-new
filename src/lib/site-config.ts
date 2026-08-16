@@ -43,6 +43,9 @@ export type SiteFormState = {
   payfmApiBase: string
   payfmMerchantNo: string
   payfmPayType: string
+  backupEnabled: boolean
+  backupTime: string
+  backupPrefix: string
   configVersion: number
 } & {
   smtpPassword: SecretField
@@ -124,13 +127,18 @@ export function buildSectionPayload(
     if (payfmSec.secret) out.payfmSecret = payfmSec.secret
     if (payfmSec.clear) out.clearPayfmSecret = true
   }
+  const backup = (): void => {
+    out.backupEnabled = s.backupEnabled
+    out.backupTime = s.backupTime
+    out.backupPrefix = s.backupPrefix.trim().replace(/^\/+|\/+$/g, '')
+  }
 
   if (section === 'all') {
-    basic(); email(); ai(); upyun(); oj(); payment()
+    basic(); email(); ai(); upyun(); oj(); payment(); backup()
     return out
   }
   const fns: Record<SingleSection, () => void> = {
-    basic, email, ai, upyun, oj, payment,
+    basic, email, ai, upyun, oj, payment, backup,
   }
   fns[section]()
   return out
@@ -173,6 +181,9 @@ export function sectionDirty(
         s.payfmMerchantNo !== base.payfmMerchantNo ||
         s.payfmPayType !== base.payfmPayType ||
         s.payfmSecret.draft !== base.payfmSecret.draft
+    case 'backup':
+      return s.backupEnabled !== base.backupEnabled || s.backupTime !== base.backupTime ||
+        s.backupPrefix !== base.backupPrefix
     default:
       return false
   }

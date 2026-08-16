@@ -15,12 +15,15 @@ import {
   type ResourceSample,
 } from '@/api/health'
 import { useAuth } from '@/auth/AuthContext'
+import { Badge } from '@/components/ui/badge'
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Empty, EmptyDescription } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCompactNumber, formatTime } from '@/lib/format'
 import { Perm } from '@/lib/permissions'
@@ -31,6 +34,12 @@ const SERVICE_LABELS: Record<string, string> = {
   smtp: '邮件服务',
   oj_luogu: '洛谷账号',
   oj_qoj: 'QOJ 账号',
+}
+
+const BACKEND_SERVICE_LABELS: Record<string, string> = {
+  user: '用户服务',
+  'core-data': '核心数据',
+  agent: '智能服务',
 }
 
 const MIDDLEWARE_LABELS: Record<string, string> = {
@@ -56,17 +65,17 @@ function chartHHMM(t: number): string {
   return `${h}:${m}`
 }
 
-function statusColor(status: string): string {
+function statusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
   switch (status) {
     case 'ok':
-      return 'bg-green-500'
+      return 'default'
     case 'warn':
-      return 'bg-yellow-500'
+      return 'secondary'
     case 'fail':
     case 'critical':
-      return 'bg-red-500'
+      return 'destructive'
     default:
-      return 'bg-muted-foreground/30'
+      return 'outline'
   }
 }
 
@@ -95,12 +104,8 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
-function StatusDot({ status }: { status: string }) {
-  return (
-    <span
-      className={`inline-block size-2 shrink-0 rounded-full ${statusColor(status)}`}
-    />
-  )
+function StatusBadge({ status }: { status: string }) {
+  return <Badge variant={statusVariant(status)}>{statusText(status)}</Badge>
 }
 
 function HealthOverviewCard() {
@@ -162,12 +167,7 @@ function HealthOverviewCard() {
     high: '偏高',
     critical: '危险',
   }
-  const loadLevelColor: Record<string, string> = {
-    low: 'text-green-600',
-    normal: 'text-green-600',
-    high: 'text-yellow-600',
-    critical: 'text-red-600',
-  }
+  const loadStatus = loadLevel === 'critical' ? 'critical' : loadLevel === 'high' ? 'warn' : 'ok'
 
   return (
     <Card>
@@ -180,32 +180,46 @@ function HealthOverviewCard() {
           </p>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* 服务状态 */}
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          {data?.services.map((s) => (
-            <div key={s.name} className="rounded-xl border bg-card px-3 py-2.5">
-              <div className="flex items-center gap-1.5">
-                <StatusDot status={s.status} />
-                <span className="text-sm font-medium">
-                  {SERVICE_LABELS[s.name] || s.name}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {statusText(s.status)}
-              </p>
-              {s.at > 0 ? (
-                <p className="mt-0.5 text-[11px] text-muted-foreground/80">
-                  最近 {formatTime(s.at)}
-                </p>
-              ) : null}
-              {s.errMsg ? (
-                <p className="mt-0.5 line-clamp-1 text-[11px] text-destructive" title={s.errMsg}>
-                  {s.errMsg}
-                </p>
-              ) : null}
-            </div>
-          ))}
+      <CardContent className="flex flex-col gap-4">
+        <div className="grid gap-4 xl:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">后台服务</CardTitle>
+              <CardDescription>GoAlgo 后台进程</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2">
+              {data?.backendServices.length === 0 ? <Empty><EmptyDescription>暂未取得服务状态</EmptyDescription></Empty> : null}
+              {data?.backendServices.map((service) => (
+                <div key={service.name} className="flex min-w-0 items-start justify-between gap-2 rounded-lg border p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{BACKEND_SERVICE_LABELS[service.name] || service.name}</p>
+                  </div>
+                  <StatusBadge status={service.status} />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">外部服务</CardTitle>
+              <CardDescription>最近一次业务调用</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2">
+              {data?.services.length === 0 ? <Empty><EmptyDescription>暂未取得服务状态</EmptyDescription></Empty> : null}
+              {data?.services.map((service) => (
+                <div key={service.name} className="flex min-w-0 items-start justify-between gap-2 rounded-lg border p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{SERVICE_LABELS[service.name] || service.name}</p>
+                    {service.at > 0 ? (
+                      <p className="mt-1 text-xs text-muted-foreground">最近 {formatTime(service.at)}</p>
+                    ) : null}
+                  </div>
+                  <StatusBadge status={service.status} />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </div>
 
         {/* 中间件状态 */}
@@ -213,20 +227,14 @@ function HealthOverviewCard() {
           {data?.middleware.map((m) => (
             <div key={m.name} className="rounded-xl border bg-card px-3 py-2.5">
               <div className="flex items-center gap-1.5">
-                <StatusDot status={m.status} />
                 <span className="text-sm font-medium">
                   {MIDDLEWARE_LABELS[m.name] || m.name}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {statusText(m.status)}
+              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                <StatusBadge status={m.status} />
                 {m.latencyMs > 0 ? ` · ${m.latencyMs}ms` : ''}
-              </p>
-              {m.errMsg ? (
-                <p className="mt-0.5 line-clamp-1 text-[11px] text-destructive" title={m.errMsg}>
-                  {m.errMsg}
-                </p>
-              ) : null}
+              </div>
             </div>
           ))}
         </div>
@@ -237,7 +245,6 @@ function HealthOverviewCard() {
             <div key={r.name} className="rounded-xl border bg-card px-3 py-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <StatusDot status={r.status} />
                   <span className="text-sm font-medium">
                     {RESOURCE_LABELS[r.name] || r.name}
                   </span>
@@ -248,13 +255,7 @@ function HealthOverviewCard() {
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
-                  className={`h-full rounded-full transition-[width] duration-300 ${
-                    r.status === 'critical'
-                      ? 'bg-red-500'
-                      : r.status === 'warn'
-                        ? 'bg-yellow-500'
-                        : 'bg-green-500'
-                  }`}
+                  className={`h-full rounded-full transition-[width] duration-300 ${r.status === 'critical' ? 'bg-destructive' : r.status === 'warn' ? 'bg-muted-foreground' : 'bg-primary'}`}
                   style={{ width: `${Math.min(100, Math.max(0, r.usedPercent))}%` }}
                 />
               </div>
@@ -300,9 +301,7 @@ function HealthOverviewCard() {
           <div className="rounded-xl border bg-card px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-medium">容量估算</p>
-              <span className={`text-sm font-semibold ${loadLevelColor[loadLevel]}`}>
-                当前负载：{loadLevelText[loadLevel]}
-              </span>
+              <Badge variant={statusVariant(loadStatus)}>当前负载：{loadLevelText[loadLevel]}</Badge>
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <MiniStat label="注册用户" value={formatCompactNumber(capacity.registeredUsers)} />

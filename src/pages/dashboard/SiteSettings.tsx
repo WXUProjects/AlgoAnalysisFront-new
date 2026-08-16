@@ -39,6 +39,7 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Spinner } from '@/components/ui/spinner'
+import { Switch } from '@/components/ui/switch'
 import { Perm } from '@/lib/permissions'
 import { formatTime } from '@/lib/format'
 import { ChevronDown } from 'lucide-react'
@@ -89,6 +90,9 @@ function buildFormState(
     ojQojUsername: string; ojQojPassword: string; ojQojPasswordSet: boolean; clearOjQojPassword: boolean
     payfmApiBase: string; payfmMerchantNo: string; payfmSecret: string; payfmSecretSet: boolean; clearPayfmSecret: boolean
     payfmPayType: string
+    backupEnabled: boolean
+    backupTime: string
+    backupPrefix: string
     configVersion: number
   },
 ): SiteFormState {
@@ -102,6 +106,9 @@ function buildFormState(
     upyunBucket: s.upyunBucket, upyunOperator: s.upyunOperator, upyunDomain: s.upyunDomain, upyunScheme: s.upyunScheme,
     ojLuoguUsername: s.ojLuoguUsername, ojQojUsername: s.ojQojUsername,
     payfmApiBase: s.payfmApiBase, payfmMerchantNo: s.payfmMerchantNo, payfmPayType: s.payfmPayType,
+    backupEnabled: s.backupEnabled,
+    backupTime: s.backupTime,
+    backupPrefix: s.backupPrefix,
     configVersion: s.configVersion,
     smtpPassword: { draft: s.smtpPassword, alreadySet: s.smtpPasswordSet, clearRequested: s.clearSmtpPassword },
     agentSecret: { draft: s.agentSecret, alreadySet: s.agentSecretSet, clearRequested: s.clearAgentSecret },
@@ -127,6 +134,9 @@ function buildPristineFromAdmin(d: {
   ojQojUsername?: string; ojQojPasswordSet?: boolean
   payfmApiBase?: string; payfmMerchantNo?: string; payfmSecretSet?: boolean
   payfmPayType?: string
+  backupEnabled?: boolean
+  backupTime?: string
+  backupPrefix?: string
   configVersion?: number
 }): SiteFormState {
   return {
@@ -142,6 +152,9 @@ function buildPristineFromAdmin(d: {
     ojLuoguUsername: d.ojLuoguUsername ?? '', ojQojUsername: d.ojQojUsername ?? '',
     payfmApiBase: d.payfmApiBase ?? '', payfmMerchantNo: d.payfmMerchantNo ?? '',
     payfmPayType: d.payfmPayType ?? '', configVersion: d.configVersion ?? 0,
+    backupEnabled: Boolean(d.backupEnabled),
+    backupTime: d.backupTime ?? '02:00',
+    backupPrefix: d.backupPrefix ?? '',
     smtpPassword: { draft: '', alreadySet: Boolean(d.smtpPasswordSet), clearRequested: false },
     agentSecret: { draft: '', alreadySet: Boolean(d.agentSecretSet), clearRequested: false },
     aiSecret: { draft: '', alreadySet: Boolean(d.aiAnalyzeSecretSet), clearRequested: false },
@@ -262,6 +275,9 @@ export function DashboardSiteSettings() {
   const [clearPayfmSecret, setClearPayfmSecret] = useState(false)
   const [payfmPayType, setPayfmPayType] = useState('')
   const [payfmNotifyUrl, setPayfmNotifyUrl] = useState('')
+  const [backupEnabled, setBackupEnabled] = useState(false)
+  const [backupTime, setBackupTime] = useState('02:00')
+  const [backupPrefix, setBackupPrefix] = useState('')
   const [agentStatus, setAgentStatus] = useState('unchecked')
   const [agentStatusAt, setAgentStatusAt] = useState(0)
   const [agentErrMsg, setAgentErrMsg] = useState('')
@@ -289,6 +305,7 @@ export function DashboardSiteSettings() {
     upyun: 0,
     oj: 0,
     payment: 0,
+    backup: 0,
   })
   const bump = (section: SingleSection) => {
     revRef.current[section] += 1
@@ -441,6 +458,9 @@ export function DashboardSiteSettings() {
       setClearPayfmSecret(false)
       setPayfmPayType(d.payfmPayType || '')
       setPayfmNotifyUrl(d.payfmNotifyUrl || '')
+      setBackupEnabled(d.backupEnabled)
+      setBackupTime(d.backupTime)
+      setBackupPrefix(d.backupPrefix)
       setAgentStatus(d.agentStatus || 'unchecked')
       setAgentStatusAt(d.agentStatusAt || 0)
       setAgentErrMsg(d.agentErrMsg || '')
@@ -497,6 +517,7 @@ export function DashboardSiteSettings() {
       ojQojUsername, ojQojPassword, ojQojPasswordSet, clearOjQojPassword,
       payfmApiBase, payfmMerchantNo, payfmSecret, payfmSecretSet, clearPayfmSecret,
       payfmPayType,
+      backupEnabled, backupTime, backupPrefix,
       configVersion,
     })
   }
@@ -576,6 +597,10 @@ export function DashboardSiteSettings() {
       setClearPayfmSecret(false)
       setPayfmPayType(d.payfmPayType || '')
       setPayfmNotifyUrl(d.payfmNotifyUrl || '')
+    } else if (section === 'backup') {
+      setBackupEnabled(d.backupEnabled)
+      setBackupTime(d.backupTime)
+      setBackupPrefix(d.backupPrefix)
     }
   }
 
@@ -584,14 +609,15 @@ export function DashboardSiteSettings() {
     const savedRev = revRef.current[section]
     setSavingSection(section)
     const res = await updateSiteConfig(buildSectionPayload(section, currentForm()))
-    setSavingSection(null)
     if (!res.success) {
+      setSavingSection(null)
       toast.error(res.message || '保存失败，稍后重试')
       return
     }
     toast.success('已保存')
     void refresh()
     await syncFromServer(section, savedRev)
+    setSavingSection(null)
   }
 
   async function handleSaveAll() {
@@ -599,8 +625,8 @@ export function DashboardSiteSettings() {
     const savedRevs = { ...revRef.current }
     setSaving(true)
     const res = await updateSiteConfig(buildSectionPayload('all', currentForm()))
-    setSaving(false)
     if (!res.success) {
+      setSaving(false)
       toast.error(res.message || '保存失败，稍后重试')
       return
     }
@@ -608,6 +634,7 @@ export function DashboardSiteSettings() {
     void refresh()
     const again = await getSiteAdminConfig()
     if (!again.success || !again.data) {
+      setSaving(false)
       toast.error('配置已保存，但刷新状态失败')
       return
     }
@@ -620,6 +647,12 @@ export function DashboardSiteSettings() {
     if (revRef.current.upyun === savedRevs.upyun) setUpyunBucket(d.upyunBucket || '')
     if (revRef.current.oj === savedRevs.oj) setOjLuoguUsername(d.ojLuoguUsername || '')
     if (revRef.current.payment === savedRevs.payment) setPayfmApiBase(d.payfmApiBase || '')
+    if (revRef.current.backup === savedRevs.backup) {
+      setBackupEnabled(d.backupEnabled)
+      setBackupTime(d.backupTime)
+      setBackupPrefix(d.backupPrefix)
+    }
+    setSaving(false)
   }
 
   async function handleTestEmail() {
@@ -732,7 +765,7 @@ export function DashboardSiteSettings() {
 
   const anyDirty =
     !!pristine &&
-    (['basic', 'email', 'ai', 'upyun', 'oj', 'payment'] as SingleSection[]).some(
+    (['basic', 'email', 'ai', 'upyun', 'oj', 'payment', 'backup'] as SingleSection[]).some(
       (section) => sectionDirty(section, currentForm(), pristine!),
     )
 
@@ -1442,6 +1475,49 @@ export function DashboardSiteSettings() {
           </FieldGroup>
         </CollapsibleCard>
         </fieldset>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>自动灾备</CardTitle>
+            <CardDescription>定时创建整实例加密归档。</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup>
+              <Field orientation="horizontal">
+                <FieldLabel className="flex-1" htmlFor="backup-enabled">启用自动灾备</FieldLabel>
+                <Switch
+                  id="backup-enabled"
+                  checked={backupEnabled}
+                  disabled={!canWrite}
+                  onCheckedChange={(checked) => { setBackupEnabled(checked); bump('backup') }}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="backup-time">每日执行时间</FieldLabel>
+                <Input
+                  id="backup-time"
+                  type="time"
+                  value={backupTime}
+                  disabled={!canWrite}
+                  onChange={(event) => { setBackupTime(event.target.value); bump('backup') }}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="backup-prefix">存储目录（可选）</FieldLabel>
+                <Input
+                  id="backup-prefix"
+                  value={backupPrefix}
+                  disabled={!canWrite}
+                  placeholder="留空时保存为 algobak"
+                  onChange={(event) => { setBackupPrefix(event.target.value); bump('backup') }}
+                />
+              </Field>
+            </FieldGroup>
+          </CardContent>
+          <CardFooter className="justify-end">
+            <CardSaveButton section="backup" />
+          </CardFooter>
+        </Card>
 
         {canWrite && (
           <div className="sticky bottom-3 z-10 rounded-lg border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
