@@ -9,6 +9,7 @@ import { OpsMonitorSection } from '@/pages/dashboard/OpsMonitor'
 import { OpsSpiderMonitor } from '@/pages/dashboard/OpsSpiderMonitor'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
+import { OpsBackupCard } from '@/components/ops-backup-card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,7 @@ export function DashboardOps() {
     can(Perm.SiteConfigWrite) ||
     can(Perm.SiteProblemOps)
   const canPurge = can(Perm.SiteSpiderOps)
+  const canBackup = can(Perm.SiteBackup)
   const [inv, setInv] = useState<SubmitInventory | null>(null)
   const [loading, setLoading] = useState(true)
   const [confirm, setConfirm] = useState('')
@@ -114,6 +116,7 @@ export function DashboardOps() {
       <div className="grid gap-4">
         <OpsMonitorSection />
         <OpsSpiderMonitor />
+        {canBackup ? <OpsBackupCard /> : null}
 
         <Card>
           <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 space-y-0">
