@@ -279,6 +279,10 @@ export const endpoints = {
       /** 近 24h CPU/内存占用时序（后台 25s 采样缓存） */
       resourceSeries: `${API_PREFIX}/core/health/resource-series`,
     },
+    backup: {
+      run: `${API_PREFIX}/core/backup/run`,
+      status: `${API_PREFIX}/core/backup/status`,
+    },
     statistic: {
       heatmap: `${API_PREFIX}/core/statistic/heatmap`,
       period: `${API_PREFIX}/core/statistic/period`,
@@ -563,6 +567,34 @@ export interface RefreshSpiderStatusRes {
   nextAvailableAt: number
   /** 当前生效自动同步间隔（分钟；min(站管覆盖, 组织 MIN, 订阅档)；失败回落默认） */
   syncIntervalMin: number
+}
+
+export type DisasterBackupState = 'idle' | 'running' | 'succeeded' | 'failed' | 'disabled'
+
+export type DisasterBackupTrigger = 'manual' | 'scheduled' | ''
+
+export interface DisasterBackupStatus {
+  enabled: boolean
+  status: DisasterBackupState
+  trigger: DisasterBackupTrigger
+  stage: string
+  message: string
+  error: string
+  startedAt: number
+  finishedAt: number
+  archiveKey: string
+  archiveSize: number
+  sha256: string
+  databaseCount: number
+}
+
+export interface RunDisasterBackupRes {
+  accepted: boolean
+  status: DisasterBackupStatus
+}
+
+export interface GetDisasterBackupStatusRes {
+  status: DisasterBackupStatus
 }
 
 /** 题单系统类型 */

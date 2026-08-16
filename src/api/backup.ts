@@ -1,11 +1,11 @@
-import { endpoints } from '../../../shared/api'
+import { endpoints } from '@shared/api'
 import type {
   DisasterBackupState,
   DisasterBackupStatus,
   DisasterBackupTrigger,
   GetDisasterBackupStatusRes,
   RunDisasterBackupRes,
-} from '../../../shared/api'
+} from '@shared/api'
 import { bool, get, num, post, str, type ApiResult } from '@/lib/http'
 
 const backupStates = new Set<DisasterBackupState>([

@@ -5,7 +5,7 @@ import type {
   DisasterBackupTrigger,
   GetDisasterBackupStatusRes,
   RunDisasterBackupRes,
-} from '../../../shared/api'
+} from '@shared/api'
 import { toast } from 'sonner'
 import {
   getDisasterBackupStatus,
