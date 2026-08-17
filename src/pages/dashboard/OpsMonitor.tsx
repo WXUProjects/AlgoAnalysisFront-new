@@ -290,7 +290,7 @@ function HealthOverviewCard() {
               hint={`p50 ${data.api.latencyP50Ms}ms · p95 ${data.api.latencyP95Ms}ms · p99 ${data.api.latencyP99Ms}ms`}
             />
             <MiniStat
-              label="爬虫 入队/成功/失败"
+              label="当前爬虫队伍"
               value={`${data.api.spiderEnqueuedToday} / ${data.api.spiderOkToday} / ${data.api.spiderFailToday}`}
             />
           </div>
