@@ -229,21 +229,10 @@
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
 | GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo）+ **`payfmConfigured`**（支付是否已完整配置：接口根地址 + 商户号 + 接入密钥齐备；公开布尔，无敏感信息；前端按它决定是否显示「赞助支持」入口） |
 | GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** / **OJ 爬虫账号** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath` + **`backupEnabled` / `backupTime` / `backupPrefix`** 自动灾备设置 + **`agentEndpoint`** 日报周报 OpenAI 兼容服务地址 + **`configVersion`** 配置乐观版本） |
-| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ **支付FM**（`payfmApiBase`/`payfmMerchantNo`/`payfmSecret`/`clearPayfmSecret`/`payfmPayType`）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`（运维磁盘统计目录，数据盘挂载点；空=默认 /data，未挂载回退 /）+ `backupEnabled` / `backupTime`（严格 `HH:mm`，默认 `02:00`）/ `backupPrefix`（可选，默认空）。**分区保存 `section`**：`basic`\|`email`\|`ai`\|`upyun`\|`oj`\|`payment`\|`backup`\|`all`（空=整页保存 `all`），只更新该分区字段、忽略其他分区字段；`backup` 分区更新上述三个灾备字段，并通过 Runtime Redis 动态传播。**`ai` 分区**含日报周报独立配置 `agentEndpoint`/`agentModel`/`agentSecret`/`clearAgentSecret` 与题库分析 `aiAnalyzeEndpoint`/`aiAnalyzeModel`/`aiAnalyzeSecret`/`clearAiAnalyzeSecret`（两套独立）。**`expectedConfigVersion`**（可选；>0 时校验 `config_version`，不匹配返回 code=409 请刷新）。**密钥规则**：空串=不修改，掩码=不修改，仅显式 `clearXxx=true` 才清除；同时传新密钥+clear 返回参数错误。endpoint 校验：http/https + host，拒绝 userinfo/query/fragment。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
+| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ **支付FM**（`payfmApiBase`/`payfmMerchantNo`/`payfmSecret`/`clearPayfmSecret`/`payfmPayType`）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`（运维磁盘统计目录，数据盘挂载点；空=默认 /data，未挂载回退 /）+ `backupEnabled` / `backupTime`（严格 `HH:mm`，默认 `02:00`）/ `backupPrefix`（**必填**，如 `goalgo/backup`，首尾斜杠自动去除；归档保存为 `目录/bak_<时间>.algobak`，仅保留最新一份）。**分区保存 `section`**：`basic`\|`email`\|`ai`\|`upyun`\|`oj`\|`payment`\|`backup`\|`all`（空=整页保存 `all`），只更新该分区字段、忽略其他分区字段；`backup` 分区更新上述三个灾备字段，并通过 Runtime Redis 动态传播。**`ai` 分区**含日报周报独立配置 `agentEndpoint`/`agentModel`/`agentSecret`/`clearAgentSecret` 与题库分析 `aiAnalyzeEndpoint`/`aiAnalyzeModel`/`aiAnalyzeSecret`/`clearAiAnalyzeSecret`（两套独立）。**`expectedConfigVersion`**（可选；>0 时校验 `config_version`，不匹配返回 code=409 请刷新）。**密钥规则**：空串=不修改，掩码=不修改，仅显式 `clearXxx=true` 才清除；同时传新密钥+clear 返回参数错误。endpoint 校验：http/https + host，拒绝 userinfo/query/fragment。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
 | POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
 | GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |
-| POST | `/user/site/backup/export` | 是(站点管理员) | 创建全量/按 scope 导出任务；body `{ scopes?: string[] }`（默认 `["all"]`）；返回 `{ jobId }`；后台慢慢导出 |
-| POST | `/user/site/backup/import` | 是(站点管理员) | multipart：`file`=zip + `confirm=RESTORE`；按包内数据 **清空再写入** 完美复现；返回 `{ jobId }` |
-| GET | `/user/site/backup/jobs` | 是(站点管理员) | 最近备份任务列表 |
-| GET | `/user/site/backup/jobs/{id}` | 是(站点管理员) | 任务状态：`pending\|running\|done\|failed`、progress、message、downloadable |
-| GET | `/user/site/backup/jobs/{id}/download` | 是(站点管理员) | 下载导出完成的 zip（`goalgo-backup-v1`） |
-| DELETE | `/user/site/backup/jobs/{id}` | 是(站点管理员) | 删除已结束任务及磁盘文件 |
-
-任务 `done`/`failed` 后保留 **10 分钟**（zip + 任务记录），超时自动清理；请在窗口内下载。
-
-**备份 scope（预留细粒度）**：`all` \| `site` \| `users` \| `orgs` \| `pastes` \| `visits` \| `platforms` \| `submits` \| `contests` \| `problems` \| `bulletins` \| `emergency` \| `daily_stats` \| `files`。  
-需 user 服务能连 `algo_core_data`（默认由 `dbname=algo_user` 推导，或 `CWXU_CORE_DATABASE_SOURCE`）。导入包不再校验已废弃的站点配置密钥指纹；`.cwxubak` 整实例灾备仍使用独立备份密钥校验。
 
 **GetAccessStatsRes（审核/运营看板）**
 
@@ -306,7 +295,7 @@
   "footerIcp": "苏ICP备2025217901号",
   "backupEnabled": false,
   "backupTime": "02:00",
-  "backupPrefix": "",
+  "backupPrefix": "goalgo/backup",
   "smtpHost": "smtp.163.com",
   "smtpPort": 465,
   "smtpUsername": "xxx@163.com",
@@ -921,7 +910,7 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 
 ### Backup（PostgreSQL 整实例灾备）
 
-> 与 `/user/site/backup/*` 的业务数据 ZIP 导入导出不同；本模块用于新机迁移和整实例灾难恢复。
+> 本模块用于新机迁移和整实例灾难恢复。
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
@@ -929,7 +918,7 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 | GET | `/core/backup/status` | 是(`site.backup`) | 查询备份是否启用及最近任务状态；状态为 `idle\|running\|succeeded\|failed\|disabled` |
 | GET | `/core/backup/key` | 是(`site.backup`) | 下载备份加密密钥（32 原始字节，JSON 中为 base64 `{ "key": "…" }`）；用于新机恢复时解密 `.cwxubak` |
 
-`core_data` 每分钟按 Asia/Shanghai 检查运行时 `backupTime`（默认 `02:00`），以 Redis 本地日期键保证同日只触发一次，修改配置无需重启。手动与定时任务共用 Redis 分布式锁，不能并发。灾备复用站点又拍云配置；本地 `.cwxubak` 完整校验后上传临时对象并回读校验 size/SHA-256/归档完整性，再通过又拍云服务端 Move 覆盖固定对象 `backupPrefix/algobak`（前缀为空即 `algobak`）并二次回读，最后删除临时对象、`latest.json` 和旧时间戳归档。
+`core_data` 每分钟按 Asia/Shanghai 检查运行时 `backupTime`（默认 `02:00`），以 Redis 本地日期键保证同日只触发一次，修改配置无需重启。手动与定时任务共用 Redis 分布式锁，不能并发。灾备复用站点又拍云配置（**存储目录 `backupPrefix` 必填**）；本地 `.cwxubak` 完整校验后上传临时对象 `bak_<Asia/Shanghai 时间>.algobak.uploading-<唯一值>` 并回读校验 size/SHA-256/归档完整性，再通过又拍云服务端 Move 落到 `backupPrefix/bak_<时间>.algobak` 并二次回读，成功后删除临时对象、`latest.json`、旧 `bak_*.algobak` 与旧时间戳归档，仅保留最新一份。
 
 **BackupStatus**
 
@@ -943,7 +932,7 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
   "error": "",
   "startedAt": 1786870000,
   "finishedAt": 1786870100,
-  "archiveKey": "algobak",
+  "archiveKey": "goalgo/backup/bak_20260816_020000.algobak",
   "archiveSize": 46526000,
   "sha256": "...",
   "databaseCount": 4
@@ -1494,12 +1483,6 @@ GET    /api/user/site/config
 GET    /api/user/site/admin-config
 POST   /api/user/site/config
 POST   /api/user/site/test-email
-POST   /api/user/site/backup/export
-POST   /api/user/site/backup/import
-GET    /api/user/site/backup/jobs
-GET    /api/user/site/backup/jobs/{id}
-GET    /api/user/site/backup/jobs/{id}/download
-DELETE /api/user/site/backup/jobs/{id}
 GET    /api/user/profile/get-by-id
 GET    /api/user/profile/get-by-name
 GET    /api/user/profile/list

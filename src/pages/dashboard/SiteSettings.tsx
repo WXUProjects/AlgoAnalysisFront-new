@@ -1,41 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
-  downloadBackupJob,
-  getBackupJob,
   getSiteAdminConfig,
-  listBackupJobs,
-  startBackupExport,
-  startBackupImport,
   testSiteEmail,
   updateSiteConfig,
   verifyOjCredential,
-  type BackupJob,
 } from '@/api/site'
 import { uploadImage } from '@/api/upload'
 import { useAuth } from '@/auth/AuthContext'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { ImageUploadTile } from '@/components/image-upload-tile'
 import { PageShell } from '@/components/page-shell'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card'
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Spinner } from '@/components/ui/spinner'
@@ -51,29 +33,6 @@ import {
   type SingleSection,
 } from '@/lib/site-config'
 import type { SiteConfigSection } from '@shared/api'
-
-function formatBytes(n: number): string {
-  if (!n || n < 0) return '—'
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`
-  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`
-}
-
-function jobStatusLabel(s: string): string {
-  switch (s) {
-    case 'pending':
-      return '排队中'
-    case 'running':
-      return '进行中'
-    case 'done':
-      return '已完成'
-    case 'failed':
-      return '失败'
-    default:
-      return s || '—'
-  }
-}
 
 // buildFormState 从当前 React state 组装 SiteFormState（供 payload 与 dirty 计算）
 function buildFormState(
@@ -212,7 +171,6 @@ export function DashboardSiteSettings() {
   const { can } = useAuth()
   const canWrite = can(Perm.SiteConfigWrite)
   const canRead = can(Perm.SiteConfigRead) || canWrite
-  const canBackup = can(Perm.SiteBackup)
   const { config: siteConfig, refresh } = useSiteConfig()
 
   const [title, setTitle] = useState('')
@@ -311,94 +269,14 @@ export function DashboardSiteSettings() {
     revRef.current[section] += 1
   }
 
-  // —— 数据备份 ——
-  const [activeJob, setActiveJob] = useState<BackupJob | null>(null)
-  const [recentJobs, setRecentJobs] = useState<BackupJob[]>([])
-  const [exporting, setExporting] = useState(false)
-  const [importing, setImporting] = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
-  const [importConfirm, setImportConfirm] = useState('')
-  const [importFile, setImportFile] = useState<File | null>(null)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  /** 卸载守卫：轮询/在途请求返回后不再 setState */
-  const mountedRef = useRef(true)
-
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-    }
-  }, [])
-
-  const refreshJobs = useCallback(async (): Promise<BackupJob | null> => {
-    const res = await listBackupJobs()
-    if (!mountedRef.current) return null
-    if (!res.success || !res.data) return null
-    setRecentJobs(res.data.slice(0, 5))
-    const running = res.data.find(
-      (j) => j.status === 'pending' || j.status === 'running',
-    )
-    if (running) {
-      setActiveJob(running)
-      return running
-    }
-    // 展示最近完成的导出，便于下载
-    const lastExport = res.data.find(
-      (j) => j.kind === 'export' && j.status === 'done',
-    )
-    if (lastExport) setActiveJob(lastExport)
-    return null
-  }, [])
-
-  const stopPoll = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
-    }
-  }, [])
-
-  const startPoll = useCallback(
-    (jobId: number) => {
-      stopPoll()
-      pollRef.current = setInterval(async () => {
-        const res = await getBackupJob(jobId)
-        if (!mountedRef.current) return
-        if (!res.success || !res.data) return
-        setActiveJob(res.data)
-        if (res.data.status === 'done' || res.data.status === 'failed') {
-          stopPoll()
-          setExporting(false)
-          setImporting(false)
-          void refreshJobs()
-          if (res.data.status === 'done') {
-            toast.success(
-              res.data.kind === 'export'
-                ? '导出完成，可下载备份包'
-                : '导入完成，请刷新页面',
-            )
-          } else {
-            toast.error(res.data.errorDetail || res.data.message || '任务失败，稍后重试')
-          }
-        }
-      }, 2000)
-    },
-    [refreshJobs, stopPoll],
-  )
-
   useEffect(() => {
     if (!canRead) return
     let cancelled = false
     ;(async () => {
       setLoading(true)
-      // 站点配置与备份任务互不依赖，并行加载；备份任务需备份权限
-      const [res, running] = await Promise.all([
-        getSiteAdminConfig(),
-        canBackup ? refreshJobs() : Promise.resolve(null),
-      ])
+      const res = await getSiteAdminConfig()
       if (cancelled) return
       setLoading(false)
-      if (running) startPoll(running.id)
       if (!res.success || !res.data) {
         toast.error(res.message || '站点配置加载失败，稍后重试')
         return
@@ -458,9 +336,9 @@ export function DashboardSiteSettings() {
       setClearPayfmSecret(false)
       setPayfmPayType(d.payfmPayType || '')
       setPayfmNotifyUrl(d.payfmNotifyUrl || '')
-      setBackupEnabled(d.backupEnabled)
-      setBackupTime(d.backupTime)
-      setBackupPrefix(d.backupPrefix)
+      setBackupEnabled(Boolean(d.backupEnabled))
+      setBackupTime(d.backupTime || '02:00')
+      setBackupPrefix(d.backupPrefix || '')
       setAgentStatus(d.agentStatus || 'unchecked')
       setAgentStatusAt(d.agentStatusAt || 0)
       setAgentErrMsg(d.agentErrMsg || '')
@@ -475,9 +353,8 @@ export function DashboardSiteSettings() {
     })()
     return () => {
       cancelled = true
-      stopPoll()
     }
-  }, [canRead, canBackup, refreshJobs, startPoll, stopPoll])
+  }, [canRead])
 
   if (!canRead) {
     return (
@@ -598,14 +475,18 @@ export function DashboardSiteSettings() {
       setPayfmPayType(d.payfmPayType || '')
       setPayfmNotifyUrl(d.payfmNotifyUrl || '')
     } else if (section === 'backup') {
-      setBackupEnabled(d.backupEnabled)
-      setBackupTime(d.backupTime)
-      setBackupPrefix(d.backupPrefix)
+      setBackupEnabled(Boolean(d.backupEnabled))
+      setBackupTime(d.backupTime || '02:00')
+      setBackupPrefix(d.backupPrefix || '')
     }
   }
 
   async function handleSaveSection(section: SingleSection) {
     if (!canWrite || savingSection || saving) return
+    if (section === 'backup' && !backupPrefix.trim()) {
+      toast.error('存储目录必填，先填写再保存')
+      return
+    }
     const savedRev = revRef.current[section]
     setSavingSection(section)
     const res = await updateSiteConfig(buildSectionPayload(section, currentForm()))
@@ -648,9 +529,9 @@ export function DashboardSiteSettings() {
     if (revRef.current.oj === savedRevs.oj) setOjLuoguUsername(d.ojLuoguUsername || '')
     if (revRef.current.payment === savedRevs.payment) setPayfmApiBase(d.payfmApiBase || '')
     if (revRef.current.backup === savedRevs.backup) {
-      setBackupEnabled(d.backupEnabled)
-      setBackupTime(d.backupTime)
-      setBackupPrefix(d.backupPrefix)
+      setBackupEnabled(Boolean(d.backupEnabled))
+      setBackupTime(d.backupTime || '02:00')
+      setBackupPrefix(d.backupPrefix || '')
     }
     setSaving(false)
   }
@@ -678,52 +559,6 @@ export function DashboardSiteSettings() {
     setTesting(false)
     if (res.success) toast.success(res.message || '测试邮件已发送')
     else toast.error(res.message || '发送失败，稍后重试')
-  }
-
-  async function handleExport() {
-    setExporting(true)
-    const res = await startBackupExport(['all'])
-    if (!res.success || !res.data?.jobId) {
-      setExporting(false)
-      toast.error(res.message || '导出任务创建失败，稍后重试')
-      return
-    }
-    toast.success('导出已开始，可稍后回来下载')
-    startPoll(res.data.jobId)
-    const job = await getBackupJob(res.data.jobId)
-    if (job.success && job.data) setActiveJob(job.data)
-  }
-
-  async function handleConfirmImport() {
-    if (!importFile) {
-      toast.error('先选备份 zip 文件')
-      return
-    }
-    if (importConfirm.trim() !== 'RESTORE') {
-      toast.error('输入 RESTORE 确认导入')
-      return
-    }
-    setImporting(true)
-    setImportOpen(false)
-    const res = await startBackupImport(importFile, 'RESTORE')
-    setImportFile(null)
-    setImportConfirm('')
-    if (fileInputRef.current) fileInputRef.current.value = ''
-    if (!res.success || !res.data?.jobId) {
-      setImporting(false)
-      toast.error(res.message || '导入任务创建失败，稍后重试')
-      return
-    }
-    toast.message('正在导入，请勿关闭页面或中断服务…')
-    startPoll(res.data.jobId)
-    const job = await getBackupJob(res.data.jobId)
-    if (job.success && job.data) setActiveJob(job.data)
-  }
-
-  function handleDownload(jobId: number) {
-    const res = downloadBackupJob(jobId)
-    if (res.success) toast.success('已开始下载')
-    else toast.error(res.message || '下载失败，稍后重试')
   }
 
   async function handleVerifyOj(platform: 'LuoGu' | 'QOJ') {
@@ -793,12 +628,6 @@ export function DashboardSiteSettings() {
       </PageShell>
     )
   }
-
-  const jobBusy =
-    exporting ||
-    importing ||
-    activeJob?.status === 'pending' ||
-    activeJob?.status === 'running'
 
   return (
     <PageShell stagger={false}>
@@ -1476,48 +1305,48 @@ export function DashboardSiteSettings() {
         </CollapsibleCard>
         </fieldset>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>自动灾备</CardTitle>
-            <CardDescription>定时创建整实例加密归档。</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FieldGroup>
-              <Field orientation="horizontal">
-                <FieldLabel className="flex-1" htmlFor="backup-enabled">启用自动灾备</FieldLabel>
-                <Switch
-                  id="backup-enabled"
-                  checked={backupEnabled}
-                  disabled={!canWrite}
-                  onCheckedChange={(checked) => { setBackupEnabled(checked); bump('backup') }}
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="backup-time">每日执行时间</FieldLabel>
-                <Input
-                  id="backup-time"
-                  type="time"
-                  value={backupTime}
-                  disabled={!canWrite}
-                  onChange={(event) => { setBackupTime(event.target.value); bump('backup') }}
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="backup-prefix">存储目录（可选）</FieldLabel>
-                <Input
-                  id="backup-prefix"
-                  value={backupPrefix}
-                  disabled={!canWrite}
-                  placeholder="留空时保存为 algobak"
-                  onChange={(event) => { setBackupPrefix(event.target.value); bump('backup') }}
-                />
-              </Field>
-            </FieldGroup>
-          </CardContent>
-          <CardFooter className="justify-end">
-            <CardSaveButton section="backup" />
-          </CardFooter>
-        </Card>
+        <CollapsibleCard
+          title="自动灾备"
+          description="定时创建整实例加密归档"
+          footer={<CardSaveButton section="backup" />}
+        >
+          <FieldGroup>
+            <Field orientation="horizontal">
+              <FieldLabel className="flex-1" htmlFor="backup-enabled">启用自动灾备</FieldLabel>
+              <Switch
+                id="backup-enabled"
+                checked={backupEnabled}
+                disabled={!canWrite}
+                onCheckedChange={(checked) => { setBackupEnabled(checked); bump('backup') }}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="backup-time">每日执行时间</FieldLabel>
+              <Input
+                id="backup-time"
+                type="time"
+                value={backupTime}
+                disabled={!canWrite}
+                onChange={(event) => { setBackupTime(event.target.value); bump('backup') }}
+              />
+            </Field>
+            <Field data-invalid={!backupPrefix.trim()}>
+              <FieldLabel htmlFor="backup-prefix">存储目录</FieldLabel>
+              <Input
+                id="backup-prefix"
+                value={backupPrefix}
+                disabled={!canWrite}
+                aria-required="true"
+                aria-invalid={!backupPrefix.trim()}
+                placeholder="如 goalgo/backup"
+                onChange={(event) => { setBackupPrefix(event.target.value); bump('backup') }}
+              />
+              <FieldDescription>
+                归档会保存为目录下的 bak_时间.algobak，仅保留最新一份
+              </FieldDescription>
+            </Field>
+          </FieldGroup>
+        </CollapsibleCard>
 
         {canWrite && (
           <div className="sticky bottom-3 z-10 rounded-lg border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
@@ -1545,195 +1374,7 @@ export function DashboardSiteSettings() {
         )}
       </div>
 
-        {canBackup && (
-        <Card className="gap-3 py-4">
-          <CardHeader className="px-4 pb-0">
-            <CardTitle>数据备份与恢复</CardTitle>
-            <CardDescription>
-              导出后请尽快下载。导入将
-              <span className="font-medium text-destructive">覆盖现有数据</span>
-              。
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4 px-4">
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="default"
-                disabled={jobBusy}
-                onClick={() => void handleExport()}
-              >
-                {exporting ||
-                (activeJob?.kind === 'export' &&
-                  (activeJob.status === 'pending' ||
-                    activeJob.status === 'running')) ? (
-                  <Spinner data-icon="inline-start" />
-                ) : null}
-                导出全部站点数据
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={jobBusy}
-                onClick={() => {
-                  setImportConfirm('')
-                  setImportOpen(true)
-                }}
-              >
-                {importing ||
-                (activeJob?.kind === 'import' &&
-                  (activeJob.status === 'pending' ||
-                    activeJob.status === 'running')) ? (
-                  <Spinner data-icon="inline-start" />
-                ) : null}
-                导入备份包…
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".zip,application/zip"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0] || null
-                  setImportFile(f)
-                }}
-              />
-            </div>
-
-            {activeJob &&
-              (activeJob.status === 'pending' ||
-                activeJob.status === 'running' ||
-                activeJob.status === 'done' ||
-                activeJob.status === 'failed') && (
-                <div className="rounded-lg border bg-muted/40 px-3 py-3 text-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-medium">
-                      当前任务 #{activeJob.id}（
-                      {activeJob.kind === 'export' ? '导出' : '导入'} ·{' '}
-                      {jobStatusLabel(activeJob.status)}）
-                    </span>
-                    <span className="tabular-nums text-muted-foreground">
-                      {activeJob.progress}%
-                    </span>
-                  </div>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary transition-[width] duration-200 ease-out"
-                      style={{
-                        width: `${Math.min(100, Math.max(0, activeJob.progress))}%`,
-                      }}
-                    />
-                  </div>
-                  <p className="mt-2 text-muted-foreground">
-                    {activeJob.message || '…'}
-                  </p>
-                  {activeJob.errorDetail ? (
-                    <p className="mt-1 text-destructive">{activeJob.errorDetail}</p>
-                  ) : null}
-                  {activeJob.downloadable ? (
-                    <div className="mt-3">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => handleDownload(activeJob.id)}
-                      >
-                        下载备份包
-                        {activeJob.fileSize
-                          ? `（${formatBytes(activeJob.fileSize)}）`
-                          : ''}
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-
-            {recentJobs.length > 0 ? (
-              <div className="text-sm">
-                <p className="mb-1.5 font-medium text-muted-foreground">
-                  最近任务
-                </p>
-                <ul className="divide-y rounded-lg border">
-                  {recentJobs.map((j) => (
-                    <li
-                      key={j.id}
-                      className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
-                    >
-                      <span>
-                        #{j.id}{' '}
-                        {j.kind === 'export' ? '导出' : '导入'} ·{' '}
-                        {jobStatusLabel(j.status)}
-                        {j.fileSize ? ` · ${formatBytes(j.fileSize)}` : ''}
-                      </span>
-                      {j.downloadable ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownload(j.id)}
-                        >
-                          下载
-                        </Button>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-        )}
       </div>
-
-      <AlertDialog open={importOpen} onOpenChange={setImportOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认导入并覆盖现有数据？</AlertDialogTitle>
-            <AlertDialogDescription>
-              导入将按备份包清空并重写对应表（用户密码哈希、提交记录、题库等均会被替换）。此操作不可撤销。先确认已有可用备份。目标环境的配置加密密钥要和导出时一致。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex flex-col gap-3 px-1">
-            <Field className="gap-1.5">
-              <FieldLabel>备份文件（.zip）</FieldLabel>
-              <Input
-                type="file"
-                accept=".zip,application/zip"
-                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-              />
-              {importFile ? (
-                <p className="text-xs text-muted-foreground">
-                  已选：{importFile.name}（{formatBytes(importFile.size)}）
-                </p>
-              ) : null}
-            </Field>
-            <Field className="gap-1.5">
-              <FieldLabel htmlFor="restore-confirm">
-                输入 RESTORE 确认
-              </FieldLabel>
-              <Input
-                id="restore-confirm"
-                value={importConfirm}
-                onChange={(e) => setImportConfirm(e.target.value)}
-                placeholder="RESTORE"
-                autoComplete="off"
-              />
-            </Field>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={
-                !importFile || importConfirm.trim() !== 'RESTORE' || importing
-              }
-              onClick={() => void handleConfirmImport()}
-            >
-              确认导入
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </PageShell>
   )
 }
