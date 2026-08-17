@@ -2186,6 +2186,7 @@ export type SiteConfigSection =
   | 'oj'
   | 'payment'
   | 'backup'
+  | 'ops'
   | 'all'
 
 /** 自动整实例灾备设置；执行时间按 Asia/Shanghai，prefix 为空时对象固定为 `algobak`。 */

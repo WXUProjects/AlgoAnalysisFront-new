@@ -43,6 +43,8 @@ export type SiteAdminConfig = SiteConfig & {
   opsNotifyEmails: string
   /** 运维磁盘统计目录（数据盘挂载点；空=默认 /data） */
   dataDiskPath: string
+  spiderConcurrency: number
+  problemAnalyzeConcurrency: number
   /** 又拍云图床 */
   upyunBucket: string
   upyunOperator: string
@@ -121,6 +123,8 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     adminNotifyEmails: str(d.adminNotifyEmails),
     opsNotifyEmails: str(d.opsNotifyEmails),
     dataDiskPath: str(d.dataDiskPath),
+    spiderConcurrency: Math.max(1, Math.min(32, num(d.spiderConcurrency, 4) || 4)),
+    problemAnalyzeConcurrency: Math.max(1, Math.min(32, num(d.problemAnalyzeConcurrency, 4) || 4)),
     upyunBucket: str(d.upyunBucket),
     upyunOperator: str(d.upyunOperator),
     upyunPasswordMasked: str(d.upyunPasswordMasked),
@@ -190,7 +194,7 @@ export async function getSiteAdminConfig(): Promise<ApiResult<SiteAdminConfig>> 
 }
 
 export async function updateSiteConfig(body: {
-  /** 保存分区：basic | email | ai | upyun | oj | payment | backup | all（缺省 all） */
+  /** 保存分区：basic | email | ai | upyun | oj | payment | backup | ops | all（缺省 all） */
   section?: SiteConfigSection
   /** 期望的 config_version；>0 校验，不匹配返回 409 */
   expectedConfigVersion?: number
@@ -242,6 +246,8 @@ export async function updateSiteConfig(body: {
   backupTime?: string
   /** 灾备对象所在目录；空表示桶根固定对象 algobak */
   backupPrefix?: string
+  spiderConcurrency?: number
+  problemAnalyzeConcurrency?: number
 }): Promise<ApiResult<SiteConfig>> {
   const res = await post<Record<string, unknown>>(endpoints.user.site.config, body)
   if (!res.success) return { ...res, data: null }

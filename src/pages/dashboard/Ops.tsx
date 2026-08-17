@@ -10,6 +10,7 @@ import { OpsSpiderMonitor } from '@/pages/dashboard/OpsSpiderMonitor'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { OpsBackupCard } from '@/components/ops-backup-card'
+import { OpsConcurrencyCard } from '@/components/ops-concurrency-card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,6 +54,7 @@ export function DashboardOps() {
     can(Perm.SiteProblemOps)
   const canPurge = can(Perm.SiteSpiderOps)
   const canBackup = can(Perm.SiteBackup)
+  const canReadConfig = can(Perm.SiteConfigRead) || can(Perm.SiteConfigWrite)
   const [inv, setInv] = useState<SubmitInventory | null>(null)
   const [loading, setLoading] = useState(true)
   const [confirm, setConfirm] = useState('')
@@ -116,6 +118,7 @@ export function DashboardOps() {
       <div className="grid gap-4">
         <OpsMonitorSection />
         <OpsSpiderMonitor />
+        {canReadConfig ? <OpsConcurrencyCard canWrite={can(Perm.SiteConfigWrite)} /> : null}
         {canBackup ? <OpsBackupCard /> : null}
 
         <Card>

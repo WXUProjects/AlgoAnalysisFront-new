@@ -57,7 +57,7 @@ export type SiteFormState = {
   payfmSecret: SecretField
 }
 
-export type SingleSection = Exclude<SiteConfigSection, 'all'>
+export type SingleSection = Exclude<SiteConfigSection, 'all' | 'ops'>
 
 export function buildSectionPayload(
   section: SiteConfigSection,
@@ -137,6 +137,7 @@ export function buildSectionPayload(
     basic(); email(); ai(); upyun(); oj(); payment(); backup()
     return out
   }
+  if (section === 'ops') return out
   const fns: Record<SingleSection, () => void> = {
     basic, email, ai, upyun, oj, payment, backup,
   }
