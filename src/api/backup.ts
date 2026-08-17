@@ -49,7 +49,7 @@ export async function getDisasterBackupStatus(): Promise<ApiResult<GetDisasterBa
 }
 
 export async function runDisasterBackup(): Promise<ApiResult<RunDisasterBackupRes>> {
-  const res = await post<Record<string, unknown>>(endpoints.core.backup.run)
+  const res = await post<Record<string, unknown>>(endpoints.core.backup.run, {})
   if (!res.success) return { ...res, data: null }
   const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
   return {
