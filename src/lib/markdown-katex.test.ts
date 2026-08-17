@@ -52,6 +52,29 @@ describe('renderMarkdown KaTeX', () => {
     // strut uses height style
     assert.match(html, /style=/)
   })
+
+  it('does not parse dollar-prefixed Kotlin strings as math across a fence', () => {
+    const html = md.renderMarkdown([
+      '```kotlin',
+      'require(byteCount >= 0L) { "byteCount < 0: $byteCount" }',
+      'require(offset >= 0L) { "offset < 0: $byteCount" }',
+      '```',
+      '',
+      '![读取示意图|75%](https://example.com/read.webp)',
+      '',
+      '## 5.4 readString 消费与 close',
+    ].join('\n'))
+    const doc = new JSDOM(html).window.document
+
+    assert.equal(
+      md.extractMarkdownCodeText(doc.querySelector('.md-code-block')!),
+      'require(byteCount >= 0L) { "byteCount < 0: $byteCount" }\n' +
+        'require(offset >= 0L) { "offset < 0: $byteCount" }',
+    )
+    assert.equal(doc.querySelector('img')?.getAttribute('data-md-wpct'), '75')
+    assert.equal(doc.querySelector('h2')?.textContent, '5.4 readString 消费与 close')
+    assert.equal(doc.querySelectorAll('.katex').length, 0)
+  })
 })
 
 describe('renderSummaryMarkdown should render katex for cards', () => {

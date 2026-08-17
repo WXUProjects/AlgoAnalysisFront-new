@@ -17,6 +17,54 @@ const PLACEHOLDER_SUFFIX = '@@'
 
 type MathPiece = { display: boolean; tex: string }
 
+function protectMarkdownCode(src: string): { text: string; code: string[] } {
+  const code: string[] = []
+  const placeholder = (value: string): string => {
+    const index = code.push(value) - 1
+    return `\uE000CODE${index}\uE001`
+  }
+  const lines = src.match(/.*(?:\n|$)/g)?.filter(Boolean) ?? []
+  const output: string[] = []
+  let fence: { marker: string; length: number; lines: string[] } | null = null
+
+  for (const line of lines) {
+    if (fence) {
+      fence.lines.push(line)
+      const close = new RegExp(
+        `^[\\t ]{0,3}\\${fence.marker}{${fence.length},}[\\t ]*(?:\\n|$)`,
+      )
+      if (close.test(line)) {
+        output.push(placeholder(fence.lines.join('')))
+        fence = null
+      }
+      continue
+    }
+
+    const open = /^[\t ]{0,3}(`{3,}|~{3,})/.exec(line)
+    if (open) {
+      fence = {
+        marker: open[1][0],
+        length: open[1].length,
+        lines: [line],
+      }
+      continue
+    }
+    output.push(line)
+  }
+
+  if (fence) output.push(placeholder(fence.lines.join('')))
+  return {
+    text: output.join('').replace(/(`+)([\s\S]*?)\1/g, (raw) => placeholder(raw)),
+    code,
+  }
+}
+
+function restoreMarkdownCode(src: string, code: string[]): string {
+  return src.replace(/\uE000CODE(\d+)\uE001/g, (_, index: string) => {
+    return code[Number(index)] ?? ''
+  })
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -150,7 +198,8 @@ export function formatObsidianImageAlt(layout: MarkdownImageLayout): string {
 
 function extractMath(src: string): { text: string; pieces: MathPiece[] } {
   const pieces: MathPiece[] = []
-  let text = src
+  const protectedSource = protectMarkdownCode(src)
+  let text = protectedSource.text
 
   // 块级 $$...$$
   text = text.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex: string) => {
@@ -178,7 +227,7 @@ function extractMath(src: string): { text: string; pieces: MathPiece[] } {
     return `${PLACEHOLDER_PREFIX}${i}${PLACEHOLDER_SUFFIX}`
   })
 
-  return { text, pieces }
+  return { text: restoreMarkdownCode(text, protectedSource.code), pieces }
 }
 
 function renderKatex(tex: string, display: boolean): string {
