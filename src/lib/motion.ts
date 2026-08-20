@@ -154,7 +154,7 @@ export function killTweens(target: gsap.TweenTarget) {
 }
 
 function instantSet(el: Element, vars: gsap.TweenVars) {
-  gsap.set(el, { ...vars, clearProps: undefined })
+  gsap.set(el, vars)
 }
 
 /** Radix `data-side` → enter offset so menus open toward their trigger */

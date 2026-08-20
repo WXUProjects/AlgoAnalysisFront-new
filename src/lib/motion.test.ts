@@ -292,6 +292,63 @@ describe('tab helpers', () => {
   })
 })
 
+describe('reduced motion', () => {
+  function withReducedMotion(fn: () => void) {
+    const original = win.matchMedia
+    win.matchMedia = ((query: string) =>
+      ({
+        matches: query.includes('reduce'),
+        media: query,
+        onchange: null,
+        addListener() {},
+        removeListener() {},
+        addEventListener() {},
+        removeEventListener() {},
+        dispatchEvent() {
+          return false
+        },
+      })) as typeof win.matchMedia
+    try {
+      fn()
+    } finally {
+      win.matchMedia = original
+    }
+  }
+
+  it('does not crash on the reduced-motion branch', () => {
+    withReducedMotion(() => {
+      const node = el()
+      assert.doesNotThrow(() => {
+        motion.animateEnter(node, 'forward')
+        motion.animateStagger([el()], 'lateral')
+        motion.animateOverlayIn(node)
+        motion.animateOverlayOut(node)
+        motion.animatePanelIn(node, 'right')
+        motion.animatePanelOut(node, 'right')
+        motion.animateDialogIn(node)
+        motion.animateDialogOut(node)
+        motion.animatePopoverIn(node)
+        motion.animatePopoverOut(node)
+        motion.animateTooltipOut(node)
+        motion.animateSwitchThumb(node, true, 12)
+        motion.animatePressOut(node)
+        motion.animateHoverLiftOut(node)
+        motion.animateHoverTransformOut(node)
+        motion.animateTabContent(node)
+      })
+    })
+  })
+
+  it('reduced-motion enter lands at rest', () => {
+    withReducedMotion(() => {
+      const node = el()
+      motion.animateEnter(node, 'forward')
+      assert.equal(Number(gsap.getProperty(node, 'opacity')), 1)
+      assert.equal(Number(gsap.getProperty(node, 'y')), 0)
+    })
+  })
+})
+
 describe('presence helpers', () => {
   it('presenceStyleVars returns duration CSS vars', () => {
     const v = motion.presenceStyleVars('panel')
