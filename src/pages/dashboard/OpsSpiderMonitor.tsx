@@ -26,6 +26,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -38,12 +39,18 @@ import { Switch } from '@/components/ui/switch'
 import { formatCompactNumber, formatTime } from '@/lib/format'
 import { formatSyncAge, spiderPlatformLabel } from '@/lib/spider-health'
 import {
+  SPIDER_ERROR_ACK_STORAGE_KEY,
+  acknowledgeSpiderError,
   canViewSpiderUsers,
   getSpiderMonitorView,
+  isSpiderErrorAcknowledged,
+  parseSpiderErrorAcknowledgements,
   spiderToggleFailureMessage,
+  type SpiderErrorAcknowledgements,
   type SpiderMonitorTone as Tone,
 } from '@/lib/spider-monitor-state'
 import { Perm } from '@/lib/permissions'
+import { safeLocalStorage } from '@/lib/safe-storage'
 import { cn } from '@/lib/utils'
 
 const TONE_DOT: Record<Tone, string> = {
@@ -79,6 +86,8 @@ function SpiderMonitorCard({
   canToggleSubmit,
   canToggleProblem,
   onViewUsers,
+  errorAcknowledged,
+  onAcknowledgeError,
 }: {
   stat: SpiderPlatformStat
   onToggle?: (module: SpiderSyncModule, enabled: boolean) => void
@@ -87,8 +96,10 @@ function SpiderMonitorCard({
   canToggleSubmit: boolean
   canToggleProblem: boolean
   onViewUsers?: (platform: string) => void
+  errorAcknowledged: boolean
+  onAcknowledgeError: () => void
 }) {
-  const view = getSpiderMonitorView(stat)
+  const view = getSpiderMonitorView(stat, errorAcknowledged)
   const { statuses, overall, paused } = view
   const moduleLabels = ['提交', '题库', '比赛', '账号']
   const [confirmModule, setConfirmModule] = useState<SpiderSyncModule | null>(null)
@@ -100,7 +111,15 @@ function SpiderMonitorCard({
         ? '还未成功同步'
         : '还没有同步'
   const hasRecentFail = stat.lastFailAt > 0 && stat.lastFailAt >= stat.lastOkAt
-  const failText = hasRecentFail ? `最近失败 ${formatTime(stat.lastFailAt)}` : null
+  const hasAccountFail = stat.hasAccount && stat.accountStatus === 'fail'
+  const hasError = hasRecentFail || hasAccountFail
+  const activeSyncError = hasRecentFail ? stat.lastError : ''
+  const activeAccountError = hasAccountFail ? stat.accountErr : ''
+  const activeErrorTime = Math.max(
+    hasRecentFail ? stat.lastFailAt : 0,
+    hasAccountFail ? stat.accountAt : 0,
+  )
+  const errorText = activeSyncError || activeAccountError || `最近失败 ${formatTime(activeErrorTime)}`
 
   function handleSwitchChange(module: SpiderSyncModule, v: boolean) {
     if (v) {
@@ -222,11 +241,20 @@ function SpiderMonitorCard({
             </span>
           ) : null}
         </p>
-        {failText ? (
+        {hasError && !errorAcknowledged ? (
           <p className="flex items-center gap-1 text-destructive">
-            <span className="truncate" title={stat.lastError || failText}>
-              {stat.lastError || failText}
+            <span className="truncate" title={errorText}>
+              {errorText}
             </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="ml-auto"
+              onClick={onAcknowledgeError}
+            >
+              知道了
+            </Button>
           </p>
         ) : null}
       </div>
@@ -271,6 +299,9 @@ function SpiderMonitorSectionInner() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [toggling, setToggling] = useState<Set<string>>(() => new Set())
+  const [errorAcknowledgements, setErrorAcknowledgements] = useState<SpiderErrorAcknowledgements>(
+    () => parseSpiderErrorAcknowledgements(safeLocalStorage.get(SPIDER_ERROR_ACK_STORAGE_KEY)),
+  )
   const canToggleSubmit = can(Perm.SiteSpiderOps)
   const canToggleProblem = can(Perm.SiteProblemOps)
 
@@ -335,6 +366,14 @@ function SpiderMonitorSectionInner() {
     [load],
   )
 
+  const acknowledgeError = useCallback((stat: SpiderPlatformStat) => {
+    setErrorAcknowledgements((current) => {
+      const next = acknowledgeSpiderError(current, stat)
+      safeLocalStorage.set(SPIDER_ERROR_ACK_STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
   useEffect(() => {
     void load()
     const timer = setInterval(() => void load(), 60_000)
@@ -392,6 +431,8 @@ function SpiderMonitorSectionInner() {
               canToggleSubmit={canToggleSubmit}
               canToggleProblem={canToggleProblem}
               onViewUsers={canViewUsers ? (platform) => void openUsers(platform) : undefined}
+              errorAcknowledged={isSpiderErrorAcknowledged(s, errorAcknowledgements)}
+              onAcknowledgeError={() => acknowledgeError(s)}
             />
           ))}
         </div>

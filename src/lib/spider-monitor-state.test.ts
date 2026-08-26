@@ -4,6 +4,10 @@ import type { SpiderPlatformStat } from '@/api/ops'
 import {
 	canViewSpiderUsers,
   getSpiderMonitorView,
+  acknowledgeSpiderError,
+  isSpiderErrorAcknowledged,
+  parseSpiderErrorAcknowledgements,
+  spiderErrorFingerprint,
   spiderToggleFailureMessage,
 } from './spider-monitor-state'
 
@@ -71,4 +75,60 @@ test('开关失败兜底文案包含平台、模块和动作', () => {
     spiderToggleFailureMessage('洛谷', 'submit', true),
     '洛谷提交记录同步恢复失败，请稍后重试',
   )
+})
+
+test('同一条错误确认后隐藏，更新失败时间后重新出现', () => {
+  const failed = platform({ lastFailAt: 200, lastError: 'timeout' })
+  const acknowledgements = acknowledgeSpiderError({}, failed)
+
+  assert.notEqual(spiderErrorFingerprint(failed), '')
+  assert.equal(isSpiderErrorAcknowledged(failed, acknowledgements), true)
+  assert.equal(
+    isSpiderErrorAcknowledged(platform({ lastFailAt: 201, lastError: 'timeout' }), acknowledgements),
+    false,
+  )
+  assert.equal(
+    spiderErrorFingerprint(platform({ lastOkAt: 300, lastFailAt: 200, lastError: 'timeout' })),
+    '',
+  )
+})
+
+test('未暂停平台确认同步和账号错误后分别隐藏两个模块的失败状态', () => {
+  const failed = platform({
+    lastFailAt: 200,
+    lastError: 'timeout',
+    hasAccount: true,
+    accountStatus: 'fail',
+    accountAt: 200,
+    accountErr: 'login timeout',
+  })
+
+  const view = getSpiderMonitorView(failed, true)
+
+  assert.equal(view.submit.label, '正常')
+  assert.equal(view.statuses[3].label, '未验证')
+})
+
+test('确认记录解析会拒绝损坏数据和非字符串值', () => {
+  assert.deepEqual(parseSpiderErrorAcknowledgements('{bad'), {})
+  assert.deepEqual(
+    parseSpiderErrorAcknowledgements('{"LuoGu":"fingerprint","QOJ":1}'),
+    { LuoGu: 'fingerprint' },
+  )
+})
+
+test('暂停平台的旧错误确认后整体显示已暂停', () => {
+  const view = getSpiderMonitorView(platform({
+    submitPaused: true,
+    problemPaused: true,
+    lastFailAt: 200,
+    lastError: 'timeout',
+    hasAccount: true,
+    accountStatus: 'fail',
+    accountAt: 200,
+    accountErr: 'timeout',
+  }), true)
+
+  assert.equal(view.overall, 'paused')
+  assert.equal(view.overallLabel, '已暂停')
 })
