@@ -35,7 +35,7 @@ test('rejects missing or invalid authorization query parameters', () => {
   }
 })
 
-test('accepts valid userscript and chrome extension authorization queries', () => {
+test('accepts userscript and rejects retired Chrome extension authorization queries', () => {
   const userscript = parseLuoguAuthorizeQuery(validQuery)
   assert.deepEqual(userscript, {
     ok: true,
@@ -50,7 +50,7 @@ test('accepts valid userscript and chrome extension authorization queries', () =
 
   const extension = new URLSearchParams(validQuery)
   extension.set('client_kind', 'chrome-extension')
-  assert.equal(parseLuoguAuthorizeQuery(extension).ok, true)
+  assert.equal(parseLuoguAuthorizeQuery(extension).ok, false)
 })
 
 test('measures client version limits in UTF-8 bytes', () => {

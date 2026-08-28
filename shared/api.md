@@ -868,12 +868,12 @@ protobuf `int64` / `uint64` 字段在 HTTP protojson 中按十进制字符串传
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| POST | `/user/plugin/luogu/authorize-code` | 是 | 官网授权页签发一次性授权码；body 含纯数字 `luoguUid`、`clientKind`（`userscript`\|`chrome-extension`）、trim 后非空的 `clientVersion`、恰好 43 位 base64url 的 PKCE `codeChallenge`、固定 `codeChallengeMethod=S256` 与 `scope=luogu.sync`、`state`、`riskAccepted=true` 与当前风险版本 |
+| POST | `/user/plugin/luogu/authorize-code` | 是 | 官网授权页签发一次性授权码；body 含纯数字 `luoguUid`、固定 `clientKind=userscript`、trim 后非空的 `clientVersion`、恰好 43 位 base64url 的 PKCE `codeChallenge`、固定 `codeChallengeMethod=S256` 与 `scope=luogu.sync`、`state`、`riskAccepted=true` 与当前风险版本 |
 | POST | `/user/plugin/luogu/token` | PKCE 授权码 | body `{ code, verifier, state, scope: "luogu.sync" }`，换取只返回一次的设备令牌 |
 | GET | `/user/plugin/luogu/authorizations` | 是 | 查看当前账号已授权的洛谷同步客户端，不返回 token 哈希或明文 |
 | POST | `/user/plugin/luogu/revoke` | 是 | body `{ authorizationId }` 撤销单个，或 `{ all: true }` 撤销全部；活动同步会话随即失效 |
 
-同步稳定错误码位于 Kratos HTTP 错误体的 `reason` 字段（兼容显式字符串 `code` envelope）：`LUOGU_LOGIN_REQUIRED`、`GOALGO_CONNECT_REQUIRED`、`TOKEN_EXPIRED`、`RISK_REACCEPT_REQUIRED`、`LUOGU_UID_MISMATCH`、`LUOGU_UID_ALREADY_BOUND`、`SUBMIT_OWNER_CONFLICT`、`SYNC_COOLDOWN`、`SYNC_IN_PROGRESS`、`SESSION_EXPIRED`、`LUOGU_LAYOUT_CHANGED`、`LUOGU_RECORDS_CHANGED`。`SYNC_COOLDOWN` 使用 HTTP 429，真实 Kratos wire 将 `code`、`nextAvailableAt`、`retryAfterSeconds` 放在 `metadata` 容器中，其中后两个值为 protojson 十进制字符串；顶层 `nextAvailableAt` 与 `retryAfterSeconds` 仅为兼容历史扁平错误体，仍接受数字或字符串。protobuf `int64` / `uint64` 字段在 HTTP protojson 中按十进制字符串传输，客户端须在 API 边界安全归一化。
+同步稳定错误码位于 Kratos HTTP 错误体的 `reason` 字段（兼容显式字符串 `code` envelope）：`LUOGU_LOGIN_REQUIRED`、`GOALGO_CONNECT_REQUIRED`、`TOKEN_EXPIRED`、`RISK_REACCEPT_REQUIRED`、`LUOGU_UID_MISMATCH`、`LUOGU_UID_ALREADY_BOUND`、`SUBMIT_OWNER_CONFLICT`、`SYNC_COOLDOWN`、`SYNC_IN_PROGRESS`、`SESSION_EXPIRED`、`LUOGU_LAYOUT_CHANGED`、`LUOGU_RECORDS_CHANGED`、`LUOGU_BINDING_INVALID_REMOVED`、`SYNC_UNAVAILABLE`。`LUOGU_BINDING_INVALID_REMOVED` 表示同步时发现已保存的洛谷绑定不是有效正整数，后端已删除该绑定及其洛谷提交、比赛、日统计、AC 聚合和修复状态，客户端应提示重新绑定。`SYNC_COOLDOWN` 使用 HTTP 429，真实 Kratos wire 将 `code`、`nextAvailableAt`、`retryAfterSeconds` 放在 `metadata` 容器中，其中后两个值为 protojson 十进制字符串；顶层 `nextAvailableAt` 与 `retryAfterSeconds` 仅为兼容历史扁平错误体，仍接受数字或字符串。protobuf `int64` / `uint64` 字段在 HTTP protojson 中按十进制字符串传输，客户端须在 API 边界安全归一化。
 
 **SetSpiderReq**
 ```json

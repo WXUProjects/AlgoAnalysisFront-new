@@ -796,7 +796,7 @@ export interface ChangePasswordRes {
 
 export const LUOGU_PLUGIN_RISK_VERSION = '2026-08-28-v1' as const
 
-export type LuoguPluginClientKind = 'userscript' | 'chrome-extension'
+export type LuoguPluginClientKind = 'userscript'
 
 export interface LuoguPluginAuthorizeCodeReq {
   luoguUid: string
@@ -938,6 +938,8 @@ export type LuoguSyncErrorCode =
   | 'SESSION_EXPIRED'
   | 'LUOGU_LAYOUT_CHANGED'
   | 'LUOGU_RECORDS_CHANGED'
+  | 'LUOGU_BINDING_INVALID_REMOVED'
+  | 'SYNC_UNAVAILABLE'
 
 export interface LuoguSyncErrorMetadata {
   code?: LuoguSyncErrorCode

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { PlusIcon } from 'lucide-react'
+import { DownloadIcon, ExternalLinkIcon, PlusIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import type { LuoguPluginAuthorization, SpiderBinding } from '@shared/api'
 import { sendCode } from '@/api/auth'
@@ -9,12 +9,19 @@ import { setEmailEnabled, updateProfile } from '@/api/profile'
 import { getMySubscription } from '@/api/subscription'
 import { getPrivacy, updatePrivacy } from '@/api/social'
 import { setSpider } from '@/api/spider'
-import { activeLuoguAuthorization, listLuoguAuthorizations } from '@/api/luogu-plugin'
+import {
+  LUOGU_USERSCRIPT_INSTALL_URL,
+  activeLuoguAuthorization,
+  getLatestLuoguUserscript,
+  listLuoguAuthorizations,
+  type LuoguUserscriptRelease,
+} from '@/api/luogu-plugin'
 import { uploadImage } from '@/api/upload'
 import { useAuth } from '@/auth/AuthContext'
 import { AvatarCropDialog } from '@/components/avatar-crop-dialog'
 import { PageShell } from '@/components/page-shell'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -122,6 +129,7 @@ function OjBindDialog({
   onClose,
   onSave,
   luoguAuthorizations,
+  luoguUserscriptRelease,
 }: {
   open: boolean
   lockedPlatform: OjPlatform | ''
@@ -129,6 +137,7 @@ function OjBindDialog({
   onClose: () => void
   onSave: (changes: OjBindingChange[]) => Promise<OjBindingSaveResult>
   luoguAuthorizations?: LuoguPluginAuthorization[]
+  luoguUserscriptRelease: LuoguUserscriptRelease | null | undefined
 }) {
   const [initial, setInitial] = useState<OjBindingValues>(() =>
     initializeOjBindings(spiders),
@@ -235,6 +244,12 @@ function OjBindDialog({
                         </FieldDescription>
                       )
                     })()}
+                    <Button size="xs" variant="outline" asChild>
+                      <a href={luoguUserscriptRelease?.downloadUrl || LUOGU_USERSCRIPT_INSTALL_URL} target="_blank" rel="noreferrer">
+                        <DownloadIcon data-icon="inline-start" />
+                        {luoguUserscriptRelease ? `安装同步脚本 v${luoguUserscriptRelease.version}` : '安装同步脚本'}
+                      </a>
+                    </Button>
                   </>
                 ) : null}
                 {health?.kind === 'failed' ? (
@@ -313,6 +328,7 @@ export function ChangeProfile() {
   const [allowPublicProfile, setAllowPublicProfile] = useState(true)
   const [allowPublicFeed, setAllowPublicFeed] = useState(true)
   const [luoguAuthorizations, setLuoguAuthorizations] = useState<LuoguPluginAuthorization[]>([])
+  const [luoguUserscriptRelease, setLuoguUserscriptRelease] = useState<LuoguUserscriptRelease | null | undefined>(undefined)
 
   const boundEmail = (profile?.email || '').trim()
   const displayName = profile?.name || user?.username || 'U'
@@ -340,6 +356,16 @@ export function ChangeProfile() {
   useEffect(() => {
     if (user) void refreshLuoguAuthorizations()
   }, [user])
+
+  useEffect(() => {
+    let cancelled = false
+    void getLatestLuoguUserscript().then((release) => {
+      if (!cancelled) setLuoguUserscriptRelease(release)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // AI 日报仅 Pro 会员显示：拉我的订阅判断档位
   useEffect(() => {
@@ -877,6 +903,35 @@ export function ChangeProfile() {
               ))}
             </div>
           )}
+          {bound.some(({ platform }) => platform.value === 'LuoGu') ? (
+            <Card className="mt-3 bg-muted/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  洛谷同步脚本
+                  {luoguUserscriptRelease === undefined ? (
+                    <Skeleton className="h-5 w-14 rounded-full" />
+                  ) : luoguUserscriptRelease ? (
+                    <Badge variant="secondary">v{luoguUserscriptRelease.version}</Badge>
+                  ) : null}
+                </CardTitle>
+                <CardDescription>安装后在洛谷页面同步提交记录，Tampermonkey 会自动检查更新。</CardDescription>
+              </CardHeader>
+              <CardFooter className="flex flex-wrap gap-2">
+                <Button size="sm" asChild>
+                  <a href={luoguUserscriptRelease?.downloadUrl || LUOGU_USERSCRIPT_INSTALL_URL} target="_blank" rel="noreferrer">
+                    <DownloadIcon data-icon="inline-start" />
+                    安装脚本
+                  </a>
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <a href="https://www.tampermonkey.net/" target="_blank" rel="noreferrer">
+                    Tampermonkey
+                    <ExternalLinkIcon data-icon="inline-end" />
+                  </a>
+                </Button>
+              </CardFooter>
+            </Card>
+          ) : null}
         </CardContent>
       </Card>
       <OjBindDialog
@@ -886,6 +941,7 @@ export function ChangeProfile() {
         onClose={() => setBindOpen(false)}
         onSave={handleCardSave}
         luoguAuthorizations={luoguAuthorizations}
+        luoguUserscriptRelease={luoguUserscriptRelease}
       />
 
       <Card id="privacy" className="scroll-mt-20 gap-4 py-4">

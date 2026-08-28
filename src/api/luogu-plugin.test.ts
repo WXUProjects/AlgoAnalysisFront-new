@@ -2,7 +2,13 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 import type { AxiosRequestConfig } from 'axios'
 import { http, post } from '@/lib/http'
-import { activeLuoguAuthorization, createLuoguAuthorizeCode, listLuoguAuthorizations } from './luogu-plugin'
+import {
+  LUOGU_USERSCRIPT_INSTALL_URL,
+  activeLuoguAuthorization,
+  createLuoguAuthorizeCode,
+  getLatestLuoguUserscript,
+  listLuoguAuthorizations,
+} from './luogu-plugin'
 
 afterEach(() => {
   http.defaults.adapter = undefined
@@ -95,4 +101,26 @@ test('loads Luogu authorization list and picks an active authorization', async (
   const result = await listLuoguAuthorizations()
   assert.equal(result.success, true)
   assert.equal(activeLuoguAuthorization(result.data?.authorizations, '2245873')?.luoguUid, '2245873')
+})
+
+test('loads only a trusted Luogu userscript release without using a cached response', async () => {
+  let requestedUrl = ''
+  let requestedInit: RequestInit | undefined
+  const release = await getLatestLuoguUserscript(async (input, init) => {
+    requestedUrl = String(input)
+    requestedInit = init
+    return new Response(JSON.stringify({
+      version: '1.2.3',
+      downloadUrl: LUOGU_USERSCRIPT_INSTALL_URL,
+    }), { status: 200 })
+  }, () => 123456)
+  assert.deepEqual(release, { version: '1.2.3', downloadUrl: LUOGU_USERSCRIPT_INSTALL_URL })
+  assert.equal(requestedUrl.endsWith('?t=123456'), true)
+  assert.equal(requestedInit?.cache, 'no-store')
+
+  const untrusted = await getLatestLuoguUserscript(async () => new Response(JSON.stringify({
+    version: '1.2.3',
+    downloadUrl: 'https://evil.example/script.user.js',
+  }), { status: 200 }))
+  assert.equal(untrusted, null)
 })

@@ -8,7 +8,6 @@ export const LUOGU_AUTHORIZE_TARGET_ORIGIN = 'https://www.luogu.com.cn'
 
 const CLIENT_KINDS = new Set<LuoguPluginClientKind>([
   'userscript',
-  'chrome-extension',
 ])
 
 const STATE_PATTERN = /^[A-Za-z0-9._~-]{16,256}$/
