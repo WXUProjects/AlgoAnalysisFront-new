@@ -379,7 +379,7 @@ export function sanitizeHtml(html: string): string {
         const [property, ...rest] = declaration.split(':')
         const value = rest.join(':').trim().toLowerCase()
         const safeProperty =
-          /^(height|width|max-width|min-width|top|left|margin(?:-(?:left|right|top|bottom))?|vertical-align|font-size|position|display)$/
+          /^(height|width|max-width|min-width|top|left|margin(?:-(?:left|right|top|bottom))?|vertical-align|font-size|position|display|border-bottom-width)$/
         const safeValue =
           /^-?(?:\d+|\d*\.\d+)(?:em|ex|rem|px|%)?$|^(?:relative|block|inline-block|flex|auto)$/
         return safeProperty.test(property.trim().toLowerCase()) && safeValue.test(value)

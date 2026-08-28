@@ -51,6 +51,7 @@ describe('renderMarkdown KaTeX', () => {
     assert.match(html, /class="katex"/)
     // strut uses height style
     assert.match(html, /style=/)
+    assert.match(html, /border-bottom-width:/, 'fraction bar style must survive sanitize')
   })
 
   it('does not parse dollar-prefixed Kotlin strings as math across a fence', () => {
