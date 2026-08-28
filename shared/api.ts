@@ -853,6 +853,7 @@ export interface LuoguPluginRevokeRes {
 export interface LuoguSyncStartReq {
   clientKind: LuoguPluginClientKind
   clientVersion: string
+  requestId: string
 }
 
 export interface LuoguSyncStartRes {

@@ -855,7 +855,7 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 | GET | `/core/spider/refresh-status` | 是 | 今日手动刷新做题记录状态（只读）：`{ code, message, limit, remaining, nextAvailableAt, syncIntervalMin }`；`limit`=今日有效总配额（已合并订阅/站管覆盖；0=禁止）、`remaining`=今日剩余（0=用完）、`nextAvailableAt`=下次可刷新 unix 秒（0=立即可，5 分钟冷却中为截止时间）、`syncIntervalMin`=当前生效自动同步间隔（min(站管覆盖, 组织 MIN, 订阅档)；失败回落默认 180） |
 | POST | `/core/spider/toggle-platform` | 是(按模块) | 暂停/恢复某 OJ 模块；body `{ platform, enabled, module?: "submit" \| "problem" }`，`submit` 需要 `site.spider.ops`，`problem` 需要 `site.problem.ops`；`module` 为空时兼容为 `submit`。暂停不清空绑定或历史数据 |
 | POST | `/core/spider/purge-submits-and-recrawl` | 是(站点管理员) | **硬清**训练数据并全量重爬；body `{ confirm: "PURGE_SUBMITS" }`。删：`submit_logs`（真假全删）、账本、日汇总、AC 预聚合、`contest_logs`、提醒发送日志 + 相关 Redis。**保留**：`platforms`、题库、公告/紧急通知、比赛日历赛程与订阅；用户账号在 user 库不动 |
-| POST | `/core/spider/luogu-sync/start` | 设备令牌 | 手动开始或恢复洛谷本地同步；5 分钟新会话限制，活动会话恢复不消耗冷却；返回 session token、`nextPage`、`pageDelayMs=500`、过期与冷却时间 |
+| POST | `/core/spider/luogu-sync/start` | 设备令牌 | 手动开始或恢复洛谷本地同步；body 携带客户端预先持久化的 43 位 base64url `requestId`；5 分钟新会话限制，活动会话恢复不消耗冷却；返回 session token、`nextPage`、`pageDelayMs=500`、过期与冷却时间 |
 | GET | `/core/spider/luogu-sync/status` | 同步会话 | 用 `X-GoAlgo-Sync-Session` 恢复已开始会话，返回下一页、累计新增、进度、过期与冷却时间；完成态同时返回 `connected=true`、`done=true` 与 `completionReason`，用于恢复丢失的最终页响应 |
 | POST | `/core/spider/luogu-sync/page` | 同步会话 | 每页最多 20 条；服务端验证 UID、页序、字段、generation 与提交归属，逐页返回 `connected` / `done` / `restart` / 新增数；完成原因仅 `checkpoint` 或 `remote_end` |
 
