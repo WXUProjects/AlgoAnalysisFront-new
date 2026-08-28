@@ -57,7 +57,7 @@ import {
   type OjBindingChange,
   type OjBindingValues,
 } from '@/lib/oj-bindings'
-import { spiderPlatformHealth } from '@/lib/spider-health'
+import { spiderPlatformHealth, usesLegacyServerCrawlerHealth } from '@/lib/spider-health'
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
 
@@ -190,7 +190,9 @@ function OjBindDialog({
           {OJ_PLATFORMS.map(({ value: platform, label }) => {
             const guide = OJ_BIND_GUIDES[platform]
             const bound = spiders?.find((spider) => spider.platform === platform)
-            const health = bound ? spiderPlatformHealth(bound) : null
+            const health = bound && usesLegacyServerCrawlerHealth(platform)
+              ? spiderPlatformHealth(bound)
+              : null
             return (
               <Field key={platform} className="gap-1.5">
                 <FieldLabel htmlFor={`oj-${platform}`}>

@@ -107,6 +107,28 @@ describe('spiderPlatformHealth / userSyncHealth', () => {
     assert.equal(h!.fault, 'system')
   })
 
+  it('ignores legacy LuoGu crawler failures', () => {
+    const h = userSyncHealth(
+      [
+        {
+          platform: 'LuoGu',
+          username: '2245875',
+          lastFailAt: now,
+          lastError: '洛谷：无法识别该用户。请检查绑定的用户名是否正确',
+        },
+        {
+          platform: 'AtCoder',
+          username: 'a',
+          lastSyncAt: now - 100,
+          lastFailAt: 0,
+        },
+      ],
+      now - 100,
+      now,
+    )
+    assert.equal(h, null)
+  })
+
   it('stale health includes relative age', () => {
     const h = spiderPlatformHealth(
       {

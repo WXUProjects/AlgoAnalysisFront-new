@@ -248,13 +248,17 @@ export function spiderPlatformHealth(
   }
 }
 
+export function usesLegacyServerCrawlerHealth(platform?: string): boolean {
+  return !['luogu'].includes((platform || '').trim().toLowerCase())
+}
+
 /** 用户级：已绑定但从未成功 / 整体过旧 / 有平台失败 */
 export function userSyncHealth(
   spiders: SpiderBinding[] | undefined,
   lastSyncAt?: number,
   nowSec = Math.floor(Date.now() / 1000),
 ): SpiderHealth | null {
-  const list = spiders || []
+  const list = (spiders || []).filter((s) => usesLegacyServerCrawlerHealth(s.platform))
   if (list.length === 0) return null
 
   const failed = list.filter((s) => spiderPlatformHealth(s, nowSec).kind === 'failed')
