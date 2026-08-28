@@ -16,6 +16,14 @@ export const endpoints = {
       resetPassword: `${API_PREFIX}/user/auth/reset-password`,
       changePassword: `${API_PREFIX}/user/auth/change-password`,
     },
+    plugin: {
+      luogu: {
+        authorizeCode: `${API_PREFIX}/user/plugin/luogu/authorize-code`,
+        token: `${API_PREFIX}/user/plugin/luogu/token`,
+        authorizations: `${API_PREFIX}/user/plugin/luogu/authorizations`,
+        revoke: `${API_PREFIX}/user/plugin/luogu/revoke`,
+      },
+    },
     profile: {
       getById: `${API_PREFIX}/user/profile/get-by-id`,
       getByName: `${API_PREFIX}/user/profile/get-by-name`,
@@ -264,6 +272,11 @@ export const endpoints = {
       refreshStatus: `${API_PREFIX}/core/spider/refresh-status`,
       /** 站管：暂停/恢复某 OJ 的爬虫同步 body: { platform, enabled } */
       togglePlatform: `${API_PREFIX}/core/spider/toggle-platform`,
+      luoguSync: {
+        start: `${API_PREFIX}/core/spider/luogu-sync/start`,
+        status: `${API_PREFIX}/core/spider/luogu-sync/status`,
+        page: `${API_PREFIX}/core/spider/luogu-sync/page`,
+      },
     },
     health: {
       /** 站管运维总览：后台进程、外部服务、中间件、资源与容量 */
@@ -770,6 +783,165 @@ export interface ChangePasswordReq {
 export interface ChangePasswordRes {
   success: boolean
   message: string
+}
+
+export const LUOGU_PLUGIN_RISK_VERSION = '2026-08-28-v1' as const
+
+export type LuoguPluginClientKind = 'userscript' | 'chrome-extension'
+
+export interface LuoguPluginAuthorizeCodeReq {
+  luoguUid: string
+  clientKind: LuoguPluginClientKind
+  clientVersion: string
+  codeChallenge: string
+  codeChallengeMethod: 'S256'
+  state: string
+  riskAccepted: boolean
+  riskVersion: typeof LUOGU_PLUGIN_RISK_VERSION
+  scope: 'luogu.sync'
+}
+
+export interface LuoguPluginAuthorizeCodeRes {
+  code: string
+  state: string
+  expiresAt: number | string
+  scope: 'luogu.sync'
+}
+
+export interface LuoguPluginTokenReq {
+  code: string
+  verifier: string
+  state: string
+  scope: 'luogu.sync'
+}
+
+export interface LuoguPluginTokenRes {
+  authorizationId: number | string
+  deviceToken: string
+  scope: 'luogu.sync'
+  expiresAt: number | string
+}
+
+export interface LuoguPluginAuthorization {
+  id: number | string
+  provider: 'luogu'
+  clientKind: LuoguPluginClientKind
+  clientVersion: string
+  luoguUid: string
+  riskVersion: string
+  acceptedAt: number | string
+  expiresAt: number | string
+  lastUsedAt: number | string
+  revokedAt: number | string
+  createdAt: number | string
+  scope: 'luogu.sync'
+}
+
+export interface LuoguPluginAuthorizationsRes {
+  authorizations: LuoguPluginAuthorization[]
+}
+
+export interface LuoguPluginRevokeReq {
+  authorizationId?: number | string
+  all?: boolean
+}
+
+export interface LuoguPluginRevokeRes {
+  revokedCount: number
+}
+
+export interface LuoguSyncStartReq {
+  clientKind: LuoguPluginClientKind
+  clientVersion: string
+}
+
+export interface LuoguSyncStartRes {
+  sessionId: string
+  sessionToken: string
+  resumed: boolean
+  nextPage: number
+  pageDelayMs: number
+  expiresAt: number | string
+  nextAvailableAt: number | string
+}
+
+export type LuoguSyncCompletionReason = '' | 'checkpoint' | 'remote_end'
+
+export interface LuoguSyncStatusRes {
+  sessionId: string
+  nextPage: number
+  inserted: number | string
+  processedPages: number
+  totalPages: number
+  expiresAt: number | string
+  nextAvailableAt: number | string
+  connected: boolean
+  done: boolean
+  completionReason: LuoguSyncCompletionReason
+}
+
+export interface LuoguSyncProblem {
+  pid: string
+  title: string
+  difficulty: number
+}
+
+export interface LuoguSyncRecord {
+  submitId: string
+  submitTime: number | string
+  status: number
+  language: number
+  problem: LuoguSyncProblem
+}
+
+export interface LuoguSyncPageReq {
+  luoguUid: string
+  page: number
+  remoteCount: number
+  perPage: number
+  records: LuoguSyncRecord[]
+}
+
+export interface LuoguSyncPageRes {
+  connected: boolean
+  done: boolean
+  completionReason: LuoguSyncCompletionReason
+  nextPage: number
+  restart: boolean
+  pageInserted: number | string
+  inserted: number | string
+  processedPages: number
+  totalPages: number
+  nextAvailableAt: number | string
+}
+
+export type LuoguSyncErrorCode =
+  | 'LUOGU_LOGIN_REQUIRED'
+  | 'GOALGO_CONNECT_REQUIRED'
+  | 'TOKEN_EXPIRED'
+  | 'RISK_REACCEPT_REQUIRED'
+  | 'LUOGU_UID_MISMATCH'
+  | 'LUOGU_UID_ALREADY_BOUND'
+  | 'SUBMIT_OWNER_CONFLICT'
+  | 'SYNC_COOLDOWN'
+  | 'SYNC_IN_PROGRESS'
+  | 'SESSION_EXPIRED'
+  | 'LUOGU_LAYOUT_CHANGED'
+  | 'LUOGU_RECORDS_CHANGED'
+
+export interface LuoguSyncErrorMetadata {
+  code?: LuoguSyncErrorCode
+  nextAvailableAt?: number | string
+  retryAfterSeconds?: number | string
+}
+
+export interface LuoguSyncErrorRes {
+  code: number | LuoguSyncErrorCode
+  reason?: LuoguSyncErrorCode
+  message: string
+  metadata?: LuoguSyncErrorMetadata
+  nextAvailableAt?: number | string
+  retryAfterSeconds?: number | string
 }
 
 export interface SpiderBinding {

@@ -17,6 +17,7 @@ import {
   ForgotPassword,
   Home,
   Login,
+  LuoguAuthorize,
   NotFound,
   OrgHub,
   OrgInvite,
@@ -57,6 +58,14 @@ export const mainRouteChildren: RouteObject[] = [
         element: (
           <Lazy>
             <Login />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'plugin/luogu/authorize',
+        element: (
+          <Lazy>
+            <LuoguAuthorize />
           </Lazy>
         ),
       },

@@ -57,9 +57,12 @@ declare module 'axios' {
   export interface AxiosRequestConfig {
     /** 为 true 时 401 不触发全局登出（用于 /auth/refresh 自身） */
     skipAuthExpired?: boolean
+    /** 已知为裸响应时跳过历史业务 envelope 解析 */
+    responseShape?: 'bare'
   }
   export interface InternalAxiosRequestConfig {
     skipAuthExpired?: boolean
+    responseShape?: 'bare'
   }
 }
 
@@ -103,6 +106,10 @@ export async function request<T = unknown>(
 
     if (!body || typeof body !== 'object') {
       return { success: true, message: 'ok', data: res.data as T, raw: res.data, status: res.status }
+    }
+
+    if (config.responseShape === 'bare') {
+      return { success: true, message: 'ok', data: body as T, raw: body, status: res.status }
     }
 
     // { success, message, data? | rest }

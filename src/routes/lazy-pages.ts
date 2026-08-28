@@ -3,6 +3,9 @@ import { lazyWithRetry as lazy } from '@/lib/lazy-with-retry'
 export const Login = lazy(() =>
   import('@/pages/Login').then((m) => ({ default: m.Login })),
 )
+export const LuoguAuthorize = lazy(() =>
+  import('@/pages/plugin/LuoguAuthorize').then((m) => ({ default: m.LuoguAuthorize })),
+)
 export const Register = lazy(() =>
   import('@/pages/Register').then((m) => ({ default: m.Register })),
 )
