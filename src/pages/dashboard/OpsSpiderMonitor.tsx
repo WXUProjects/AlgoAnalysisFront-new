@@ -120,6 +120,7 @@ function SpiderMonitorCard({
     hasAccountFail ? stat.accountAt : 0,
   )
   const errorText = activeSyncError || activeAccountError || `最近失败 ${formatTime(activeErrorTime)}`
+  const submitAccountReady = !stat.hasAccount || stat.accountStatus === 'ok'
 
   function handleSwitchChange(module: SpiderSyncModule, v: boolean) {
     if (v) {
@@ -152,8 +153,8 @@ function SpiderMonitorCard({
           <span>提交记录</span>
           {canToggleSubmit ? (
             <Switch
-              checked={!stat.submitPaused}
-              disabled={!stat.hasSubmitFetcher || togglingSubmit}
+              checked={submitAccountReady && !stat.submitPaused}
+              disabled={!stat.hasSubmitFetcher || !submitAccountReady || togglingSubmit}
               onCheckedChange={(enabled) => handleSwitchChange('submit', enabled)}
               aria-label={`${spiderPlatformLabel(stat.platform)}提交记录同步`}
             />

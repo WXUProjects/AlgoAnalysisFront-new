@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Building2Icon,
@@ -18,7 +18,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { userSyncHealth } from '@/lib/spider-health'
 import { OrgRole } from '@/lib/roles'
 
 function storageKey(parts: Array<string | number>) {
@@ -48,15 +47,6 @@ function writeDismissed(key: string) {
 export function HomeSetupCards() {
   const { isLogin, user, orgs, currentOrg, isCoach, isCaptain, isOrgAdmin } = useAuth()
   const [spidersLen, setSpidersLen] = useState<number | null>(null)
-  const [lastSyncAt, setLastSyncAt] = useState<number | undefined>(undefined)
-  const [spiders, setSpiders] = useState<
-    Array<{
-      platform?: string
-      lastSyncAt?: number
-      lastFailAt?: number
-      lastError?: string
-    }>
-  >([])
   const [tick, setTick] = useState(0)
 
   const uid = user?.userId || 0
@@ -67,8 +57,6 @@ export function HomeSetupCards() {
     void getProfileById(uid).then((res) => {
       if (cancelled || !res.success || !res.data) return
       setSpidersLen(res.data.spiders?.length ?? 0)
-      setLastSyncAt(res.data.lastSyncAt)
-      setSpiders(res.data.spiders || [])
     })
     return () => {
       cancelled = true
@@ -106,20 +94,11 @@ export function HomeSetupCards() {
     nonSystemOrg &&
     !readDismissed(coachKey)
 
-  // 首页只提示「用户可自行修复」的问题（如绑定用户名错误）；
-  // OJ 侧/网络类问题（非用户过错）不打扰用户，恢复后自然消失。
-  const syncHint = useMemo(() => {
-    if (!isLogin || spidersLen === null || spidersLen === 0) return null
-    const hint = userSyncHealth(spiders as never, lastSyncAt)
-    if (!hint || hint.kind !== 'failed' || hint.fault !== 'user') return null
-    return hint
-  }, [isLogin, spidersLen, spiders, lastSyncAt])
-
   // re-render after dismiss
   void tick
 
   if (!isLogin) return null
-  if (!showBind && !showJoin && !showCoach && !syncHint) return null
+  if (!showBind && !showJoin && !showCoach) return null
 
   return (
     <div className="flex flex-col gap-3">
@@ -151,20 +130,6 @@ export function HomeSetupCards() {
           <CardContent className="flex flex-wrap gap-2 pt-0">
             <Button asChild size="sm">
               <Link to="/change-profile?focus=oj">去绑定</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {syncHint ? (
-        <Card className="border-destructive/40 shadow-none">
-          <CardHeader className="space-y-1 pb-2">
-            <CardTitle className="text-base">{syncHint.label}</CardTitle>
-            <CardDescription>{syncHint.detail}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2 pt-0">
-            <Button asChild size="sm" variant="secondary">
-              <Link to="/change-profile?focus=oj">检查用户名</Link>
             </Button>
           </CardContent>
         </Card>
