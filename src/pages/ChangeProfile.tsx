@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PlusIcon } from 'lucide-react'
 import { toast } from 'sonner'
-import type { SpiderBinding } from '@shared/api'
+import type { LuoguPluginAuthorization, SpiderBinding } from '@shared/api'
 import { sendCode } from '@/api/auth'
 import { getProblemUserProfile } from '@/api/problem'
 import { setEmailEnabled, updateProfile } from '@/api/profile'
 import { getMySubscription } from '@/api/subscription'
 import { getPrivacy, updatePrivacy } from '@/api/social'
-import { setSpider } from '@/api/spider'
+import { resolveLuoguUser, setSpider } from '@/api/spider'
+import { activeLuoguAuthorization, listLuoguAuthorizations } from '@/api/luogu-plugin'
 import { uploadImage } from '@/api/upload'
 import { useAuth } from '@/auth/AuthContext'
 import { AvatarCropDialog } from '@/components/avatar-crop-dialog'
@@ -65,12 +66,14 @@ function OjPlatformCard({
   label,
   spider,
   acCount,
+  luoguAuthorization,
   onEdit,
 }: {
   platform: OjPlatform
   label: string
   spider: SpiderBinding
   acCount?: number
+  luoguAuthorization?: LuoguPluginAuthorization
   onEdit: () => void
 }) {
   return (
@@ -103,6 +106,11 @@ function OjPlatformCard({
       {typeof acCount === 'number' && acCount > 0 ? (
         <p className="text-xs text-muted-foreground tabular-nums">已过 {acCount} 题</p>
       ) : null}
+      {platform === 'LuoGu' ? (
+        <p className={luoguAuthorization ? 'text-xs text-emerald-600' : 'text-xs text-muted-foreground'}>
+          {luoguAuthorization ? '插件协议已授权' : '插件协议未授权'}
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -113,12 +121,14 @@ function OjBindDialog({
   spiders,
   onClose,
   onSave,
+  luoguAuthorizations,
 }: {
   open: boolean
   lockedPlatform: OjPlatform | ''
   spiders: SpiderBinding[] | undefined
   onClose: () => void
   onSave: (changes: OjBindingChange[]) => Promise<OjBindingSaveResult>
+  luoguAuthorizations?: LuoguPluginAuthorization[]
 }) {
   const [initial, setInitial] = useState<OjBindingValues>(() =>
     initializeOjBindings(spiders),
@@ -127,6 +137,9 @@ function OjBindDialog({
     initializeOjBindings(spiders),
   )
   const [saving, setSaving] = useState(false)
+  const [luoguIdentity, setLuoguIdentity] = useState<{ uid: string; username: string } | null>(null)
+  const [luoguResolving, setLuoguResolving] = useState(false)
+  const [luoguResolveError, setLuoguResolveError] = useState('')
   const inputRefs = useRef<Partial<Record<OjPlatform, HTMLInputElement | null>>>({})
   const wasOpenRef = useRef(false)
   const previousLockedPlatformRef = useRef<OjPlatform | ''>('')
@@ -148,6 +161,8 @@ function OjBindDialog({
     setInitial(values)
     setCurrent(values)
     setSaving(false)
+    setLuoguIdentity(null)
+    setLuoguResolveError('')
     if (lockedPlatform) {
       requestAnimationFrame(() => {
         const input = inputRefs.current[lockedPlatform]
@@ -158,6 +173,20 @@ function OjBindDialog({
   }, [open, lockedPlatform])
 
   const changes = getOjBindingChanges(initial, current)
+
+  async function resolveLuoguBinding() {
+    const query = current.LuoGu.trim()
+    if (!query) {
+      setLuoguIdentity(null)
+      setLuoguResolveError('')
+      return
+    }
+    setLuoguResolving(true)
+    const result = await resolveLuoguUser(query)
+    setLuoguResolving(false)
+    setLuoguIdentity(result.success && result.data ? result.data : null)
+    setLuoguResolveError(result.success ? '' : result.message || '洛谷无法识别该用户，请检查用户名或 UID')
+  }
 
   return (
     <Dialog
@@ -192,12 +221,41 @@ function OjBindDialog({
                   value={current[platform]}
                 placeholder={guide.placeholder}
                 disabled={saving}
-                  onChange={(event) => setCurrent((values) => ({
+                onChange={(event) => {
+                  if (platform === 'LuoGu') {
+                    setLuoguIdentity(null)
+                    setLuoguResolveError('')
+                  }
+                  setCurrent((values) => ({
                     ...values,
                     [platform]: event.target.value,
-                  }))}
+                  }))
+                }}
+                onBlur={platform === 'LuoGu' ? () => void resolveLuoguBinding() : undefined}
                 autoComplete="off"
               />
+                {platform === 'LuoGu' ? (
+                  <>
+                    <FieldDescription>
+                      {luoguResolving ? '正在查询洛谷用户…' : luoguIdentity
+                        ? `绑定身份：${luoguIdentity.username}（UID ${luoguIdentity.uid}）`
+                        : luoguResolveError || '输入洛谷 UID 或用户名，离开输入框后自动识别'}
+                    </FieldDescription>
+                    {(() => {
+                      const authorization = activeLuoguAuthorization(
+                        luoguAuthorizations,
+                        luoguIdentity?.uid || current.LuoGu.trim(),
+                      )
+                      return (
+                        <FieldDescription className={authorization ? 'text-emerald-600' : undefined}>
+                          {authorization
+                            ? `插件协议：已授权 · ${authorization.clientKind} · 有效至 ${new Date(Number(authorization.expiresAt) * 1000).toLocaleDateString()}`
+                            : '插件协议：未授权'}
+                        </FieldDescription>
+                      )
+                    })()}
+                  </>
+                ) : null}
                 {health?.kind === 'failed' ? (
                   <FieldDescription className="text-destructive">
                     {health.detail}
@@ -210,8 +268,13 @@ function OjBindDialog({
         <DialogFooter>
           <Button
             size="sm"
-            disabled={saving || changes.length === 0}
+            disabled={saving || luoguResolving || changes.length === 0}
             onClick={async () => {
+              const luoguChange = changes.find(({ platform }) => platform === 'LuoGu')
+              if (luoguChange && !luoguIdentity) {
+                toast.error(luoguResolveError || '请先输入有效的洛谷 UID 或用户名')
+                return
+              }
               setSaving(true)
               try {
                 const result = await onSave(changes)
@@ -268,6 +331,7 @@ export function ChangeProfile() {
   const [privacySaving, setPrivacySaving] = useState(false)
   const [allowPublicProfile, setAllowPublicProfile] = useState(true)
   const [allowPublicFeed, setAllowPublicFeed] = useState(true)
+  const [luoguAuthorizations, setLuoguAuthorizations] = useState<LuoguPluginAuthorization[]>([])
 
   const boundEmail = (profile?.email || '').trim()
   const displayName = profile?.name || user?.username || 'U'
@@ -286,6 +350,15 @@ export function ChangeProfile() {
       setAiDailyOn(profile.aiDailyEnabled ?? false)
     }
   }, [profile])
+
+  async function refreshLuoguAuthorizations() {
+    const result = await listLuoguAuthorizations()
+    if (result.success && result.data) setLuoguAuthorizations(result.data.authorizations || [])
+  }
+
+  useEffect(() => {
+    if (user) void refreshLuoguAuthorizations()
+  }, [user])
 
   // AI 日报仅 Pro 会员显示：拉我的订阅判断档位
   useEffect(() => {
@@ -560,6 +633,9 @@ export function ChangeProfile() {
     if (result.syncError) {
       toast.error(`账号已保存，但刷新失败：${result.syncError}`)
     }
+    if (result.saved.some(({ platform }) => platform === 'LuoGu')) {
+      await refreshLuoguAuthorizations()
+    }
     if (result.saved.length > 0 && result.failed.length === 0 && !result.syncError) {
       toast.success(changes.length > 1 ? `${changes.length} 个 OJ 账号已保存` : 'OJ 账号已保存')
     }
@@ -811,6 +887,7 @@ export function ChangeProfile() {
                   label={p.label}
                   spider={bind}
                   acCount={acCounts.get(p.value)}
+                  luoguAuthorization={p.value === 'LuoGu' ? activeLuoguAuthorization(luoguAuthorizations) : undefined}
                   onEdit={() => {
                     setBindLocked(p.value)
                     setBindOpen(true)
@@ -827,6 +904,7 @@ export function ChangeProfile() {
         spiders={profile?.spiders}
         onClose={() => setBindOpen(false)}
         onSave={handleCardSave}
+        luoguAuthorizations={luoguAuthorizations}
       />
 
       <Card id="privacy" className="scroll-mt-20 gap-4 py-4">

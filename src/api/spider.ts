@@ -3,6 +3,7 @@ import {
   type Platform,
   type RefreshSpiderRes,
   type RefreshSpiderStatusRes,
+  type LuoguResolvedUser,
 } from '@shared/api'
 import { post, get, num, str, type ApiResult } from '@/lib/http'
 
@@ -20,6 +21,11 @@ export async function updateSpider(userId: number): Promise<ApiResult<unknown>> 
 
 export async function updateAllSpiders(): Promise<ApiResult<unknown>> {
   return post(endpoints.core.spider.updateAll, {})
+}
+
+/** 公开解析洛谷 UID/用户名；不需要 GoAlgo 登录。 */
+export function resolveLuoguUser(query: string): Promise<ApiResult<LuoguResolvedUser>> {
+  return get<LuoguResolvedUser>(endpoints.core.spider.luogu.resolveUser, { query: query.trim() })
 }
 
 /** 手动增量刷新自己的 OJ 做题记录（每日限 2 次）；返回剩余次数与提示 */

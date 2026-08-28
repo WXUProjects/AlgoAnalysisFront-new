@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 import type { AxiosRequestConfig } from 'axios'
 import { http, post } from '@/lib/http'
-import { createLuoguAuthorizeCode } from './luogu-plugin'
+import { activeLuoguAuthorization, createLuoguAuthorizeCode, listLuoguAuthorizations } from './luogu-plugin'
 
 afterEach(() => {
   http.defaults.adapter = undefined
@@ -82,4 +82,17 @@ test('keeps existing 2xx code envelopes as business failures', async () => {
 
   assert.equal(result.success, false)
   assert.equal(result.message, 'business failure')
+})
+
+test('loads Luogu authorization list and picks an active authorization', async () => {
+  http.defaults.adapter = async (config) => ({
+    data: { authorizations: [{ provider: 'luogu', luoguUid: '2245873', revokedAt: '0', expiresAt: String(Math.floor(Date.now() / 1000) + 3600) }] },
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    config,
+  })
+  const result = await listLuoguAuthorizations()
+  assert.equal(result.success, true)
+  assert.equal(activeLuoguAuthorization(result.data?.authorizations, '2245873')?.luoguUid, '2245873')
 })

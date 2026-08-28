@@ -277,6 +277,9 @@ export const endpoints = {
         status: `${API_PREFIX}/core/spider/luogu-sync/status`,
         page: `${API_PREFIX}/core/spider/luogu-sync/page`,
       },
+      luogu: {
+        resolveUser: `${API_PREFIX}/core/spider/luogu/resolve-user`,
+      },
     },
     health: {
       /** 站管运维总览：后台进程、外部服务、中间件、资源与容量 */
@@ -564,6 +567,12 @@ export interface PlatformUserItem {
   /** 平台当前 rating（hasRating=false 时忽略） */
   rating?: number
   hasRating?: boolean
+}
+
+/** 洛谷公开 UID/用户名解析结果（无需 GoAlgo 登录） */
+export interface LuoguResolvedUser {
+  uid: string
+  username: string
 }
 
 /** 某 OJ 绑定用户列表响应（GET /core/spider/platform-users） */
