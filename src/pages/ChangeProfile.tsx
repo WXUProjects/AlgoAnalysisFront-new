@@ -8,7 +8,7 @@ import { getProblemUserProfile } from '@/api/problem'
 import { setEmailEnabled, updateProfile } from '@/api/profile'
 import { getMySubscription } from '@/api/subscription'
 import { getPrivacy, updatePrivacy } from '@/api/social'
-import { resolveLuoguUser, setSpider } from '@/api/spider'
+import { setSpider } from '@/api/spider'
 import { activeLuoguAuthorization, listLuoguAuthorizations } from '@/api/luogu-plugin'
 import { uploadImage } from '@/api/upload'
 import { useAuth } from '@/auth/AuthContext'
@@ -137,9 +137,6 @@ function OjBindDialog({
     initializeOjBindings(spiders),
   )
   const [saving, setSaving] = useState(false)
-  const [luoguIdentity, setLuoguIdentity] = useState<{ uid: string; username: string } | null>(null)
-  const [luoguResolving, setLuoguResolving] = useState(false)
-  const [luoguResolveError, setLuoguResolveError] = useState('')
   const inputRefs = useRef<Partial<Record<OjPlatform, HTMLInputElement | null>>>({})
   const wasOpenRef = useRef(false)
   const previousLockedPlatformRef = useRef<OjPlatform | ''>('')
@@ -161,8 +158,6 @@ function OjBindDialog({
     setInitial(values)
     setCurrent(values)
     setSaving(false)
-    setLuoguIdentity(null)
-    setLuoguResolveError('')
     if (lockedPlatform) {
       requestAnimationFrame(() => {
         const input = inputRefs.current[lockedPlatform]
@@ -173,20 +168,6 @@ function OjBindDialog({
   }, [open, lockedPlatform])
 
   const changes = getOjBindingChanges(initial, current)
-
-  async function resolveLuoguBinding() {
-    const query = current.LuoGu.trim()
-    if (!query) {
-      setLuoguIdentity(null)
-      setLuoguResolveError('')
-      return
-    }
-    setLuoguResolving(true)
-    const result = await resolveLuoguUser(query)
-    setLuoguResolving(false)
-    setLuoguIdentity(result.success && result.data ? result.data : null)
-    setLuoguResolveError(result.success ? '' : result.message || '洛谷无法识别该用户，请检查用户名或 UID')
-  }
 
   return (
     <Dialog
@@ -219,32 +200,30 @@ function OjBindDialog({
                   ref={(node) => { inputRefs.current[platform] = node }}
                   id={`oj-${platform}`}
                   value={current[platform]}
-                placeholder={guide.placeholder}
-                disabled={saving}
-                onChange={(event) => {
-                  if (platform === 'LuoGu') {
-                    setLuoguIdentity(null)
-                    setLuoguResolveError('')
-                  }
-                  setCurrent((values) => ({
-                    ...values,
-                    [platform]: event.target.value,
-                  }))
-                }}
-                onBlur={platform === 'LuoGu' ? () => void resolveLuoguBinding() : undefined}
-                autoComplete="off"
-              />
+                  placeholder={guide.placeholder}
+                  disabled={saving}
+                  onChange={(event) => {
+                    const value = platform === 'LuoGu'
+                      ? event.target.value.replace(/\D/g, '')
+                      : event.target.value
+                    setCurrent((values) => ({
+                      ...values,
+                      [platform]: value,
+                    }))
+                  }}
+                  inputMode={platform === 'LuoGu' ? 'numeric' : undefined}
+                  pattern={platform === 'LuoGu' ? '[0-9]*' : undefined}
+                  autoComplete="off"
+                />
                 {platform === 'LuoGu' ? (
                   <>
                     <FieldDescription>
-                      {luoguResolving ? '正在查询洛谷用户…' : luoguIdentity
-                        ? `绑定身份：${luoguIdentity.username}（UID ${luoguIdentity.uid}）`
-                        : luoguResolveError || '输入洛谷 UID 或用户名，离开输入框后自动识别'}
+                      洛谷用户编号（UID）是主页链接 /user/ 后面的纯数字编码
                     </FieldDescription>
                     {(() => {
                       const authorization = activeLuoguAuthorization(
                         luoguAuthorizations,
-                        luoguIdentity?.uid || current.LuoGu.trim(),
+                        current.LuoGu.trim(),
                       )
                       return (
                         <FieldDescription className={authorization ? 'text-emerald-600' : undefined}>
@@ -268,11 +247,11 @@ function OjBindDialog({
         <DialogFooter>
           <Button
             size="sm"
-            disabled={saving || luoguResolving || changes.length === 0}
+            disabled={saving || changes.length === 0}
             onClick={async () => {
               const luoguChange = changes.find(({ platform }) => platform === 'LuoGu')
-              if (luoguChange && !luoguIdentity) {
-                toast.error(luoguResolveError || '请先输入有效的洛谷 UID 或用户名')
+              if (luoguChange && !/^[1-9]\d*$/.test(luoguChange.username)) {
+                toast.error('请填写洛谷主页链接 /user/ 后面的数字 UID')
                 return
               }
               setSaving(true)

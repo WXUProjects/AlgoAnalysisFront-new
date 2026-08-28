@@ -848,7 +848,7 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 | POST | `/core/spider/update` | 是(站点管理员) | 手动全量同步单用户全部已绑定平台 |
 | POST | `/core/spider/update-all` | 是(站点管理员) | 全站用户全量更新 |
 | POST | `/core/spider/update-platform` | 是(站点管理员) | 仅某平台全量回填；body `{ platform: "LeetCode" }`；清该平台 pending/inflight 后 needAll 入队 |
-| GET | `/core/spider/luogu/resolve-user` | 否 | 公开查询洛谷 UID 或用户名并返回规范化的 `{ uid, username }`；query `query`，按 IP 限流 |
+| GET | `/core/spider/luogu/resolve-user` | 否 | query `query`；纯数字按洛谷 UID 直接返回 `{ uid, username: uid }`（不依赖洛谷在线校验），用户名才调用洛谷公开搜索并返回规范化的 `{ uid, username }`；按 IP 限流 |
 | GET | `/core/spider/submit-inventory` | 是(站点管理员) | 真实入库库存：`submitLogsTotal` / `submitLogsRealTotal` / `oldestTime` / `newestTime`（`countedSubmitIdsTotal` 已废弃恒为 0） |
 | GET | `/core/spider/monitor` | 是(`site.config.read` / `site.spider.ops` / `site.problem.ops` 任一) | 各 OJ 爬虫模块监控（提交/题库/比赛/账号），返回 `platforms[]` + `collectedAt` |
 | GET | `/core/spider/platform-users` | 是(站点管理员) | 某 OJ 的绑定用户列表，query `platform`、`offset?`、`limit?`（默认 20，最大 100）；返回 `total` + `list[{userId,name,username,ojUsername,rating,hasRating}]`（name 为站内展示名，无则回退站内用户名；ojUsername 为绑定的 OJ 账号） |
