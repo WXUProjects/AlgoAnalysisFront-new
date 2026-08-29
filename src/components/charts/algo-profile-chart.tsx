@@ -26,6 +26,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { buildRadarChartData } from './algo-profile-radar'
 
 const CLOUD_COLORS = [
   'text-sky-600 dark:text-sky-400',
@@ -376,15 +377,7 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
       count: r.acCount,
       score: typeof r.score === 'number' ? r.score : 0,
     }))
-  const radarChart = [...radarAll]
-    .sort((a, b) => b.score - a.score || b.count - a.count)
-    .slice(0, 8)
-    .map((r) => ({
-      subject: shortLabel(r.name, 6),
-      fullName: r.name,
-      score: Math.max(0, Math.min(100, r.score)),
-      acCount: r.count,
-    }))
+  const radarChart = buildRadarChartData(data.radar)
   const diffs = data.difficulties
     .filter((d) => d.name?.trim() && !isJunkLabel(d.name))
     .map((d) => ({ name: d.name.trim(), value: d.count }))
@@ -408,7 +401,14 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
       hint: `总 AC ${data.totalAc}`,
       body: radarChart.length ? (
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart data={radarChart} cx="50%" cy="52%" outerRadius="68%">
+          <RadarChart
+            data={radarChart}
+            cx="50%"
+            cy="52%"
+            outerRadius="68%"
+            startAngle={90}
+            endAngle={-270}
+          >
             <PolarGrid stroke="var(--border)" />
             <PolarAngleAxis
               dataKey="subject"

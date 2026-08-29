@@ -1774,7 +1774,7 @@ export interface HotProblemRes {
 }
 
 export interface ProblemUserProfile {
-  /** 能力雷达：score=掌握度 0–100（难度加权题量 + 饱和锚定），acCount=去重 AC 题数 */
+  /** 能力雷达：score=掌握度/能力分 0–100（题目难度后验、个人首次 AC 过程与标签广度置信度），acCount=该标签下去重 AC 题数 */
   radar: { tag: string; score: number; acCount: number }[]
   /** 平台过题；牛客统一为 NowCoder（不再拆竞赛站 / Tracker） */
   platforms: { name: string; count: number }[]

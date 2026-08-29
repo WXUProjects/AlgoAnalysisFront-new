@@ -1183,8 +1183,8 @@ protobuf `int64` / `uint64` 字段在 HTTP protojson 中按十进制字符串传
 ```
 | GET | `/core/user/recent-comments` | 否 | query: `userId`, `limit?` → 用户近期评论（资料页） |
 | GET | `/core/user/recent-solutions` | 否 | query: `userId`, `limit?` → 用户近期题解（资料页） |
-| POST | `/core/problem/rebuild-profiles` | 是(**站点管理员**) | 全站**仅重建能力画像**（不重爬 OJ）：对有 AC 用户强制入队画像重建，队列内重算难度加权 `weight`（评分模型升级后回填用）；返回 `{ code, message, candidates, published }` |
-| GET | `/core/problem/user-profile` | 否 | query: `userId` 做题画像；`radar[].score`=掌握度（0–100），= `100×weight/(weight+30)`，weight=该标签下 AC 题按难度加权（简单1/中等3/困难8/未知2）之和；`acCount`=去重 AC 题数 |
+| POST | `/core/problem/rebuild-profiles` | 是(**站点管理员**) | 全站**仅重建能力画像**（不重爬 OJ）：刷新题目难度后验，并对有 AC 用户强制入队重算个人首次 AC 过程、标签广度置信度与能力分（评分模型升级后回填用）；返回 `{ code, message, candidates, published }` |
+| GET | `/core/problem/user-profile` | 否 | query: `userId` 做题画像；`radar[].score`=掌握度/能力分（0–100），由题目难度后验、个人首次 AC 过程与标签广度置信度计算；`acCount`=该标签下去重 AC 题数 |
 | GET | `/core/problem/related-contests` | 否 | query: `problemId` → 本题出现过的比赛（`contest_problems` 反查，含站内 `contestLogId` / 题号 label） |
 | GET | `/core/problem/progress` | 是(管理员) | 爬取/分析进度 |
 | POST | `/core/problem/backfill` | 是(管理员) | 近6月提交回填入队；body: `{ limit }`；**仅组织用户提交**的题才爬题面/跑 AI；纯公共域/散户只入库（前端「题面准备中」） |
