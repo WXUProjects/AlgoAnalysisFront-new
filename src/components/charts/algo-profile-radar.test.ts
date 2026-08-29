@@ -144,4 +144,15 @@ describe('AlgoProfileChart radar direction', () => {
 
     assert.match(source, /<RadarChart[\s\S]*startAngle=\{90\}[\s\S]*endAngle=\{-270\}/)
   })
+
+  it('uses the full tag statistics for the word cloud and AC chart', () => {
+    const source = readFileSync(new URL('./algo-profile-chart.tsx', import.meta.url), 'utf8')
+
+    assert.match(
+      source,
+      /const allTagScores = data\.tagStats\?\.length \? data\.tagStats : data\.radar/,
+    )
+    assert.match(source, /const radarAll = allTagScores/)
+    assert.doesNotMatch(source, /\.slice\(0,\s*36\)/)
+  })
 })

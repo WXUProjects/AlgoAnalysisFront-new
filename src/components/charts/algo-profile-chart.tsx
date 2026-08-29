@@ -110,11 +110,13 @@ function TagWordCloud({ items }: { items: { name: string; count: number }[] }) {
     return <p className="px-2 text-sm text-muted-foreground">还没有标签统计</p>
   }
   const max = Math.max(...items.map((i) => i.count), 1)
-  const ordered = [...items].sort((a, b) => b.count - a.count).slice(0, 36)
+  const ordered = [...items].sort(
+    (a, b) => b.count - a.count || a.name.localeCompare(b.name),
+  )
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex h-full min-h-0 flex-wrap content-center items-center justify-center gap-x-3 gap-y-2.5 px-3 py-2">
+      <div className="flex min-h-full flex-wrap content-center items-center justify-center gap-x-3 gap-y-2.5 px-3 py-2">
         {ordered.map((item, i) => {
           const w = item.count / max
           const size = 0.75 + w * 0.65
@@ -351,6 +353,7 @@ function ProfilePanels({
 function hasProfileContent(data: ProblemUserProfile): boolean {
   if (data.totalAc > 0) return true
   if (data.radar?.some((r) => r.tag?.trim() && r.acCount > 0)) return true
+  if (data.tagStats?.some((r) => r.tag?.trim() && r.acCount > 0)) return true
   if (data.platforms?.some((p) => p.name?.trim() && p.count > 0)) return true
   if (data.difficulties?.some((d) => d.name?.trim() && d.count > 0)) return true
   return false
@@ -369,7 +372,8 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
     )
   }
 
-  const radarAll = data.radar
+  const allTagScores = data.tagStats?.length ? data.tagStats : data.radar
+  const radarAll = allTagScores
     .filter((r) => r.tag?.trim() && !isJunkLabel(r.tag))
     .map((r) => ({
       name: r.tag.trim(),
@@ -377,6 +381,10 @@ export function AlgoProfileChart({ data }: { data: ProblemUserProfile | null }) 
       count: r.acCount,
       score: typeof r.score === 'number' ? r.score : 0,
     }))
+    .sort(
+      (a, b) =>
+        b.count - a.count || b.score - a.score || a.name.localeCompare(b.name),
+    )
   const radarChart = buildRadarChartData(data.radar)
   const diffs = data.difficulties
     .filter((d) => d.name?.trim() && !isJunkLabel(d.name))

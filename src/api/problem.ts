@@ -303,21 +303,31 @@ export async function getProblemUserProfile(
   })
   if (!res.success) return { ...res, data: null }
 
-  // 真实: { code, message, radar, platforms, difficulties, totalAc } 无 data 包裹
+  // 真实: { code, message, radar, tagStats, platforms, difficulties, totalAc } 无 data 包裹
   const d = (res.data && typeof res.data === 'object'
     ? res.data
     : (res.raw as Record<string, unknown>)) as Record<string, unknown>
 
+  const radar = Array.isArray(d.radar)
+    ? (d.radar as Record<string, unknown>[]).map((r) => ({
+        tag: str(r.tag),
+        score: num(r.score),
+        acCount: num(r.acCount),
+      }))
+    : []
+  const tagStats = Array.isArray(d.tagStats)
+    ? (d.tagStats as Record<string, unknown>[]).map((r) => ({
+        tag: str(r.tag),
+        score: num(r.score),
+        acCount: num(r.acCount),
+      }))
+    : radar
+
   return {
     ...res,
     data: {
-      radar: Array.isArray(d.radar)
-        ? (d.radar as Record<string, unknown>[]).map((r) => ({
-            tag: str(r.tag),
-            score: num(r.score),
-            acCount: num(r.acCount),
-          }))
-        : [],
+      radar,
+      tagStats,
       platforms: Array.isArray(d.platforms)
         ? (d.platforms as Record<string, unknown>[]).map((p) => ({
             name: str(p.name),
