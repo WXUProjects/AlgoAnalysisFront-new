@@ -486,7 +486,9 @@ export function QuestionBankDetail() {
   const contentEmpty = !problem.contentMd?.trim()
   const tagsEmpty = !problem.tags.length
   const canRefetch = isLogin && problem.canRefetch === true
-  const canReanalyze = isLogin && problem.canReanalyze === true
+  // The API still enforces the permission; keep the action discoverable so users
+  // can see the reason when their account is not eligible.
+  const canReanalyze = isLogin
 
   async function handleRefetch() {
     if (!problem || action) return
@@ -972,7 +974,7 @@ export function QuestionBankDetail() {
 
       {problem.solutions.length > 0 && (
         <Card className="gap-3 py-4">
-          <CardHeader className="flex flex-row items-start justify-between gap-3 px-4">
+              <CardHeader className="flex flex-wrap items-start justify-between gap-3 px-4">
             <div className="flex min-w-0 flex-col gap-1">
               <CardTitle className="text-base">AI 参考解法</CardTitle>
               <CardDescription>
@@ -982,9 +984,9 @@ export function QuestionBankDetail() {
               </CardDescription>
             </div>
             {canReanalyze && (
-                      <Button type="button" size="sm" variant="outline" disabled={action !== null || !problem.contentMd?.trim()} onClick={() => void handleReanalyze()}>
+              <Button type="button" className="shrink-0" size="sm" variant="outline" disabled={action !== null || !problem.contentMd?.trim()} onClick={() => void handleReanalyze()}>
                 {action === 'reanalyze' ? <Spinner data-icon="inline-start" /> : null}
-                        重新分析
+                重新分析
               </Button>
             )}
           </CardHeader>
@@ -1004,12 +1006,12 @@ export function QuestionBankDetail() {
 
       {problem.solutions.length === 0 && canReanalyze && (
         <Card className="gap-3 py-4">
-          <CardHeader className="flex flex-row items-center justify-between gap-3 px-4">
-            <div>
+          <CardHeader className="flex flex-wrap items-center justify-between gap-3 px-4">
+            <div className="min-w-0">
               <CardTitle className="text-base">AI 参考解法</CardTitle>
               <CardDescription>还没有分析结果</CardDescription>
             </div>
-            <Button type="button" size="sm" variant="outline" disabled={action !== null || !problem.contentMd?.trim()} onClick={() => void handleReanalyze()}>
+            <Button type="button" className="shrink-0" size="sm" variant="outline" disabled={action !== null || !problem.contentMd?.trim()} onClick={() => void handleReanalyze()}>
               {action === 'reanalyze' ? <Spinner data-icon="inline-start" /> : null}
               重新分析
             </Button>
