@@ -22,6 +22,8 @@ import {
   listProblemRelatedContests,
   listProblemTags,
   proposeProblemEdit,
+  refetchProblem,
+  reanalyzeProblem,
   type TagCountItem,
 } from '@/api/problem'
 import {
@@ -133,7 +135,7 @@ export function QuestionBankDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { isLogin, can } = useAuth()
+  const { isLogin, can, profile } = useAuth()
   // 题库审查权限：直接保存生效；否则提交审核
   const canReview = can(Perm.ContentProblemReview)
   const [problem, setProblem] = useState<ProblemInfo | null>(null)
@@ -181,6 +183,7 @@ export function QuestionBankDetail() {
     ProblemRelatedContest[]
   >([])
   const [contestsSheetOpen, setContestsSheetOpen] = useState(false)
+  const [action, setAction] = useState<'refetch' | 'reanalyze' | null>(null)
 
   const [addSetOpen, setAddSetOpen] = useState(false)
   const [mySets, setMySets] = useState<ProblemsetInfo[]>([])
@@ -332,6 +335,9 @@ export function QuestionBankDetail() {
   }, [loadProblem])
 
   useEffect(() => {
+  }, [isLogin])
+
+  useEffect(() => {
     void loadSubs()
   }, [loadSubs])
 
@@ -479,6 +485,34 @@ export function QuestionBankDetail() {
 
   const contentEmpty = !problem.contentMd?.trim()
   const tagsEmpty = !problem.tags.length
+  const canRefetch = isLogin && profile?.problemFetchEnabled === true
+  const canReanalyze = isLogin && profile?.problemAiEnabled === true
+
+  async function handleRefetch() {
+    if (!problem || action) return
+    setAction('refetch')
+    const res = await refetchProblem(problem.id)
+    setAction(null)
+    if (!res.success) {
+      toast.error(res.message || '重新爬取失败')
+      return
+    }
+    toast.success('已开始重新爬取题面')
+    window.setTimeout(() => void loadProblem(), 1200)
+  }
+
+  async function handleReanalyze() {
+    if (!problem || action) return
+    setAction('reanalyze')
+    const res = await reanalyzeProblem(problem.id)
+    setAction(null)
+    if (!res.success) {
+      toast.error(res.message || '重新分析失败')
+      return
+    }
+    toast.success('已开始重新分析')
+    window.setTimeout(() => void loadProblem(), 1200)
+  }
 
   return (
     <PageShell>
@@ -684,9 +718,21 @@ export function QuestionBankDetail() {
                     题面还没就绪，登录后可以补充并提交审核
                   </CardDescription>
                 )}
+                {!contentEmpty && (
+                  <CardDescription>
+                    {problem.contentSource ? `来源：${problem.contentSource === 'vjudge' ? 'VirtualOJ' : problem.contentSource}` : ''}
+                    {problem.contentFetchedAt ? ` · 抓取于 ${formatTime(problem.contentFetchedAt)}` : ''}
+                  </CardDescription>
+                )}
               </div>
               {isLogin && (
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  {canRefetch && (
+                    <Button type="button" size="sm" variant="outline" disabled={action !== null} onClick={() => void handleRefetch()}>
+                      {action === 'refetch' ? <Spinner data-icon="inline-start" /> : null}
+                      重新爬取
+                    </Button>
+                  )}
                   <DropdownMenu
                     open={addSetOpen}
                     onOpenChange={(open) => {
@@ -926,9 +972,21 @@ export function QuestionBankDetail() {
 
       {problem.solutions.length > 0 && (
         <Card className="gap-3 py-4">
-          <CardHeader className="px-4">
-            <CardTitle className="text-base">AI 参考解法</CardTitle>
-            <CardDescription>由 AI 生成，仅供参考</CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between gap-3 px-4">
+            <div className="flex min-w-0 flex-col gap-1">
+              <CardTitle className="text-base">AI 参考解法</CardTitle>
+              <CardDescription>
+                由 AI 生成，仅供参考
+                {problem.analyzedAt ? ` · ${formatTime(problem.analyzedAt)}` : ''}
+                {problem.analyzedModel ? ` · ${problem.analyzedModel}` : ''}
+              </CardDescription>
+            </div>
+            {canReanalyze && (
+                      <Button type="button" size="sm" variant="outline" disabled={action !== null || !problem.contentMd?.trim()} onClick={() => void handleReanalyze()}>
+                {action === 'reanalyze' ? <Spinner data-icon="inline-start" /> : null}
+                        重新分析
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="grid gap-2 px-4 sm:grid-cols-2">
             {problem.solutions.map((s, i) => (
@@ -941,6 +999,21 @@ export function QuestionBankDetail() {
               </div>
             ))}
           </CardContent>
+        </Card>
+      )}
+
+      {problem.solutions.length === 0 && canReanalyze && (
+        <Card className="gap-3 py-4">
+          <CardHeader className="flex flex-row items-center justify-between gap-3 px-4">
+            <div>
+              <CardTitle className="text-base">AI 参考解法</CardTitle>
+              <CardDescription>还没有分析结果</CardDescription>
+            </div>
+            <Button type="button" size="sm" variant="outline" disabled={action !== null || !problem.contentMd?.trim()} onClick={() => void handleReanalyze()}>
+              {action === 'reanalyze' ? <Spinner data-icon="inline-start" /> : null}
+              重新分析
+            </Button>
+          </CardHeader>
         </Card>
       )}
 

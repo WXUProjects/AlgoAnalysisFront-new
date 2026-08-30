@@ -143,7 +143,7 @@ function SpiderMonitorCard({
             {spiderPlatformLabel(stat.platform)}
           </span>
           {stat.submitPaused && <Badge variant="outline">提交已暂停</Badge>}
-          {stat.problemPaused && <Badge variant="outline">题面已暂停</Badge>}
+          {!stat.officialStatementEnabled && !stat.vjudgeStatementEnabled && <Badge variant="outline">题面已暂停</Badge>}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className={cn('text-xs font-medium', TONE_TEXT[overall])}>

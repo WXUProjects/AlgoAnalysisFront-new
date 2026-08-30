@@ -45,7 +45,7 @@ export function parseSpiderPlatformStat(p: Record<string, unknown>): SpiderPlatf
     accountAt: num(p.accountAt, 0),
     accountErr: str(p.accountErr),
     submitPaused,
-    problemPaused: bool(p.problemPaused),
+     problemPaused: !((p.officialStatementEnabled == null ? true : bool(p.officialStatementEnabled)) || bool(p.vjudgeStatementEnabled)),
     officialStatementEnabled: p.officialStatementEnabled == null ? true : bool(p.officialStatementEnabled),
     vjudgeStatementEnabled: bool(p.vjudgeStatementEnabled),
     paused: submitPaused,

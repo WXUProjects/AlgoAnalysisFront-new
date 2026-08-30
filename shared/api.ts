@@ -349,6 +349,8 @@ export const endpoints = {
       /** 全站热题：近 N 天提交/做题人数/AC 综合热度 */
       hot: `${API_PREFIX}/core/problem/hot`,
       get: `${API_PREFIX}/core/problem/get`,
+      refetch: `${API_PREFIX}/core/problem/refetch`,
+      reanalyze: `${API_PREFIX}/core/problem/reanalyze`,
       /** 本题出现过的比赛（全平台） */
       relatedContests: `${API_PREFIX}/core/problem/related-contests`,
       submissions: `${API_PREFIX}/core/problem/submissions`,
@@ -1067,6 +1069,8 @@ export interface UserProfile {
   emailWeeklyEnabled?: boolean
   emailAllowedByOrg?: boolean
   emailWeeklyAllowedByOrg?: boolean
+  problemFetchEnabled?: boolean
+  problemAiEnabled?: boolean
   roleId?: number
   spiders: SpiderBinding[]
   /** 最近一次 OJ 数据同步成功时间（unix 秒；0/缺省=尚无记录） */
@@ -1746,6 +1750,9 @@ export interface ProblemInfo {
   contentSource?: string
   contentSourceUrl?: string
   contentLanguage?: string
+  contentFetchedAt?: number
+  analyzedAt?: number
+  analyzedModel?: string
   problemType: string
   tags: string[]
   solutions: SolutionMeta[]

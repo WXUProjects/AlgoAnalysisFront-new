@@ -86,7 +86,23 @@ function normalizeProblem(raw: Record<string, unknown>): ProblemInfo {
     userStatus: str(raw.userStatus),
     contributors:
       contributors && contributors.length > 0 ? contributors : undefined,
+    contentSource: str(raw.contentSource),
+    contentSourceUrl: str(raw.contentSourceUrl),
+    contentLanguage: str(raw.contentLanguage),
+    contentFetchedAt: num(raw.contentFetchedAt),
+    analyzedAt: num(raw.analyzedAt),
+    analyzedModel: str(raw.analyzedModel),
   }
+}
+
+export async function refetchProblem(problemId: number): Promise<ApiResult<unknown>> {
+  return post(endpoints.core.problem.refetch, { problemId })
+}
+
+export async function reanalyzeProblem(problemId: number): Promise<ApiResult<{ remaining: number }>> {
+  const res = await post<Record<string, unknown>>(endpoints.core.problem.reanalyze, { problemId })
+  const raw = (res.data ?? res.raw ?? {}) as Record<string, unknown>
+  return { ...res, data: { remaining: num(raw.remaining, 0) } }
 }
 
 export type { ProblemRelatedContest }
