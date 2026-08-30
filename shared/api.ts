@@ -537,6 +537,7 @@ export interface ClientSyncAuditInfo {
   restartCount: number
   errorCode: string
   errorMessage: string
+  username: string
 }
 
 export interface AdminListClientSyncAuditsRes {

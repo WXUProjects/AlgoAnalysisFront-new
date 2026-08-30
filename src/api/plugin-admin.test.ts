@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { endpoints } from '@shared/api'
 import { http } from '@/lib/http'
-import { listPluginAuthorizations, listSyncAudits } from './plugin-admin'
+import { latestAuthorizationRows, listPluginAuthorizations, listSyncAudits } from './plugin-admin'
 
 test('lists plugin authorizations with server-side filters and normalizes pagination', async () => {
   let requestUrl = ''
@@ -46,4 +46,12 @@ test('lists sync audits with date filters and normalizes string counters', async
   assert.deepEqual(params, { pageNum: 1, pageSize: 10, keyword: 'alice', platform: 'luogu', status: 'completed', from: 1, to: 9 })
   assert.equal(result.data?.list[0]?.inserted, 4)
   assert.equal(result.data?.total, 1)
+})
+
+test('keeps only the newest row for each user and plugin account in the UI fallback', () => {
+  const rows = [
+    { id: '2', userId: '1', provider: 'luogu', platform: 'luogu', ojUid: '123', clientKind: 'userscript', clientVersion: '0.1.3' },
+    { id: '1', userId: '1', provider: 'luogu', platform: 'luogu', ojUid: '123', clientKind: 'userscript', clientVersion: '0.1.0' },
+  ] as AdminPluginAuthorizationInfo[]
+  assert.deepEqual(latestAuthorizationRows(rows).map((row) => row.clientVersion), ['0.1.3'])
 })

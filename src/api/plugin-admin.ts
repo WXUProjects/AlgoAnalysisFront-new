@@ -24,9 +24,19 @@ function authorization(raw: Record<string, unknown>): AdminPluginAuthorizationIn
   }
 }
 
+export function latestAuthorizationRows(rows: AdminPluginAuthorizationInfo[]): AdminPluginAuthorizationInfo[] {
+  const latest = new Map<string, AdminPluginAuthorizationInfo>()
+  for (const row of rows) {
+    const key = `${row.userId}:${row.provider || row.platform}:${row.ojUid}:${row.clientKind}`
+    const current = latest.get(key)
+    if (!current || Number(row.id) > Number(current.id)) latest.set(key, row)
+  }
+  return [...latest.values()]
+}
+
 function audit(raw: Record<string, unknown>): ClientSyncAuditInfo {
   return {
-    sessionId: str(raw.sessionId), authorizationId: str(raw.authorizationId), userId: str(raw.userId), platform: str(raw.platform), ojUid: str(raw.ojUid), clientKind: str(raw.clientKind), clientVersion: str(raw.clientVersion), status: str(raw.status) as ClientSyncAuditInfo['status'], completionReason: str(raw.completionReason), startedAt: num(raw.startedAt), updatedAt: num(raw.updatedAt), terminalAt: num(raw.terminalAt), processedPages: num(raw.processedPages), remoteCount: num(raw.remoteCount), inserted: num(raw.inserted), restartCount: num(raw.restartCount), errorCode: str(raw.errorCode), errorMessage: str(raw.errorMessage),
+    sessionId: str(raw.sessionId), authorizationId: str(raw.authorizationId), userId: str(raw.userId), username: str(raw.username), platform: str(raw.platform), ojUid: str(raw.ojUid), clientKind: str(raw.clientKind), clientVersion: str(raw.clientVersion), status: str(raw.status) as ClientSyncAuditInfo['status'], completionReason: str(raw.completionReason), startedAt: num(raw.startedAt), updatedAt: num(raw.updatedAt), terminalAt: num(raw.terminalAt), processedPages: num(raw.processedPages), remoteCount: num(raw.remoteCount), inserted: num(raw.inserted), restartCount: num(raw.restartCount), errorCode: str(raw.errorCode), errorMessage: str(raw.errorMessage),
   }
 }
 

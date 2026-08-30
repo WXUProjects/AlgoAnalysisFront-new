@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertCircleIcon } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import type { AdminPluginAuthorizationInfo, ClientSyncAuditInfo } from '@shared/api'
-import { listPluginAuthorizations, listSyncAudits } from '@/api/plugin-admin'
+import { latestAuthorizationRows, listPluginAuthorizations, listSyncAudits } from '@/api/plugin-admin'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -71,7 +71,6 @@ function Filters({ tab, onChange }: { tab: 'authorizations' | 'audits'; onChange
       <SelectTrigger aria-label="状态" className="w-32"><SelectValue placeholder="状态" /></SelectTrigger>
       <SelectContent><SelectGroup><SelectItem value="all">全部状态</SelectItem>{statuses[tab].map((v) => <SelectItem key={v} value={v}>{statusText(v)}</SelectItem>)}</SelectGroup></SelectContent>
     </Select>
-    {tab === 'audits' ? <><Input type="date" aria-label="开始日期" onChange={(e) => onChange('from', e.target.value)} /><Input type="date" aria-label="结束日期" onChange={(e) => onChange('to', e.target.value)} /></> : null}
   </div>
 }
 
@@ -82,7 +81,7 @@ function AuthorizationTable({ rows }: { rows: AdminPluginAuthorizationInfo[] }) 
 
 function AuditTable({ rows }: { rows: ClientSyncAuditInfo[] }) {
   if (!rows.length) return <Empty><EmptyTitle>还没有同步日志</EmptyTitle><EmptyDescription>插件开始同步后，记录会显示在这里。</EmptyDescription></Empty>
-  return <div className="overflow-x-auto"><Table className="min-w-[980px]"><TableHeader><TableRow><TableHead>用户 ID</TableHead><TableHead>平台账号</TableHead><TableHead>版本</TableHead><TableHead>开始</TableHead><TableHead>结束</TableHead><TableHead>页数</TableHead><TableHead>新增条数</TableHead><TableHead>结果</TableHead></TableRow></TableHeader><TableBody>{rows.map((row) => <TableRow key={row.sessionId}><TableCell>{row.userId}</TableCell><TableCell>{row.platform} · {row.ojUid}</TableCell><TableCell>{row.clientVersion}</TableCell><TableCell>{date(row.startedAt)}</TableCell><TableCell>{date(row.terminalAt || row.updatedAt)}</TableCell><TableCell>{row.processedPages}</TableCell><TableCell>{row.inserted}</TableCell><TableCell><Badge variant={row.status === 'completed' ? 'default' : 'secondary'}>{statusText(row.status)}</Badge></TableCell></TableRow>)}</TableBody></Table></div>
+  return <div className="overflow-x-auto"><Table className="min-w-[980px]"><TableHeader><TableRow><TableHead>用户</TableHead><TableHead>平台账号</TableHead><TableHead>版本</TableHead><TableHead>开始</TableHead><TableHead>结束</TableHead><TableHead>页数</TableHead><TableHead>新增条数</TableHead><TableHead>结果</TableHead></TableRow></TableHeader><TableBody>{rows.map((row) => <TableRow key={row.sessionId}><TableCell>{row.username || `用户 ${row.userId}`}</TableCell><TableCell>{row.platform} · {row.ojUid}</TableCell><TableCell>{row.clientVersion}</TableCell><TableCell>{date(row.startedAt)}</TableCell><TableCell>{date(row.terminalAt || row.updatedAt)}</TableCell><TableCell>{row.processedPages}</TableCell><TableCell>{row.inserted}</TableCell><TableCell><Badge variant={row.status === 'completed' ? 'default' : 'secondary'}>{statusText(row.status)}</Badge></TableCell></TableRow>)}</TableBody></Table></div>
 }
 
 export function DashboardPluginsManage() {
@@ -102,12 +101,12 @@ export function DashboardPluginsManage() {
     const common = { pageNum: page, pageSize, keyword: params.get('keyword') || undefined, platform: params.get('platform') || undefined }
     const result = tab === 'authorizations'
       ? await listPluginAuthorizations({ ...common, status: params.get('status') || undefined })
-      : await listSyncAudits({ ...common, status: (params.get('status') || undefined) as 'running' | 'completed' | 'failed' | 'terminated' | 'expired' | undefined, ...auditDateRange(params.get('from') || '', params.get('to') || '') })
+      : await listSyncAudits({ ...common, status: (params.get('status') || undefined) as 'running' | 'completed' | 'failed' | 'terminated' | 'expired' | undefined })
     if (!isCurrentPluginRequest(sequence, requestSequence.current)) return
     setLoading(false)
     if (!result.success || !result.data) { setError(result.message || '加载失败'); return }
     setTotal(Number(result.data.total))
-    if (tab === 'authorizations') setAuthRows(result.data.list as AdminPluginAuthorizationInfo[])
+    if (tab === 'authorizations') setAuthRows(latestAuthorizationRows(result.data.list as AdminPluginAuthorizationInfo[]))
     else setAuditRows(result.data.list as ClientSyncAuditInfo[])
   }, [page, pageSize, params, tab])
   useEffect(() => { void load() }, [load])
