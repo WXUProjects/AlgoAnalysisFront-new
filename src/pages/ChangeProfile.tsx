@@ -64,6 +64,7 @@ import {
   type OjBindingChange,
   type OjBindingValues,
 } from '@/lib/oj-bindings'
+import { shouldShowLuoguInstallPrompt } from '@/lib/luogu-plugin-prompt'
 import { spiderPlatformHealth, usesLegacyServerCrawlerHealth } from '@/lib/spider-health'
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
@@ -115,7 +116,7 @@ function OjPlatformCard({
       ) : null}
       {platform === 'LuoGu' ? (
         <p className={luoguAuthorization ? 'text-xs text-emerald-600' : 'text-xs text-muted-foreground'}>
-          {luoguAuthorization ? '插件协议已授权' : '插件协议未授权'}
+          {luoguAuthorization ? '同步插件已授权' : '同步插件未授权'}
         </p>
       ) : null}
     </div>
@@ -239,15 +240,15 @@ function OjBindDialog({
                       return (
                         <FieldDescription className={authorization ? 'text-emerald-600' : undefined}>
                           {authorization
-                            ? `插件协议：已授权 · ${authorization.clientKind} · 有效至 ${new Date(Number(authorization.expiresAt) * 1000).toLocaleDateString()}`
-                            : '插件协议：未授权'}
+                            ? `同步插件：已授权 · 有效至 ${new Date(Number(authorization.expiresAt) * 1000).toLocaleDateString()}`
+                            : '同步插件：未授权'}
                         </FieldDescription>
                       )
                     })()}
                     <Button size="xs" variant="outline" asChild>
                       <a href={luoguUserscriptRelease?.downloadUrl || LUOGU_USERSCRIPT_INSTALL_URL} target="_blank" rel="noreferrer">
                         <DownloadIcon data-icon="inline-start" />
-                        {luoguUserscriptRelease ? `安装同步脚本 v${luoguUserscriptRelease.version}` : '安装同步脚本'}
+                        {luoguUserscriptRelease ? `安装插件 v${luoguUserscriptRelease.version}` : '安装插件'}
                       </a>
                     </Button>
                   </>
@@ -329,6 +330,7 @@ export function ChangeProfile() {
   const [allowPublicFeed, setAllowPublicFeed] = useState(true)
   const [luoguAuthorizations, setLuoguAuthorizations] = useState<LuoguPluginAuthorization[]>([])
   const [luoguUserscriptRelease, setLuoguUserscriptRelease] = useState<LuoguUserscriptRelease | null | undefined>(undefined)
+  const luoguPromptedUidRef = useRef<string | undefined>(undefined)
 
   const boundEmail = (profile?.email || '').trim()
   const displayName = profile?.name || user?.username || 'U'
@@ -637,13 +639,33 @@ export function ChangeProfile() {
       const label = OJ_PLATFORMS.find(({ value }) => value === change.platform)?.label
       toast.error(`${label || change.platform} 保存失败：${message || '过会儿再试'}`)
     }
-    if (result.syncError) {
-      toast.error(`账号已保存，但刷新失败：${result.syncError}`)
+     if (result.syncError) {
+       toast.error(`账号已保存，但刷新失败：${result.syncError}`)
+     }
+     let showedInstallPrompt = false
+     if (result.saved.some(({ platform }) => platform === 'LuoGu')) {
+      const authorizationResult = await listLuoguAuthorizations()
+      const latestAuthorizations = authorizationResult.success && authorizationResult.data
+        ? authorizationResult.data.authorizations || []
+        : luoguAuthorizations
+      setLuoguAuthorizations(latestAuthorizations)
+      const savedLuogu = result.saved.find(({ platform }) => platform === 'LuoGu')
+      if (savedLuogu && shouldShowLuoguInstallPrompt({
+        previousUid: profile?.spiders?.find((item) => item.platform === 'LuoGu')?.username || '',
+        currentUid: savedLuogu.username,
+        savedPlatforms: result.saved.map(({ platform }) => platform),
+        authorizedUids: latestAuthorizations.filter((item) => activeLuoguAuthorization([item], savedLuogu.username)).map((item) => item.luoguUid),
+        promptedUid: luoguPromptedUidRef.current,
+      })) {
+         luoguPromptedUidRef.current = savedLuogu.username
+         showedInstallPrompt = true
+         toast('GoAlgo 同步插件', {
+          description: '安装后在洛谷页面同步提交记录，Tampermonkey 会自动检查更新。',
+          action: { label: '安装插件', onClick: () => window.open(luoguUserscriptRelease?.downloadUrl || LUOGU_USERSCRIPT_INSTALL_URL, '_blank', 'noopener,noreferrer') },
+        })
+      }
     }
-    if (result.saved.some(({ platform }) => platform === 'LuoGu')) {
-      await refreshLuoguAuthorizations()
-    }
-    if (result.saved.length > 0 && result.failed.length === 0 && !result.syncError) {
+     if (result.saved.length > 0 && result.failed.length === 0 && !result.syncError && !showedInstallPrompt) {
       toast.success(changes.length > 1 ? `${changes.length} 个 OJ 账号已保存` : 'OJ 账号已保存')
     }
     return result
@@ -907,7 +929,7 @@ export function ChangeProfile() {
             <Card className="mt-3 bg-muted/30">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  洛谷同步脚本
+                  GoAlgo 同步插件
                   {luoguUserscriptRelease === undefined ? (
                     <Skeleton className="h-5 w-14 rounded-full" />
                   ) : luoguUserscriptRelease ? (
@@ -920,7 +942,7 @@ export function ChangeProfile() {
                 <Button size="sm" asChild>
                   <a href={luoguUserscriptRelease?.downloadUrl || LUOGU_USERSCRIPT_INSTALL_URL} target="_blank" rel="noreferrer">
                     <DownloadIcon data-icon="inline-start" />
-                    安装脚本
+                    安装插件
                   </a>
                 </Button>
                 <Button size="sm" variant="outline" asChild>

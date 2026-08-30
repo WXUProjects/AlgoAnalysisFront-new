@@ -3,6 +3,7 @@ import {
   Building2Icon,
   ClipboardCheckIcon,
   CrownIcon,
+  PlugIcon,
   FlagIcon,
   MegaphoneIcon,
   NewspaperIcon,
@@ -158,6 +159,14 @@ export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[]
       anyOf: [Perm.SiteUserSync],
       section: 'site',
       isActive: (p) => pathActive(p, '/admin/subscriptions'),
+    },
+    {
+      to: '/admin/plugins',
+      label: '插件管理',
+      icon: PlugIcon,
+      anyOf: [Perm.SiteUserSync],
+      section: 'site',
+      isActive: (p) => pathActive(p, '/admin/plugins'),
     },
     {
       to: '/admin/orgs',

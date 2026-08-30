@@ -123,6 +123,9 @@ export const DashboardSubscriptions = lazy(() =>
     default: m.DashboardSubscriptions,
   })),
 )
+export const DashboardPluginsManage = lazy(() =>
+  import('@/pages/dashboard/PluginsManage').then((m) => ({ default: m.DashboardPluginsManage })),
+)
 export const DashboardOrgBulletinManage = lazy(() =>
   import('@/pages/dashboard/BulletinManage').then((m) => ({
     default: m.DashboardOrgBulletinManage,

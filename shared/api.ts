@@ -249,6 +249,11 @@ export const endpoints = {
       /** 硬删除当前用户全部站内信 */
       clearAll: `${API_PREFIX}/user/notification/clear-all`,
     },
+    admin: {
+      plugins: {
+        authorizations: `${API_PREFIX}/user/admin/plugins/authorizations`,
+      },
+    },
   },
   core: {
     submitLog: {
@@ -279,6 +284,11 @@ export const endpoints = {
       },
       luogu: {
         resolveUser: `${API_PREFIX}/core/spider/luogu/resolve-user`,
+      },
+    },
+    admin: {
+      plugins: {
+        syncAudits: `${API_PREFIX}/core/admin/plugins/sync-audits`,
       },
     },
     health: {
@@ -462,6 +472,78 @@ export interface TrainingReportJob {
   downloadable?: boolean
   errorDetail?: string
   fileName?: string
+}
+
+export interface AdminListPluginAuthorizationsReq {
+  pageNum: number
+  pageSize: number
+  keyword?: string
+  status?: string
+  platform?: string
+}
+
+export interface AdminPluginAuthorizationInfo {
+  id: number | string
+  userId: number | string
+  username: string
+  name: string
+  provider: string
+  platform: string
+  ojUid: string
+  clientKind: string
+  clientVersion: string
+  acceptedAt: number | string
+  expiresAt: number | string
+  lastUsedAt: number | string
+  revokedAt: number | string
+  status: string
+}
+
+export interface AdminListPluginAuthorizationsRes {
+  list: AdminPluginAuthorizationInfo[]
+  total: number | string
+  pageNum: number
+  pageSize: number
+}
+
+export type ClientSyncAuditStatus = 'running' | 'completed' | 'failed' | 'terminated' | 'expired'
+
+export interface AdminListClientSyncAuditsReq {
+  pageNum: number
+  pageSize: number
+  keyword?: string
+  platform?: string
+  status?: ClientSyncAuditStatus
+  from?: number | string
+  to?: number | string
+}
+
+export interface ClientSyncAuditInfo {
+  sessionId: string
+  authorizationId: number | string
+  userId: number | string
+  platform: string
+  ojUid: string
+  clientKind: string
+  clientVersion: string
+  status: ClientSyncAuditStatus
+  completionReason: string
+  startedAt: number | string
+  updatedAt: number | string
+  terminalAt: number | string
+  processedPages: number
+  remoteCount: number
+  inserted: number | string
+  restartCount: number
+  errorCode: string
+  errorMessage: string
+}
+
+export interface AdminListClientSyncAuditsRes {
+  list: ClientSyncAuditInfo[]
+  total: number | string
+  pageNum: number
+  pageSize: number
 }
 
 export interface HealthBackendServiceItem {
