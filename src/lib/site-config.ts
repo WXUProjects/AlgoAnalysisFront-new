@@ -40,6 +40,7 @@ export type SiteFormState = {
   upyunScheme: string
   ojLuoguUsername: string
   ojQojUsername: string
+  ojVjudgeUsername: string
   payfmApiBase: string
   payfmMerchantNo: string
   payfmPayType: string
@@ -54,6 +55,7 @@ export type SiteFormState = {
   upyunPassword: SecretField
   ojLuoguPassword: SecretField
   ojQojPassword: SecretField
+  ojVjudgePassword: SecretField
   payfmSecret: SecretField
 }
 
@@ -73,6 +75,7 @@ export function buildSectionPayload(
   const upyunPw = secretUpdate(s.upyunPassword)
   const ojLgPw = secretUpdate(s.ojLuoguPassword)
   const ojQojPw = secretUpdate(s.ojQojPassword)
+  const ojVjudgePw = secretUpdate(s.ojVjudgePassword)
   const payfmSec = secretUpdate(s.payfmSecret)
 
   const basic = (): void => {
@@ -115,10 +118,13 @@ export function buildSectionPayload(
   const oj = (): void => {
     out.ojLuoguUsername = s.ojLuoguUsername.trim()
     out.ojQojUsername = s.ojQojUsername.trim()
+    out.ojVjudgeUsername = s.ojVjudgeUsername.trim()
     if (ojLgPw.secret) out.ojLuoguPassword = ojLgPw.secret
     if (ojLgPw.clear) out.clearOjLuoguPassword = true
     if (ojQojPw.secret) out.ojQojPassword = ojQojPw.secret
     if (ojQojPw.clear) out.clearOjQojPassword = true
+    if (ojVjudgePw.secret) out.ojVjudgePassword = ojVjudgePw.secret
+    if (ojVjudgePw.clear) out.clearOjVjudgePassword = true
   }
   const payment = (): void => {
     out.payfmApiBase = s.payfmApiBase.trim()
@@ -175,8 +181,10 @@ export function sectionDirty(
     case 'oj':
       return s.ojLuoguUsername !== base.ojLuoguUsername ||
         s.ojQojUsername !== base.ojQojUsername ||
+        s.ojVjudgeUsername !== base.ojVjudgeUsername ||
         s.ojLuoguPassword.draft !== base.ojLuoguPassword.draft ||
-        s.ojQojPassword.draft !== base.ojQojPassword.draft
+        s.ojQojPassword.draft !== base.ojQojPassword.draft ||
+        s.ojVjudgePassword.draft !== base.ojVjudgePassword.draft
     case 'payment':
       return s.payfmApiBase !== base.payfmApiBase ||
         s.payfmMerchantNo !== base.payfmMerchantNo ||

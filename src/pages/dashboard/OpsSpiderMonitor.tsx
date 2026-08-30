@@ -90,7 +90,7 @@ function SpiderMonitorCard({
   onAcknowledgeError,
 }: {
   stat: SpiderPlatformStat
-  onToggle?: (module: SpiderSyncModule, enabled: boolean) => void
+  onToggle?: (module: SpiderSyncModule, enabled: boolean, source?: 'official' | 'vjudge') => void
   togglingSubmit: boolean
   togglingProblem: boolean
   canToggleSubmit: boolean
@@ -102,7 +102,7 @@ function SpiderMonitorCard({
   const view = getSpiderMonitorView(stat, errorAcknowledged)
   const { statuses, overall, paused } = view
   const moduleLabels = ['提交', '题库', '比赛', '账号']
-  const [confirmModule, setConfirmModule] = useState<SpiderSyncModule | null>(null)
+  const [confirmModule, setConfirmModule] = useState<{ module: SpiderSyncModule; source?: 'official' | 'vjudge' } | null>(null)
 
   const lastSyncText =
     stat.lastOkAt > 0
@@ -122,11 +122,15 @@ function SpiderMonitorCard({
   const errorText = activeSyncError || activeAccountError || `最近失败 ${formatTime(activeErrorTime)}`
   const submitAccountReady = !stat.hasAccount || stat.accountStatus === 'ok'
 
-  function handleSwitchChange(module: SpiderSyncModule, v: boolean) {
+  function handleSwitchChange(module: SpiderSyncModule, v: boolean, source?: 'official' | 'vjudge') {
+    if (source) {
+      onToggle?.(module, v, source)
+      return
+    }
     if (v) {
       onToggle?.(module, true)
     } else {
-      setConfirmModule(module)
+      setConfirmModule({ module, source })
     }
   }
 
@@ -161,15 +165,17 @@ function SpiderMonitorCard({
           ) : null}
         </div>
         <div className="flex items-center justify-between gap-2">
-          <span>题面</span>
-          {canToggleProblem ? (
-            <Switch
-              checked={!stat.problemPaused}
-              disabled={!stat.hasProblemFetch || togglingProblem}
-              onCheckedChange={(enabled) => handleSwitchChange('problem', enabled)}
-              aria-label={`${spiderPlatformLabel(stat.platform)}题面获取`}
-            />
-          ) : null}
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+            <span>题面</span>
+            {canToggleProblem && ['LuoGu', 'CodeForces', 'AtCoder', 'QOJ'].includes(stat.platform) ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">官方</span>
+                <Switch checked={stat.officialStatementEnabled} disabled={togglingProblem} onCheckedChange={(enabled) => handleSwitchChange('problem', enabled, 'official')} aria-label={`${spiderPlatformLabel(stat.platform)}官方题面`} />
+                <span className="text-xs text-muted-foreground">VirtualOJ</span>
+                <Switch checked={stat.vjudgeStatementEnabled} disabled={togglingProblem} onCheckedChange={(enabled) => handleSwitchChange('problem', enabled, 'vjudge')} aria-label={`${spiderPlatformLabel(stat.platform)}VirtualOJ题面`} />
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -180,7 +186,7 @@ function SpiderMonitorCard({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              暂停{confirmModule === 'problem' ? '题面获取' : '提交记录同步'}？
+              暂停{confirmModule?.module === 'problem' ? '题面获取' : '提交记录同步'}？
             </AlertDialogTitle>
             <AlertDialogDescription>恢复前将不再获取新数据。</AlertDialogDescription>
           </AlertDialogHeader>
@@ -188,7 +194,7 @@ function SpiderMonitorCard({
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (confirmModule) onToggle?.(confirmModule, false)
+                if (confirmModule) onToggle?.(confirmModule.module, false, confirmModule.source)
                 setConfirmModule(null)
               }}
             >
@@ -339,15 +345,15 @@ function SpiderMonitorSectionInner() {
   }, [])
 
   const handleToggle = useCallback(
-    async (stat: SpiderPlatformStat, module: SpiderSyncModule, enabled: boolean) => {
-      const toggleKey = `${stat.platform}:${module}`
-      setToggling((current) => new Set(current).add(toggleKey))
+    async (stat: SpiderPlatformStat, module: SpiderSyncModule, enabled: boolean, source?: 'official' | 'vjudge') => {
+       const toggleKey = `${stat.platform}:${module}:${source || ''}`
+       setToggling((current) => new Set(current).add(toggleKey))
       const platform = spiderPlatformLabel(stat.platform)
       const feature = module === 'submit' ? '提交记录同步' : '题面获取'
       const action = enabled ? '恢复' : '暂停'
       const fallbackMessage = spiderToggleFailureMessage(platform, module, enabled)
       try {
-        const res = await togglePlatformSync(stat.platform, enabled, module)
+        const res = await togglePlatformSync(stat.platform, enabled, module, source)
         if (res.success) {
           toast.success(`${platform}已${action}${feature}`)
           await load()
@@ -426,9 +432,9 @@ function SpiderMonitorSectionInner() {
             <SpiderMonitorCard
               key={s.platform}
               stat={s}
-              onToggle={(module, enabled) => void handleToggle(s, module, enabled)}
-              togglingSubmit={toggling.has(`${s.platform}:submit`)}
-              togglingProblem={toggling.has(`${s.platform}:problem`)}
+               onToggle={(module, enabled, source) => void handleToggle(s, module, enabled, source)}
+               togglingSubmit={toggling.has(`${s.platform}:submit:`)}
+               togglingProblem={toggling.has(`${s.platform}:problem:official`) || toggling.has(`${s.platform}:problem:vjudge`)}
               canToggleSubmit={canToggleSubmit}
               canToggleProblem={canToggleProblem}
               onViewUsers={canViewUsers ? (platform) => void openUsers(platform) : undefined}

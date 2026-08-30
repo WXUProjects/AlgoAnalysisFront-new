@@ -46,7 +46,8 @@ function buildFormState(
     upyunBucket: string; upyunOperator: string; upyunPassword: string; upyunPasswordSet: boolean; clearUpyunPassword: boolean
     upyunDomain: string; upyunScheme: string
     ojLuoguUsername: string; ojLuoguPassword: string; ojLuoguPasswordSet: boolean; clearOjLuoguPassword: boolean
-    ojQojUsername: string; ojQojPassword: string; ojQojPasswordSet: boolean; clearOjQojPassword: boolean
+     ojQojUsername: string; ojQojPassword: string; ojQojPasswordSet: boolean; clearOjQojPassword: boolean
+     ojVjudgeUsername: string; ojVjudgePassword: string; ojVjudgePasswordSet: boolean; clearOjVjudgePassword: boolean
     payfmApiBase: string; payfmMerchantNo: string; payfmSecret: string; payfmSecretSet: boolean; clearPayfmSecret: boolean
     payfmPayType: string
     backupEnabled: boolean
@@ -63,7 +64,7 @@ function buildFormState(
     agentEndpoint: s.agentEndpoint, agentModel: s.agentModel,
     aiEndpoint: s.aiEndpoint, aiModel: s.aiModel,
     upyunBucket: s.upyunBucket, upyunOperator: s.upyunOperator, upyunDomain: s.upyunDomain, upyunScheme: s.upyunScheme,
-    ojLuoguUsername: s.ojLuoguUsername, ojQojUsername: s.ojQojUsername,
+    ojLuoguUsername: s.ojLuoguUsername, ojQojUsername: s.ojQojUsername, ojVjudgeUsername: s.ojVjudgeUsername,
     payfmApiBase: s.payfmApiBase, payfmMerchantNo: s.payfmMerchantNo, payfmPayType: s.payfmPayType,
     backupEnabled: s.backupEnabled,
     backupTime: s.backupTime,
@@ -74,7 +75,8 @@ function buildFormState(
     aiSecret: { draft: s.aiSecret, alreadySet: s.aiSecretSet, clearRequested: s.clearAiSecret },
     upyunPassword: { draft: s.upyunPassword, alreadySet: s.upyunPasswordSet, clearRequested: s.clearUpyunPassword },
     ojLuoguPassword: { draft: s.ojLuoguPassword, alreadySet: s.ojLuoguPasswordSet, clearRequested: s.clearOjLuoguPassword },
-    ojQojPassword: { draft: s.ojQojPassword, alreadySet: s.ojQojPasswordSet, clearRequested: s.clearOjQojPassword },
+     ojQojPassword: { draft: s.ojQojPassword, alreadySet: s.ojQojPasswordSet, clearRequested: s.clearOjQojPassword },
+     ojVjudgePassword: { draft: s.ojVjudgePassword, alreadySet: s.ojVjudgePasswordSet, clearRequested: s.clearOjVjudgePassword },
     payfmSecret: { draft: s.payfmSecret, alreadySet: s.payfmSecretSet, clearRequested: s.clearPayfmSecret },
   }
 }
@@ -90,7 +92,8 @@ function buildPristineFromAdmin(d: {
   upyunBucket?: string; upyunOperator?: string; upyunPasswordSet?: boolean
   upyunDomain?: string; upyunScheme?: string
   ojLuoguUsername?: string; ojLuoguPasswordSet?: boolean
-  ojQojUsername?: string; ojQojPasswordSet?: boolean
+   ojQojUsername?: string; ojQojPasswordSet?: boolean
+   ojVjudgeUsername?: string; ojVjudgePasswordSet?: boolean
   payfmApiBase?: string; payfmMerchantNo?: string; payfmSecretSet?: boolean
   payfmPayType?: string
   backupEnabled?: boolean
@@ -108,7 +111,8 @@ function buildPristineFromAdmin(d: {
     aiEndpoint: d.aiAnalyzeEndpoint ?? '', aiModel: d.aiAnalyzeModel ?? '',
     upyunBucket: d.upyunBucket ?? '', upyunOperator: d.upyunOperator ?? '',
     upyunDomain: d.upyunDomain ?? '', upyunScheme: d.upyunScheme ?? 'http',
-    ojLuoguUsername: d.ojLuoguUsername ?? '', ojQojUsername: d.ojQojUsername ?? '',
+     ojLuoguUsername: d.ojLuoguUsername ?? '', ojQojUsername: d.ojQojUsername ?? '',
+     ojVjudgeUsername: d.ojVjudgeUsername ?? '',
     payfmApiBase: d.payfmApiBase ?? '', payfmMerchantNo: d.payfmMerchantNo ?? '',
     payfmPayType: d.payfmPayType ?? '', configVersion: d.configVersion ?? 0,
     backupEnabled: Boolean(d.backupEnabled),
@@ -119,7 +123,8 @@ function buildPristineFromAdmin(d: {
     aiSecret: { draft: '', alreadySet: Boolean(d.aiAnalyzeSecretSet), clearRequested: false },
     upyunPassword: { draft: '', alreadySet: Boolean(d.upyunPasswordSet), clearRequested: false },
     ojLuoguPassword: { draft: '', alreadySet: Boolean(d.ojLuoguPasswordSet), clearRequested: false },
-    ojQojPassword: { draft: '', alreadySet: Boolean(d.ojQojPasswordSet), clearRequested: false },
+     ojQojPassword: { draft: '', alreadySet: Boolean(d.ojQojPasswordSet), clearRequested: false },
+     ojVjudgePassword: { draft: '', alreadySet: Boolean(d.ojVjudgePasswordSet), clearRequested: false },
     payfmSecret: { draft: '', alreadySet: Boolean(d.payfmSecretSet), clearRequested: false },
   }
 }
@@ -226,6 +231,13 @@ export function DashboardSiteSettings() {
   const [ojQojStatus, setOjQojStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
   const [ojQojStatusAt, setOjQojStatusAt] = useState(0)
   const [ojQojErrMsg, setOjQojErrMsg] = useState('')
+  const [ojVjudgeUsername, setOjVjudgeUsername] = useState('')
+  const [ojVjudgePassword, setOjVjudgePassword] = useState('')
+  const [ojVjudgePasswordSet, setOjVjudgePasswordSet] = useState(false)
+  const [clearOjVjudgePassword, setClearOjVjudgePassword] = useState(false)
+  const [ojVjudgeStatus, setOjVjudgeStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
+  const [ojVjudgeStatusAt, setOjVjudgeStatusAt] = useState(0)
+  const [ojVjudgeErrMsg, setOjVjudgeErrMsg] = useState('')
   const [payfmApiBase, setPayfmApiBase] = useState('')
   const [payfmMerchantNo, setPayfmMerchantNo] = useState('')
   const [payfmSecret, setPayfmSecret] = useState('')
@@ -329,6 +341,13 @@ export function DashboardSiteSettings() {
       setOjQojStatus((d.ojQojStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
       setOjQojStatusAt(d.ojQojStatusAt || 0)
       setOjQojErrMsg(d.ojQojErrMsg || '')
+      setOjVjudgeUsername(d.ojVjudgeUsername || '')
+      setOjVjudgePassword('')
+      setOjVjudgePasswordSet(d.ojVjudgePasswordSet)
+      setClearOjVjudgePassword(false)
+      setOjVjudgeStatus((d.ojVjudgeStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
+      setOjVjudgeStatusAt(d.ojVjudgeStatusAt || 0)
+      setOjVjudgeErrMsg(d.ojVjudgeErrMsg || '')
       setPayfmApiBase(d.payfmApiBase || '')
       setPayfmMerchantNo(d.payfmMerchantNo || '')
       setPayfmSecret('')
@@ -392,6 +411,7 @@ export function DashboardSiteSettings() {
       upyunDomain, upyunScheme,
       ojLuoguUsername, ojLuoguPassword, ojLuoguPasswordSet, clearOjLuoguPassword,
       ojQojUsername, ojQojPassword, ojQojPasswordSet, clearOjQojPassword,
+      ojVjudgeUsername, ojVjudgePassword, ojVjudgePasswordSet, clearOjVjudgePassword,
       payfmApiBase, payfmMerchantNo, payfmSecret, payfmSecretSet, clearPayfmSecret,
       payfmPayType,
       backupEnabled, backupTime, backupPrefix,
@@ -464,8 +484,13 @@ export function DashboardSiteSettings() {
       setOjQojPassword('')
       setOjQojPasswordSet(d.ojQojPasswordSet)
       setClearOjQojPassword(false)
+      setOjVjudgeUsername(d.ojVjudgeUsername || '')
+      setOjVjudgePassword('')
+      setOjVjudgePasswordSet(d.ojVjudgePasswordSet)
+      setClearOjVjudgePassword(false)
       setOjLuoguStatus((d.ojLuoguStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
       setOjQojStatus((d.ojQojStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
+      setOjVjudgeStatus((d.ojVjudgeStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
     } else if (section === 'payment') {
       setPayfmApiBase(d.payfmApiBase || '')
       setPayfmMerchantNo(d.payfmMerchantNo || '')
@@ -526,7 +551,10 @@ export function DashboardSiteSettings() {
     if (revRef.current.email === savedRevs.email) setSmtpHost(d.smtpHost || '')
     if (revRef.current.ai === savedRevs.ai) setAgentEndpoint(d.agentEndpoint || '')
     if (revRef.current.upyun === savedRevs.upyun) setUpyunBucket(d.upyunBucket || '')
-    if (revRef.current.oj === savedRevs.oj) setOjLuoguUsername(d.ojLuoguUsername || '')
+     if (revRef.current.oj === savedRevs.oj) {
+       setOjLuoguUsername(d.ojLuoguUsername || '')
+       setOjVjudgeUsername(d.ojVjudgeUsername || '')
+     }
     if (revRef.current.payment === savedRevs.payment) setPayfmApiBase(d.payfmApiBase || '')
     if (revRef.current.backup === savedRevs.backup) {
       setBackupEnabled(Boolean(d.backupEnabled))
@@ -561,11 +589,11 @@ export function DashboardSiteSettings() {
     else toast.error(res.message || '发送失败，稍后重试')
   }
 
-  async function handleVerifyOj(platform: 'LuoGu' | 'QOJ') {
-    const setStatus = platform === 'LuoGu' ? setOjLuoguStatus : setOjQojStatus
-    const setErr = platform === 'LuoGu' ? setOjLuoguErrMsg : setOjQojErrMsg
-    const user = platform === 'LuoGu' ? ojLuoguUsername.trim() : ojQojUsername.trim()
-    const pass = platform === 'LuoGu' ? ojLuoguPassword : ojQojPassword
+  async function handleVerifyOj(platform: 'LuoGu' | 'QOJ' | 'VJudge') {
+    const setStatus = platform === 'LuoGu' ? setOjLuoguStatus : platform === 'QOJ' ? setOjQojStatus : setOjVjudgeStatus
+    const setErr = platform === 'LuoGu' ? setOjLuoguErrMsg : platform === 'QOJ' ? setOjQojErrMsg : setOjVjudgeErrMsg
+    const user = platform === 'LuoGu' ? ojLuoguUsername.trim() : platform === 'QOJ' ? ojQojUsername.trim() : ojVjudgeUsername.trim()
+    const pass = platform === 'LuoGu' ? ojLuoguPassword : platform === 'QOJ' ? ojQojPassword : ojVjudgePassword
     if (!user) {
       toast.error('先填用户名')
       return
@@ -574,8 +602,8 @@ export function DashboardSiteSettings() {
     setErr('')
     const pw = secretUpdate({
       draft: pass,
-      alreadySet: platform === 'LuoGu' ? ojLuoguPasswordSet : ojQojPasswordSet,
-      clearRequested: platform === 'LuoGu' ? clearOjLuoguPassword : clearOjQojPassword,
+      alreadySet: platform === 'LuoGu' ? ojLuoguPasswordSet : platform === 'QOJ' ? ojQojPasswordSet : ojVjudgePasswordSet,
+      clearRequested: platform === 'LuoGu' ? clearOjLuoguPassword : platform === 'QOJ' ? clearOjQojPassword : clearOjVjudgePassword,
     })
     const res = await verifyOjCredential({
       platform,
@@ -584,7 +612,7 @@ export function DashboardSiteSettings() {
     })
     if (res.data?.ok) {
       setStatus('ok')
-      toast.success(`${platform === 'LuoGu' ? '洛谷' : 'QOJ'} 验证通过`)
+      toast.success(`${platform === 'LuoGu' ? '洛谷' : platform === 'QOJ' ? 'QOJ' : 'VirtualOJ'} 验证通过`)
     } else {
       setStatus('fail')
       const detail = res.data?.errorDetail || res.message || '验证失败'
@@ -1096,7 +1124,20 @@ export function DashboardSiteSettings() {
                 status: ojQojStatus,
                 statusAt: ojQojStatusAt,
                 errMsg: ojQojErrMsg,
-                platform: 'QOJ' as const,
+               platform: 'QOJ' as const,
+              },
+              {
+                key: 'vjudge',
+                label: 'VirtualOJ（VJudge）',
+                user: ojVjudgeUsername,
+                setUser: setOjVjudgeUsername,
+                pass: ojVjudgePassword,
+                setPass: setOjVjudgePassword,
+                passSet: ojVjudgePasswordSet,
+                status: ojVjudgeStatus,
+                statusAt: ojVjudgeStatusAt,
+                errMsg: ojVjudgeErrMsg,
+                platform: 'VJudge' as const,
               },
             ]).map((oj) => (
               <Collapsible key={oj.key}>
@@ -1133,7 +1174,8 @@ export function DashboardSiteSettings() {
                             bump('oj')
                             if (oj.status !== 'unchecked') {
                               if (oj.key === 'luogu') setOjLuoguStatus('unchecked')
-                              else setOjQojStatus('unchecked')
+                               else if (oj.key === 'qoj') setOjQojStatus('unchecked')
+                               else setOjVjudgeStatus('unchecked')
                             }
                           }}
                           placeholder={`${oj.label}用户名`}
@@ -1151,10 +1193,12 @@ export function DashboardSiteSettings() {
                               oj.setPass(e.target.value)
                               if (oj.key === 'luogu' && clearOjLuoguPassword) setClearOjLuoguPassword(false)
                               if (oj.key === 'qoj' && clearOjQojPassword) setClearOjQojPassword(false)
+                              if (oj.key === 'vjudge' && clearOjVjudgePassword) setClearOjVjudgePassword(false)
                               bump('oj')
                               if (oj.status !== 'unchecked') {
                                 if (oj.key === 'luogu') setOjLuoguStatus('unchecked')
-                                else setOjQojStatus('unchecked')
+                                 else if (oj.key === 'qoj') setOjQojStatus('unchecked')
+                                 else setOjVjudgeStatus('unchecked')
                               }
                             }}
                             placeholder={oj.passSet ? '已保存；留空表示不修改' : `${oj.label}密码`}
@@ -1165,10 +1209,11 @@ export function DashboardSiteSettings() {
                               type="button"
                               variant="outline"
                               size="sm"
-                              disabled={oj.key === 'luogu' ? clearOjLuoguPassword : clearOjQojPassword}
+                               disabled={oj.key === 'luogu' ? clearOjLuoguPassword : oj.key === 'qoj' ? clearOjQojPassword : clearOjVjudgePassword}
                               onClick={() => {
                                 if (oj.key === 'luogu') { setOjLuoguPassword(''); setClearOjLuoguPassword(true) }
-                                else { setOjQojPassword(''); setClearOjQojPassword(true) }
+                                 else if (oj.key === 'qoj') { setOjQojPassword(''); setClearOjQojPassword(true) }
+                                 else { setOjVjudgePassword(''); setClearOjVjudgePassword(true) }
                                 bump('oj')
                               }}
                             >

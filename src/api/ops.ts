@@ -17,8 +17,9 @@ export function buildTogglePlatformBody(
   platform: string,
   enabled: boolean,
   module: SpiderSyncModule,
+  source?: 'official' | 'vjudge',
 ) {
-  return { platform, enabled, module }
+  return { platform, enabled, module, ...(source ? { source } : {}) }
 }
 
 export function parseSpiderPlatformStat(p: Record<string, unknown>): SpiderPlatformStat {
@@ -45,6 +46,8 @@ export function parseSpiderPlatformStat(p: Record<string, unknown>): SpiderPlatf
     accountErr: str(p.accountErr),
     submitPaused,
     problemPaused: bool(p.problemPaused),
+    officialStatementEnabled: p.officialStatementEnabled == null ? true : bool(p.officialStatementEnabled),
+    vjudgeStatementEnabled: bool(p.vjudgeStatementEnabled),
     paused: submitPaused,
   }
 }
@@ -64,10 +67,11 @@ export async function togglePlatformSync(
   platform: string,
   enabled: boolean,
   module: SpiderSyncModule,
+  source?: 'official' | 'vjudge',
 ): Promise<ApiResult<unknown>> {
   return post(
     endpoints.core.spider.togglePlatform,
-    buildTogglePlatformBody(platform, enabled, module),
+    buildTogglePlatformBody(platform, enabled, module, source),
   )
 }
 

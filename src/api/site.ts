@@ -60,6 +60,12 @@ export type SiteAdminConfig = SiteConfig & {
   ojQojUsername: string
   ojQojPasswordMasked: string
   ojQojPasswordSet: boolean
+  ojVjudgeUsername: string
+  ojVjudgePasswordMasked: string
+  ojVjudgePasswordSet: boolean
+  ojVjudgeStatus: string
+  ojVjudgeStatusAt: number
+  ojVjudgeErrMsg: string
   /** 支付FM（聚合支付；https://docs.zhifux.com） */
   payfmApiBase: string
   payfmMerchantNo: string
@@ -137,6 +143,12 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     ojQojUsername: str(d.ojQojUsername),
     ojQojPasswordMasked: str(d.ojQojPasswordMasked),
     ojQojPasswordSet: Boolean(d.ojQojPasswordSet),
+    ojVjudgeUsername: str(d.ojVjudgeUsername),
+    ojVjudgePasswordMasked: str(d.ojVjudgePasswordMasked),
+    ojVjudgePasswordSet: Boolean(d.ojVjudgePasswordSet),
+    ojVjudgeStatus: str(d.ojVjudgeStatus, 'unchecked'),
+    ojVjudgeStatusAt: num(d.ojVjudgeStatusAt, 0),
+    ojVjudgeErrMsg: str(d.ojVjudgeErrMsg),
     ojLuoguStatus: str(d.ojLuoguStatus, 'unchecked'),
     ojLuoguStatusAt: num(d.ojLuoguStatusAt, 0),
     ojLuoguErrMsg: str(d.ojLuoguErrMsg),
@@ -236,6 +248,9 @@ export async function updateSiteConfig(body: {
   ojQojUsername?: string
   ojQojPassword?: string
   clearOjQojPassword?: boolean
+  ojVjudgeUsername?: string
+  ojVjudgePassword?: string
+  clearOjVjudgePassword?: boolean
   payfmApiBase?: string
   payfmMerchantNo?: string
   payfmSecret?: string

@@ -626,6 +626,8 @@ export interface SpiderPlatformStat {
   submitPaused: boolean
   /** 站管是否已暂停该 OJ 的题面获取 */
   problemPaused: boolean
+  officialStatementEnabled: boolean
+  vjudgeStatementEnabled: boolean
   /** @deprecated 兼容字段，值与 submitPaused 相同 */
   paused: boolean
 }
@@ -1741,6 +1743,9 @@ export interface ProblemInfo {
   title: string
   url: string
   contentMd: string
+  contentSource?: string
+  contentSourceUrl?: string
+  contentLanguage?: string
   problemType: string
   tags: string[]
   solutions: SolutionMeta[]
