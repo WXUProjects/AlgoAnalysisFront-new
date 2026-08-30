@@ -152,11 +152,12 @@ function SpiderMonitorCard({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border p-2.5 text-sm">
-        <div className="flex items-center justify-between gap-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 rounded-lg border p-2.5 text-sm sm:grid-cols-2">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
           <span>提交记录</span>
           {canToggleSubmit ? (
             <Switch
+              className="shrink-0"
               checked={submitAccountReady && !stat.submitPaused}
               disabled={!stat.hasSubmitFetcher || !submitAccountReady || togglingSubmit}
               onCheckedChange={(enabled) => handleSwitchChange('submit', enabled)}
@@ -164,17 +165,17 @@ function SpiderMonitorCard({
             />
           ) : null}
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
             <span>题面</span>
             {canToggleProblem ? (
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <span className="text-xs text-muted-foreground">官方</span>
-                <Switch checked={stat.officialStatementEnabled} disabled={togglingProblem} onCheckedChange={(enabled) => handleSwitchChange('problem', enabled, 'official')} aria-label={`${spiderPlatformLabel(stat.platform)}官方题面`} />
+                <Switch className="shrink-0" checked={stat.officialStatementEnabled} disabled={togglingProblem} onCheckedChange={(enabled) => handleSwitchChange('problem', enabled, 'official')} aria-label={`${spiderPlatformLabel(stat.platform)}官方题面`} />
                 {['LuoGu', 'CodeForces', 'AtCoder', 'QOJ'].includes(stat.platform) ? (
                   <>
                     <span className="text-xs text-muted-foreground">VirtualOJ</span>
-                    <Switch checked={stat.vjudgeStatementEnabled} disabled={togglingProblem} onCheckedChange={(enabled) => handleSwitchChange('problem', enabled, 'vjudge')} aria-label={`${spiderPlatformLabel(stat.platform)}VirtualOJ题面`} />
+                    <Switch className="shrink-0" checked={stat.vjudgeStatementEnabled} disabled={togglingProblem} onCheckedChange={(enabled) => handleSwitchChange('problem', enabled, 'vjudge')} aria-label={`${spiderPlatformLabel(stat.platform)}VirtualOJ题面`} />
                   </>
                 ) : null}
               </div>
