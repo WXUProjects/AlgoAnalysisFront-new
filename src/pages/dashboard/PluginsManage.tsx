@@ -51,6 +51,14 @@ export function isCurrentPluginRequest(sequence: number, latest: number): boolea
   return sequence === latest
 }
 
+export function updatePluginListParams(params: URLSearchParams, key: string, value: string): URLSearchParams {
+  const next = new URLSearchParams(params)
+  if (value) next.set(key, value)
+  else next.delete(key)
+  if (key !== 'page' && key !== 'pageSize') next.set('page', '1')
+  return next
+}
+
 function Filters({ tab, onChange }: { tab: 'authorizations' | 'audits'; onChange: (key: string, value: string) => void }) {
   const [params] = useSearchParams()
   return <div className="flex flex-wrap gap-2">
@@ -104,11 +112,7 @@ export function DashboardPluginsManage() {
   }, [page, pageSize, params, tab])
   useEffect(() => { void load() }, [load])
   const update = (key: string, value: string) => {
-    const next = new URLSearchParams(params)
-    if (value) next.set(key, value)
-    else next.delete(key)
-    next.set('page', '1')
-     setParams(next)
+    setParams(updatePluginListParams(params, key, value))
   }
   return <PageShell><Card><CardHeader><CardTitle>插件管理</CardTitle></CardHeader><CardContent><Tabs value={tab} onValueChange={(v) => { const next = filtersForTab(params, v as 'authorizations' | 'audits'); next.set('tab', v); next.set('page', '1'); setParams(next) }}><TabsList><TabsTrigger value="authorizations">授权记录</TabsTrigger><TabsTrigger value="audits">同步日志</TabsTrigger></TabsList><TabsContent value="authorizations" className="flex flex-col gap-4"><Filters tab="authorizations" onChange={update} />{error ? <Alert variant="destructive"><AlertCircleIcon /><AlertTitle>加载失败</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : loading ? <Skeleton className="h-48 w-full" /> : <AuthorizationTable rows={authRows} />}<Pagination page={page} pageSize={pageSize} total={total} onChange={(p) => update('page', String(p))} onPageSizeChange={(s) => update('pageSize', String(s))} /></TabsContent><TabsContent value="audits" className="flex flex-col gap-4"><Filters tab="audits" onChange={update} />{error ? <Alert variant="destructive"><AlertCircleIcon /><AlertTitle>加载失败</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : loading ? <Skeleton className="h-48 w-full" /> : <AuditTable rows={auditRows} />}<Pagination page={page} pageSize={pageSize} total={total} onChange={(p) => update('page', String(p))} onPageSizeChange={(s) => update('pageSize', String(s))} /></TabsContent></Tabs></CardContent></Card></PageShell>
 }
