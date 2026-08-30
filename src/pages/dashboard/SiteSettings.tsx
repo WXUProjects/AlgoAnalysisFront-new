@@ -64,7 +64,7 @@ function buildFormState(
     agentEndpoint: s.agentEndpoint, agentModel: s.agentModel,
     aiEndpoint: s.aiEndpoint, aiModel: s.aiModel,
     upyunBucket: s.upyunBucket, upyunOperator: s.upyunOperator, upyunDomain: s.upyunDomain, upyunScheme: s.upyunScheme,
-    ojLuoguUsername: s.ojLuoguUsername, ojQojUsername: s.ojQojUsername, ojVjudgeUsername: s.ojVjudgeUsername,
+     ojLuoguUsername: s.ojLuoguUsername, ojQojUsername: s.ojQojUsername, ojVjudgeUsername: s.ojVjudgeUsername,
     payfmApiBase: s.payfmApiBase, payfmMerchantNo: s.payfmMerchantNo, payfmPayType: s.payfmPayType,
     backupEnabled: s.backupEnabled,
     backupTime: s.backupTime,
@@ -92,8 +92,8 @@ function buildPristineFromAdmin(d: {
   upyunBucket?: string; upyunOperator?: string; upyunPasswordSet?: boolean
   upyunDomain?: string; upyunScheme?: string
   ojLuoguUsername?: string; ojLuoguPasswordSet?: boolean
-   ojQojUsername?: string; ojQojPasswordSet?: boolean
-   ojVjudgeUsername?: string; ojVjudgePasswordSet?: boolean
+    ojQojUsername?: string; ojQojPasswordSet?: boolean
+    ojVjudgeUsername?: string; ojVjudgePasswordSet?: boolean
   payfmApiBase?: string; payfmMerchantNo?: string; payfmSecretSet?: boolean
   payfmPayType?: string
   backupEnabled?: boolean
@@ -230,14 +230,15 @@ export function DashboardSiteSettings() {
   const [clearOjQojPassword, setClearOjQojPassword] = useState(false)
   const [ojQojStatus, setOjQojStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
   const [ojQojStatusAt, setOjQojStatusAt] = useState(0)
-  const [ojQojErrMsg, setOjQojErrMsg] = useState('')
-  const [ojVjudgeUsername, setOjVjudgeUsername] = useState('')
-  const [ojVjudgePassword, setOjVjudgePassword] = useState('')
-  const [ojVjudgePasswordSet, setOjVjudgePasswordSet] = useState(false)
-  const [clearOjVjudgePassword, setClearOjVjudgePassword] = useState(false)
-  const [ojVjudgeStatus, setOjVjudgeStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
-  const [ojVjudgeStatusAt, setOjVjudgeStatusAt] = useState(0)
-  const [ojVjudgeErrMsg, setOjVjudgeErrMsg] = useState('')
+   const [ojQojErrMsg, setOjQojErrMsg] = useState('')
+   const [ojVjudgeUsername, setOjVjudgeUsername] = useState('')
+   const [ojVjudgePassword, setOjVjudgePassword] = useState('')
+   const [ojVjudgePasswordSet, setOjVjudgePasswordSet] = useState(false)
+   const [clearOjVjudgePassword, setClearOjVjudgePassword] = useState(false)
+   const [ojVjudgeStatus, setOjVjudgeStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
+   const [ojVjudgeErrMsg, setOjVjudgeErrMsg] = useState('')
+   void ojVjudgeStatus
+   void ojVjudgeErrMsg
   const [payfmApiBase, setPayfmApiBase] = useState('')
   const [payfmMerchantNo, setPayfmMerchantNo] = useState('')
   const [payfmSecret, setPayfmSecret] = useState('')
@@ -341,13 +342,6 @@ export function DashboardSiteSettings() {
       setOjQojStatus((d.ojQojStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
       setOjQojStatusAt(d.ojQojStatusAt || 0)
       setOjQojErrMsg(d.ojQojErrMsg || '')
-      setOjVjudgeUsername(d.ojVjudgeUsername || '')
-      setOjVjudgePassword('')
-      setOjVjudgePasswordSet(d.ojVjudgePasswordSet)
-      setClearOjVjudgePassword(false)
-      setOjVjudgeStatus((d.ojVjudgeStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
-      setOjVjudgeStatusAt(d.ojVjudgeStatusAt || 0)
-      setOjVjudgeErrMsg(d.ojVjudgeErrMsg || '')
       setPayfmApiBase(d.payfmApiBase || '')
       setPayfmMerchantNo(d.payfmMerchantNo || '')
       setPayfmSecret('')
@@ -1125,19 +1119,6 @@ export function DashboardSiteSettings() {
                 statusAt: ojQojStatusAt,
                 errMsg: ojQojErrMsg,
                platform: 'QOJ' as const,
-              },
-              {
-                key: 'vjudge',
-                label: 'VirtualOJ（VJudge）',
-                user: ojVjudgeUsername,
-                setUser: setOjVjudgeUsername,
-                pass: ojVjudgePassword,
-                setPass: setOjVjudgePassword,
-                passSet: ojVjudgePasswordSet,
-                status: ojVjudgeStatus,
-                statusAt: ojVjudgeStatusAt,
-                errMsg: ojVjudgeErrMsg,
-                platform: 'VJudge' as const,
               },
             ]).map((oj) => (
               <Collapsible key={oj.key}>

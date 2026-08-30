@@ -180,11 +180,11 @@ export function sectionDirty(
         s.upyunPassword.draft !== base.upyunPassword.draft
     case 'oj':
       return s.ojLuoguUsername !== base.ojLuoguUsername ||
-        s.ojQojUsername !== base.ojQojUsername ||
-        s.ojVjudgeUsername !== base.ojVjudgeUsername ||
+         s.ojQojUsername !== base.ojQojUsername ||
+         s.ojVjudgeUsername !== base.ojVjudgeUsername ||
         s.ojLuoguPassword.draft !== base.ojLuoguPassword.draft ||
-        s.ojQojPassword.draft !== base.ojQojPassword.draft ||
-        s.ojVjudgePassword.draft !== base.ojVjudgePassword.draft
+         s.ojQojPassword.draft !== base.ojQojPassword.draft ||
+         s.ojVjudgePassword.draft !== base.ojVjudgePassword.draft
     case 'payment':
       return s.payfmApiBase !== base.payfmApiBase ||
         s.payfmMerchantNo !== base.payfmMerchantNo ||
