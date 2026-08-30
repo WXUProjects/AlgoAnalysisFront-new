@@ -167,12 +167,16 @@ function SpiderMonitorCard({
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
             <span>题面</span>
-            {canToggleProblem && ['LuoGu', 'CodeForces', 'AtCoder', 'QOJ'].includes(stat.platform) ? (
+            {canToggleProblem ? (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">官方</span>
                 <Switch checked={stat.officialStatementEnabled} disabled={togglingProblem} onCheckedChange={(enabled) => handleSwitchChange('problem', enabled, 'official')} aria-label={`${spiderPlatformLabel(stat.platform)}官方题面`} />
-                <span className="text-xs text-muted-foreground">VirtualOJ</span>
-                <Switch checked={stat.vjudgeStatementEnabled} disabled={togglingProblem} onCheckedChange={(enabled) => handleSwitchChange('problem', enabled, 'vjudge')} aria-label={`${spiderPlatformLabel(stat.platform)}VirtualOJ题面`} />
+                {['LuoGu', 'CodeForces', 'AtCoder', 'QOJ'].includes(stat.platform) ? (
+                  <>
+                    <span className="text-xs text-muted-foreground">VirtualOJ</span>
+                    <Switch checked={stat.vjudgeStatementEnabled} disabled={togglingProblem} onCheckedChange={(enabled) => handleSwitchChange('problem', enabled, 'vjudge')} aria-label={`${spiderPlatformLabel(stat.platform)}VirtualOJ题面`} />
+                  </>
+                ) : null}
               </div>
             ) : null}
           </div>
