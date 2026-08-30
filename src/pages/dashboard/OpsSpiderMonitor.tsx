@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { PlatformUserItem } from '@shared/api'
 import {
@@ -307,6 +307,7 @@ function SpiderMonitorSectionInner() {
   const { can } = useAuth()
   const canViewUsers = canViewSpiderUsers(can)
   const [data, setData] = useState<SpiderPlatformStat[] | null>(null)
+  const pendingSourceChanges = useRef(new Map<string, boolean>())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [toggling, setToggling] = useState<Set<string>>(() => new Set())
@@ -344,7 +345,11 @@ function SpiderMonitorSectionInner() {
       setError(res.message || '爬虫监控加载失败')
       return
     }
-    setData(res.data)
+    setData(res.data.map((item) => ({
+      ...item,
+      officialStatementEnabled: pendingSourceChanges.current.get(`${item.platform}:official`) ?? item.officialStatementEnabled,
+      vjudgeStatementEnabled: pendingSourceChanges.current.get(`${item.platform}:vjudge`) ?? item.vjudgeStatementEnabled,
+    })))
     setError('')
   }, [])
 
@@ -352,19 +357,61 @@ function SpiderMonitorSectionInner() {
     async (stat: SpiderPlatformStat, module: SpiderSyncModule, enabled: boolean, source?: 'official' | 'vjudge') => {
        const toggleKey = `${stat.platform}:${module}:${source || ''}`
        setToggling((current) => new Set(current).add(toggleKey))
-      const platform = spiderPlatformLabel(stat.platform)
+       if (module === 'problem' && source) {
+         pendingSourceChanges.current.set(`${stat.platform}:${source}`, enabled)
+         setData((current) => current?.map((item) => (
+           item.platform !== stat.platform
+             ? item
+             : source === 'official'
+               ? { ...item, officialStatementEnabled: enabled }
+               : { ...item, vjudgeStatementEnabled: enabled }
+         )) || current)
+       }
+       const platform = spiderPlatformLabel(stat.platform)
       const feature = module === 'submit' ? '提交记录同步' : '题面获取'
       const action = enabled ? '恢复' : '暂停'
       const fallbackMessage = spiderToggleFailureMessage(platform, module, enabled)
       try {
         const res = await togglePlatformSync(stat.platform, enabled, module, source)
         if (res.success) {
-          toast.success(`${platform}已${action}${feature}`)
+          toast.success(source ? `${platform}已${enabled ? '开启' : '关闭'}${source === 'official' ? '官方题面' : 'VirtualOJ题面'}` : `${platform}已${action}${feature}`)
           await load()
+          if (module === 'problem' && source) {
+            pendingSourceChanges.current.delete(`${stat.platform}:${source}`)
+            // Keep the controlled Switch responsive even if the monitor read
+            // is briefly served from a stale replica/cache.
+            setData((current) => current?.map((item) => (
+              item.platform !== stat.platform
+                ? item
+                : source === 'official'
+                  ? { ...item, officialStatementEnabled: enabled }
+                  : { ...item, vjudgeStatementEnabled: enabled }
+            )) || current)
+          }
         } else {
+          if (module === 'problem' && source) {
+            pendingSourceChanges.current.delete(`${stat.platform}:${source}`)
+            setData((current) => current?.map((item) => (
+              item.platform !== stat.platform
+                ? item
+                : source === 'official'
+                  ? { ...item, officialStatementEnabled: !enabled }
+                  : { ...item, vjudgeStatementEnabled: !enabled }
+            )) || current)
+          }
           toast.error(res.message || fallbackMessage)
         }
       } catch {
+        if (module === 'problem' && source) {
+          pendingSourceChanges.current.delete(`${stat.platform}:${source}`)
+          setData((current) => current?.map((item) => (
+            item.platform !== stat.platform
+              ? item
+              : source === 'official'
+                ? { ...item, officialStatementEnabled: !enabled }
+                : { ...item, vjudgeStatementEnabled: !enabled }
+          )) || current)
+        }
         toast.error(fallbackMessage)
       } finally {
         setToggling((current) => {
