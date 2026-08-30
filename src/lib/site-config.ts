@@ -40,6 +40,7 @@ export type SiteFormState = {
   upyunScheme: string
   ojLuoguUsername: string
   ojQojUsername: string
+  ojProxyBaseUrl: string
   ojVjudgeUsername: string
   payfmApiBase: string
   payfmMerchantNo: string
@@ -55,6 +56,7 @@ export type SiteFormState = {
   upyunPassword: SecretField
   ojLuoguPassword: SecretField
   ojQojPassword: SecretField
+  ojProxySecret: SecretField
   ojVjudgePassword: SecretField
   payfmSecret: SecretField
 }
@@ -75,6 +77,7 @@ export function buildSectionPayload(
   const upyunPw = secretUpdate(s.upyunPassword)
   const ojLgPw = secretUpdate(s.ojLuoguPassword)
   const ojQojPw = secretUpdate(s.ojQojPassword)
+  const proxySecret = secretUpdate(s.ojProxySecret)
   const ojVjudgePw = secretUpdate(s.ojVjudgePassword)
   const payfmSec = secretUpdate(s.payfmSecret)
 
@@ -118,11 +121,14 @@ export function buildSectionPayload(
   const oj = (): void => {
     out.ojLuoguUsername = s.ojLuoguUsername.trim()
     out.ojQojUsername = s.ojQojUsername.trim()
+    out.ojProxyBaseUrl = s.ojProxyBaseUrl.trim()
     out.ojVjudgeUsername = s.ojVjudgeUsername.trim()
     if (ojLgPw.secret) out.ojLuoguPassword = ojLgPw.secret
     if (ojLgPw.clear) out.clearOjLuoguPassword = true
     if (ojQojPw.secret) out.ojQojPassword = ojQojPw.secret
     if (ojQojPw.clear) out.clearOjQojPassword = true
+    if (proxySecret.secret) out.ojProxySecret = proxySecret.secret
+    if (proxySecret.clear) out.clearOjProxySecret = true
     if (ojVjudgePw.secret) out.ojVjudgePassword = ojVjudgePw.secret
     if (ojVjudgePw.clear) out.clearOjVjudgePassword = true
   }
@@ -181,9 +187,11 @@ export function sectionDirty(
     case 'oj':
       return s.ojLuoguUsername !== base.ojLuoguUsername ||
          s.ojQojUsername !== base.ojQojUsername ||
+         s.ojProxyBaseUrl !== base.ojProxyBaseUrl ||
          s.ojVjudgeUsername !== base.ojVjudgeUsername ||
         s.ojLuoguPassword.draft !== base.ojLuoguPassword.draft ||
          s.ojQojPassword.draft !== base.ojQojPassword.draft ||
+         s.ojProxySecret.draft !== base.ojProxySecret.draft
          s.ojVjudgePassword.draft !== base.ojVjudgePassword.draft
     case 'payment':
       return s.payfmApiBase !== base.payfmApiBase ||

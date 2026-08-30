@@ -47,6 +47,7 @@ function buildFormState(
     upyunDomain: string; upyunScheme: string
     ojLuoguUsername: string; ojLuoguPassword: string; ojLuoguPasswordSet: boolean; clearOjLuoguPassword: boolean
      ojQojUsername: string; ojQojPassword: string; ojQojPasswordSet: boolean; clearOjQojPassword: boolean
+     ojProxyBaseUrl: string; ojProxySecret: string; ojProxySecretSet: boolean; clearOjProxySecret: boolean
      ojVjudgeUsername: string; ojVjudgePassword: string; ojVjudgePasswordSet: boolean; clearOjVjudgePassword: boolean
     payfmApiBase: string; payfmMerchantNo: string; payfmSecret: string; payfmSecretSet: boolean; clearPayfmSecret: boolean
     payfmPayType: string
@@ -65,6 +66,7 @@ function buildFormState(
     aiEndpoint: s.aiEndpoint, aiModel: s.aiModel,
     upyunBucket: s.upyunBucket, upyunOperator: s.upyunOperator, upyunDomain: s.upyunDomain, upyunScheme: s.upyunScheme,
      ojLuoguUsername: s.ojLuoguUsername, ojQojUsername: s.ojQojUsername, ojVjudgeUsername: s.ojVjudgeUsername,
+     ojProxyBaseUrl: s.ojProxyBaseUrl,
     payfmApiBase: s.payfmApiBase, payfmMerchantNo: s.payfmMerchantNo, payfmPayType: s.payfmPayType,
     backupEnabled: s.backupEnabled,
     backupTime: s.backupTime,
@@ -77,6 +79,7 @@ function buildFormState(
     ojLuoguPassword: { draft: s.ojLuoguPassword, alreadySet: s.ojLuoguPasswordSet, clearRequested: s.clearOjLuoguPassword },
      ojQojPassword: { draft: s.ojQojPassword, alreadySet: s.ojQojPasswordSet, clearRequested: s.clearOjQojPassword },
      ojVjudgePassword: { draft: s.ojVjudgePassword, alreadySet: s.ojVjudgePasswordSet, clearRequested: s.clearOjVjudgePassword },
+     ojProxySecret: { draft: s.ojProxySecret, alreadySet: s.ojProxySecretSet, clearRequested: s.clearOjProxySecret },
     payfmSecret: { draft: s.payfmSecret, alreadySet: s.payfmSecretSet, clearRequested: s.clearPayfmSecret },
   }
 }
@@ -94,6 +97,7 @@ function buildPristineFromAdmin(d: {
   ojLuoguUsername?: string; ojLuoguPasswordSet?: boolean
     ojQojUsername?: string; ojQojPasswordSet?: boolean
     ojVjudgeUsername?: string; ojVjudgePasswordSet?: boolean
+    ojProxyBaseUrl?: string; ojProxySecretSet?: boolean
   payfmApiBase?: string; payfmMerchantNo?: string; payfmSecretSet?: boolean
   payfmPayType?: string
   backupEnabled?: boolean
@@ -113,6 +117,7 @@ function buildPristineFromAdmin(d: {
     upyunDomain: d.upyunDomain ?? '', upyunScheme: d.upyunScheme ?? 'http',
      ojLuoguUsername: d.ojLuoguUsername ?? '', ojQojUsername: d.ojQojUsername ?? '',
      ojVjudgeUsername: d.ojVjudgeUsername ?? '',
+     ojProxyBaseUrl: d.ojProxyBaseUrl ?? '',
     payfmApiBase: d.payfmApiBase ?? '', payfmMerchantNo: d.payfmMerchantNo ?? '',
     payfmPayType: d.payfmPayType ?? '', configVersion: d.configVersion ?? 0,
     backupEnabled: Boolean(d.backupEnabled),
@@ -125,6 +130,7 @@ function buildPristineFromAdmin(d: {
     ojLuoguPassword: { draft: '', alreadySet: Boolean(d.ojLuoguPasswordSet), clearRequested: false },
      ojQojPassword: { draft: '', alreadySet: Boolean(d.ojQojPasswordSet), clearRequested: false },
      ojVjudgePassword: { draft: '', alreadySet: Boolean(d.ojVjudgePasswordSet), clearRequested: false },
+     ojProxySecret: { draft: '', alreadySet: Boolean(d.ojProxySecretSet), clearRequested: false },
     payfmSecret: { draft: '', alreadySet: Boolean(d.payfmSecretSet), clearRequested: false },
   }
 }
@@ -237,6 +243,10 @@ export function DashboardSiteSettings() {
    const [clearOjVjudgePassword, setClearOjVjudgePassword] = useState(false)
    const [ojVjudgeStatus, setOjVjudgeStatus] = useState<'unchecked' | 'ok' | 'fail' | 'loading'>('unchecked')
    const [ojVjudgeErrMsg, setOjVjudgeErrMsg] = useState('')
+   const [ojProxyBaseUrl, setOjProxyBaseUrl] = useState('')
+   const [ojProxySecret, setOjProxySecret] = useState('')
+   const [ojProxySecretSet, setOjProxySecretSet] = useState(false)
+   const [clearOjProxySecret, setClearOjProxySecret] = useState(false)
    void ojVjudgeStatus
    void ojVjudgeErrMsg
   const [payfmApiBase, setPayfmApiBase] = useState('')
@@ -342,6 +352,10 @@ export function DashboardSiteSettings() {
       setOjQojStatus((d.ojQojStatus as 'unchecked' | 'ok' | 'fail') || 'unchecked')
       setOjQojStatusAt(d.ojQojStatusAt || 0)
       setOjQojErrMsg(d.ojQojErrMsg || '')
+      setOjProxyBaseUrl(d.ojProxyBaseUrl || '')
+      setOjProxySecret('')
+      setOjProxySecretSet(d.ojProxySecretSet)
+      setClearOjProxySecret(false)
       setPayfmApiBase(d.payfmApiBase || '')
       setPayfmMerchantNo(d.payfmMerchantNo || '')
       setPayfmSecret('')
@@ -406,6 +420,7 @@ export function DashboardSiteSettings() {
       ojLuoguUsername, ojLuoguPassword, ojLuoguPasswordSet, clearOjLuoguPassword,
       ojQojUsername, ojQojPassword, ojQojPasswordSet, clearOjQojPassword,
       ojVjudgeUsername, ojVjudgePassword, ojVjudgePasswordSet, clearOjVjudgePassword,
+      ojProxyBaseUrl, ojProxySecret, ojProxySecretSet, clearOjProxySecret,
       payfmApiBase, payfmMerchantNo, payfmSecret, payfmSecretSet, clearPayfmSecret,
       payfmPayType,
       backupEnabled, backupTime, backupPrefix,
@@ -1092,6 +1107,16 @@ export function DashboardSiteSettings() {
           description="同步用户提交记录"
           footer={<CardSaveButton section="oj" />}
         >
+          <div className="mb-3 grid gap-2 sm:grid-cols-2">
+            <Field className="gap-1">
+              <FieldLabel htmlFor="oj-proxy-base-url">Cloudflare 代理地址</FieldLabel>
+              <Input id="oj-proxy-base-url" value={ojProxyBaseUrl} onChange={(e) => { setOjProxyBaseUrl(e.target.value); bump('oj') }} placeholder="https://proxy.example.workers.dev" autoComplete="off" />
+            </Field>
+            <Field className="gap-1">
+              <FieldLabel htmlFor="oj-proxy-secret">代理密钥</FieldLabel>
+              <Input id="oj-proxy-secret" type="password" value={ojProxySecret} onChange={(e) => { setOjProxySecret(e.target.value); setClearOjProxySecret(false); bump('oj') }} placeholder={ojProxySecretSet ? '已保存；留空表示不修改' : '代理密钥'} autoComplete="new-password" />
+            </Field>
+          </div>
           <FieldGroup className="gap-2">
             {([
               {

@@ -60,6 +60,9 @@ export type SiteAdminConfig = SiteConfig & {
   ojQojUsername: string
   ojQojPasswordMasked: string
   ojQojPasswordSet: boolean
+  ojProxyBaseUrl: string
+  ojProxySecretMasked: string
+  ojProxySecretSet: boolean
   ojVjudgeUsername: string
   ojVjudgePasswordMasked: string
   ojVjudgePasswordSet: boolean
@@ -143,6 +146,9 @@ function normalizeAdmin(raw: Record<string, unknown> | null | undefined): SiteAd
     ojQojUsername: str(d.ojQojUsername),
     ojQojPasswordMasked: str(d.ojQojPasswordMasked),
      ojQojPasswordSet: Boolean(d.ojQojPasswordSet),
+     ojProxyBaseUrl: str(d.ojProxyBaseUrl),
+     ojProxySecretMasked: str(d.ojProxySecretMasked),
+     ojProxySecretSet: Boolean(d.ojProxySecretSet),
      ojVjudgeUsername: str(d.ojVjudgeUsername),
      ojVjudgePasswordMasked: str(d.ojVjudgePasswordMasked),
      ojVjudgePasswordSet: Boolean(d.ojVjudgePasswordSet),

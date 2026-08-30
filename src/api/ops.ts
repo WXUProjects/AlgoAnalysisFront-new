@@ -11,7 +11,7 @@ export interface SubmitInventory {
 
 export type SpiderPlatformStat = SpiderMonitorRes['platforms'][number]
 
-export type SpiderSyncModule = 'submit' | 'problem'
+export type SpiderSyncModule = 'submit' | 'problem' | 'proxy'
 
 export function buildTogglePlatformBody(
   platform: string,
@@ -47,6 +47,7 @@ export function parseSpiderPlatformStat(p: Record<string, unknown>): SpiderPlatf
     submitPaused,
      problemPaused: !((p.officialStatementEnabled == null ? true : bool(p.officialStatementEnabled)) || bool(p.vjudgeStatementEnabled)),
      officialStatementEnabled: true,
+     proxyEnabled: bool(p.proxyEnabled),
      vjudgeStatementEnabled: bool(p.vjudgeStatementEnabled),
     paused: submitPaused,
   }

@@ -629,6 +629,7 @@ export interface SpiderPlatformStat {
   /** 站管是否已暂停该 OJ 的题面获取 */
   problemPaused: boolean
   officialStatementEnabled: boolean
+  proxyEnabled: boolean
   vjudgeStatementEnabled: boolean
   /** @deprecated 兼容字段，值与 submitPaused 相同 */
   paused: boolean
