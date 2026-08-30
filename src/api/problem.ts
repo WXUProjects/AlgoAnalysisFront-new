@@ -92,6 +92,8 @@ function normalizeProblem(raw: Record<string, unknown>): ProblemInfo {
     contentFetchedAt: num(raw.contentFetchedAt),
     analyzedAt: num(raw.analyzedAt),
     analyzedModel: str(raw.analyzedModel),
+    canRefetch: bool(raw.canRefetch),
+    canReanalyze: bool(raw.canReanalyze),
   }
 }
 

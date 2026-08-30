@@ -1753,6 +1753,8 @@ export interface ProblemInfo {
   contentFetchedAt?: number
   analyzedAt?: number
   analyzedModel?: string
+  canRefetch?: boolean
+  canReanalyze?: boolean
   problemType: string
   tags: string[]
   solutions: SolutionMeta[]

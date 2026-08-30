@@ -135,7 +135,7 @@ export function QuestionBankDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { isLogin, can, profile } = useAuth()
+  const { isLogin, can } = useAuth()
   // 题库审查权限：直接保存生效；否则提交审核
   const canReview = can(Perm.ContentProblemReview)
   const [problem, setProblem] = useState<ProblemInfo | null>(null)
@@ -485,8 +485,8 @@ export function QuestionBankDetail() {
 
   const contentEmpty = !problem.contentMd?.trim()
   const tagsEmpty = !problem.tags.length
-  const canRefetch = isLogin && profile?.problemFetchEnabled === true
-  const canReanalyze = isLogin && profile?.problemAiEnabled === true
+  const canRefetch = isLogin && problem.canRefetch === true
+  const canReanalyze = isLogin && problem.canReanalyze === true
 
   async function handleRefetch() {
     if (!problem || action) return
