@@ -99,6 +99,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { useDocumentMeta } from '@/hooks/use-document-meta'
 import { formatTime } from '@/lib/format'
+import { isFreshReanalysisCompletion } from '@/lib/problem-action-poll'
 import { getSubmitLink } from '@/lib/link'
 import { num, str } from '@/lib/http'
 import { cn } from '@/lib/utils'
@@ -519,6 +520,8 @@ export function QuestionBankDetail() {
 
   async function handleReanalyze() {
     if (!problem || action) return
+    const previousAnalyzedAt = problem.analyzedAt ?? 0
+    const requestedAt = Math.floor(Date.now() / 1000)
     setAction('reanalyze')
     const res = await reanalyzeProblem(problem.id)
     if (!res.success) {
@@ -526,10 +529,11 @@ export function QuestionBankDetail() {
       toast.error(res.message || '重新分析失败')
       return
     }
-    startActionPolling('reanalyze', problem.id, problem.contentFetchedAt ?? 0)
+    toast.success('已进入分析队列')
+    startActionPolling('reanalyze', problem.id, previousAnalyzedAt, requestedAt)
   }
 
-  function startActionPolling(kind: 'refetch' | 'reanalyze', problemId: number, previousFetchedAt: number) {
+  function startActionPolling(kind: 'refetch' | 'reanalyze', problemId: number, previousCompletedAt: number, requestedAt = 0) {
     if (actionPollRef.current !== null) window.clearInterval(actionPollRef.current)
     actionStartedAtRef.current = Date.now()
     const poll = async () => {
@@ -552,8 +556,8 @@ export function QuestionBankDetail() {
       setProblem((current) => {
         if (!current || current.id !== problemId || !latest) return current
         const fetched = kind === 'refetch'
-          ? latest.contentMd.trim() !== '' && (latest.contentFetchedAt ?? 0) > previousFetchedAt
-          : latest.status === 'COMPLETED'
+          ? latest.contentMd.trim() !== '' && (latest.contentFetchedAt ?? 0) > previousCompletedAt
+          : isFreshReanalysisCompletion(latest, previousCompletedAt, requestedAt)
         const failed = latest.status === 'FAILED' || latest.status === 'FAILED_PERM'
         if (fetched || failed) {
           if (actionPollRef.current !== null) window.clearInterval(actionPollRef.current)
@@ -562,7 +566,7 @@ export function QuestionBankDetail() {
           if (fetched) toast.success(kind === 'refetch' ? '题面已更新' : '分析已完成')
           else toast.error(kind === 'refetch' ? '题面爬取失败' : '分析失败')
         }
-        return current
+        return fetched || failed ? latest : current
       })
     }
     void poll()
@@ -775,8 +779,8 @@ export function QuestionBankDetail() {
                 )}
                 {!contentEmpty && (
                   <CardDescription>
-                    {problem.contentSource ? `来源：${problem.contentSource === 'vjudge' ? 'VirtualOJ' : problem.contentSource}` : ''}
-                    {problem.contentFetchedAt ? ` · 抓取于 ${formatTime(problem.contentFetchedAt)}` : ''}
+                    {problem.contentSource ? `来源：${problem.contentSource === 'vjudge' ? 'VirtualOJ' : problem.contentSource} ` : ''}
+                    {problem.contentFetchedAt ? `抓取于 ${formatTime(problem.contentFetchedAt)}` : ''}
                   </CardDescription>
                 )}
               </div>

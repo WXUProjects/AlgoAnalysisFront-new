@@ -88,6 +88,7 @@ import {
 import { num, str } from "@/lib/http";
 import { Perm } from "@/lib/permissions";
 import { safeLocalStorage } from "@/lib/safe-storage";
+import { queuedProblemJobs } from "@/lib/problem-queue-jobs";
 
 const PROBLEM_ALERT_ACK_KEY = "goalgo.problem.progress.alertAck";
 
@@ -240,6 +241,14 @@ export function DashboardProblemProgress() {
   const liveJobs = useMemo(() => {
     return data?.activeJobs || [];
   }, [data?.activeJobs]);
+  const queuedJobs = useMemo(
+    () => queuedProblemJobs(data?.inProgress || [], liveJobs),
+    [data?.inProgress, liveJobs],
+  );
+  const workerJobs = useMemo(
+    () => liveJobs.concat(queuedJobs),
+    [liveJobs, queuedJobs],
+  );
   const conversations = data?.conversations || [];
   const runningByStage = useMemo(() => {
     const counts = new Map<string, number>();
@@ -482,10 +491,10 @@ export function DashboardProblemProgress() {
           <CardHeader className="border-b">
             <div>
               <CardTitle className="flex items-center gap-2">
-                正在执行 <Badge variant="outline">{liveJobs.length}</Badge>
+                处理任务 <Badge variant="outline">{workerJobs.length}</Badge>
               </CardTitle>
               <CardDescription>
-                这里只显示 worker 当前实际执行的任务，点击可查看实时输出
+                包含正在执行和排队中的题面获取、AI 分析任务
               </CardDescription>
             </div>
             <CardAction>
@@ -504,9 +513,9 @@ export function DashboardProblemProgress() {
           </CardHeader>
           <CardContent className="p-0">
             <JobTable
-              rows={liveJobs}
+              rows={workerJobs}
               onAnalyzeClick={setSelectedJob}
-              empty="当前没有正在执行的任务"
+              empty="当前没有执行中或排队中的任务"
             />
           </CardContent>
         </Card>
@@ -663,8 +672,8 @@ export function DashboardProblemProgress() {
           <div className="sr-only" aria-live="polite">
             {selectedJob.state === "finished"
               ? "任务已结束"
-              : selectedJob.latestOutput
-                ? "正在接收 AI 输出"
+              : selectedJob.reasoningOutput || selectedJob.latestOutput
+                ? "正在接收 AI 响应"
                 : "等待 AI 输出"}
           </div>
         ) : null}
@@ -712,15 +721,15 @@ export function DashboardProblemProgress() {
               />
               <InfoItem
                 label="输出状态"
-                value={selectedJob?.latestOutput ? "可查看" : selectedJob?.state === "finished" ? "无输出" : "等待输出"}
+                value={selectedJob?.latestOutput ? "已有结果" : selectedJob?.reasoningOutput ? "正在思考" : selectedJob?.state === "finished" ? "无输出" : "等待输出"}
               />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                {selectedJob?.latestOutput ? (
+                {selectedJob?.reasoningOutput || selectedJob?.latestOutput ? (
                   <>
                     <span className="inline-block size-1.5 animate-pulse rounded-full bg-emerald-500" />
-                    实时输出
+                    实时响应
                   </>
                 ) : selectedJob?.state === "finished" ? (
                   <>
@@ -745,21 +754,6 @@ export function DashboardProblemProgress() {
                   <RefreshCw data-icon="inline-start" />
                   刷新
                 </Button>
-                {selectedJob?.latestOutput ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      void navigator.clipboard?.writeText(
-                        String(selectedJob.latestOutput),
-                      );
-                      toast.success("输出已复制");
-                    }}
-                  >
-                    <Copy data-icon="inline-start" />
-                    复制
-                  </Button>
-                ) : null}
                 {num(selectedJob?.id ?? selectedJob?.problemId) ? (
                   <Button variant="outline" size="sm" asChild>
                     <Link
@@ -772,20 +766,27 @@ export function DashboardProblemProgress() {
                 ) : null}
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-muted/30 p-4">
-              <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-6 text-foreground/90">
-                {selectedJob?.latestOutput
-                  ? String(selectedJob.latestOutput)
-                  : selectedJob?.state === "finished"
-                    ? "任务已结束，没有可读取的 AI 输出。"
-                    : "任务正在等待 AI 返回输出。"}
-              </pre>
-            </div>
-            <div className="rounded-lg border bg-muted/20 p-4">
-              <div className="mb-2 text-xs font-medium text-muted-foreground">输入 Prompt</div>
-              <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-6 text-foreground/90">
-                {selectedJob?.prompt ? String(selectedJob.prompt) : "任务尚未进入 AI 执行阶段"}
-              </pre>
+            <div className="min-h-0 flex-1 overflow-auto">
+              <div className="flex flex-col gap-4 pb-1">
+                <TaskTextCard
+                  title="思考过程"
+                  value={str(selectedJob?.reasoningOutput)}
+                  empty={selectedJob?.state === "finished" ? "当前模型未返回思考过程。" : "等待模型返回思考过程。"}
+                  copyLabel="思考过程"
+                />
+                <TaskTextCard
+                  title="最终输出"
+                  value={str(selectedJob?.latestOutput)}
+                  empty={selectedJob?.state === "finished" ? "任务已结束，没有可读取的最终输出。" : "等待模型返回最终输出。"}
+                  copyLabel="最终输出"
+                />
+                <TaskTextCard
+                  title="完整 Prompt"
+                  value={str(selectedJob?.prompt)}
+                  empty="任务尚未进入 AI 执行阶段。"
+                  copyLabel="Prompt"
+                />
+              </div>
             </div>
             {selectedJob?.errorMsg ? (
               <Alert variant="destructive">
@@ -797,12 +798,52 @@ export function DashboardProblemProgress() {
               </Alert>
             ) : null}
             <p className="text-xs text-muted-foreground">
-              任务运行中的流式输出、输入 Prompt 和结束结果会保留 1 小时。
+              任务的原始思考过程、最终输出和完整 Prompt 会在结束后保留 1 小时。
             </p>
           </div>
         </SheetContent>
       </Sheet>
     </PageShell>
+  );
+}
+
+function TaskTextCard({
+  title,
+  value,
+  empty,
+  copyLabel,
+}: {
+  title: string;
+  value: string;
+  empty: string;
+  copyLabel: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        {value ? (
+          <CardAction>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                void navigator.clipboard?.writeText(value);
+                toast.success(`${copyLabel}已复制`);
+              }}
+            >
+              <Copy data-icon="inline-start" />
+              复制
+            </Button>
+          </CardAction>
+        ) : null}
+      </CardHeader>
+      <CardContent>
+        <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-6 text-foreground/90">
+          {value || empty}
+        </pre>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -966,10 +1007,11 @@ function JobTable({
             str(row.title),
             str(row.externalId || id || "-"),
           );
-          const stage = formatPipelineStage(str(row.stage || row.status));
+          const stage = str(row.queueLabel) || formatPipelineStage(str(row.stage || row.status));
           const error = str(row.errorMsg || row.error_msg || row.message);
-          const clickable =
-            str(row.stage) === "analyze" || str(row.status) === "TAGGING";
+          const clickable = !row.queued && (
+            str(row.stage) === "analyze" || str(row.status) === "TAGGING"
+          );
           return (
             <TableRow
               key={`${id}:${str(row.stage || row.status)}:${str(row.updatedAt || row.startedAt || row.time)}:${index}`}

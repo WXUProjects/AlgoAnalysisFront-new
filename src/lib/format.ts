@@ -23,6 +23,10 @@ export function formatCompactNumber(value: unknown): string {
 
 /** unix 秒或毫秒 → 本地时间字符串 */
 export function formatTime(value: unknown): string {
+	if (typeof value === 'string' && value.trim() && !/^\d+(\.\d+)?$/.test(value.trim())) {
+		const parsed = Date.parse(value)
+		if (Number.isFinite(parsed)) return new Date(parsed).toLocaleString('zh-CN')
+	}
   const n = num(value, 0)
   if (!n) return '-'
   const ms = n > 1e12 ? n : n * 1000
