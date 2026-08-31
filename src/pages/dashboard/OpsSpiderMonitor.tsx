@@ -351,7 +351,7 @@ function SpiderMonitorSectionInner() {
        const toggleKey = `${stat.platform}:${module}`
        setToggling((current) => new Set(current).add(toggleKey))
        const platform = spiderPlatformLabel(stat.platform)
-      const feature = module === 'submit' ? '提交记录同步' : '题面获取'
+       const feature = module === 'submit' ? '提交记录同步' : module === 'problem' ? '题面同步' : '代理'
       const action = enabled ? '恢复' : '暂停'
       const fallbackMessage = spiderToggleFailureMessage(platform, module, enabled)
       try {
