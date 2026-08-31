@@ -18,9 +18,10 @@ type Props = { canWrite: boolean }
 
 export function OpsConcurrencyCard({ canWrite }: Props) {
   const [spider, setSpider] = useState('4')
+  const [fetch, setFetch] = useState('4')
   const [analyze, setAnalyze] = useState('4')
   const [version, setVersion] = useState(0)
-  const [saved, setSaved] = useState('4:4')
+  const [saved, setSaved] = useState('4:4:4')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -33,9 +34,11 @@ export function OpsConcurrencyCard({ canWrite }: Props) {
     }
     const nextSpider = String(res.data.spiderConcurrency)
     const nextAnalyze = String(res.data.problemAnalyzeConcurrency)
+    const nextFetch = String(res.data.problemFetchConcurrency)
     setSpider(nextSpider)
+    setFetch(nextFetch)
     setAnalyze(nextAnalyze)
-    setSaved(`${nextSpider}:${nextAnalyze}`)
+    setSaved(`${nextSpider}:${nextFetch}:${nextAnalyze}`)
     setVersion(res.data.configVersion)
   }
 
@@ -43,8 +46,9 @@ export function OpsConcurrencyCard({ canWrite }: Props) {
 
   async function save() {
     const spiderConcurrency = Number(spider)
+    const problemFetchConcurrency = Number(fetch)
     const problemAnalyzeConcurrency = Number(analyze)
-    if (![spiderConcurrency, problemAnalyzeConcurrency].every((value) => Number.isInteger(value) && value >= 1 && value <= 32)) {
+    if (![spiderConcurrency, problemFetchConcurrency, problemAnalyzeConcurrency].every((value) => Number.isInteger(value) && value >= 1 && value <= 32)) {
       toast.error('并发数须为 1 到 32 的整数')
       return
     }
@@ -53,6 +57,7 @@ export function OpsConcurrencyCard({ canWrite }: Props) {
       section: 'ops',
       expectedConfigVersion: version,
       spiderConcurrency,
+      problemFetchConcurrency,
       problemAnalyzeConcurrency,
     })
     setSaving(false)
@@ -68,14 +73,18 @@ export function OpsConcurrencyCard({ canWrite }: Props) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">运行并发</CardTitle>
-        <CardDescription>调整同步和题库分析同时执行的任务数</CardDescription>
+      <CardDescription>分别调整三类后台任务的同时执行数</CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? <Skeleton className="h-16 w-full" /> : (
-          <FieldGroup className="grid gap-3 sm:grid-cols-2">
+          <FieldGroup className="grid gap-3 sm:grid-cols-3">
             <Field>
               <FieldLabel htmlFor="spider-concurrency">OJ 提交同步</FieldLabel>
                <Input id="spider-concurrency" type="number" min={1} max={32} step={1} value={spider} disabled={!canWrite || saving} onChange={(event) => setSpider(event.target.value)} />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="problem-fetch-concurrency">抓取题面</FieldLabel>
+              <Input id="problem-fetch-concurrency" type="number" min={1} max={32} step={1} value={fetch} disabled={!canWrite || saving} onChange={(event) => setFetch(event.target.value)} />
             </Field>
             <Field>
               <FieldLabel htmlFor="problem-analyze-concurrency">题库 AI 分析</FieldLabel>
@@ -86,7 +95,7 @@ export function OpsConcurrencyCard({ canWrite }: Props) {
       </CardContent>
       {canWrite ? (
         <CardFooter>
-          <Button type="button" size="sm" disabled={loading || saving || `${spider}:${analyze}` === saved} onClick={() => void save()}>
+          <Button type="button" size="sm" disabled={loading || saving || `${spider}:${fetch}:${analyze}` === saved} onClick={() => void save()}>
             {saving ? '保存中…' : '保存'}
           </Button>
         </CardFooter>

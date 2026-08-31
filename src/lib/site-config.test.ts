@@ -12,7 +12,7 @@ function sec(draft: string, alreadySet = false, clearRequested = false): SecretF
 }
 
 /** 全量 Secret 字段默认空（未设置） */
-function allSecs(overrides: Partial<Record<'smtpPassword' | 'agentSecret' | 'aiSecret' | 'upyunPassword' | 'ojLuoguPassword' | 'ojQojPassword' | 'payfmSecret', SecretField>> = {}) {
+function allSecs(overrides: Partial<Record<'smtpPassword' | 'agentSecret' | 'aiSecret' | 'upyunPassword' | 'ojLuoguPassword' | 'ojQojPassword' | 'ojProxySecret' | 'ojVjudgePassword' | 'payfmSecret', SecretField>> = {}) {
   const empty = sec('')
   return {
     smtpPassword: empty,
@@ -21,6 +21,8 @@ function allSecs(overrides: Partial<Record<'smtpPassword' | 'agentSecret' | 'aiS
     upyunPassword: empty,
     ojLuoguPassword: empty,
     ojQojPassword: empty,
+    ojProxySecret: empty,
+    ojVjudgePassword: empty,
     payfmSecret: empty,
     ...overrides,
   }
@@ -34,7 +36,8 @@ function allScalars(overrides: Record<string, unknown> = {}) {
     adminNotifyEmails: '', opsNotifyEmails: '', dataDiskPath: '',
     agentEndpoint: '', agentModel: '', aiEndpoint: '', aiModel: '',
     upyunBucket: '', upyunOperator: '', upyunDomain: '', upyunScheme: 'http',
-    ojLuoguUsername: '', ojQojUsername: '',
+     ojLuoguUsername: '', ojQojUsername: '',
+     ojProxyBaseUrl: '', ojVjudgeUsername: '',
     payfmApiBase: '', payfmMerchantNo: '', payfmPayType: '', backupEnabled: false, backupTime: '02:00', backupPrefix: '',
     configVersion: 0,
   }

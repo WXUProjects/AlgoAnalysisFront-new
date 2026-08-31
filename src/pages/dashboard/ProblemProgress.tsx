@@ -102,7 +102,18 @@ export function DashboardProblemProgress() {
   const [failedPage, setFailedPage] = useState(1)
   const failedPageSize = 20
   const [selectedJobId, setSelectedJobId] = useState(0)
-  const selectedJob = (data?.activeJobs || []).find((job) => num(job.problemId ?? job.id) === selectedJobId) || null
+  const processingJobs: Record<string, unknown>[] = (() => {
+    const live = data?.activeJobs || []
+    const liveIds = new Set(live.map((job) => num(job.problemId ?? job.id)))
+    const queued = (data?.inProgress || [])
+      .filter((job) => !liveIds.has(num(job.problemId ?? job.id)))
+      .map((job) => ({
+        ...job,
+        stage: str(job.status) === 'FETCHING' ? 'fetch' : 'analyze',
+      }))
+    return [...live, ...queued]
+  })()
+  const selectedJob = processingJobs.find((job) => num(job.problemId ?? job.id) === selectedJobId) || null
   const [hiddenPermIds, setHiddenPermIds] = useState<Set<number>>(() =>
     readHiddenIds(HIDDEN_PERM_KEY),
   )
@@ -398,9 +409,9 @@ export function DashboardProblemProgress() {
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {(['problem_fetch', 'problem_analyze'] as const).map((name) => {
+        {(['spider', 'problem_fetch', 'problem_analyze'] as const).map((name) => {
           const q = queueMap[name]
-          const label = name === 'problem_fetch' ? '抓取题面' : 'AI 分析'
+          const label = name === 'spider' ? 'OJ 提交同步' : name === 'problem_fetch' ? '抓取题面' : 'AI 分析'
           return (
             <Card key={name} className="gap-1 py-3">
               <CardHeader className="px-3 py-0">
@@ -435,12 +446,12 @@ export function DashboardProblemProgress() {
           <CardTitle className="text-base">
             正在处理
             <span className="ml-2 text-sm font-normal text-muted-foreground">
-              当前 {data?.activeJobs?.length ?? 0} 题
+              当前 {processingJobs.length} 题
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <JobTable rows={data?.activeJobs || []} onAnalyzeClick={(job) => setSelectedJobId(num(job.problemId ?? job.id))} />
+          <JobTable rows={processingJobs} onAnalyzeClick={(job) => setSelectedJobId(num(job.problemId ?? job.id))} />
         </CardContent>
       </Card>
 
