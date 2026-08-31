@@ -75,11 +75,11 @@ export function OpsConcurrencyCard({ canWrite }: Props) {
           <FieldGroup className="grid gap-3 sm:grid-cols-2">
             <Field>
               <FieldLabel htmlFor="spider-concurrency">OJ 提交同步</FieldLabel>
-              <Input id="spider-concurrency" type="number" min={1} max={32} step={1} value={spider} disabled={!canWrite || saving} onChange={(event) => setSpider(event.target.value)} />
+               <Input id="spider-concurrency" type="number" min={1} max={32} step={1} value={spider} disabled={!canWrite || saving} onChange={(event) => setSpider(event.target.value)} />
             </Field>
             <Field>
               <FieldLabel htmlFor="problem-analyze-concurrency">题库 AI 分析</FieldLabel>
-              <Input id="problem-analyze-concurrency" type="number" min={1} max={32} step={1} value={analyze} disabled={!canWrite || saving} onChange={(event) => setAnalyze(event.target.value)} />
+               <Input id="problem-analyze-concurrency" type="number" min={1} max={32} step={1} value={analyze} disabled={!canWrite || saving} onChange={(event) => setAnalyze(event.target.value)} />
             </Field>
           </FieldGroup>
         )}

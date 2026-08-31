@@ -47,6 +47,8 @@ import { cleanProblemTitle, formatPipelineStage, formatTime } from '@/lib/format
 import { num, str } from '@/lib/http'
 import { Perm } from '@/lib/permissions'
 import { safeLocalStorage } from '@/lib/safe-storage'
+import { OpsConcurrencyCard } from '@/components/ops-concurrency-card'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Pagination } from '@/components/pagination'
 
 /** 本地隐藏的失败列表题目 ID，不改后端状态 */
@@ -99,6 +101,8 @@ export function DashboardProblemProgress() {
   const [busy, setBusy] = useState(false)
   const [failedPage, setFailedPage] = useState(1)
   const failedPageSize = 20
+  const [selectedJobId, setSelectedJobId] = useState(0)
+  const selectedJob = (data?.activeJobs || []).find((job) => num(job.problemId ?? job.id) === selectedJobId) || null
   const [hiddenPermIds, setHiddenPermIds] = useState<Set<number>>(() =>
     readHiddenIds(HIDDEN_PERM_KEY),
   )
@@ -233,7 +237,8 @@ export function DashboardProblemProgress() {
   )
 
   return (
-    <PageShell>
+      <PageShell>
+      {canProblemOps ? <OpsConcurrencyCard canWrite={can(Perm.SiteConfigWrite)} /> : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-semibold">题面处理</h3>
@@ -435,9 +440,24 @@ export function DashboardProblemProgress() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <JobTable rows={data?.activeJobs || []} />
+          <JobTable rows={data?.activeJobs || []} onAnalyzeClick={(job) => setSelectedJobId(num(job.problemId ?? job.id))} />
         </CardContent>
       </Card>
+
+      <Sheet open={Boolean(selectedJob)} onOpenChange={(open) => { if (!open) setSelectedJobId(0) }}>
+        <SheetContent className="w-full sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle>{str(selectedJob?.title, 'AI 分析')}</SheetTitle>
+            <SheetDescription>{str(selectedJob?.platform)} · {str(selectedJob?.externalId)} · 分析中</SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-col gap-3 px-4 pb-4">
+            <div className="text-xs text-muted-foreground">AI 最新输出</div>
+            <pre className="max-h-[65vh] overflow-auto whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm leading-6">
+              {str(selectedJob?.latestOutput, '正在等待 AI 输出…')}
+            </pre>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Card className="gap-0 py-0 overflow-hidden">
         <CardHeader className="px-4 py-3 border-b">
@@ -596,9 +616,11 @@ export function DashboardProblemProgress() {
 function JobTable({
   rows,
   showError = false,
+  onAnalyzeClick,
 }: {
   rows: Record<string, unknown>[]
   showError?: boolean
+  onAnalyzeClick?: (row: Record<string, unknown>) => void
 }) {
   if (!rows.length) {
     return <p className="p-4 text-sm text-muted-foreground">暂时没有记录</p>
@@ -624,7 +646,7 @@ function JobTable({
           const stage = formatPipelineStage(str(r.stage || r.status))
           const errorMsg = str(r.errorMsg || r.error_msg || r.message)
           return (
-            <TableRow key={`${id || 'unknown'}:${str(r.stage || r.status)}:${str(r.updatedAt || r.startedAt || r.time)}`}>
+            <TableRow key={`${id || 'unknown'}:${str(r.stage || r.status)}:${str(r.updatedAt || r.startedAt || r.time)}`} onClick={() => str(r.stage) === 'analyze' ? onAnalyzeClick?.(r) : undefined} className={str(r.stage) === 'analyze' ? 'cursor-pointer' : undefined}>
               <TableCell>
                 {id ? (
                   <Link
