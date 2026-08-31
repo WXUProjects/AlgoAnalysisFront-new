@@ -529,11 +529,15 @@ export function QuestionBankDetail() {
       toast.error(res.message || '重新分析失败')
       return
     }
-    toast.success('已进入分析队列')
     startActionPolling('reanalyze', problem.id, previousAnalyzedAt, requestedAt)
   }
 
-  function startActionPolling(kind: 'refetch' | 'reanalyze', problemId: number, previousCompletedAt: number, requestedAt = 0) {
+  function startActionPolling(
+    kind: 'refetch' | 'reanalyze',
+    problemId: number,
+    previousCompletedAt: number,
+    requestedAt = 0,
+  ) {
     if (actionPollRef.current !== null) window.clearInterval(actionPollRef.current)
     actionStartedAtRef.current = Date.now()
     const poll = async () => {
@@ -546,11 +550,15 @@ export function QuestionBankDetail() {
         actionPollBusyRef.current = false
       }
       if (!actionAliveRef.current) return
-      if (String(id) !== String(problemId) || Date.now() - actionStartedAtRef.current > 120_000) {
+      if (
+        String(id) !== String(problemId) ||
+        (kind === 'refetch' &&
+          Date.now() - actionStartedAtRef.current > 120_000)
+      ) {
         if (actionPollRef.current !== null) window.clearInterval(actionPollRef.current)
         actionPollRef.current = null
         setAction(null)
-        toast.error('处理时间较长，请稍后刷新查看结果')
+        if (kind === 'refetch') toast.error('处理时间较长，请稍后刷新查看结果')
         return
       }
       setProblem((current) => {
@@ -1042,7 +1050,6 @@ export function QuestionBankDetail() {
             </div>
             {canReanalyze && (
               <Button type="button" className="shrink-0" size="sm" variant="outline" disabled={action !== null || !problem.contentMd?.trim()} onClick={() => void handleReanalyze()}>
-                {action === 'reanalyze' ? <Spinner data-icon="inline-start" /> : null}
                 重新分析
               </Button>
             )}
@@ -1069,7 +1076,6 @@ export function QuestionBankDetail() {
               <CardDescription>还没有分析结果</CardDescription>
             </div>
             <Button type="button" className="shrink-0" size="sm" variant="outline" disabled={action !== null || !problem.contentMd?.trim()} onClick={() => void handleReanalyze()}>
-              {action === 'reanalyze' ? <Spinner data-icon="inline-start" /> : null}
               重新分析
             </Button>
           </CardHeader>

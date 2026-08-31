@@ -237,7 +237,7 @@ export function DashboardProblemProgress() {
     setAlertAcknowledgement(next);
   }
   // The processing table is strictly for worker execution. Queue-waiting rows
-  // remain represented by queue counts and are not shown as active jobs.
+  // are represented by the queue counts above, not inferred from inProgress.
   const liveJobs = useMemo(() => {
     return data?.activeJobs || [];
   }, [data?.activeJobs]);
@@ -494,7 +494,7 @@ export function DashboardProblemProgress() {
                 处理任务 <Badge variant="outline">{workerJobs.length}</Badge>
               </CardTitle>
               <CardDescription>
-                包含正在执行和排队中的题面获取、AI 分析任务
+                当前正在执行或待处理的题面获取、AI 分析任务
               </CardDescription>
             </div>
             <CardAction>
@@ -515,7 +515,7 @@ export function DashboardProblemProgress() {
             <JobTable
               rows={workerJobs}
               onAnalyzeClick={setSelectedJob}
-              empty="当前没有执行中或排队中的任务"
+              empty="当前没有执行中或待处理的任务"
             />
           </CardContent>
         </Card>

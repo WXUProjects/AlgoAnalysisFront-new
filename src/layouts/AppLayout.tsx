@@ -48,6 +48,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { EmergencyDialogHost } from '@/components/emergency-dialog'
 import { NotificationInbox } from '@/components/notification-inbox'
 import { PrivacySetupDialog } from '@/components/privacy-setup-dialog'
+import { RouteScrollRestoration } from '@/components/route-scroll-restoration'
 import { SiteFooter } from '@/components/site-footer'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
@@ -574,6 +575,7 @@ function AppLayoutInner() {
               </Link>
             </div>
           )}
+          <RouteScrollRestoration />
           <main
             data-app-scroll-container=""
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto"

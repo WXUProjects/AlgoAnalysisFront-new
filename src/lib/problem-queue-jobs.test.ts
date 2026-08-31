@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { queuedProblemJobs } from './problem-queue-jobs'
 
-test('derives queued fetch and analysis rows with exact labels', () => {
+test('derives pending fetch and analysis rows without calling them queued', () => {
   const rows = queuedProblemJobs(
     [
       { id: 1, status: 'FETCHING', title: 'fetch' },
@@ -15,8 +15,8 @@ test('derives queued fetch and analysis rows with exact labels', () => {
   assert.deepEqual(
     rows.map((row) => [row.id, row.queueLabel, row.queued]),
     [
-      [1, '题面获取 · 排队中', true],
-      [2, 'AI 分析 · 排队中', true],
+      [1, '题面获取 · 待处理', true],
+      [2, 'AI 分析 · 待处理', true],
     ],
   )
 })

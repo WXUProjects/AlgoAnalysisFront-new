@@ -18,7 +18,8 @@ export function createScrollPositionStore(): ScrollPositionStore {
 }
 
 export function getScrollAction(
-  navigationType: 'POP' | 'PUSH' | 'REPLACE',
+  navigationType: string,
+  position?: ScrollPosition,
 ): 'restore' | 'top' {
-  return navigationType === 'POP' ? 'restore' : 'top'
+  return navigationType === 'POP' && position ? 'restore' : 'top'
 }

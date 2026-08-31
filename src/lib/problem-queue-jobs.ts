@@ -13,11 +13,13 @@ export function queuedProblemJobs(
     const id = jobId(row)
     if (!id || activeIds.has(id)) return []
     const status = String(row.status || '')
-    const queueLabel = status === 'FETCHING'
-      ? '题面获取 · 排队中'
+    const pendingLabel = status === 'FETCHING'
+      ? '题面获取 · 待处理'
       : status === 'TAGGING'
-        ? 'AI 分析 · 排队中'
+        ? 'AI 分析 · 待处理'
         : ''
-    return queueLabel ? [{ ...row, id, queued: true, queueLabel }] : []
+    return pendingLabel
+      ? [{ ...row, id, queued: true, queueLabel: pendingLabel }]
+      : []
   })
 }

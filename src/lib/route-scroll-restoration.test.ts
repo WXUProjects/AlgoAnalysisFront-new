@@ -11,7 +11,15 @@ test('stores scroll positions independently for each history entry', () => {
 })
 
 test('restores only on POP navigation', () => {
-  assert.equal(getScrollAction('POP'), 'restore')
+  assert.equal(getScrollAction('POP', { container: 840, window: 12 }), 'restore')
   assert.equal(getScrollAction('PUSH'), 'top')
   assert.equal(getScrollAction('REPLACE'), 'top')
+})
+
+test('returns to the top when a POP position is unavailable', () => {
+  assert.equal(getScrollAction('POP'), 'top')
+})
+
+test('returns to the top for an unknown navigation type', () => {
+  assert.equal(getScrollAction('UNKNOWN'), 'top')
 })
