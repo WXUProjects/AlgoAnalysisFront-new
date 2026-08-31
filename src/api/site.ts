@@ -289,6 +289,10 @@ export type VerifyOjResult = {
   errorDetail: string
 }
 
+export async function testOjProxy(baseUrl: string): Promise<ApiResult<unknown>> {
+  return post(endpoints.user.site.testOjProxy, { baseUrl })
+}
+
 export async function verifyOjCredential(body: {
   platform: string
   username?: string

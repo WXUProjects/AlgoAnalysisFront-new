@@ -111,6 +111,7 @@ export const endpoints = {
       visitPing: `${API_PREFIX}/user/site/visit-ping`,
       accessStats: `${API_PREFIX}/user/site/access-stats`,
       verifyOj: `${API_PREFIX}/user/site/verify-oj`,
+      testOjProxy: `${API_PREFIX}/user/site/test-proxy`,
     },
     tickets: {
       current: `${API_PREFIX}/user/tickets/current`,

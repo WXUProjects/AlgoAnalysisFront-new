@@ -5,6 +5,7 @@ import {
   testSiteEmail,
   updateSiteConfig,
   verifyOjCredential,
+  testOjProxy,
 } from '@/api/site'
 import { uploadImage } from '@/api/upload'
 import { useAuth } from '@/auth/AuthContext'
@@ -245,8 +246,9 @@ export function DashboardSiteSettings() {
    const [ojVjudgeErrMsg, setOjVjudgeErrMsg] = useState('')
    const [ojProxyBaseUrl, setOjProxyBaseUrl] = useState('')
    const [ojProxySecret, setOjProxySecret] = useState('')
-   const [ojProxySecretSet, setOjProxySecretSet] = useState(false)
-   const [clearOjProxySecret, setClearOjProxySecret] = useState(false)
+  const [ojProxySecretSet, setOjProxySecretSet] = useState(false)
+  const [clearOjProxySecret, setClearOjProxySecret] = useState(false)
+  const [testingOjProxy, setTestingOjProxy] = useState(false)
    void ojVjudgeStatus
    void ojVjudgeErrMsg
   const [payfmApiBase, setPayfmApiBase] = useState('')
@@ -1115,6 +1117,7 @@ export function DashboardSiteSettings() {
             <Field className="gap-1">
               <FieldLabel htmlFor="oj-proxy-secret">代理密钥</FieldLabel>
               <Input id="oj-proxy-secret" type="password" value={ojProxySecret} onChange={(e) => { setOjProxySecret(e.target.value); setClearOjProxySecret(false); bump('oj') }} placeholder={ojProxySecretSet ? '已保存；留空表示不修改' : '代理密钥'} autoComplete="new-password" />
+              <Button type="button" variant="outline" size="sm" disabled={testingOjProxy || !ojProxyBaseUrl.trim()} onClick={async () => { setTestingOjProxy(true); const r = await testOjProxy(ojProxyBaseUrl.trim()); setTestingOjProxy(false); r.success ? toast.success('代理连接正常') : toast.error(r.message || '代理连接失败') }}>检测链接</Button>
             </Field>
           </div>
           <FieldGroup className="gap-2">
