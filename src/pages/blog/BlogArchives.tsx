@@ -7,6 +7,32 @@ import type { BlogArticle } from '@shared/api'
 
 type YearGroup = { year: number; items: { article: BlogArticle; month: number; day: number }[] }
 
+type BlogListPage = Awaited<ReturnType<typeof listBlogByUsername>>
+
+export async function loadAllBlogArticles(
+  username: string,
+  fetchPage: typeof listBlogByUsername = listBlogByUsername,
+): Promise<{ list: BlogArticle[]; success: boolean; message: string }> {
+  const pageSize = 50
+  const first = await fetchPage({ username, page: 1, pageSize })
+  if (!first.success || !first.data) {
+    return { list: [], success: false, message: first.message }
+  }
+
+  const list = [...first.data.list]
+  const total = Math.max(first.data.total, list.length)
+  const pageCount = Math.ceil(total / pageSize)
+  for (let page = 2; page <= pageCount; page += 1) {
+    const next: BlogListPage = await fetchPage({ username, page, pageSize })
+    if (!next.success || !next.data) {
+      return { list, success: false, message: next.message }
+    }
+    list.push(...next.data.list)
+    if (next.data.list.length === 0) break
+  }
+  return { list, success: true, message: first.message }
+}
+
 export function BlogArchivesPage() {
   const { username, theme } = useOutletContext<BlogOutletContext>()
   const [list, setList] = useState<BlogArticle[]>([])
@@ -16,14 +42,9 @@ export function BlogArchivesPage() {
     let cancelled = false
     ;(async () => {
       setLoading(true)
-      // pull enough for archives view
-      const res = await listBlogByUsername({
-        username,
-        page: 1,
-        pageSize: 100,
-      })
+      const res = await loadAllBlogArticles(username)
       if (cancelled) return
-      setList(res.data?.list || [])
+      setList(res.list)
       setLoading(false)
     })()
     return () => {
