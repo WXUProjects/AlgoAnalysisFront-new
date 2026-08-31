@@ -184,6 +184,19 @@ export function QuestionBankDetail() {
   >([])
   const [contestsSheetOpen, setContestsSheetOpen] = useState(false)
   const [action, setAction] = useState<'refetch' | 'reanalyze' | null>(null)
+  const actionPollRef = useRef<number | null>(null)
+  const actionStartedAtRef = useRef(0)
+  const actionPollBusyRef = useRef(false)
+  const actionAliveRef = useRef(true)
+
+  useEffect(() => {
+    actionAliveRef.current = true
+    return () => {
+      actionAliveRef.current = false
+      if (actionPollRef.current !== null) window.clearInterval(actionPollRef.current)
+      actionPollRef.current = null
+    }
+  }, [])
 
   const [addSetOpen, setAddSetOpen] = useState(false)
   const [mySets, setMySets] = useState<ProblemsetInfo[]>([])
@@ -492,28 +505,66 @@ export function QuestionBankDetail() {
 
   async function handleRefetch() {
     if (!problem || action) return
+    const previousFetchedAt = problem.contentFetchedAt ?? 0
     setAction('refetch')
     const res = await refetchProblem(problem.id)
-    setAction(null)
     if (!res.success) {
+      setAction(null)
       toast.error(res.message || '重新爬取失败')
       return
     }
-    toast.success('已开始重新爬取题面')
-    window.setTimeout(() => void loadProblem(), 1200)
+    startActionPolling('refetch', problem.id, previousFetchedAt)
   }
 
   async function handleReanalyze() {
     if (!problem || action) return
     setAction('reanalyze')
     const res = await reanalyzeProblem(problem.id)
-    setAction(null)
     if (!res.success) {
+      setAction(null)
       toast.error(res.message || '重新分析失败')
       return
     }
-    toast.success('已开始重新分析')
-    window.setTimeout(() => void loadProblem(), 1200)
+    startActionPolling('reanalyze', problem.id, problem.contentFetchedAt ?? 0)
+  }
+
+  function startActionPolling(kind: 'refetch' | 'reanalyze', problemId: number, previousFetchedAt: number) {
+    if (actionPollRef.current !== null) window.clearInterval(actionPollRef.current)
+    actionStartedAtRef.current = Date.now()
+    const poll = async () => {
+      if (!actionAliveRef.current || actionPollBusyRef.current) return
+      actionPollBusyRef.current = true
+      try {
+        await loadProblem()
+      } finally {
+        actionPollBusyRef.current = false
+      }
+      if (!actionAliveRef.current) return
+      if (String(id) !== String(problemId) || Date.now() - actionStartedAtRef.current > 120_000) {
+        if (actionPollRef.current !== null) window.clearInterval(actionPollRef.current)
+        actionPollRef.current = null
+        setAction(null)
+        toast.error('处理时间较长，请稍后刷新查看结果')
+        return
+      }
+      setProblem((current) => {
+        if (!current || current.id !== problemId) return current
+        const fetched = kind === 'refetch'
+          ? current.contentMd.trim() !== '' && (current.contentFetchedAt ?? 0) > previousFetchedAt
+          : current.status === 'COMPLETED'
+        const failed = current.status === 'FAILED' || current.status === 'FAILED_PERM'
+        if (fetched || failed) {
+          if (actionPollRef.current !== null) window.clearInterval(actionPollRef.current)
+          actionPollRef.current = null
+          setAction(null)
+          if (fetched) toast.success(kind === 'refetch' ? '题面已更新' : '分析已完成')
+          else toast.error(kind === 'refetch' ? '题面爬取失败' : '分析失败')
+        }
+        return current
+      })
+    }
+    void poll()
+    actionPollRef.current = window.setInterval(() => void poll(), 2_000)
   }
 
   return (

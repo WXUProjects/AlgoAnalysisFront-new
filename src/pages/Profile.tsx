@@ -100,7 +100,7 @@ import {
 } from '@/lib/contest-nav'
 
 export function Profile() {
-  const { user, isLogin, logout, currentOrg } = useAuth()
+  const { user, isLogin, logout, currentOrg, sync } = useAuth()
   /** 支付是否完整配置（决定会员入口显隐） */
   const { config: siteConfig } = useSiteConfig()
   const { username: routeUsername } = useParams<{ username?: string }>()
@@ -512,6 +512,13 @@ export function Profile() {
       if (res.data.code === 0) toast.success(res.data.message)
       else toast.error(res.data.message)
       loadRefreshStatus()
+      if (res.data.code === 0 && isSelf) {
+        // The crawler is queued asynchronously; refresh once after it has had
+        // time to write the new rating and submission cursor.
+        window.setTimeout(() => {
+          void sync({ forceProfile: true })
+        }, 2500)
+      }
     } else {
       toast.error(res.message || '刷新失败，稍后再试')
     }
