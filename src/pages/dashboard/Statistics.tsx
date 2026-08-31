@@ -1,18 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { toast } from 'sonner'
-import { listGroups } from '@/api/group'
-import { listSquads } from '@/api/squad'
-import { listProfiles } from '@/api/profile'
-import { listJoinRequests } from '@/api/org'
-import { updateAllSpiders } from '@/api/spider'
-import { getHeatmap, getPeriod, getRank } from '@/api/statistic'
-import type { HeatmapItem, PeriodData, StatisticRankItem } from '@shared/api'
-import { useAuth } from '@/auth/AuthContext'
-import { PageShell } from '@/components/page-shell'
-import { CoachWeekPanel } from '@/pages/dashboard/CoachWeekPanel'
-import { OrgTrainingReportCard } from '@/pages/dashboard/OrgTrainingReportCard'
-import { TrendChart } from '@/components/charts/trend-chart'
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
+import { listGroups } from "@/api/group";
+import { listSquads } from "@/api/squad";
+import { listProfiles } from "@/api/profile";
+import { listJoinRequests } from "@/api/org";
+import { updateAllSpiders } from "@/api/spider";
+import { getHeatmap, getPeriod, getRank } from "@/api/statistic";
+import type { HeatmapItem, PeriodData, StatisticRankItem } from "@shared/api";
+import { useAuth } from "@/auth/AuthContext";
+import { PageShell } from "@/components/page-shell";
+import { CoachWeekPanel } from "@/pages/dashboard/CoachWeekPanel";
+import { OrgTrainingReportCard } from "@/pages/dashboard/OrgTrainingReportCard";
+import { OrgRankSheet } from "@/pages/dashboard/OrgRankSheet";
+import { TrendChart } from "@/components/charts/trend-chart";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,20 +24,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Spinner } from '@/components/ui/spinner'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+} from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   sumHeatmap,
   computeActiveDays,
@@ -50,96 +56,101 @@ import {
   computeNoAcMembers,
   computeWeekdayDistribution,
   WEEKDAY_LABELS,
-} from '@/lib/dashboard-metrics'
-import { Perm } from '@/lib/permissions'
-import { OrgRole } from '@/lib/roles'
-import { cn } from '@/lib/utils'
+} from "@/lib/dashboard-metrics";
+import { Perm } from "@/lib/permissions";
+import { OrgRole } from "@/lib/roles";
+import { cn } from "@/lib/utils";
 import {
   daysAgoYmd,
   formatCompactNumber,
   todayYmd,
   ymdToDateKey,
-} from '@/lib/format'
+} from "@/lib/format";
 
 const TIME_RANGES = [
-  { value: '7', label: '7 天', days: 7 },
-  { value: '30', label: '30 天', days: 30 },
-  { value: '90', label: '90 天', days: 90 },
-] as const
+  { value: "7", label: "7 天", days: 7 },
+  { value: "30", label: "30 天", days: 30 },
+  { value: "90", label: "90 天", days: 90 },
+] as const;
 
-type TimeRangeValue = (typeof TIME_RANGES)[number]['value']
+type TimeRangeValue = (typeof TIME_RANGES)[number]["value"];
 
 function rangeDays(v: TimeRangeValue): number {
-  return TIME_RANGES.find((r) => r.value === v)?.days ?? 30
+  return TIME_RANGES.find((r) => r.value === v)?.days ?? 30;
 }
 
 function fmtStat(n?: number | null): string {
-  if (n === undefined || n === null) return '-'
-  return formatCompactNumber(n)
+  if (n === undefined || n === null) return "-";
+  return formatCompactNumber(n);
 }
 
-type StatsScope = 'org' | 'site'
+type StatsScope = "org" | "site";
 
 type KpiCard = {
-  label: string
-  value: string
-  raw?: number | null
-  hint?: string
-}
+  label: string;
+  value: string;
+  raw?: number | null;
+  hint?: string;
+};
 
 export function DashboardOrgStatistics() {
-  return <StatisticsPage scope="org" />
+  return <StatisticsPage scope="org" />;
 }
 
 export function DashboardSiteStatistics() {
-  return <StatisticsPage scope="site" />
+  return <StatisticsPage scope="site" />;
 }
 
 /** @deprecated 兼容旧 import */
 export function DashboardStatistics() {
-  return <StatisticsPage scope="org" />
+  return <StatisticsPage scope="org" />;
 }
 
 function StatisticsPage({ scope }: { scope: StatsScope }) {
-  const { isSiteAdmin, can, perms, currentOrg } = useAuth()
-  const isSite = scope === 'site'
+  const { isSiteAdmin, can, perms, currentOrg } = useAuth();
+  const isSite = scope === "site";
 
-  const [timeRange, setTimeRange] = useState<TimeRangeValue>('30')
+  const [timeRange, setTimeRange] = useState<TimeRangeValue>("30");
   /** 0 = 全组织 */
-  const [scopeGroupId, setScopeGroupId] = useState(0)
-  const [scopeSquadId, setScopeSquadId] = useState(0)
-  const [scopeGroups, setScopeGroups] = useState<Array<{ id: number; name: string }>>([])
-  const [scopeSquads, setScopeSquads] = useState<Array<{ id: number; name: string; groupId: number }>>([])
-  const [period, setPeriod] = useState<PeriodData | null>(null)
-  const [userCount, setUserCount] = useState(0)
-  const [frozenCount, setFrozenCount] = useState(0)
-  const [groupCount, setGroupCount] = useState(0)
-  const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([])
-  const [acHeat, setAcHeat] = useState<HeatmapItem[]>([])
-  const [rankList, setRankList] = useState<StatisticRankItem[]>([])
-  const [rankTotal, setRankTotal] = useState(0)
-  const [pendingJoinCount, setPendingJoinCount] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState(false)
-  const [errors, setErrors] = useState<string[]>([])
-  const hasLoadedOnce = useRef(false)
+  const [scopeGroupId, setScopeGroupId] = useState(0);
+  const [scopeSquadId, setScopeSquadId] = useState(0);
+  const [scopeGroups, setScopeGroups] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
+  const [scopeSquads, setScopeSquads] = useState<
+    Array<{ id: number; name: string; groupId: number }>
+  >([]);
+  const [period, setPeriod] = useState<PeriodData | null>(null);
+  const [userCount, setUserCount] = useState(0);
+  const [frozenCount, setFrozenCount] = useState(0);
+  const [groupCount, setGroupCount] = useState(0);
+  const [submitHeat, setSubmitHeat] = useState<HeatmapItem[]>([]);
+  const [acHeat, setAcHeat] = useState<HeatmapItem[]>([]);
+  const [rankList, setRankList] = useState<StatisticRankItem[]>([]);
+  const [rankTotal, setRankTotal] = useState(0);
+  const [pendingJoinCount, setPendingJoinCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [rankSheetOpen, setRankSheetOpen] = useState(false);
+  const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
-    if (isSite) return
-    let cancelled = false
+    if (isSite) return;
+    let cancelled = false;
     void (async () => {
-      const gRes = await listGroups(1, 100)
-      if (cancelled) return
+      const gRes = await listGroups(1, 100);
+      if (cancelled) return;
       if (gRes.success && gRes.data?.list) {
         setScopeGroups(
           gRes.data.list.map((g) => ({
             id: Number(g.id),
             name: g.name || `组 #${g.id}`,
           })),
-        )
+        );
       }
-      const sRes = await listSquads()
-      if (cancelled) return
+      const sRes = await listSquads();
+      if (cancelled) return;
       if (sRes.success && sRes.data) {
         setScopeSquads(
           sRes.data.map((s) => ({
@@ -147,46 +158,60 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             name: s.name,
             groupId: s.groupId,
           })),
-        )
+        );
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [isSite, currentOrg?.id])
+      cancelled = true;
+    };
+  }, [isSite, currentOrg?.id]);
 
-  const canSiteStats = can(Perm.SiteStatsRead)
-  const canJoinReview = can(Perm.OrgJoinReview)
-  const periodUserId = isSite ? -2 : -1
-  const heatmapUserId = isSite ? -2 : 0
-  const days = rangeDays(timeRange)
+  const canSiteStats = can(Perm.SiteStatsRead);
+  const canJoinReview = can(Perm.OrgJoinReview);
+  const periodUserId = isSite ? -2 : -1;
+  const heatmapUserId = isSite ? -2 : 0;
+  const days = rangeDays(timeRange);
 
-  const abortRef = useRef(0)
+  const abortRef = useRef(0);
   useEffect(() => {
     if (isSite && !canSiteStats) {
-      setLoading(false)
-      return
+      setLoading(false);
+      return;
     }
-    const fetchId = ++abortRef.current
-    let cancelled = false
+    const fetchId = ++abortRef.current;
+    let cancelled = false;
 
     async function load() {
-      setLoading(true)
-      setErrors([])
+      setLoading(true);
+      setErrors([]);
       // rank 接口只接受 YYYY-MM-DD；todayYmd 是 YYYYMMDD，必须转换
-      const end = ymdToDateKey(todayYmd())
-      const start = ymdToDateKey(daysAgoYmd(days - 1))
-      const listScope = isSite ? 'site' : 'org'
+      const end = ymdToDateKey(todayYmd());
+      const start = ymdToDateKey(daysAgoYmd(days - 1));
+      const listScope = isSite ? "site" : "org";
 
       try {
         const results = await Promise.allSettled([
-          getPeriod(periodUserId, isSite ? undefined : { groupId: scopeGroupId || undefined, squadId: scopeSquadId || undefined }),
+          getPeriod(
+            periodUserId,
+            isSite
+              ? undefined
+              : {
+                  groupId: scopeGroupId || undefined,
+                  squadId: scopeSquadId || undefined,
+                },
+          ),
           listProfiles(1, 1, listScope),
           isSite
-            ? listProfiles(1, 1, 'site', undefined, { dormantOnly: true })
-            : Promise.resolve({ success: true, data: { total: 0, list: [] } } as const),
+            ? listProfiles(1, 1, "site", undefined, { dormantOnly: true })
+            : Promise.resolve({
+                success: true,
+                data: { total: 0, list: [] },
+              } as const),
           isSite
-            ? Promise.resolve({ success: true, data: { total: 0, list: [] } } as const)
+            ? Promise.resolve({
+                success: true,
+                data: { total: 0, list: [] },
+              } as const)
             : listGroups(1, 1),
           getHeatmap({
             startDate: start,
@@ -207,7 +232,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
           getRank({
             startDate: start,
             endDate: end,
-            scoreType: 'ac',
+            scoreType: "ac",
             pageSize: 50,
             groupId: isSite ? undefined : scopeGroupId || undefined,
             squadId: isSite ? undefined : scopeSquadId || undefined,
@@ -219,101 +244,134 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
                 list: [] as unknown[],
               }))
             : Promise.resolve(null),
-        ])
+        ]);
 
-        if (cancelled || fetchId !== abortRef.current) return
+        if (cancelled || fetchId !== abortRef.current) return;
 
-        const failedItems: string[] = []
+        const failedItems: string[] = [];
 
-        const pResult = results[0]
-        if (pResult.status === 'fulfilled' && pResult.value.success) {
-          setPeriod(pResult.value.data)
+        const pResult = results[0];
+        if (pResult.status === "fulfilled" && pResult.value.success) {
+          setPeriod(pResult.value.data);
         } else {
-          failedItems.push('今日/本周统计')
+          failedItems.push("今日/本周统计");
         }
 
-        const uResult = results[1]
-        if (uResult.status === 'fulfilled' && uResult.value.success && uResult.value.data) {
-          setUserCount(uResult.value.data.total)
+        const uResult = results[1];
+        if (
+          uResult.status === "fulfilled" &&
+          uResult.value.success &&
+          uResult.value.data
+        ) {
+          setUserCount(uResult.value.data.total);
         } else {
-          failedItems.push('成员人数')
+          failedItems.push("成员人数");
         }
 
-        const fResult = results[2]
-        if (isSite && fResult.status === 'fulfilled' && fResult.value.success && fResult.value.data) {
-          setFrozenCount(fResult.value.data.total)
+        const fResult = results[2];
+        if (
+          isSite &&
+          fResult.status === "fulfilled" &&
+          fResult.value.success &&
+          fResult.value.data
+        ) {
+          setFrozenCount(fResult.value.data.total);
         } else if (isSite) {
-          setFrozenCount(0)
+          setFrozenCount(0);
         }
 
-        const gResult = results[3]
+        const gResult = results[3];
         if (!isSite) {
-          if (gResult.status === 'fulfilled' && gResult.value.success && gResult.value.data) {
-            setGroupCount(gResult.value.data.total)
+          if (
+            gResult.status === "fulfilled" &&
+            gResult.value.success &&
+            gResult.value.data
+          ) {
+            setGroupCount(gResult.value.data.total);
           } else {
-            failedItems.push('分组')
+            failedItems.push("分组");
           }
         }
 
-        const hsResult = results[4]
-        if (hsResult.status === 'fulfilled' && hsResult.value.success) {
-          setSubmitHeat(hsResult.value.data || [])
+        const hsResult = results[4];
+        if (hsResult.status === "fulfilled" && hsResult.value.success) {
+          setSubmitHeat(hsResult.value.data || []);
         } else {
-          failedItems.push('提交趋势')
+          failedItems.push("提交趋势");
         }
 
-        const haResult = results[5]
-        if (haResult.status === 'fulfilled' && haResult.value.success) {
-          setAcHeat(haResult.value.data || [])
+        const haResult = results[5];
+        if (haResult.status === "fulfilled" && haResult.value.success) {
+          setAcHeat(haResult.value.data || []);
         } else {
-          failedItems.push('通过趋势')
+          failedItems.push("通过趋势");
         }
 
-        const rResult = results[6]
-        if (rResult.status === 'fulfilled' && rResult.value.success && rResult.value.data) {
-          setRankList(rResult.value.data.list)
-          setRankTotal(rResult.value.data.total)
+        const rResult = results[6];
+        if (
+          rResult.status === "fulfilled" &&
+          rResult.value.success &&
+          rResult.value.data
+        ) {
+          setRankList(rResult.value.data.list);
+          setRankTotal(rResult.value.data.total);
         } else if (!isSite) {
-          failedItems.push('成员排行')
+          failedItems.push("成员排行");
         }
 
-        const jResult = results[7]
-        if (jResult.status === 'fulfilled' && jResult.value && jResult.value.success) {
-          setPendingJoinCount(jResult.value.list?.length ?? 0)
+        const jResult = results[7];
+        if (
+          jResult.status === "fulfilled" &&
+          jResult.value &&
+          jResult.value.success
+        ) {
+          setPendingJoinCount(jResult.value.list?.length ?? 0);
         }
 
         if (failedItems.length > 0) {
           setErrors([
-            `有一部分数据没加载成功（${failedItems.join('、')}）。下面能显示的部分仍可查看，也可稍后刷新重试。`,
-          ])
+            `有一部分数据没加载成功（${failedItems.join("、")}）。下面能显示的部分仍可查看，也可稍后刷新重试。`,
+          ]);
         }
-        hasLoadedOnce.current = true
+        hasLoadedOnce.current = true;
       } catch (e) {
         if (!cancelled && fetchId === abortRef.current) {
-          setErrors([e instanceof Error ? e.message : '数据加载失败，稍后重试'])
+          setErrors([
+            e instanceof Error ? e.message : "数据加载失败，稍后重试",
+          ]);
         }
       } finally {
         if (!cancelled && fetchId === abortRef.current) {
-          setLoading(false)
+          setLoading(false);
         }
       }
     }
 
-    void load()
+    void load();
     return () => {
-      cancelled = true
-    }
-  }, [isSite, canSiteStats, canJoinReview, currentOrg?.id, periodUserId, heatmapUserId, days, scopeGroupId, scopeSquadId])
+      cancelled = true;
+    };
+  }, [
+    isSite,
+    canSiteStats,
+    canJoinReview,
+    currentOrg?.id,
+    periodUserId,
+    heatmapUserId,
+    days,
+    scopeGroupId,
+    scopeSquadId,
+  ]);
 
   const metrics = useMemo(() => {
-    const rangeSubmit = sumHeatmap(submitHeat)
-    const rangeAc = sumHeatmap(acHeat)
-    const careerAc = period?.ac.total ?? 0
-    const careerSubmit = period?.submit.total ?? 0
+    const rangeSubmit = sumHeatmap(submitHeat);
+    const rangeAc = sumHeatmap(acHeat);
+    const careerAc = period?.ac.total ?? 0;
+    const careerSubmit = period?.submit.total ?? 0;
 
     const activeMembers = isSite
       ? Math.max(0, userCount - frozenCount)
-      : computeActiveMembers(rankTotal, userCount)
+      : computeActiveMembers(rankTotal, userCount);
 
     return {
       rangeSubmit,
@@ -330,8 +388,17 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       recent7vsPrev7: compareRecent7vsPrev7(submitHeat, todayYmd()),
       noAcMembers: computeNoAcMembers(userCount, rankTotal),
       weekdayDist: computeWeekdayDistribution(submitHeat),
-    }
-  }, [period, userCount, frozenCount, rankTotal, submitHeat, acHeat, days, isSite])
+    };
+  }, [
+    period,
+    userCount,
+    frozenCount,
+    rankTotal,
+    submitHeat,
+    acHeat,
+    days,
+    isSite,
+  ]);
 
   if (isSite && !canSiteStats) {
     return (
@@ -340,41 +407,41 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
           你还没有查看全站统计的权限。有需要的话，找站点管理员开通。
         </p>
       </PageShell>
-    )
+    );
   }
 
   async function handleUpdateAll() {
-    setUpdating(true)
-    const res = await updateAllSpiders()
-    setUpdating(false)
-    if (res.success) toast.success(res.message || '已开始全站同步')
-    else toast.error(res.message || '全站同步失败，稍后重试')
+    setUpdating(true);
+    const res = await updateAllSpiders();
+    setUpdating(false);
+    if (res.success) toast.success(res.message || "已开始全站同步");
+    else toast.error(res.message || "全站同步失败，稍后重试");
   }
 
-  const orgName = currentOrg?.name || '当前组织'
+  const orgName = currentOrg?.name || "当前组织";
   // 文案按身份分支：站点管理员按团队管理员展示；自定义角色（不改 orgRole，仅赋权限）落到通用「管理中心」
-  const roleForCopy = isSiteAdmin ? OrgRole.OrgAdmin : currentOrg?.myRole
-  const hasOrgManagePerm = Array.from(perms).some((c) => c.startsWith('org.'))
-  let title: string
-  let desc: string
+  const roleForCopy = isSiteAdmin ? OrgRole.OrgAdmin : currentOrg?.myRole;
+  const hasOrgManagePerm = Array.from(perms).some((c) => c.startsWith("org."));
+  let title: string;
+  let desc: string;
   if (isSite) {
-    title = '站点数据统计'
-    desc = '查看全站用户的提交与通过情况。'
+    title = "站点数据统计";
+    desc = "查看全站用户的提交与通过情况。";
   } else if (roleForCopy === OrgRole.OrgAdmin) {
-    title = `${orgName} · 组织管理`
-    desc = '成员活跃、训练参与与待办审批。'
+    title = `${orgName} · 组织管理`;
+    desc = "成员活跃、训练参与与待办审批。";
   } else if (roleForCopy === OrgRole.Coach) {
-    title = `${orgName} · 教练工作台`
-    desc = '按时间范围查看训练参与与成员排行。'
+    title = `${orgName} · 教练工作台`;
+    desc = "按时间范围查看训练参与与成员排行。";
   } else if (roleForCopy === OrgRole.Captain) {
-    title = `${orgName} · 队长工作台`
-    desc = '按时间范围查看训练参与与成员排行。'
+    title = `${orgName} · 队长工作台`;
+    desc = "按时间范围查看训练参与与成员排行。";
   } else if (hasOrgManagePerm) {
-    title = `${orgName} · 管理中心`
-    desc = '常用管理入口与组织训练数据。'
+    title = `${orgName} · 管理中心`;
+    desc = "常用管理入口与组织训练数据。";
   } else {
-    title = `${orgName} · 数据统计`
-    desc = '按当前组织成员汇总提交与通过情况。'
+    title = `${orgName} · 数据统计`;
+    desc = "按当前组织成员汇总提交与通过情况。";
   }
 
   const hasQuickAction =
@@ -383,81 +450,93 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
     can(Perm.OrgGroupManage) ||
     can(Perm.OrgReportView) ||
     can(Perm.OrgInfoWrite) ||
-    can(Perm.OrgBulletinManage)
+    can(Perm.OrgBulletinManage);
 
   const kpiCards: KpiCard[] = isSite
     ? [
-        { label: '全站用户', value: fmtStat(userCount), raw: userCount },
-        { label: '已暂停同步', value: fmtStat(frozenCount), raw: frozenCount },
+        { label: "全站用户", value: fmtStat(userCount), raw: userCount },
+        { label: "已暂停同步", value: fmtStat(frozenCount), raw: frozenCount },
         {
-          label: '正常同步',
+          label: "正常同步",
           value: fmtStat(userCount - frozenCount),
           raw: userCount - frozenCount,
         },
-        { label: '累计通过', value: fmtStat(metrics.careerAc), raw: metrics.careerAc },
         {
-          label: '累计提交',
+          label: "累计通过",
+          value: fmtStat(metrics.careerAc),
+          raw: metrics.careerAc,
+        },
+        {
+          label: "累计提交",
           value: fmtStat(metrics.careerSubmit),
           raw: metrics.careerSubmit,
         },
         {
-          label: '今日通过 / 提交',
+          label: "今日通过 / 提交",
           value: `${fmtStat(period?.ac.today)} / ${fmtStat(period?.submit.today)}`,
         },
-        { label: '本周通过', value: fmtStat(period?.ac.thisWeek), raw: period?.ac.thisWeek },
-        { label: '本月通过', value: fmtStat(period?.ac.thisMonth), raw: period?.ac.thisMonth },
+        {
+          label: "本周通过",
+          value: fmtStat(period?.ac.thisWeek),
+          raw: period?.ac.thisWeek,
+        },
+        {
+          label: "本月通过",
+          value: fmtStat(period?.ac.thisMonth),
+          raw: period?.ac.thisMonth,
+        },
       ]
     : [
-        { label: '组织成员', value: fmtStat(userCount), raw: userCount },
-        { label: '分组数', value: fmtStat(groupCount), raw: groupCount },
+        { label: "组织成员", value: fmtStat(userCount), raw: userCount },
+        { label: "分组数", value: fmtStat(groupCount), raw: groupCount },
         {
-          label: '本期活跃',
+          label: "本期活跃",
           value: fmtStat(metrics.activeMembers),
           raw: metrics.activeMembers,
-          hint: '有通过记录',
+          hint: "有通过记录",
         },
         {
-          label: '参与率',
+          label: "参与率",
           value: `${metrics.participationRate}%`,
-          hint: '活跃 / 成员',
+          hint: "活跃 / 成员",
         },
         {
-          label: '本期通过',
+          label: "本期通过",
           value: fmtStat(metrics.rangeAc),
           raw: metrics.rangeAc,
           hint: `近 ${days} 天`,
         },
         {
-          label: '本期提交',
+          label: "本期提交",
           value: fmtStat(metrics.rangeSubmit),
           raw: metrics.rangeSubmit,
           hint: `近 ${days} 天`,
         },
         {
-          label: '通过率',
+          label: "通过率",
           value: `${metrics.passRate}%`,
-          hint: '通过 / 提交',
+          hint: "通过 / 提交",
         },
         {
-          label: '活跃天数',
+          label: "活跃天数",
           value: String(metrics.activeDays),
           hint: `近 ${days} 天有提交`,
         },
         {
-          label: '日均提交',
+          label: "日均提交",
           value: String(metrics.dailyAvg),
-          hint: '总提交 ÷ 天数',
+          hint: "总提交 ÷ 天数",
         },
         {
-          label: '累计通过',
+          label: "累计通过",
           value: fmtStat(metrics.careerAc),
           raw: metrics.careerAc,
-          hint: '生涯 AC',
+          hint: "生涯 AC",
         },
-      ]
+      ];
 
-  const showSkeleton = loading && !hasLoadedOnce.current
-  const weekdayMax = Math.max(...metrics.weekdayDist, 1)
+  const showSkeleton = loading && !hasLoadedOnce.current;
+  const weekdayMax = Math.max(...metrics.weekdayDist, 1);
 
   return (
     <PageShell>
@@ -482,7 +561,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             type="single"
             value={timeRange}
             onValueChange={(v) => {
-              if (v) setTimeRange(v as TimeRangeValue)
+              if (v) setTimeRange(v as TimeRangeValue);
             }}
             size="sm"
             variant="outline"
@@ -496,15 +575,14 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             ))}
           </ToggleGroup>
 
-          
           {!isSite ? (
             <>
               <select
                 className="h-8 rounded-md border bg-background px-2 text-sm"
                 value={scopeGroupId}
                 onChange={(e) => {
-                  setScopeGroupId(Number(e.target.value) || 0)
-                  setScopeSquadId(0)
+                  setScopeGroupId(Number(e.target.value) || 0);
+                  setScopeSquadId(0);
                 }}
                 aria-label="按分组查看"
               >
@@ -533,11 +611,14 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             </>
           ) : null}
 
-          {!isSite && canJoinReview && pendingJoinCount !== null && pendingJoinCount > 0 && (
-            <Button asChild size="sm" variant="destructive">
-              <Link to="/admin/user?tab=join">待审批 {pendingJoinCount}</Link>
-            </Button>
-          )}
+          {!isSite &&
+            canJoinReview &&
+            pendingJoinCount !== null &&
+            pendingJoinCount > 0 && (
+              <Button asChild size="sm" variant="destructive">
+                <Link to="/admin/user?tab=join">待审批 {pendingJoinCount}</Link>
+              </Button>
+            )}
 
           {isSite && can(Perm.SiteSpiderOps) && (
             <AlertDialog>
@@ -571,7 +652,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
         type="single"
         value={timeRange}
         onValueChange={(v) => {
-          if (v) setTimeRange(v as TimeRangeValue)
+          if (v) setTimeRange(v as TimeRangeValue);
         }}
         size="sm"
         variant="outline"
@@ -587,8 +668,8 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
 
       <div
         className={cn(
-          'grid grid-cols-2 gap-2 sm:grid-cols-3',
-          isSite ? 'lg:grid-cols-4' : 'lg:grid-cols-5',
+          "grid grid-cols-2 gap-2 sm:grid-cols-3",
+          isSite ? "lg:grid-cols-4" : "lg:grid-cols-5",
         )}
       >
         {showSkeleton
@@ -598,20 +679,28 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
           : kpiCards.map((c) => (
               <Card key={c.label} className="gap-1 py-3 shadow-none">
                 <CardHeader className="px-3 py-0">
-                  <CardDescription className="text-xs">{c.label}</CardDescription>
+                  <CardDescription className="text-xs">
+                    {c.label}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-0.5 px-3">
                   <span
                     className={cn(
-                      'text-xl font-semibold tabular-nums tracking-tight',
-                      loading && hasLoadedOnce.current && 'opacity-70',
+                      "text-xl font-semibold tabular-nums tracking-tight",
+                      loading && hasLoadedOnce.current && "opacity-70",
                     )}
-                    title={c.raw !== undefined && c.raw !== null ? String(c.raw) : undefined}
+                    title={
+                      c.raw !== undefined && c.raw !== null
+                        ? String(c.raw)
+                        : undefined
+                    }
                   >
                     {c.value}
                   </span>
                   {c.hint ? (
-                    <span className="text-[10px] text-muted-foreground">{c.hint}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {c.hint}
+                    </span>
                   ) : null}
                 </CardContent>
               </Card>
@@ -657,13 +746,26 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
       {!isSite && (
         <div className="grid gap-4 md:grid-cols-2">
           <Card className="gap-3 py-4 shadow-none">
-            <CardHeader className="px-4">
-              <CardTitle className="text-base">成员排行（本期通过）</CardTitle>
-              <CardDescription>
-                {rankTotal > 0
-                  ? `共 ${rankTotal} 人在近 ${days} 天有通过记录`
-                  : `近 ${days} 天的通过排行`}
-              </CardDescription>
+            <CardHeader className="flex flex-row items-start justify-between gap-3 px-4">
+              <div className="min-w-0">
+                <CardTitle className="text-base">
+                  成员排行（本期通过）
+                </CardTitle>
+                <CardDescription>
+                  {rankTotal > 0
+                    ? `共 ${rankTotal} 人在近 ${days} 天有通过记录`
+                    : `近 ${days} 天的通过排行`}
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="shrink-0"
+                onClick={() => setRankSheetOpen(true)}
+              >
+                查看更多
+              </Button>
             </CardHeader>
             <CardContent className="px-4">
               {showSkeleton ? (
@@ -691,15 +793,17 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
                       <div className="flex min-w-0 items-center gap-2">
                         <span
                           className={cn(
-                            'flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px] font-medium',
+                            "flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px] font-medium",
                             i < 3
-                              ? 'bg-primary/10 text-primary'
-                              : 'text-muted-foreground',
+                              ? "bg-primary/10 text-primary"
+                              : "text-muted-foreground",
                           )}
                         >
                           {i + 1}
                         </span>
-                        <span className="truncate font-medium">{r.name || `用户 #${r.userId}`}</span>
+                        <span className="truncate font-medium">
+                          {r.name || `用户 #${r.userId}`}
+                        </span>
                       </div>
                       <span className="shrink-0 tabular-nums text-muted-foreground">
                         {r.score} 通过
@@ -739,7 +843,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
                     value={
                       metrics.peakDay
                         ? `${metrics.peakDay.date.slice(5)} · ${metrics.peakDay.count} 次`
-                        : '—'
+                        : "—"
                     }
                   />
                   <InsightRow
@@ -750,18 +854,18 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
                     label="最近 7 天提交"
                     value={`${metrics.recent7vsPrev7.recent} 次`}
                     badge={
-                      metrics.recent7vsPrev7.direction === 'up'
-                        ? '上升'
-                        : metrics.recent7vsPrev7.direction === 'down'
-                          ? '下降'
-                          : '持平'
+                      metrics.recent7vsPrev7.direction === "up"
+                        ? "上升"
+                        : metrics.recent7vsPrev7.direction === "down"
+                          ? "下降"
+                          : "持平"
                     }
                     badgeVariant={
-                      metrics.recent7vsPrev7.direction === 'up'
-                        ? 'default'
-                        : metrics.recent7vsPrev7.direction === 'down'
-                          ? 'destructive'
-                          : 'secondary'
+                      metrics.recent7vsPrev7.direction === "up"
+                        ? "default"
+                        : metrics.recent7vsPrev7.direction === "down"
+                          ? "destructive"
+                          : "secondary"
                     }
                   />
                   <InsightRow
@@ -779,6 +883,13 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
               )}
             </CardContent>
           </Card>
+          <OrgRankSheet
+            open={rankSheetOpen}
+            onOpenChange={setRankSheetOpen}
+            groupId={currentOrg?.id ?? 0}
+            scopeGroupId={scopeGroupId}
+            scopeSquadId={scopeSquadId}
+          />
         </div>
       )}
 
@@ -794,16 +905,21 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             ) : (
               <div className="flex h-40 items-stretch gap-1.5 sm:gap-2">
                 {metrics.weekdayDist.map((count, i) => {
-                  const pct = Math.round((count / weekdayMax) * 100)
+                  const pct = Math.round((count / weekdayMax) * 100);
                   return (
-                    <div key={WEEKDAY_LABELS[i]} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                    <div
+                      key={WEEKDAY_LABELS[i]}
+                      className="flex min-w-0 flex-1 flex-col items-center gap-1"
+                    >
                       <span className="text-[10px] tabular-nums text-muted-foreground">
                         {count}
                       </span>
                       <div className="relative flex w-full flex-1 items-end justify-center">
                         <div
                           className="w-full max-w-10 rounded-t-md bg-primary/70 transition-[height]"
-                          style={{ height: `${Math.max(pct, count > 0 ? 8 : 2)}%` }}
+                          style={{
+                            height: `${Math.max(pct, count > 0 ? 8 : 2)}%`,
+                          }}
                           title={`${WEEKDAY_LABELS[i]}：${count} 次`}
                         />
                       </div>
@@ -811,7 +927,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
                         {WEEKDAY_LABELS[i]}
                       </span>
                     </div>
-                  )
+                  );
                 })}
               </div>
             )}
@@ -836,10 +952,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
               <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">待审批申请</span>
                 {canJoinReview ? (
-                  <Link
-                    to="/admin/user?tab=join"
-                    className="inline-flex"
-                  >
+                  <Link to="/admin/user?tab=join" className="inline-flex">
                     <Badge variant="destructive" className="cursor-pointer">
                       {pendingJoinCount} 人
                     </Badge>
@@ -851,16 +964,24 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
             )}
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">定时同步做题数据</span>
-              <Badge variant={currentOrg.enableSpider !== false ? 'default' : 'secondary'}>
-                {currentOrg.enableSpider !== false ? '已开启' : '已关闭'}
+              <Badge
+                variant={
+                  currentOrg.enableSpider !== false ? "default" : "secondary"
+                }
+              >
+                {currentOrg.enableSpider !== false ? "已开启" : "已关闭"}
               </Badge>
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">周报邮件</span>
               <Badge
-                variant={currentOrg.enableAiWeeklyEmail !== false ? 'default' : 'secondary'}
+                variant={
+                  currentOrg.enableAiWeeklyEmail !== false
+                    ? "default"
+                    : "secondary"
+                }
               >
-                {currentOrg.enableAiWeeklyEmail !== false ? '已开启' : '已关闭'}
+                {currentOrg.enableAiWeeklyEmail !== false ? "已开启" : "已关闭"}
               </Badge>
             </div>
           </CardContent>
@@ -880,7 +1001,7 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
                   加入审批
                   {pendingJoinCount !== null && pendingJoinCount > 0
                     ? `（${pendingJoinCount}）`
-                    : ''}
+                    : ""}
                 </Link>
               </Button>
             )}
@@ -912,9 +1033,8 @@ function StatisticsPage({ scope }: { scope: StatsScope }) {
           </CardContent>
         </Card>
       )}
-
     </PageShell>
-  )
+  );
 }
 
 function InsightRow({
@@ -924,23 +1044,25 @@ function InsightRow({
   badgeVariant,
   valueClassName,
 }: {
-  label: string
-  value: string
-  badge?: string
-  badgeVariant?: 'default' | 'destructive' | 'secondary'
-  valueClassName?: string
+  label: string;
+  value: string;
+  badge?: string;
+  badgeVariant?: "default" | "destructive" | "secondary";
+  valueClassName?: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-muted-foreground">{label}</span>
-      <span className={cn('flex items-center gap-1.5 tabular-nums', valueClassName)}>
+      <span
+        className={cn("flex items-center gap-1.5 tabular-nums", valueClassName)}
+      >
         {value}
         {badge ? (
-          <Badge variant={badgeVariant ?? 'secondary'} className="text-[10px]">
+          <Badge variant={badgeVariant ?? "secondary"} className="text-[10px]">
             {badge}
           </Badge>
         ) : null}
       </span>
     </div>
-  )
+  );
 }
