@@ -47,6 +47,7 @@ import { cleanProblemTitle, formatPipelineStage, formatTime } from '@/lib/format
 import { num, str } from '@/lib/http'
 import { Perm } from '@/lib/permissions'
 import { safeLocalStorage } from '@/lib/safe-storage'
+import { Pagination } from '@/components/pagination'
 
 /** 本地隐藏的失败列表题目 ID，不改后端状态 */
 const HIDDEN_PERM_KEY = 'goalgo.problem.hiddenFailedPerm'
@@ -96,6 +97,8 @@ export function DashboardProblemProgress() {
   const [data, setData] = useState<ProblemProgressData | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [failedPage, setFailedPage] = useState(1)
+  const failedPageSize = 20
   const [hiddenPermIds, setHiddenPermIds] = useState<Set<number>>(() =>
     readHiddenIds(HIDDEN_PERM_KEY),
   )
@@ -108,7 +111,7 @@ export function DashboardProblemProgress() {
   const load = useCallback(async (silent = false) => {
     const rid = ++requestId.current
     if (!silent) setLoading(true)
-    const res = await getProblemProgress()
+    const res = await getProblemProgress({ page: failedPage, pageSize: failedPageSize })
     // 轮询与手动刷新并发时只采纳最新响应；卸载后不再 setState
     if (rid !== requestId.current) return
     if (!silent) setLoading(false)
@@ -117,7 +120,7 @@ export function DashboardProblemProgress() {
       return
     }
     setData(res.data)
-  }, [])
+  }, [failedPage, failedPageSize])
 
   useEffect(() => {
     void load()
@@ -483,14 +486,14 @@ export function DashboardProblemProgress() {
                       variant="outline"
                       disabled={busy || !visibleRecentFailed.length}
                     >
-                      停止自动重试
+                         全部纳入永久失败
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>停止近期失败的自动重试？</AlertDialogTitle>
+                         <AlertDialogTitle>将全部失败题目纳入永久失败？</AlertDialogTitle>
                       <AlertDialogDescription>
-                        这些题目将不再自动重试，需要时可在「永久失败」中手动重试。
+                         近 6 个月内的全部失败题目将停止自动重试，并纳入永久失败。
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -509,6 +512,7 @@ export function DashboardProblemProgress() {
         </CardHeader>
         <CardContent className="p-0">
           <JobTable rows={visibleRecentFailed} showError />
+          <Pagination page={failedPage} pageSize={failedPageSize} total={data?.recentFailedTotal ?? 0} onChange={setFailedPage} />
         </CardContent>
       </Card>
 
@@ -581,6 +585,7 @@ export function DashboardProblemProgress() {
           </CardHeader>
           <CardContent className="p-0">
             <JobTable rows={visibleFailedPerm} showError />
+            <Pagination page={failedPage} pageSize={failedPageSize} total={data?.recentFailedPermTotal ?? 0} onChange={setFailedPage} />
           </CardContent>
         </Card>
       )}
@@ -610,7 +615,7 @@ function JobTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map((r, i) => {
+        {rows.map((r) => {
           const id = num(r.problemId ?? r.id)
           const title = cleanProblemTitle(
             str(r.title),
@@ -619,7 +624,7 @@ function JobTable({
           const stage = formatPipelineStage(str(r.stage || r.status))
           const errorMsg = str(r.errorMsg || r.error_msg || r.message)
           return (
-            <TableRow key={i}>
+            <TableRow key={`${id || 'unknown'}:${str(r.stage || r.status)}:${str(r.updatedAt || r.startedAt || r.time)}`}>
               <TableCell>
                 {id ? (
                   <Link

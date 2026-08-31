@@ -221,8 +221,8 @@ export function QuestionBankDetail() {
   )
 
   /** 题目主体 + 关联题单；不依赖筛选/分页，避免误卸整页 */
-  const loadProblem = useCallback(async () => {
-    if (!id) return
+  const loadProblem = useCallback(async (): Promise<ProblemInfo | null> => {
+    if (!id) return null
     const rid = ++problemRequestId.current
     const isNewProblem = loadedProblemIdRef.current !== String(id)
     if (isNewProblem) setLoading(true)
@@ -232,7 +232,7 @@ export function QuestionBankDetail() {
       listProblemRelatedContests(id),
     ])
     // 快速切题时丢弃旧响应，避免旧题数据覆盖新题
-    if (rid !== problemRequestId.current) return
+    if (rid !== problemRequestId.current) return null
     if (!pRes.success || !pRes.data) {
       if (isNewProblem) {
         setLoading(false)
@@ -240,7 +240,7 @@ export function QuestionBankDetail() {
         loadedProblemIdRef.current = null
       }
       toast.error(pRes.message || '题目没加载出来，过会儿再试')
-      return
+      return null
     }
     setProblem(pRes.data)
     loadedProblemIdRef.current = String(id)
@@ -258,12 +258,13 @@ export function QuestionBankDetail() {
 
     if (isLogin && !canReview) {
       const pend = await getMyPendingProblemEdit(id)
-      if (rid !== problemRequestId.current) return
+      if (rid !== problemRequestId.current) return null
       setHasPending(Boolean(pend.success && pend.data?.hasPending))
     } else {
       setHasPending(false)
     }
     if (isNewProblem) setLoading(false)
+    return pRes.data
   }, [id, isLogin, canReview])
 
   /** 提交历史：筛选/分页只刷新表格区域，保持滚动位置 */
@@ -534,8 +535,9 @@ export function QuestionBankDetail() {
     const poll = async () => {
       if (!actionAliveRef.current || actionPollBusyRef.current) return
       actionPollBusyRef.current = true
+      let latest: ProblemInfo | null = null
       try {
-        await loadProblem()
+        latest = await loadProblem()
       } finally {
         actionPollBusyRef.current = false
       }
@@ -548,11 +550,11 @@ export function QuestionBankDetail() {
         return
       }
       setProblem((current) => {
-        if (!current || current.id !== problemId) return current
+        if (!current || current.id !== problemId || !latest) return current
         const fetched = kind === 'refetch'
-          ? current.contentMd.trim() !== '' && (current.contentFetchedAt ?? 0) > previousFetchedAt
-          : current.status === 'COMPLETED'
-        const failed = current.status === 'FAILED' || current.status === 'FAILED_PERM'
+          ? latest.contentMd.trim() !== '' && (latest.contentFetchedAt ?? 0) > previousFetchedAt
+          : latest.status === 'COMPLETED'
+        const failed = latest.status === 'FAILED' || latest.status === 'FAILED_PERM'
         if (fetched || failed) {
           if (actionPollRef.current !== null) window.clearInterval(actionPollRef.current)
           actionPollRef.current = null

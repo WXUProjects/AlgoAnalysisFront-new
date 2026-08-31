@@ -26,6 +26,10 @@ export interface ProblemProgressData {
   activeJobs: Record<string, unknown>[]
   queues: Record<string, unknown>[]
   inProgress: Record<string, unknown>[]
+  recentFailedTotal: number
+  recentFailedPermTotal: number
+  failedPage: number
+  failedPageSize: number
 }
 
 function normalizeSolution(raw: Record<string, unknown>): SolutionMeta {
@@ -363,8 +367,11 @@ export async function getProblemUserProfile(
   }
 }
 
-export async function getProblemProgress(): Promise<ApiResult<ProblemProgressData>> {
-  const res = await get<Record<string, unknown>>(endpoints.core.problem.progress)
+export async function getProblemProgress(params?: { page?: number; pageSize?: number }): Promise<ApiResult<ProblemProgressData>> {
+  const res = await get<Record<string, unknown>>(endpoints.core.problem.progress, {
+    failedPage: params?.page ?? 1,
+    failedPageSize: params?.pageSize ?? 20,
+  })
   if (!res.success) return { ...res, data: null }
   // 顶层: items, recentFailed, total, paused, activeJobs, queues, inProgress
   const d = (res.raw && typeof res.raw === 'object'
@@ -397,6 +404,10 @@ export async function getProblemProgress(): Promise<ApiResult<ProblemProgressDat
       inProgress: Array.isArray(d.inProgress)
         ? (d.inProgress as Record<string, unknown>[])
         : [],
+      recentFailedTotal: num(d.recentFailedTotal),
+      recentFailedPermTotal: num(d.recentFailedPermTotal),
+      failedPage: num(d.failedPage, params?.page ?? 1),
+      failedPageSize: num(d.failedPageSize, params?.pageSize ?? 20),
     },
   }
 }
