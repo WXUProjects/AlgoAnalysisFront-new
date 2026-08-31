@@ -26,6 +26,9 @@ export interface ProblemProgressData {
   activeJobs: Record<string, unknown>[]
   queues: Record<string, unknown>[]
   inProgress: Record<string, unknown>[]
+  inProgressTotal: number
+  inProgressPage: number
+  inProgressPageSize: number
   recentFailedTotal: number
   recentFailedPermTotal: number
   failedPage: number
@@ -367,10 +370,12 @@ export async function getProblemUserProfile(
   }
 }
 
-export async function getProblemProgress(params?: { page?: number; pageSize?: number }): Promise<ApiResult<ProblemProgressData>> {
+export async function getProblemProgress(params?: { page?: number; pageSize?: number; inProgressPage?: number; inProgressPageSize?: number }): Promise<ApiResult<ProblemProgressData>> {
   const res = await get<Record<string, unknown>>(endpoints.core.problem.progress, {
     failedPage: params?.page ?? 1,
     failedPageSize: params?.pageSize ?? 20,
+    inProgressPage: params?.inProgressPage ?? 1,
+    inProgressPageSize: params?.inProgressPageSize ?? 30,
   })
   if (!res.success) return { ...res, data: null }
   // 顶层: items, recentFailed, total, paused, activeJobs, queues, inProgress
@@ -404,6 +409,9 @@ export async function getProblemProgress(params?: { page?: number; pageSize?: nu
       inProgress: Array.isArray(d.inProgress)
         ? (d.inProgress as Record<string, unknown>[])
         : [],
+      inProgressTotal: num(d.inProgressTotal),
+      inProgressPage: num(d.inProgressPage, params?.inProgressPage ?? 1),
+      inProgressPageSize: num(d.inProgressPageSize, params?.inProgressPageSize ?? 30),
       recentFailedTotal: num(d.recentFailedTotal),
       recentFailedPermTotal: num(d.recentFailedPermTotal),
       failedPage: num(d.failedPage, params?.page ?? 1),

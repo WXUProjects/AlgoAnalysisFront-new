@@ -101,6 +101,8 @@ export function DashboardProblemProgress() {
   const [busy, setBusy] = useState(false)
   const [failedPage, setFailedPage] = useState(1)
   const failedPageSize = 20
+  const [inProgressPage, setInProgressPage] = useState(1)
+  const inProgressPageSize = 30
   const [selectedJobId, setSelectedJobId] = useState(0)
   const processingJobs: Record<string, unknown>[] = (() => {
     const live = data?.activeJobs || []
@@ -126,7 +128,7 @@ export function DashboardProblemProgress() {
   const load = useCallback(async (silent = false) => {
     const rid = ++requestId.current
     if (!silent) setLoading(true)
-    const res = await getProblemProgress({ page: failedPage, pageSize: failedPageSize })
+    const res = await getProblemProgress({ page: failedPage, pageSize: failedPageSize, inProgressPage, inProgressPageSize })
     // 轮询与手动刷新并发时只采纳最新响应；卸载后不再 setState
     if (rid !== requestId.current) return
     if (!silent) setLoading(false)
@@ -135,7 +137,7 @@ export function DashboardProblemProgress() {
       return
     }
     setData(res.data)
-  }, [failedPage, failedPageSize])
+  }, [failedPage, failedPageSize, inProgressPage, inProgressPageSize])
 
   useEffect(() => {
     void load()
@@ -447,11 +449,15 @@ export function DashboardProblemProgress() {
             正在处理
             <span className="ml-2 text-sm font-normal text-muted-foreground">
               当前 {processingJobs.length} 题
+              {data && data.inProgressTotal > inProgressPageSize ? ` · 共 ${data.inProgressTotal} 题，还有 ${Math.max(0, data.inProgressTotal - inProgressPage * inProgressPageSize)} 题` : ''}
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <JobTable rows={processingJobs} onAnalyzeClick={(job) => setSelectedJobId(num(job.problemId ?? job.id))} />
+          <div className="border-t px-4 py-3">
+            <Pagination page={inProgressPage} pageSize={inProgressPageSize} total={data?.inProgressTotal ?? 0} onChange={setInProgressPage} />
+          </div>
         </CardContent>
       </Card>
 
