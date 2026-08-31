@@ -33,6 +33,8 @@ export interface ProblemProgressData {
   recentFailedPermTotal: number
   failedPage: number
   failedPageSize: number
+  conversations: Record<string, unknown>[]
+  recentCompleted: Record<string, unknown>[]
 }
 
 function normalizeSolution(raw: Record<string, unknown>): SolutionMeta {
@@ -416,6 +418,12 @@ export async function getProblemProgress(params?: { page?: number; pageSize?: nu
       recentFailedPermTotal: num(d.recentFailedPermTotal),
       failedPage: num(d.failedPage, params?.page ?? 1),
       failedPageSize: num(d.failedPageSize, params?.pageSize ?? 20),
+      conversations: Array.isArray(d.conversations)
+        ? (d.conversations as Record<string, unknown>[])
+        : [],
+      recentCompleted: Array.isArray(d.recentCompleted)
+        ? (d.recentCompleted as Record<string, unknown>[])
+        : [],
     },
   }
 }

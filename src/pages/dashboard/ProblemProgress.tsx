@@ -29,6 +29,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cleanProblemTitle, formatPipelineStage, formatTime } from '@/lib/format'
 import { num, str } from '@/lib/http'
 import { Perm } from '@/lib/permissions'
+import { safeLocalStorage } from '@/lib/safe-storage'
+
+const PROBLEM_ALERT_ACK_KEY = 'goalgo.problem.progress.alertAck'
+
+type AlertAcknowledgement = { failed: number; permanent: number }
+
+function readAlertAcknowledgement(): AlertAcknowledgement {
+  try {
+    const raw = safeLocalStorage.get(PROBLEM_ALERT_ACK_KEY)
+    if (!raw) return { failed: 0, permanent: 0 }
+    const parsed = JSON.parse(raw) as Partial<AlertAcknowledgement>
+    return {
+      failed: Number.isFinite(parsed.failed) && Number(parsed.failed) >= 0 ? Number(parsed.failed) : 0,
+      permanent: Number.isFinite(parsed.permanent) && Number(parsed.permanent) >= 0 ? Number(parsed.permanent) : 0,
+    }
+  } catch {
+    return { failed: 0, permanent: 0 }
+  }
+}
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: '待获取题面', FETCHING: '获取题面中', TAGGING: '等待 AI 分析', COMPLETED: '已完成', FAILED: '失败', FAILED_PERM: '永久失败', SKIPPED: '已跳过',
@@ -50,16 +69,15 @@ export function DashboardProblemProgress() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [failedPage, setFailedPage] = useState(1)
-  const [inProgressPage, setInProgressPage] = useState(1)
   const [selectedJob, setSelectedJob] = useState<Record<string, unknown> | null>(null)
+  const [alertAcknowledgement, setAlertAcknowledgement] = useState<AlertAcknowledgement>(readAlertAcknowledgement)
   const requestId = useRef(0)
   const failedPageSize = 20
-  const inProgressPageSize = 30
 
   const load = useCallback(async (silent = false) => {
     const rid = ++requestId.current
     if (!silent) setLoading(true)
-    const res = await getProblemProgress({ page: failedPage, pageSize: failedPageSize, inProgressPage, inProgressPageSize })
+    const res = await getProblemProgress({ page: failedPage, pageSize: failedPageSize })
     if (rid !== requestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
@@ -67,7 +85,7 @@ export function DashboardProblemProgress() {
       return
     }
     setData(res.data)
-  }, [failedPage, inProgressPage])
+  }, [failedPage])
 
   useEffect(() => {
     void load()
@@ -94,31 +112,41 @@ export function DashboardProblemProgress() {
 
   const statusMap = useMemo(() => new Map((data?.items || []).map((item) => [item.status, item.count])), [data?.items])
   const queueMap = useMemo(() => new Map((data?.queues || []).map((queue) => [str(queue.name), queue])), [data?.queues])
-  const attentionCount = (statusMap.get('FAILED') || 0) + (statusMap.get('FAILED_PERM') || 0)
+  const failedCount = statusMap.get('FAILED') || 0
+  const permanentCount = statusMap.get('FAILED_PERM') || 0
+  // Acknowledging is a local view preference, never a backend state change.
+  const acknowledgedFailed = Math.min(alertAcknowledgement.failed, failedCount)
+  const acknowledgedPermanent = Math.min(alertAcknowledgement.permanent, permanentCount)
+  const unacknowledgedFailed = Math.max(0, failedCount - acknowledgedFailed)
+  const unacknowledgedPermanent = Math.max(0, permanentCount - acknowledgedPermanent)
+  const attentionCount = unacknowledgedFailed + unacknowledgedPermanent
   const finished = statusMap.get('COMPLETED') || 0
   const total = data?.total || 0
   const completion = total ? Math.round((finished / total) * 100) : 0
-  // inProgress is the paginated source of truth; activeJobs supplements live output.
+
+  function acknowledgeAlerts() {
+    const next = { failed: failedCount, permanent: permanentCount }
+    safeLocalStorage.set(PROBLEM_ALERT_ACK_KEY, JSON.stringify(next))
+    setAlertAcknowledgement(next)
+  }
+  // The processing table is strictly for worker execution. Queue-waiting rows
+  // remain represented by queue counts and are not shown as active jobs.
   const liveJobs = useMemo(() => {
-    const activeById = new Map(
-      (data?.activeJobs || []).map((job) => [num(job.problemId ?? job.id), job]),
-    )
-    const listed = (data?.inProgress || []).map((job) => ({
-      ...job,
-      ...activeById.get(num(job.problemId ?? job.id)),
-    }))
-    const listedIds = new Set(listed.map((job) => num(job.problemId ?? job.id)))
-    return listed.concat(
-      (data?.activeJobs || []).filter((job) => !listedIds.has(num(job.problemId ?? job.id))),
-    )
-  }, [data?.activeJobs, data?.inProgress])
+    return data?.activeJobs || []
+  }, [data?.activeJobs])
+  const conversations = data?.conversations || []
+  const runningByStage = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const job of data?.activeJobs || []) counts.set(str(job.stage), (counts.get(str(job.stage)) || 0) + 1)
+    return counts
+  }, [data?.activeJobs])
 
   useEffect(() => {
     if (!selectedJob) return
     const selectedId = num(selectedJob.problemId ?? selectedJob.id)
-    const next = liveJobs.find((job) => num(job.problemId ?? job.id) === selectedId)
+    const next = liveJobs.concat(conversations).find((job) => num(job.problemId ?? job.id) === selectedId)
     if (next) setSelectedJob(next)
-  }, [liveJobs, selectedJob])
+  }, [conversations, liveJobs, selectedJob])
 
   return (
     <PageShell>
@@ -141,14 +169,19 @@ export function DashboardProblemProgress() {
           <Alert variant="destructive">
             <AlertTriangle />
             <AlertTitle>有任务需要处理</AlertTitle>
-            <AlertDescription>当前有 {statusMap.get('FAILED') || 0} 项可重试失败，{statusMap.get('FAILED_PERM') || 0} 项永久失败。</AlertDescription>
+            <AlertDescription>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span>新增 {unacknowledgedFailed} 项可重试失败，{unacknowledgedPermanent} 项永久失败。</span>
+                <Button variant="outline" size="sm" onClick={acknowledgeAlerts}>知道了</Button>
+              </div>
+            </AlertDescription>
           </Alert>
         ) : null}
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard label="全部题目" value={total} detail={`${completion}% 已完成`} icon={SquareStack} progress={completion} loading={loading && !data} />
           <MetricCard label="待处理" value={(statusMap.get('PENDING') || 0) + (statusMap.get('TAGGING') || 0)} detail={`获取题面 ${statusMap.get('PENDING') || 0} · 等待 AI ${statusMap.get('TAGGING') || 0}`} icon={Clock3} loading={loading && !data} />
-          <MetricCard label="正在处理" value={data?.inProgressTotal || liveJobs.length} detail={`当前显示 ${liveJobs.length} 项`} icon={Activity} loading={loading && !data} />
+          <MetricCard label="正在执行" value={liveJobs.length} detail="当前 worker 正在处理" icon={Activity} loading={loading && !data} />
           <MetricCard label="需要关注" value={attentionCount} detail="失败与永久失败" icon={attentionCount ? AlertTriangle : CheckCircle2} tone={attentionCount ? 'danger' : 'success'} loading={loading && !data} />
         </section>
 
@@ -171,8 +204,8 @@ export function DashboardProblemProgress() {
                 const paused = name === 'problem_fetch' ? data?.fetchPaused : name === 'problem_analyze' ? data?.analyzePaused : false
                 return <div key={name} className="rounded-lg border bg-muted/20 p-3">
                   <div className="flex items-center justify-between gap-2"><span className="flex items-center gap-2 text-sm font-medium"><Icon className="size-4 text-muted-foreground" />{meta.label}</span><span className={`size-2 rounded-full ${paused ? 'bg-destructive' : 'bg-emerald-500'}`} /></div>
-                  <div className="mt-4 flex items-baseline gap-1"><strong className="text-2xl tabular-nums">{queue ? num(queue.messages) : '-'}</strong><span className="text-xs text-muted-foreground">待处理</span></div>
-                  <div className="mt-1 text-xs text-muted-foreground">并行处理 {queue ? num(queue.concurrency) : '-'} 项 · {paused ? '已暂停' : '运行中'}</div>
+                  <div className="mt-4 flex items-baseline gap-1"><strong className="text-2xl tabular-nums">{queue ? num(queue.messages) + (runningByStage.get(name === 'problem_analyze' ? 'analyze' : name === 'problem_fetch' ? 'fetch' : 'spider') || 0) : '-'}</strong><span className="text-xs text-muted-foreground">待处理（含执行中）</span></div>
+                  <div className="mt-1 text-xs text-muted-foreground">排队 {queue ? num(queue.messages) : '-'} · 并行 {queue ? num(queue.concurrency) : '-'} 项 · {paused ? '已暂停' : '运行中'}</div>
                 </div>
               })}
             </CardContent>
@@ -193,17 +226,34 @@ export function DashboardProblemProgress() {
 
         <Card className="overflow-hidden">
           <CardHeader className="border-b">
-            <div><CardTitle className="flex items-center gap-2">处理中的题目 <Badge variant="outline">{data?.inProgressTotal || 0}</Badge></CardTitle><CardDescription>正在执行的任务会显示实时输出，等待中的任务可查看诊断信息</CardDescription></div>
-            <CardAction>{liveJobs.some((job) => Boolean(str(job.latestOutput)) && str(job.stage) === 'analyze') ? <Badge variant="secondary"><span className="mr-1 inline-block size-1.5 animate-pulse rounded-full bg-emerald-500" />有实时任务</Badge> : <Badge variant="outline">当前无实时输出</Badge>}</CardAction>
+            <div><CardTitle className="flex items-center gap-2">正在执行 <Badge variant="outline">{liveJobs.length}</Badge></CardTitle><CardDescription>这里只显示 worker 当前实际执行的任务，点击可查看实时输出</CardDescription></div>
+            <CardAction>{conversations.some((job) => str(job.state) === 'running' && str(job.stage) === 'analyze') ? <Badge variant="secondary"><span className="mr-1 inline-block size-1.5 animate-pulse rounded-full bg-emerald-500" />有实时任务</Badge> : <Badge variant="outline">当前无实时输出</Badge>}</CardAction>
           </CardHeader>
-          <CardContent className="p-0"><JobTable rows={liveJobs} onAnalyzeClick={setSelectedJob} empty="当前没有正在执行的任务" /><Pagination page={inProgressPage} pageSize={inProgressPageSize} total={data?.inProgressTotal || 0} onChange={setInProgressPage} /></CardContent>
+          <CardContent className="p-0"><JobTable rows={liveJobs} onAnalyzeClick={setSelectedJob} empty="当前没有正在执行的任务" /></CardContent>
         </Card>
 
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,1fr)]">
+        <section className="grid gap-4 xl:grid-cols-2">
           <Card className="overflow-hidden">
             <CardHeader className="border-b"><div><CardTitle className="flex items-center gap-2">失败记录 <Badge variant="outline">{data?.recentFailedTotal || 0}</Badge></CardTitle><CardDescription>近 6 个月内可自动重试的题目</CardDescription></div><CardAction><div className="flex gap-2"><ConfirmAction title="重试失败题目？" description="将重新处理近 6 个月内可重试的失败题目。" disabled={!canOps || busy || !(data?.recentFailed.length)} onConfirm={() => void run('重试失败', () => retryFailedProblems(0))}>重试全部</ConfirmAction><ConfirmAction title="停止自动重试？" description="失败题目将停止自动重试，并记录为永久失败。" disabled={!canOps || busy || !(data?.recentFailed.length)} onConfirm={() => void run('停止自动重试', clearRecentFailedProblems)}>停止重试</ConfirmAction></div></CardAction></CardHeader>
-            <CardContent className="p-0"><JobTable rows={data?.recentFailed || []} showError empty="暂无可重试的失败记录" /><Pagination page={failedPage} pageSize={failedPageSize} total={data?.recentFailedTotal || 0} onChange={setFailedPage} /></CardContent>
+            <CardContent className="max-h-[420px] overflow-auto p-0"><JobTable rows={data?.recentFailed || []} showError empty="暂无可重试的失败记录" /><Pagination page={failedPage} pageSize={failedPageSize} total={data?.recentFailedTotal || 0} onChange={setFailedPage} /></CardContent>
           </Card>
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b"><div><CardTitle className="flex items-center gap-2">永久失败 <Badge variant="outline">{data?.recentFailedPermTotal || 0}</Badge></CardTitle><CardDescription>不会自动重试，可手动重新安排</CardDescription></div><CardAction><ConfirmAction title="重试永久失败题目？" description="将重新尝试处理当前页中的可恢复题目。" disabled={!canOps || busy || !(data?.recentFailedPerm.length)} onConfirm={() => void run('重试永久失败', () => retryFailedProblems(0, true))}>重试</ConfirmAction></CardAction></CardHeader>
+            <CardContent className="max-h-[420px] overflow-auto p-0"><JobTable rows={data?.recentFailedPerm || []} showError empty="暂无永久失败记录" /><Pagination page={failedPage} pageSize={failedPageSize} total={data?.recentFailedPermTotal || 0} onChange={setFailedPage} /></CardContent>
+          </Card>
+        </section>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b"><div><CardTitle className="flex items-center gap-2">最近成功 <Badge variant="outline">{Math.min(100, data?.recentCompleted.length || 0)}</Badge></CardTitle><CardDescription>最近完成的题目，最多保留 100 条</CardDescription></div></CardHeader>
+          <CardContent className="max-h-[360px] overflow-auto p-0"><JobTable rows={data?.recentCompleted || []} empty="暂无成功记录" /></CardContent>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b"><div><CardTitle className="flex items-center gap-2">AI 任务记录 <Badge variant="outline">{Math.min(100, conversations.length)}</Badge></CardTitle><CardDescription>运行中的任务和最近 1 小时内结束的任务</CardDescription></div></CardHeader>
+          <CardContent className="max-h-[360px] overflow-auto p-0"><ConversationTable rows={conversations} onSelect={setSelectedJob} /></CardContent>
+        </Card>
+
+        <section className="grid gap-4 xl:grid-cols-2">
           <Card>
             <CardHeader><CardTitle>处理概况</CardTitle><CardDescription>题库状态分布</CardDescription></CardHeader>
             <CardContent className="flex flex-col gap-3">
@@ -214,14 +264,6 @@ export function DashboardProblemProgress() {
             </CardContent>
           </Card>
         </section>
-
-        <Card className="overflow-hidden">
-          <CardHeader className="border-b">
-            <div><CardTitle className="flex items-center gap-2">永久失败 <Badge variant="outline">{data?.recentFailedPermTotal || 0}</Badge></CardTitle><CardDescription>不会再自动重试，通常需要检查题目访问权限或来源状态</CardDescription></div>
-            <CardAction><ConfirmAction title="重试永久失败题目？" description="将重新尝试获取可恢复题目的题面，仍不可访问的题目会继续保留。" disabled={!canOps || busy || !(data?.recentFailedPerm.length)} onConfirm={() => void run('重试永久失败', () => retryFailedProblems(0, true))}>重试当前范围</ConfirmAction></CardAction>
-          </CardHeader>
-          <CardContent className="p-0"><JobTable rows={data?.recentFailedPerm || []} showError empty="暂无永久失败记录" /><Pagination page={failedPage} pageSize={failedPageSize} total={data?.recentFailedPermTotal || 0} onChange={setFailedPage} /></CardContent>
-        </Card>
 
         {canOps ? <div className="flex flex-col gap-2"><div className="flex items-center gap-2 text-sm font-medium"><Settings2 className="size-4" />运行并发</div><OpsConcurrencyCard canWrite={can(Perm.SiteConfigWrite)} /></div> : null}
       </div>
@@ -252,4 +294,9 @@ function ConfirmAction({ children, title, description, onConfirm, disabled }: { 
 function JobTable({ rows, showError = false, onAnalyzeClick, empty }: { rows: Record<string, unknown>[]; showError?: boolean; onAnalyzeClick?: (row: Record<string, unknown>) => void; empty: string }) {
   if (!rows.length) return <div className="flex flex-col items-center gap-2 px-4 py-12 text-center text-sm text-muted-foreground"><CheckCircle2 className="size-6" />{empty}</div>
   return <Table><TableHeader><TableRow><TableHead>题目</TableHead><TableHead className="hidden sm:table-cell">平台</TableHead><TableHead>阶段</TableHead>{showError ? <TableHead className="min-w-40">失败原因</TableHead> : null}<TableHead>更新时间</TableHead><TableHead className="w-10" /></TableRow></TableHeader><TableBody>{rows.map((row, index) => { const id = num(row.problemId ?? row.id); const title = cleanProblemTitle(str(row.title), str(row.externalId || id || '-')); const stage = formatPipelineStage(str(row.stage || row.status)); const error = str(row.errorMsg || row.error_msg || row.message); const clickable = str(row.stage) === 'analyze' || str(row.status) === 'TAGGING'; return <TableRow key={`${id}:${str(row.stage || row.status)}:${str(row.updatedAt || row.startedAt || row.time)}:${index}`} className={clickable ? 'cursor-pointer' : undefined} onClick={() => clickable && onAnalyzeClick?.(row)}><TableCell className="max-w-[240px] font-medium">{id ? <Link to={`/question-bank/detail/${id}`} className="truncate hover:underline" onClick={(event) => event.stopPropagation()}>{title}</Link> : <span className="truncate">{title}</span>}</TableCell><TableCell className="hidden sm:table-cell text-muted-foreground">{str(row.platform, '-')}</TableCell><TableCell><Badge variant={str(row.status) === 'FAILED' ? 'destructive' : 'outline'}>{stage}</Badge></TableCell>{showError ? <TableCell className="max-w-xs text-xs text-muted-foreground"><span className="line-clamp-2 break-all" title={error || undefined}>{error || '—'}</span></TableCell> : null}<TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatTime(row.startedAt || row.updatedAt || row.time)}</TableCell><TableCell>{clickable ? <Eye className="size-4 text-muted-foreground" /> : null}</TableCell></TableRow> })}</TableBody></Table>
+}
+
+function ConversationTable({ rows, onSelect }: { rows: Record<string, unknown>[]; onSelect: (row: Record<string, unknown>) => void }) {
+  if (!rows.length) return <div className="flex flex-col items-center gap-2 px-4 py-12 text-center text-sm text-muted-foreground"><Clock3 className="size-6" />暂无 AI 任务记录</div>
+  return <Table><TableHeader><TableRow><TableHead>题目</TableHead><TableHead>状态</TableHead><TableHead>结束时间</TableHead><TableHead className="w-10" /></TableRow></TableHeader><TableBody>{rows.map((row, index) => { const id = num(row.problemId ?? row.id); const running = str(row.state) === 'running'; return <TableRow key={`${id}:${str(row.stage)}:${index}`} className="cursor-pointer" onClick={() => onSelect(row)}><TableCell className="max-w-[280px] font-medium"><span className="truncate">{cleanProblemTitle(str(row.title), str(row.externalId || id || '-'))}</span></TableCell><TableCell><Badge variant={running ? 'secondary' : 'outline'}>{running ? '运行中' : '已结束'}</Badge></TableCell><TableCell className="whitespace-nowrap text-xs text-muted-foreground">{running ? '—' : formatTime(row.endedAt)}</TableCell><TableCell><Eye className="size-4 text-muted-foreground" /></TableCell></TableRow> })}</TableBody></Table>
 }
