@@ -73,7 +73,7 @@ export function formatPipelineStage(stage?: string | null): string {
     analyze: '分析中',
     PENDING: '待获取题面',
     FETCHING: '获取题面中',
-    TAGGING: '待分析',
+    TAGGING: '等待 AI 分析',
     COMPLETED: '已完成',
     FAILED: '失败（可重试）',
     FAILED_PERM: '永久失败',
