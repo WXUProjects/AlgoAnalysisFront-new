@@ -70,6 +70,7 @@ import {
   readContestSeed,
 } from '@/lib/contest-nav'
 import { getSubmitLink } from '@/lib/link'
+import { goNavBack } from '@/lib/nav-back'
 import { cn } from '@/lib/utils'
 
 const DEFAULT_PAGE_SIZE = 20
@@ -480,8 +481,13 @@ export function ContestDetails() {
               </a>
             </Button>
           )}
-          <Button type="button" size="sm" variant="outline" asChild>
-            <Link to="/contest?tab=records">返回列表</Link>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => goNavBack(navigate, location.pathname)}
+          >
+            返回列表
           </Button>
         </div>
       </div>

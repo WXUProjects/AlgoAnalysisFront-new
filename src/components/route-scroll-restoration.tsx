@@ -72,6 +72,7 @@ export function RouteScrollRestoration({
     let frame = 0
     let attempts = 0
     let restoring = true
+    let waitingForContent = false
 
     const stopRestoring = () => {
       if (!restoring) return
@@ -93,6 +94,7 @@ export function RouteScrollRestoration({
 
     const restore = () => {
       if (!restoring) return
+      waitingForContent = false
       applyPosition(scroller, target)
       attempts += 1
 
@@ -101,12 +103,26 @@ export function RouteScrollRestoration({
         current.container === target.container && current.window === target.window
       if (!restored && attempts < MAX_RESTORE_FRAMES) {
         frame = window.requestAnimationFrame(restore)
+      } else if (!restored) {
+        waitingForContent = true
       } else {
         frame = window.requestAnimationFrame(() => {
           restoring = false
           suppressSave = false
         })
       }
+    }
+
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(() => {
+          if (!restoring || !waitingForContent) return
+          waitingForContent = false
+          attempts = 0
+          frame = window.requestAnimationFrame(restore)
+        })
+    if (scroller) {
+      resizeObserver?.observe(scroller.firstElementChild ?? scroller)
     }
 
     frame = window.requestAnimationFrame(restore)
@@ -122,6 +138,7 @@ export function RouteScrollRestoration({
       window.removeEventListener('touchstart', stopRestoring)
       window.removeEventListener('pointerdown', stopRestoring)
       window.removeEventListener('keydown', stopRestoringFromKey)
+      resizeObserver?.disconnect()
     }
   }, [location.key, navigationType, store])
 

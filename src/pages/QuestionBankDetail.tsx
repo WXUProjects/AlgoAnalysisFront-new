@@ -529,6 +529,7 @@ export function QuestionBankDetail() {
       toast.error(res.message || '重新分析失败')
       return
     }
+    toast.success('已进入分析队列，请稍等')
     startActionPolling('reanalyze', problem.id, previousAnalyzedAt, requestedAt)
   }
 

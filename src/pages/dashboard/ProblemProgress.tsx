@@ -88,7 +88,11 @@ import {
 import { num, str } from "@/lib/http";
 import { Perm } from "@/lib/permissions";
 import { safeLocalStorage } from "@/lib/safe-storage";
-import { queuedProblemJobs } from "@/lib/problem-queue-jobs";
+import {
+  paginateProblemJobs,
+  PROBLEM_JOBS_PAGE_SIZE,
+  queuedProblemJobs,
+} from "@/lib/problem-queue-jobs";
 
 const PROBLEM_ALERT_ACK_KEY = "goalgo.problem.progress.alertAck";
 
@@ -146,6 +150,7 @@ export function DashboardProblemProgress() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [failedPage, setFailedPage] = useState(1);
+  const [workerPage, setWorkerPage] = useState(1);
   const [selectedJob, setSelectedJob] = useState<Record<
     string,
     unknown
@@ -236,18 +241,30 @@ export function DashboardProblemProgress() {
     safeLocalStorage.set(PROBLEM_ALERT_ACK_KEY, JSON.stringify(next));
     setAlertAcknowledgement(next);
   }
-  // The processing table is strictly for worker execution. Queue-waiting rows
-  // are represented by the queue counts above, not inferred from inProgress.
+  // Stage records are only treated as waiting when the corresponding queue
+  // confirms that work is actually pending.
   const liveJobs = useMemo(() => {
     return data?.activeJobs || [];
   }, [data?.activeJobs]);
   const queuedJobs = useMemo(
-    () => queuedProblemJobs(data?.inProgress || [], liveJobs),
-    [data?.inProgress, liveJobs],
+    () =>
+      queuedProblemJobs(data?.inProgress || [], liveJobs, {
+        fetch: queueMap.has("problem_fetch")
+          ? num(queueMap.get("problem_fetch")?.messages)
+          : undefined,
+        analyze: queueMap.has("problem_analyze")
+          ? num(queueMap.get("problem_analyze")?.messages)
+          : undefined,
+      }),
+    [data?.inProgress, liveJobs, queueMap],
   );
   const workerJobs = useMemo(
     () => liveJobs.concat(queuedJobs),
     [liveJobs, queuedJobs],
+  );
+  const visibleWorkerJobs = useMemo(
+    () => paginateProblemJobs(workerJobs, workerPage),
+    [workerJobs, workerPage],
   );
   const conversations = data?.conversations || [];
   const runningByStage = useMemo(() => {
@@ -265,6 +282,14 @@ export function DashboardProblemProgress() {
       .find((job) => num(job.problemId ?? job.id) === selectedId);
     if (next) setSelectedJob(next);
   }, [conversations, liveJobs, selectedJob]);
+
+  useEffect(() => {
+    const lastPage = Math.max(
+      1,
+      Math.ceil(workerJobs.length / PROBLEM_JOBS_PAGE_SIZE),
+    );
+    if (workerPage > lastPage) setWorkerPage(lastPage);
+  }, [workerJobs.length, workerPage]);
 
   return (
     <PageShell>
@@ -513,9 +538,15 @@ export function DashboardProblemProgress() {
           </CardHeader>
           <CardContent className="p-0">
             <JobTable
-              rows={workerJobs}
+              rows={visibleWorkerJobs}
               onAnalyzeClick={setSelectedJob}
               empty="当前没有执行中或待处理的任务"
+            />
+            <Pagination
+              page={workerPage}
+              pageSize={PROBLEM_JOBS_PAGE_SIZE}
+              total={workerJobs.length}
+              onChange={setWorkerPage}
             />
           </CardContent>
         </Card>

@@ -15,6 +15,7 @@ import { RouteScrollRestoration } from './route-scroll-restoration'
 let root: Root | undefined
 let dom: JSDOM | undefined
 let frames: FrameRequestCallback[] = []
+let resizeCallbacks: ResizeObserverCallback[] = []
 
 afterEach(async () => {
   if (root) await act(() => root?.unmount())
@@ -22,6 +23,7 @@ afterEach(async () => {
   dom?.window.close()
   dom = undefined
   frames = []
+  resizeCallbacks = []
 })
 
 function installDom() {
@@ -35,6 +37,14 @@ function installDom() {
     Event: dom.window.Event,
     MouseEvent: dom.window.MouseEvent,
     IS_REACT_ACT_ENVIRONMENT: true,
+    ResizeObserver: class {
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallbacks.push(callback)
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
   })
   Object.defineProperty(globalThis, 'navigator', {
     configurable: true,
@@ -208,6 +218,11 @@ async function renderPendingRestore(store: ScrollPositionStore) {
     allowFullRestore: () => {
       maximum = 1000
     },
+    notifyContentResize: async () => {
+      await act(async () => {
+        resizeCallbacks.forEach((callback) => callback([], {} as ResizeObserver))
+      })
+    },
   }
 }
 
@@ -231,6 +246,20 @@ test('pending restore continues when there is no user scroll intent', async () =
   assert.equal(scroller.scrollTop, 100)
 
   allowFullRestore()
+  await flushAllFrames()
+
+  assert.equal(scroller.scrollTop, 640)
+})
+
+test('content growth resumes a restore after the initial frame budget is exhausted', async () => {
+  const store = createScrollPositionStore()
+  const { scroller, allowFullRestore, notifyContentResize } = await renderPendingRestore(store)
+
+  await flushAllFrames()
+  assert.equal(scroller.scrollTop, 100)
+
+  allowFullRestore()
+  await notifyContentResize()
   await flushAllFrames()
 
   assert.equal(scroller.scrollTop, 640)
