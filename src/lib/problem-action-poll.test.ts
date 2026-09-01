@@ -22,3 +22,14 @@ test('confirms a successful reanalysis request before polling', () => {
   assert.notEqual(successToast, -1)
   assert.ok(successToast < startPolling)
 })
+
+test('keeps the problem source readable when the mobile action group wraps', () => {
+  const source = readFileSync(new URL('../pages/QuestionBankDetail.tsx', import.meta.url), 'utf8')
+  const header = source.slice(
+    source.indexOf('className="flex flex-row flex-wrap items-start justify-between'),
+    source.indexOf('className="flex flex-row flex-wrap items-start justify-between') + 900,
+  )
+
+  assert.match(header, /flex-wrap/)
+  assert.match(header, /whitespace-nowrap/)
+})

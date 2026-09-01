@@ -778,8 +778,8 @@ export function QuestionBankDetail() {
               mobilePane !== 'problem' && 'hidden md:flex',
             )}
           >
-            <CardHeader className="flex flex-row items-start justify-between gap-2 px-5 sm:px-6">
-              <div className="flex min-w-0 flex-col gap-1">
+            <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 px-5 sm:px-6">
+              <div className="flex shrink-0 flex-col gap-1">
                 <CardTitle className="text-base">题面</CardTitle>
                 {contentEmpty && (
                   <CardDescription>
@@ -787,7 +787,7 @@ export function QuestionBankDetail() {
                   </CardDescription>
                 )}
                 {!contentEmpty && (
-                  <CardDescription>
+                  <CardDescription className="whitespace-nowrap">
                     {problem.contentSource ? `来源：${problem.contentSource === 'vjudge' ? 'VirtualOJ' : problem.contentSource} ` : ''}
                     {problem.contentFetchedAt ? `抓取于 ${formatTime(problem.contentFetchedAt)}` : ''}
                   </CardDescription>
