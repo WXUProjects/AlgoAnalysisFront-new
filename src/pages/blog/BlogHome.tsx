@@ -11,6 +11,7 @@ import {
 import { listBlogByUsername, listBlogCategories } from '@/api/blog'
 import { MarkdownBody } from '@/components/markdown-body'
 import { MarkdownSummary } from '@/components/markdown-summary'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
@@ -192,6 +193,7 @@ export function BlogHome() {
                       <time>
                         {formatDateSlash(a.publishedAt || a.createdAt)}
                       </time>
+                      {a.pinnedAt ? <Badge variant="secondary">置顶</Badge> : null}
                       {catName(a.categoryId) ? (
                         <>
                           <FolderOpenIcon className="meta-sep inline" />
@@ -303,6 +305,7 @@ export function BlogHome() {
                         {formatDateSlash(a.publishedAt || a.createdAt)}
                       </time>
                     </span>
+                    {a.pinnedAt ? <Badge variant="secondary">置顶</Badge> : null}
                     {catName(a.categoryId) ? (
                       <span className="inline-flex items-center gap-1">
                         <FolderOpenIcon />
@@ -483,6 +486,7 @@ export function BlogHome() {
                 <div className="flex flex-1 flex-col gap-2 p-4">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <time>{formatDate(a.publishedAt || a.createdAt)}</time>
+                    {a.pinnedAt ? <Badge variant="secondary">置顶</Badge> : null}
                     {a.requiresPassword && (
                       <span className="rounded bg-muted px-1.5 py-0.5">密码</span>
                     )}
