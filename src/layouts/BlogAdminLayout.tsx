@@ -13,6 +13,7 @@ import {
   FolderOpenIcon,
   LayoutListIcon,
   PenLineIcon,
+  PinIcon,
   SettingsIcon,
 } from 'lucide-react'
 import { getBlogActivationStatus, listBlogByUsername } from '@/api/blog'
@@ -129,6 +130,7 @@ export function BlogAdminLayout() {
   const tabs = [
     { to: manage, end: true, label: '文章', icon: LayoutListIcon },
     { to: `${manage}/new`, label: '写文章', icon: PenLineIcon },
+    { to: `${manage}/pinned`, label: '文章置顶', icon: PinIcon },
     { to: `${manage}/analytics`, label: '数据', icon: BarChart3Icon },
     { to: `${manage}/categories`, label: '分类', icon: FolderOpenIcon },
     { to: `${manage}/settings`, label: '外观', icon: SettingsIcon },

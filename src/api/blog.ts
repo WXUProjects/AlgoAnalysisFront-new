@@ -93,6 +93,8 @@ function normalizeArticle(raw: Record<string, unknown>): BlogArticle {
     createdAt: num(raw.createdAt),
     updatedAt: num(raw.updatedAt) || undefined,
     publishedAt: num(raw.publishedAt) || undefined,
+    pinnedAt: num(raw.pinnedAt) || undefined,
+    pinOrder: num(raw.pinOrder) || undefined,
   }
 }
 
@@ -138,6 +140,8 @@ export async function listBlogByUsername(params: {
   keyword?: string
   /** 标签模糊筛选 */
   tag?: string
+  /** 仅个人博客首页启用置顶优先 */
+  pinnedFirst?: boolean
 }): Promise<
   ApiResult<{
     author: BlogAuthor
@@ -167,6 +171,7 @@ export async function listBlogByUsername(params: {
   if (params.categoryId) query.categoryId = params.categoryId
   if (params.keyword) query.keyword = params.keyword
   if (params.tag) query.tag = params.tag
+  if (params.pinnedFirst) query.pinnedFirst = true
   const res = await get<Record<string, unknown>>(
     endpoints.user.blog.byUsername,
     query,
@@ -322,6 +327,38 @@ export async function listMyBlogArticles(params?: {
       pageSize: num(data.pageSize, 20),
     }
   })
+}
+
+export async function listMyPinnedBlogArticles(): Promise<ApiResult<BlogArticle[]>> {
+  const res = await get<unknown>(endpoints.user.blog.articlePinnedMine)
+  const raw = (res.raw ?? res.data ?? {}) as Record<string, unknown>
+  const data = raw.data ?? raw
+  const listRaw = (Array.isArray(data) ? data : []) as Record<string, unknown>[]
+  if (!res.success && listRaw.length === 0) {
+    return { ...res, data: null }
+  }
+  return {
+    ...res,
+    success: true,
+    data: listRaw.map(normalizeArticle),
+  }
+}
+
+export async function setBlogArticlePinned(
+  id: number,
+  pinned: boolean,
+): Promise<ApiResult<BlogArticle>> {
+  const res = await post<Record<string, unknown>>(endpoints.user.blog.articlePin, {
+    id,
+    pinned,
+  })
+  return wrapData(res, (data) => (num(data.id) ? normalizeArticle(data) : null))
+}
+
+export async function reorderPinnedBlogArticles(
+  articleIds: number[],
+): Promise<ApiResult<unknown>> {
+  return post(endpoints.user.blog.articlePinnedReorder, { articleIds })
 }
 
 export async function listBlogRecommend(params?: {

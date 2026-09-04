@@ -14,6 +14,7 @@ import {
   BlogHome,
   BlogLayout,
   BlogManage,
+  BlogPinnedPage,
   BlogSettingsPage,
 } from '@/routes/lazy-pages'
 
@@ -54,6 +55,14 @@ export const blogRoutes: RouteObject[] = [
             element: (
               <Lazy>
                 <BlogEditor />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'pinned',
+            element: (
+              <Lazy>
+                <BlogPinnedPage />
               </Lazy>
             ),
           },

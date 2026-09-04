@@ -184,6 +184,9 @@ export const endpoints = {
       articleUpdate: `${API_PREFIX}/user/blog/article/update`,
       articleDelete: `${API_PREFIX}/user/blog/article/delete`,
       articleMine: `${API_PREFIX}/user/blog/article/mine`,
+      articlePinnedMine: `${API_PREFIX}/user/blog/article/pinned/mine`,
+      articlePin: `${API_PREFIX}/user/blog/article/pin`,
+      articlePinnedReorder: `${API_PREFIX}/user/blog/article/pinned/reorder`,
       recommend: `${API_PREFIX}/user/blog/recommend`,
       plaza: `${API_PREFIX}/user/blog/plaza`,
       authors: `${API_PREFIX}/user/blog/authors`,
@@ -2359,6 +2362,10 @@ export interface BlogArticle {
   createdAt: number
   updatedAt?: number
   publishedAt?: number
+  /** 置顶操作时间；仅影响个人博客无筛选首页 */
+  pinnedAt?: number
+  /** 置顶区顺序，从 1 开始，数值越小越靠前 */
+  pinOrder?: number
 }
 
 export interface BlogCategory {

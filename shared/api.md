@@ -387,13 +387,16 @@ Proto 生成（`cwxu-algo/api/user/v1/blog/blog.proto`）。文章为**单一数
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| GET | `/user/blog/by-username` | 否* | query: `username`；可选 `page`/`pageSize`/`categoryId`/`keyword`/`tag`（标签模糊）；返回作者信息 + 文章列表 + `activated` + 壳配置（`themeId`/`colorScheme`/`subtitle`/`socialLinks`/`aboutMd`/`homeIntroMd`/`friendsMd`）；未开通且非本人时 `list` 为空 |
+| GET | `/user/blog/by-username` | 否* | query: `username`；可选 `page`/`pageSize`/`categoryId`/`keyword`/`tag`（标签模糊）/`pinnedFirst=true`；仅个人博客首页传 `pinnedFirst=true`，此时无筛选列表按有效置顶文章、`pinOrder`、发布时间排列，置顶可自然跨页；其它调用及任一筛选生效时按发布时间倒序；返回作者信息 + 文章列表 + `activated` + 壳配置（`themeId`/`colorScheme`/`subtitle`/`socialLinks`/`aboutMd`/`homeIntroMd`/`friendsMd`）；未开通且非本人时 `list` 为空 |
 | GET | `/user/blog/article/get` | 否* | query: `id` 或 `username`+`slug`；可选 `password`/`unlockToken` |
 | POST | `/user/blog/article/unlock` | 否 | body: `{ id, password }`；成功返回正文 + `unlockToken` |
 | POST | `/user/blog/article/create` | 是 | body: `BlogArticleWriteReq` |
 | POST | `/user/blog/article/update` | 是 | body: 含 `id` 的 `BlogArticleWriteReq` |
 | POST | `/user/blog/article/delete` | 是 | body: `{ id }` |
 | GET | `/user/blog/article/mine` | 是 | 作者全部文章（含 private） |
+| GET | `/user/blog/article/pinned/mine` | 是 | 当前作者全部有效置顶文章，按 `pinOrder` 升序，不分页；仅含 `public` / `password` |
+| POST | `/user/blog/article/pin` | 是 | body: `{ id, pinned }`；新置顶文章排在最前；重复置顶幂等；取消置顶清空顺序 |
+| POST | `/user/blog/article/pinned/reorder` | 是 | body: `{ articleIds }`；必须按目标顺序精确覆盖当前有效置顶文章集合 |
 | GET | `/user/blog/recommend` | 否 | 主站/发现**精选**：仅 `recommend=true` 且 `sync_to_main_profile=true` 的公开已审文；query: `page`/`pageSize`/`orgId?`（私有域=仅该组织成员；公共域/缺省=全站）/`excludeSolutions=1`（排除题解镜像） |
 | GET | `/user/blog/plaza` | 否 | **博客广场**公开文流（仅 `sync_to_main_profile=true`）；query: `page`/`pageSize`/`keyword`/`sort=latest\|hot\|recommend`；`recommend` 仅精选；`orgId?`（私有域=仅该组织成员作者；公共域/缺省=全站）/`excludeSolutions=1`（排除题解镜像，发现页去重）；列表**不含 content** |
 | GET | `/user/blog/authors` | 否 | 广场侧栏：最近有公开文的作者；query: `page`/`pageSize`/`keyword`；按最近发布时间排序 |
@@ -415,6 +418,7 @@ Proto 生成（`cwxu-algo/api/user/v1/blog/blog.proto`）。文章为**单一数
 - **共享互动**：题解与镜像博客共享点赞/评论/UV 浏览量；迁移时历史浏览量清零。
 - 题解详情 get 会对未同步的旧题解做懒同步。
 - 前端题解阅读页用 `blogUsername` + `blogSlug` 跳转 `/blog/:username/:slug`。
+
 | GET | `/user/blog/comment/list` | 否*（登录可带 liked） | query: `articleId`、`page`/`pageSize` → **顶层评论分页** + 嵌套 `replies`；项含 `likeCount`/`liked`/`parentId`/`replyTo*`；最大深度 3 |
 | POST | `/user/blog/comment/create` | 是 | body: `{ articleId, content, parentId? }`；`parentId` 回复；最大深度 3；题解镜像文前端改走题解评论 API |
 | POST | `/user/blog/comment/delete` | 是 | body: `{ id }`；评论作者 / 文章作者 / 站管；**级联删除子树** + 评论点赞 |
@@ -445,6 +449,13 @@ Proto 生成（`cwxu-algo/api/user/v1/blog/blog.proto`）。文章为**单一数
 | GET | `/user/blog/image-upload/status` | 是 | 当前用户：`{ configured, authorized, enabled, pendingRequest, pendingRequestId? }`（站点又拍云已配且已授权时 `enabled=true`） |
 | POST | `/user/blog/image-upload/apply` | 是 | body: `{ reason }`（必填，5–500 字）；提交图片上传权限申请，通知站管；已开通/已有待审幂等返回 |
 | POST | `/user/blog/images/check` | 是 | body `{ urls?: string[], hashes?: string[] }`（合计 ≤200）→ `{ existing, missing, existingHashes, missingHashes }`：批量确认 URL/object key 与 content hash 是否仍在本用户 `blog_image_assets`（插件/编辑器缓存复用；GC 以 hash 为主） |
+
+**文章置顶**
+
+- 作者可置顶任意数量的 `public` / `password` 文章；`private` 不可置顶，文章改为 `private` 时自动取消置顶。
+- 置顶仅影响个人博客无分类、关键词、标签筛选的文章列表，不影响博客侧栏最近更新、博客广场、精选、归档和筛选结果。
+- `pinnedAt` 为置顶操作时间，`pinOrder` 从 1 开始且数值越小越靠前；新置顶文章默认排在最前，作者可重排。
+
 **又拍云图床**：站点设置配置 `upyunBucket`（服务名）、`upyunOperator`、`upyunPassword`（脱敏存储）、`upyunDomain`（用户侧访问域，如 `zhiyuansofts.cn`）、`upyunScheme`（`http`/`https`）。上传走服务端代传；不再自动 GC，只有站点管理员可在博客管理的「图片管理」页签显式清理。正文支持 Obsidian 定宽 `![说明|550](url)`。
 
 **图床 URL 存储（path-only）**：本站又拍云对象在库内以 `/blog/{userId}/…` 路径存储（正文、封面、`blog_image_assets`、题解镜像）。`POST /user/upload`（`purpose=blog|blog_cover`）仍返回**当前**完整公网 `url` + `hash` 供编辑器/插件插入与缓存；文章/题解/页面 **读接口** 会按站点当前 `upyunDomain`+`upyunScheme` 展开为完整 URL。因此修改访问域名后，旧文无需改写即可用新域名出图；外链图不受影响。

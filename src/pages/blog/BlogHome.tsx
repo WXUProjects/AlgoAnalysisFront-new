@@ -93,6 +93,7 @@ export function BlogHome() {
           categoryId,
           keyword: keyword || undefined,
           tag: tag || undefined,
+          pinnedFirst: true,
         }),
         listBlogCategories(username),
       ])

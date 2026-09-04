@@ -223,6 +223,9 @@ export const BlogArticlePage = lazy(() =>
 export const BlogManage = lazy(() =>
   import('@/pages/blog/BlogManage').then((m) => ({ default: m.BlogManage })),
 )
+export const BlogPinnedPage = lazy(() =>
+  import('@/pages/blog/BlogPinned').then((m) => ({ default: m.BlogPinnedPage })),
+)
 export const BlogEditor = lazy(() =>
   import('@/pages/blog/BlogEditor').then((m) => ({ default: m.BlogEditor })),
 )
