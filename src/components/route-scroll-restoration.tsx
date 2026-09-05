@@ -116,16 +116,25 @@ export function RouteScrollRestoration({
       }
     }
 
+    const retryRestore = () => {
+      if (!restoring || !waitingForContent) return
+      waitingForContent = false
+      attempts = 0
+      frame = window.requestAnimationFrame(restore)
+    }
+
     const resizeObserver = typeof ResizeObserver === 'undefined'
       ? null
-      : new ResizeObserver(() => {
-          if (!restoring || !waitingForContent) return
-          waitingForContent = false
-          attempts = 0
-          frame = window.requestAnimationFrame(restore)
-        })
+      : new ResizeObserver(retryRestore)
     if (scroller) {
+      resizeObserver?.observe(scroller)
       resizeObserver?.observe(scroller.firstElementChild ?? scroller)
+    }
+    const mutationObserver = typeof MutationObserver === 'undefined' || !scroller
+      ? null
+      : new MutationObserver(retryRestore)
+    if (mutationObserver && scroller) {
+      mutationObserver.observe(scroller, { childList: true, subtree: true })
     }
 
     frame = window.requestAnimationFrame(restore)
@@ -142,6 +151,7 @@ export function RouteScrollRestoration({
       window.removeEventListener('pointerdown', stopRestoring)
       window.removeEventListener('keydown', stopRestoringFromKey)
       resizeObserver?.disconnect()
+      mutationObserver?.disconnect()
     }
   }, [location.key, navigationType, store])
 
