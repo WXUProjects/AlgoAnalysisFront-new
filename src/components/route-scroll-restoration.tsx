@@ -83,16 +83,20 @@ export function RouteScrollRestoration({
       suppressSave = false
       window.cancelAnimationFrame(frame)
     }
+    const saveBeforeNavigation = () => {
+      savePosition()
+      stopRestoring()
+    }
     const stopRestoringFromKey = (event: KeyboardEvent) => {
       if (SCROLL_KEYS.has(event.key)) stopRestoring()
     }
 
     scroller?.addEventListener('wheel', stopRestoring, { passive: true })
     scroller?.addEventListener('touchstart', stopRestoring, { passive: true })
-    scroller?.addEventListener('pointerdown', stopRestoring, { passive: true })
+    scroller?.addEventListener('pointerdown', saveBeforeNavigation, { passive: true })
     window.addEventListener('wheel', stopRestoring, { passive: true })
     window.addEventListener('touchstart', stopRestoring, { passive: true })
-    window.addEventListener('pointerdown', stopRestoring, { passive: true })
+    window.addEventListener('pointerdown', saveBeforeNavigation, { passive: true })
     window.addEventListener('keydown', stopRestoringFromKey)
 
     const restore = () => {
@@ -145,10 +149,10 @@ export function RouteScrollRestoration({
       window.removeEventListener('scroll', savePosition)
       scroller?.removeEventListener('wheel', stopRestoring)
       scroller?.removeEventListener('touchstart', stopRestoring)
-      scroller?.removeEventListener('pointerdown', stopRestoring)
+      scroller?.removeEventListener('pointerdown', saveBeforeNavigation)
       window.removeEventListener('wheel', stopRestoring)
       window.removeEventListener('touchstart', stopRestoring)
-      window.removeEventListener('pointerdown', stopRestoring)
+      window.removeEventListener('pointerdown', saveBeforeNavigation)
       window.removeEventListener('keydown', stopRestoringFromKey)
       resizeObserver?.disconnect()
       mutationObserver?.disconnect()
