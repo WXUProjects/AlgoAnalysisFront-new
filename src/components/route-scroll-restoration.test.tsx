@@ -189,6 +189,22 @@ test('navigate(-1) restores the previous list position after a PUSH', async () =
   assert.equal(scroller.scrollTop, 640)
 })
 
+test('restores a list position when its history key changes after query replacement', async () => {
+  const store = createScrollPositionStore()
+  const { container } = await renderRouter(store)
+  const scroller = container.querySelector<HTMLElement>('[data-app-scroll-container]')!
+  scroller.scrollTop = 640
+  scroller.dispatchEvent(new window.Event('scroll'))
+
+  await act(async () => container.querySelector<HTMLButtonElement>('button')?.click())
+  await flushAllFrames()
+
+  await act(async () => container.querySelectorAll<HTMLButtonElement>('button')[1].click())
+  await flushAllFrames()
+
+  assert.equal(scroller.scrollTop, 640)
+})
+
 async function renderPendingRestore(store: ScrollPositionStore) {
   const container = installDom()
   const scroller = document.createElement('main')

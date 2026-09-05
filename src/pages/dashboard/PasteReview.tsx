@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { listAdminPastes, type AdminPasteItem } from '@/api/paste'
 import { useAuth } from '@/auth/AuthContext'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -14,6 +14,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatTime } from '@/lib/format'
 import { Perm } from '@/lib/permissions'
+import { useListQueryState } from '@/hooks/use-list-query-state'
+import { AlertCircleIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50]
@@ -29,11 +31,14 @@ export function DashboardPasteReview() {
   const canReview =
     can(Perm.ContentCommunityMod) || can(Perm.ContentReportHandle)
 
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const { page, pageSize, setPage, setPageSize } = useListQueryState({
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+    pageSizeOptions: PAGE_SIZE_OPTIONS,
+  })
   const [rows, setRows] = useState<AdminPasteItem[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const requestId = useRef(0)
 
   const load = useCallback(async () => {
@@ -43,11 +48,12 @@ export function DashboardPasteReview() {
     }
     const id = ++requestId.current
     setLoading(true)
+    setError('')
     const res = await listAdminPastes(page, pageSize)
     if (id !== requestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
-      toast.error(res.message || '粘贴内容加载失败，稍后重试')
+      setError(res.message || '粘贴内容加载失败，请重试')
       return
     }
     setTotal(res.data.total)
@@ -96,7 +102,18 @@ export function DashboardPasteReview() {
           </Button>
         </CardHeader>
         <CardContent>
-          {loading && rows.length === 0 ? (
+          {error ? (
+            <Alert variant="destructive">
+              <AlertCircleIcon />
+              <AlertTitle>加载失败</AlertTitle>
+              <AlertDescription className="flex flex-wrap items-center gap-2">
+                <span>{error}</span>
+                <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
+                  重试
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : loading && rows.length === 0 ? (
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-28 w-full" />

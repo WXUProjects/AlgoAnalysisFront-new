@@ -223,6 +223,8 @@ export function ContestRecords() {
     if (id !== requestId.current) return
     setLoading(false)
     if (!res.success || !res.data) {
+      setList([])
+      setTotal(0)
       toast.error(res.message || '比赛列表没加载出来，过会儿再试')
       return
     }

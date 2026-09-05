@@ -190,7 +190,7 @@ export function ContestDetails() {
 
   useEffect(() => {
     if (!id) {
-      navigate(-1)
+      navigate('/contest', { replace: true })
       return
     }
     // 路由 id 变化或从列表带入 state：立刻用上游数据填标题区

@@ -17,6 +17,10 @@ export function createScrollPositionStore(): ScrollPositionStore {
   }
 }
 
+export function createRouteScrollKey(pathname: string, search: string): string {
+  return `${pathname}${search}`
+}
+
 export function getScrollAction(
   navigationType: string,
   position?: ScrollPosition,

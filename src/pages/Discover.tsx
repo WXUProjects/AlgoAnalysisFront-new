@@ -154,9 +154,6 @@ export function Discover() {
     )
     // 切页后滚回顶部：实际滚动容器是 AppLayout 的 main（overflow-y-auto），
     // 而非 window，需精确查询。
-    document
-      .querySelector<HTMLElement>('[data-app-scroll-container]')
-      ?.scrollTo(0, 0)
   }
 
   function setTab(next: DiscoverTabKey) {

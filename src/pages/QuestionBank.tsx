@@ -224,6 +224,8 @@ export function QuestionBank() {
       if (cancelled) return
       setLoading(false)
       if (!res.success || !res.data) {
+        setList([])
+        setTotal(0)
         toast.error(res.message || '题库没加载出来，过会儿再试')
         return
       }

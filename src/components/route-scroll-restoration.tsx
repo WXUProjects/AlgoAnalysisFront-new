@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect } from 'react'
 import { useLocation, useNavigationType } from 'react-router-dom'
 import {
   createScrollPositionStore,
+  createRouteScrollKey,
   getScrollAction,
   type ScrollPosition,
   type ScrollPositionStore,
@@ -57,15 +58,17 @@ export function RouteScrollRestoration({
   useLayoutEffect(() => {
     const scroller = getScroller()
     const key = location.key
+    const routeKey = createRouteScrollKey(location.pathname, location.search)
     let suppressSave = true
     const savePosition = () => {
       if (suppressSave) return
       store.set(key, readPosition(scroller))
+      store.set(routeKey, readPosition(scroller))
     }
 
     scroller?.addEventListener('scroll', savePosition, { passive: true })
     window.addEventListener('scroll', savePosition, { passive: true })
-    const savedPosition = store.get(key)
+    const savedPosition = store.get(key) ?? store.get(routeKey)
     const target = getScrollAction(navigationType, savedPosition) === 'restore'
       ? savedPosition!
       : { container: 0, window: 0 }

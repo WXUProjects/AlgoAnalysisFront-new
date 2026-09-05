@@ -84,6 +84,10 @@ export function AllActivities() {
       loadingRef.current = false
       setLoading(false)
       if (!res.success || !res.data) {
+        if (reset) {
+          setItems([])
+          setHasMore(false)
+        }
         toast.error(res.message || '动态没加载出来，过会儿再试')
         return
       }

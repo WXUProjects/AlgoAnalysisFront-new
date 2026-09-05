@@ -734,8 +734,7 @@ export function QuestionBankDetail() {
             size="sm"
             variant="outline"
             onClick={() => {
-              if (window.history.length > 1) navigate(-1)
-              else navigate('/question-bank')
+              navigate(-1)
             }}
           >
             返回
