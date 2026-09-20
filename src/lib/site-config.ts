@@ -191,7 +191,7 @@ export function sectionDirty(
          s.ojVjudgeUsername !== base.ojVjudgeUsername ||
         s.ojLuoguPassword.draft !== base.ojLuoguPassword.draft ||
          s.ojQojPassword.draft !== base.ojQojPassword.draft ||
-         s.ojProxySecret.draft !== base.ojProxySecret.draft
+         s.ojProxySecret.draft !== base.ojProxySecret.draft ||
          s.ojVjudgePassword.draft !== base.ojVjudgePassword.draft
     case 'payment':
       return s.payfmApiBase !== base.payfmApiBase ||

@@ -137,3 +137,13 @@ test('sectionDirty backup 检测开关变化', () => {
   assert.equal(sectionDirty('backup', current, base), true)
   assert.equal(sectionDirty('backup', base, base), false)
 })
+
+test('sectionDirty oj 检测 VirtualOJ 密码变化', () => {
+  const base: any = { ...allScalars(), ...allSecs() }
+  const onlyVjudgePw: any = {
+    ...allScalars(),
+    ...allSecs({ ojVjudgePassword: sec('new-pw') }),
+  }
+  assert.equal(sectionDirty('oj', onlyVjudgePw, base), true)
+  assert.equal(sectionDirty('oj', base, base), false)
+})
