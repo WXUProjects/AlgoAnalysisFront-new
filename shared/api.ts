@@ -900,6 +900,7 @@ export interface LuoguPluginAuthorizeCodeReq {
   riskAccepted: boolean
   riskVersion: typeof LUOGU_PLUGIN_RISK_VERSION
   scope: 'luogu.sync'
+  platform?: 'LuoGu' | 'QOJ'
 }
 
 export interface LuoguPluginAuthorizeCodeRes {
@@ -925,7 +926,8 @@ export interface LuoguPluginTokenRes {
 
 export interface LuoguPluginAuthorization {
   id: number | string
-  provider: 'luogu'
+  provider: 'luogu' | 'qoj'
+  platform?: 'LuoGu' | 'QOJ'
   clientKind: LuoguPluginClientKind
   clientVersion: string
   luoguUid: string

@@ -1232,6 +1232,11 @@ export function DashboardSiteSettings() {
                         </div>
                       </Field>
                     </div>
+                    {oj.key === 'qoj' ? (
+                      <p className="text-xs text-muted-foreground">
+                        QOJ 密码和登录验证不是必填。用户提交由浏览器插件同步，Cloudflare 拦住服务端登录时也可以保存。
+                      </p>
+                    ) : null}
                     <div className="flex items-center gap-2">
                       <Button
                         type="button"

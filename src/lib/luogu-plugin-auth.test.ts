@@ -45,6 +45,7 @@ test('accepts userscript and rejects retired Chrome extension authorization quer
       luoguUid: '2245873',
       clientKind: 'userscript',
       clientVersion: '1.0.0',
+      platform: 'LuoGu',
     },
   })
 
@@ -88,7 +89,23 @@ test('builds the fixed S256 Luogu authorization contract', () => {
     scope: 'luogu.sync',
     riskAccepted: true,
     riskVersion: '2026-08-28-v1',
+    platform: 'LuoGu',
   })
+})
+
+test('accepts a QOJ username and rejects an invalid platform', () => {
+  const qoj = new URLSearchParams(validQuery)
+  qoj.set('platform', 'QOJ')
+  qoj.set('luogu_uid', 'alice_01')
+  const parsed = parseLuoguAuthorizeQuery(qoj)
+  assert.equal(parsed.ok, true)
+  if (!parsed.ok) return
+  assert.equal(parsed.value.platform, 'QOJ')
+  assert.equal(parsed.value.luoguUid, 'alice_01')
+
+  const invalid = new URLSearchParams(validQuery)
+  invalid.set('platform', 'Codeforces')
+  assert.equal(parseLuoguAuthorizeQuery(invalid).ok, false)
 })
 
 test('posts an authorization code only to the fixed Luogu origin', () => {

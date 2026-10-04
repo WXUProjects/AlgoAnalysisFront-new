@@ -24,7 +24,8 @@ import {
 } from '@/lib/luogu-plugin-auth'
 
 const RISK_TEXT = '本工具会使用你当前的洛谷登录状态读取提交记录。频繁同步可能触发洛谷风控，极端情况下存在账号受限或封禁风险。建议每天少量同步，只在需要时操作。'
-const RISK_ACKNOWLEDGEMENT = '我已阅读并了解上述风险，自愿使用洛谷同步工具。'
+const QOJ_RISK_TEXT = '本工具只读取你当前浏览器里已经打开的 QOJ 提交页，不会保存或上传 QOJ 密码、Cookie 或完整页面。'
+const RISK_ACKNOWLEDGEMENT = '我已阅读并了解上述风险，自愿使用同步工具。'
 
 function LuoguAuthorizeContent() {
   const [searchParams] = useSearchParams()
@@ -32,18 +33,19 @@ function LuoguAuthorizeContent() {
   const [accepted, setAccepted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const platform = query.ok ? query.value.platform : 'LuoGu'
   const sendCode = useRef(
     createAuthorizationCodeMessenger((message, targetOrigin) => {
       const opener = window.opener
       if (!opener) throw new Error('opener unavailable')
       opener.postMessage(message, targetOrigin)
-    }),
+    }, platform),
   )
 
   async function authorize() {
     if (!query.ok || !accepted || submitting) return
     if (!window.opener) {
-      setError('无法返回洛谷同步工具。请关闭此页并返回洛谷后重新连接。')
+      setError(platform === 'QOJ' ? '无法返回 QOJ 同步工具。请关闭此页并返回 QOJ 后重新连接。' : '无法返回洛谷同步工具。请关闭此页并返回洛谷后重新连接。')
       return
     }
 
@@ -63,7 +65,7 @@ function LuoguAuthorizeContent() {
     if (sendCode.current(query.value.state, code)) {
       window.close()
     } else {
-      setError('无法返回洛谷同步工具。请关闭此页并返回洛谷后重新连接。')
+      setError(platform === 'QOJ' ? '无法返回 QOJ 同步工具。请关闭此页并返回 QOJ 后重新连接。' : '无法返回洛谷同步工具。请关闭此页并返回洛谷后重新连接。')
     }
   }
 
@@ -73,7 +75,7 @@ function LuoguAuthorizeContent() {
         <Card className="w-full max-w-lg">
           <CardHeader>
             <CardTitle>无法完成授权</CardTitle>
-            <CardDescription>请返回洛谷同步工具后重新连接。</CardDescription>
+            <CardDescription>请返回同步工具后重新连接。</CardDescription>
           </CardHeader>
           <CardContent>
             <Alert variant="destructive">
@@ -91,14 +93,16 @@ function LuoguAuthorizeContent() {
     <PageShell className="items-center justify-center" stagger={false}>
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle>授权洛谷同步工具</CardTitle>
-          <CardDescription>确认风险后即可连接当前洛谷账号。</CardDescription>
+          <CardTitle>{platform === 'QOJ' ? '授权 QOJ 同步工具' : '授权洛谷同步工具'}</CardTitle>
+          <CardDescription>
+            {platform === 'QOJ' ? `确认后即可连接当前 QOJ 用户 ${query.value.luoguUid}。` : '确认风险后即可连接当前洛谷账号。'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <Alert>
             <ShieldCheckIcon />
             <AlertTitle>使用风险</AlertTitle>
-            <AlertDescription>{RISK_TEXT}</AlertDescription>
+            <AlertDescription>{platform === 'QOJ' ? QOJ_RISK_TEXT : RISK_TEXT}</AlertDescription>
           </Alert>
           <FieldGroup>
             <Field orientation="horizontal">

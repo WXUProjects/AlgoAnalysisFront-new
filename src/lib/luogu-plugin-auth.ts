@@ -5,6 +5,7 @@ import {
 } from '@shared/api'
 
 export const LUOGU_AUTHORIZE_TARGET_ORIGIN = 'https://www.luogu.com.cn'
+export const QOJ_AUTHORIZE_TARGET_ORIGIN = 'https://qoj.ac'
 
 const CLIENT_KINDS = new Set<LuoguPluginClientKind>([
   'userscript',
@@ -13,6 +14,9 @@ const CLIENT_KINDS = new Set<LuoguPluginClientKind>([
 const STATE_PATTERN = /^[A-Za-z0-9._~-]{16,256}$/
 const PKCE_CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43}$/
 const LUOGU_UID_PATTERN = /^[1-9][0-9]{0,9}$/
+const QOJ_USERNAME_PATTERN = /^[A-Za-z0-9_]{1,64}$/
+
+export type SyncAuthorizePlatform = 'LuoGu' | 'QOJ'
 
 export type LuoguAuthorizeQuery = {
   state: string
@@ -20,6 +24,7 @@ export type LuoguAuthorizeQuery = {
   luoguUid: string
   clientKind: LuoguPluginClientKind
   clientVersion: string
+  platform: SyncAuthorizePlatform
 }
 
 export type LuoguAuthorizeQueryResult =
@@ -44,9 +49,18 @@ export function parseLuoguAuthorizeQuery(
     return { ok: false, message: '授权信息无效，请返回洛谷后重新连接。' }
   }
 
+  const platformValues = query.getAll('platform')
+  if (platformValues.length > 1) {
+    return { ok: false, message: '平台信息无效，请返回同步工具后重新连接。' }
+  }
+  const platformValue = platformValues[0] ?? ''
+  if (platformValue !== '' && platformValue !== 'LuoGu' && platformValue !== 'QOJ') {
+    return { ok: false, message: '平台信息无效，请返回同步工具后重新连接。' }
+  }
+  const platform: SyncAuthorizePlatform = platformValue === 'QOJ' ? 'QOJ' : 'LuoGu'
   const luoguUid = requiredQueryValue(query, 'luogu_uid')
-  if (!LUOGU_UID_PATTERN.test(luoguUid)) {
-    return { ok: false, message: '洛谷账号信息无效，请返回洛谷后重新连接。' }
+  if (platform === 'QOJ' ? !QOJ_USERNAME_PATTERN.test(luoguUid) : !LUOGU_UID_PATTERN.test(luoguUid)) {
+    return { ok: false, message: platform === 'QOJ' ? 'QOJ 账号信息无效，请返回 QOJ 后重新连接。' : '洛谷账号信息无效，请返回洛谷后重新连接。' }
   }
 
   const clientKind = requiredQueryValue(query, 'client_kind')
@@ -75,6 +89,7 @@ export function parseLuoguAuthorizeQuery(
       luoguUid,
       clientKind: clientKind as LuoguPluginClientKind,
       clientVersion,
+      platform,
     },
   }
 }
@@ -88,12 +103,17 @@ export function buildLuoguAuthorizeCodeRequest(
     scope: 'luogu.sync',
     riskAccepted: true,
     riskVersion: LUOGU_PLUGIN_RISK_VERSION,
+    platform: query.platform,
   }
+}
+
+export function authorizeTargetOrigin(platform: SyncAuthorizePlatform): string {
+  return platform === 'QOJ' ? QOJ_AUTHORIZE_TARGET_ORIGIN : LUOGU_AUTHORIZE_TARGET_ORIGIN
 }
 
 type PostMessage = (message: unknown, targetOrigin: string) => void
 
-export function createAuthorizationCodeMessenger(postMessage?: PostMessage) {
+export function createAuthorizationCodeMessenger(postMessage?: PostMessage, platform: SyncAuthorizePlatform = 'LuoGu') {
   let sent = false
 
   return (state: string, code: string) => {
@@ -101,7 +121,7 @@ export function createAuthorizationCodeMessenger(postMessage?: PostMessage) {
     try {
       postMessage(
         { type: 'goalgo.luogu.authorized', state, code },
-        LUOGU_AUTHORIZE_TARGET_ORIGIN,
+        authorizeTargetOrigin(platform),
       )
       sent = true
       return true

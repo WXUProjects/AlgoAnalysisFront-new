@@ -69,6 +69,11 @@ import { spiderPlatformHealth, usesLegacyServerCrawlerHealth } from '@/lib/spide
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
 
+function qojSyncUrl(username?: string): string {
+  const user = username?.trim()
+  return user ? `https://qoj.ac/submissions?submitter=${encodeURIComponent(user)}` : 'https://qoj.ac/submissions'
+}
+
 function OjPlatformCard({
   platform,
   label,
@@ -251,6 +256,32 @@ function OjBindDialog({
                         {luoguUserscriptRelease ? `安装插件 v${luoguUserscriptRelease.version}` : '安装插件'}
                       </a>
                     </Button>
+                  </>
+                ) : null}
+                {platform === 'QOJ' ? (
+                  <>
+                    <FieldDescription>
+                      不需要填写 QOJ 密码。安装同步插件后，在已登录的 QOJ 提交页同步。
+                    </FieldDescription>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="xs" variant="outline" asChild>
+                        <a href={luoguUserscriptRelease?.downloadUrl || LUOGU_USERSCRIPT_INSTALL_URL} target="_blank" rel="noreferrer">
+                          <DownloadIcon data-icon="inline-start" />
+                          安装插件
+                        </a>
+                      </Button>
+                      <Button size="xs" variant="outline" asChild>
+                        <a
+                          href={current.QOJ.trim()
+                            ? `https://qoj.ac/submissions?submitter=${encodeURIComponent(current.QOJ.trim())}`
+                            : 'https://qoj.ac/submissions'}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          打开 QOJ 同步
+                        </a>
+                      </Button>
+                    </div>
                   </>
                 ) : null}
                 {health?.kind === 'failed' ? (
@@ -925,35 +956,42 @@ export function ChangeProfile() {
               ))}
             </div>
           )}
-          {bound.some(({ platform }) => platform.value === 'LuoGu') ? (
-            <Card className="mt-3 bg-muted/30">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  GoAlgo 同步插件
-                  {luoguUserscriptRelease === undefined ? (
-                    <Skeleton className="h-5 w-14 rounded-full" />
-                  ) : luoguUserscriptRelease ? (
-                    <Badge variant="secondary">v{luoguUserscriptRelease.version}</Badge>
-                  ) : null}
-                </CardTitle>
-                <CardDescription>安装后在洛谷页面同步提交记录，Tampermonkey 会自动检查更新。</CardDescription>
-              </CardHeader>
-              <CardFooter className="flex flex-wrap gap-2">
-                <Button size="sm" asChild>
-                  <a href={luoguUserscriptRelease?.downloadUrl || LUOGU_USERSCRIPT_INSTALL_URL} target="_blank" rel="noreferrer">
-                    <DownloadIcon data-icon="inline-start" />
-                    安装插件
-                  </a>
-                </Button>
-                <Button size="sm" variant="outline" asChild>
-                  <a href="https://www.tampermonkey.net/" target="_blank" rel="noreferrer">
-                    Tampermonkey
-                    <ExternalLinkIcon data-icon="inline-end" />
-                  </a>
-                </Button>
-              </CardFooter>
-            </Card>
-          ) : null}
+          <Card className="mt-3 bg-muted/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                GoAlgo 同步插件
+                {luoguUserscriptRelease === undefined ? (
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                ) : luoguUserscriptRelease ? (
+                  <Badge variant="secondary">v{luoguUserscriptRelease.version}</Badge>
+                ) : null}
+              </CardTitle>
+              <CardDescription>安装后可在洛谷或 QOJ 已登录页面同步提交记录。QOJ 不需要预先绑定，也不上传密码。</CardDescription>
+            </CardHeader>
+            <CardFooter className="flex flex-wrap gap-2">
+              <Button size="sm" asChild>
+                <a href={luoguUserscriptRelease?.downloadUrl || LUOGU_USERSCRIPT_INSTALL_URL} target="_blank" rel="noreferrer">
+                  <DownloadIcon data-icon="inline-start" />
+                  安装插件
+                </a>
+              </Button>
+              <Button size="sm" variant="outline" asChild>
+                <a
+                  href={qojSyncUrl(profile?.spiders?.find((item) => item.platform === 'QOJ')?.username)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  打开 QOJ 同步
+                </a>
+              </Button>
+              <Button size="sm" variant="outline" asChild>
+                <a href="https://www.tampermonkey.net/" target="_blank" rel="noreferrer">
+                  Tampermonkey
+                  <ExternalLinkIcon data-icon="inline-end" />
+                </a>
+              </Button>
+            </CardFooter>
+          </Card>
         </CardContent>
       </Card>
       <OjBindDialog
