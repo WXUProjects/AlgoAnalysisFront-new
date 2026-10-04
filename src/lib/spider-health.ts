@@ -249,7 +249,9 @@ export function spiderPlatformHealth(
 }
 
 export function usesLegacyServerCrawlerHealth(platform?: string): boolean {
-  return !['luogu'].includes((platform || '').trim().toLowerCase())
+  // 洛谷和 QOJ 由浏览器插件同步。服务端直连 QOJ 会被 Cloudflare 拦下，
+  // 那条「异常页面」不能再显示在用户的绑定页上。
+  return !['luogu', 'qoj'].includes((platform || '').trim().toLowerCase())
 }
 
 /** 用户级：已绑定但从未成功 / 整体过旧 / 有平台失败 */

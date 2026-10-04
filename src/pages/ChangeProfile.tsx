@@ -12,6 +12,7 @@ import { setSpider } from '@/api/spider'
 import {
   LUOGU_USERSCRIPT_INSTALL_URL,
   activeLuoguAuthorization,
+  activeSharedSyncAuthorization,
   getLatestLuoguUserscript,
   listLuoguAuthorizations,
   type LuoguUserscriptRelease,
@@ -69,11 +70,6 @@ import { spiderPlatformHealth, usesLegacyServerCrawlerHealth } from '@/lib/spide
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
 
-function qojSyncUrl(username?: string): string {
-  const user = username?.trim()
-  return user ? `https://qoj.ac/submissions?submitter=${encodeURIComponent(user)}` : 'https://qoj.ac/submissions'
-}
-
 function OjPlatformCard({
   platform,
   label,
@@ -119,7 +115,7 @@ function OjPlatformCard({
       {typeof acCount === 'number' && acCount > 0 ? (
         <p className="text-xs text-muted-foreground tabular-nums">已过 {acCount} 题</p>
       ) : null}
-      {platform === 'LuoGu' ? (
+      {platform === 'LuoGu' || platform === 'QOJ' ? (
         <p className={luoguAuthorization ? 'text-xs text-emerald-600' : 'text-xs text-muted-foreground'}>
           {luoguAuthorization ? '同步插件已授权' : '同步插件未授权'}
         </p>
@@ -232,16 +228,18 @@ function OjBindDialog({
                   pattern={platform === 'LuoGu' ? '[0-9]*' : undefined}
                   autoComplete="off"
                 />
-                {platform === 'LuoGu' ? (
+                {platform === 'LuoGu' || platform === 'QOJ' ? (
                   <>
                     <FieldDescription>
-                      洛谷用户编号（UID）是主页链接 /user/ 后面的纯数字编码
+                      {platform === 'LuoGu'
+                        ? '洛谷用户编号（UID）是主页链接 /user/ 后面的纯数字编码'
+                        : 'QOJ 用户名是主页链接 /user/profile/ 后面的名字'}
                     </FieldDescription>
                     {(() => {
-                      const authorization = activeLuoguAuthorization(
-                        luoguAuthorizations,
-                        current.LuoGu.trim(),
-                      )
+                      const authorization = activeSharedSyncAuthorization(luoguAuthorizations)
+                        ?? (platform === 'LuoGu'
+                          ? activeLuoguAuthorization(luoguAuthorizations, current.LuoGu.trim())
+                          : undefined)
                       return (
                         <FieldDescription className={authorization ? 'text-emerald-600' : undefined}>
                           {authorization
@@ -256,32 +254,6 @@ function OjBindDialog({
                         {luoguUserscriptRelease ? `安装插件 v${luoguUserscriptRelease.version}` : '安装插件'}
                       </a>
                     </Button>
-                  </>
-                ) : null}
-                {platform === 'QOJ' ? (
-                  <>
-                    <FieldDescription>
-                      不需要填写 QOJ 密码。安装同步插件后，在已登录的 QOJ 提交页同步。
-                    </FieldDescription>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="xs" variant="outline" asChild>
-                        <a href={luoguUserscriptRelease?.downloadUrl || LUOGU_USERSCRIPT_INSTALL_URL} target="_blank" rel="noreferrer">
-                          <DownloadIcon data-icon="inline-start" />
-                          安装插件
-                        </a>
-                      </Button>
-                      <Button size="xs" variant="outline" asChild>
-                        <a
-                          href={current.QOJ.trim()
-                            ? `https://qoj.ac/submissions?submitter=${encodeURIComponent(current.QOJ.trim())}`
-                            : 'https://qoj.ac/submissions'}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          打开 QOJ 同步
-                        </a>
-                      </Button>
-                    </div>
                   </>
                 ) : null}
                 {health?.kind === 'failed' ? (
@@ -947,7 +919,7 @@ export function ChangeProfile() {
                   label={p.label}
                   spider={bind}
                   acCount={acCounts.get(p.value)}
-                  luoguAuthorization={p.value === 'LuoGu' ? activeLuoguAuthorization(luoguAuthorizations) : undefined}
+                  luoguAuthorization={p.value === 'LuoGu' || p.value === 'QOJ' ? activeSharedSyncAuthorization(luoguAuthorizations) : undefined}
                   onEdit={() => {
                     setBindLocked(p.value)
                     setBindOpen(true)
@@ -966,22 +938,13 @@ export function ChangeProfile() {
                   <Badge variant="secondary">v{luoguUserscriptRelease.version}</Badge>
                 ) : null}
               </CardTitle>
-              <CardDescription>安装后可在洛谷或 QOJ 已登录页面同步提交记录。QOJ 不需要预先绑定，也不上传密码。</CardDescription>
+              <CardDescription>安装后在洛谷或 QOJ 页面同步提交记录。一份授权两边都能用。</CardDescription>
             </CardHeader>
             <CardFooter className="flex flex-wrap gap-2">
               <Button size="sm" asChild>
                 <a href={luoguUserscriptRelease?.downloadUrl || LUOGU_USERSCRIPT_INSTALL_URL} target="_blank" rel="noreferrer">
                   <DownloadIcon data-icon="inline-start" />
                   安装插件
-                </a>
-              </Button>
-              <Button size="sm" variant="outline" asChild>
-                <a
-                  href={qojSyncUrl(profile?.spiders?.find((item) => item.platform === 'QOJ')?.username)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  打开 QOJ 同步
                 </a>
               </Button>
               <Button size="sm" variant="outline" asChild>

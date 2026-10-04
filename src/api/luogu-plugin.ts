@@ -46,6 +46,17 @@ export function activeLuoguAuthorization(
   )
 }
 
+/** 一份 GoAlgo 设备授权同时覆盖洛谷和 QOJ。 */
+export function activeSharedSyncAuthorization(
+  authorizations: LuoguPluginAuthorization[] | undefined,
+): LuoguPluginAuthorization | undefined {
+  return authorizations?.find((item) =>
+    (item.provider === 'luogu' || item.provider === 'qoj' || !item.provider) &&
+    Number(item.revokedAt || 0) === 0 &&
+    Number(item.expiresAt || 0) * 1000 > Date.now(),
+  )
+}
+
 export async function getLatestLuoguUserscript(
   fetcher: typeof fetch = fetch,
   now: () => number = Date.now,
