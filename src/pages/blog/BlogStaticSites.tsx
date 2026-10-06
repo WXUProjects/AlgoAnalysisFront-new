@@ -156,7 +156,18 @@ export function BlogStaticSitesPage() {
       ok = res.ok && (body.code === 0 || body.code === undefined)
       message = body.message || message
     } catch {
+      const again = await listMyBlogStaticSites()
+      const slug = draft.slug.trim().toLowerCase()
+      const hit = again.data?.find((s) => s.slug === slug)
+      if (hit) {
+        toast.success('已添加')
+        setOpen(false)
+        setSaving(false)
+        void load()
+        return
+      }
       ok = false
+      message = '上传未完成，请再试一次'
     }
     setSaving(false)
     if (!ok) {
