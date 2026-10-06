@@ -7,7 +7,7 @@
 
 鉴权：需要登录的接口在 Header 携带 `Authorization: Bearer <jwtToken>`。
 
-洛谷浏览器同步使用独立最小权限令牌：授权码签发、授权列表和撤销使用普通 JWT；换取设备令牌使用一次性授权码与 PKCE；同步 start 使用 `X-GoAlgo-Plugin-Token`，status/page 使用 `X-GoAlgo-Sync-Session`。设备令牌不能调用其他 API。
+浏览器同步使用独立最小权限令牌：授权码签发、授权列表和撤销使用普通 JWT；换取设备令牌使用一次性授权码与 PKCE；同步 start 使用 `X-GoAlgo-Plugin-Token`，status/page 使用 `X-GoAlgo-Sync-Session`。设备令牌不能调用其他 API。平台支持 `LuoGu` 与 `QOJ`，省略平台时兼容洛谷。
 
 ---
 
@@ -227,11 +227,12 @@
 
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc\|blog\|blog_cover`。本地用途（`site\|bulletin\|misc`）≤3MB（jpg/png/gif/webp/ico/**svg**；svg 拒脚本），本地 url 带真实扩展名。**`blog`/`blog_cover`**：走又拍云（需站点配置又拍云 + 站管在 `/admin/blog` 授权该用户），清晰度优先压缩，≤约 12MB 原图，返回公网 `{ url, hash }`（`hash`=落库字节 SHA-256，内容寻址 key `/blog/{uid}/{hash}{ext}`）；未授权或未配置则 403。**`avatar`**：也走又拍云（仅需站点配置又拍云，无需博客授权），≤3MB（jpg/png/gif/webp/ico，**拒 svg**），清晰度优先压缩，返回公网 `{ url, hash }`（key `/avatar/{uid}/{hash}{ext}`），未配置则 403；`users.avatar` 落库为 path-only key，读取时按当前图床域名扩展（换域/切 https 即时生效） |
+| POST | `/user/upload` | 是 | multipart `file` + 可选 `purpose`=`avatar\|site\|bulletin\|misc\|blog\|blog_cover`。本地用途（`bulletin\|misc`）≤3MB（jpg/png/gif/webp/ico/**svg**；svg 拒脚本），本地 url 带真实扩展名。**`site`**：站点与组织 Logo/Favicon 直接走又拍云，需站点配置又拍云及站点配置或组织信息修改权限，≤3MB，返回公网 `{ url, hash }`，内容寻址 key `/branding/{uid}/{hash}{ext}`；不自动迁移或删除历史本地文件。**`blog`/`blog_cover`**：走又拍云（需站点配置又拍云 + 站管在 `/admin/blog` 授权该用户），清晰度优先压缩，≤约 12MB 原图，返回公网 `{ url, hash }`（`hash`=落库字节 SHA-256，内容寻址 key `/blog/{uid}/{hash}{ext}`）；未授权或未配置则 403。**`avatar`**：也走又拍云（仅需站点配置又拍云，无需博客授权），≤3MB（jpg/png/gif/webp/ico，**拒 svg**），清晰度优先压缩，返回公网 `{ url, hash }`（key `/avatar/{uid}/{hash}{ext}`），未配置则 403；`users.avatar` 落库为 path-only key，读取时按当前图床域名扩展（换域/切 https 即时生效） |
 | GET | `/user/static/*` | 否 | 已上传文件；支持带后缀精确匹配；无后缀/错后缀时会按 stem 探测磁盘上的 `.png/.jpg/...` |
 | GET | `/user/site/config` | 否 | 站点标题/logo/favicon/footerIcp（默认 GoAlgo）+ **`payfmConfigured`**（支付是否已完整配置：接口根地址 + 商户号 + 接入密钥齐备；公开布尔，无敏感信息；前端按它决定是否显示「赞助支持」入口） |
-| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** / **OJ 爬虫账号** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath` + **`backupEnabled` / `backupTime` / `backupPrefix`** 自动灾备设置 + **`agentEndpoint`** 日报周报 OpenAI 兼容服务地址 + **`configVersion`** 配置乐观版本） |
-| POST | `/user/site/config` | 是(站点管理员) | 更新品牌 + 页脚备案 + SMTP + AI + **又拍云** + **OJ 爬虫**（`ojLuoguUsername`/`ojLuoguPassword`/`clearOjLuoguPassword`/`ojQojUsername`/`ojQojPassword`/`clearOjQojPassword`）+ **支付FM**（`payfmApiBase`/`payfmMerchantNo`/`payfmSecret`/`clearPayfmSecret`/`payfmPayType`）+ 可选 `inactiveDays`/`setInactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath`（运维磁盘统计目录，数据盘挂载点；空=默认 /data，未挂载回退 /）+ `backupEnabled` / `backupTime`（严格 `HH:mm`，默认 `02:00`）/ `backupPrefix`（**必填**，如 `goalgo/backup`，首尾斜杠自动去除；归档保存为 `目录/bak_<时间>.algobak`，仅保留最新一份）。**分区保存 `section`**：`basic`\|`email`\|`ai`\|`upyun`\|`oj`\|`payment`\|`backup`\|`all`（空=整页保存 `all`），只更新该分区字段、忽略其他分区字段；`backup` 分区更新上述三个灾备字段，并通过 Runtime Redis 动态传播。**`ai` 分区**含日报周报独立配置 `agentEndpoint`/`agentModel`/`agentSecret`/`clearAgentSecret` 与题库分析 `aiAnalyzeEndpoint`/`aiAnalyzeModel`/`aiAnalyzeSecret`/`clearAiAnalyzeSecret`（两套独立）。**`expectedConfigVersion`**（可选；>0 时校验 `config_version`，不匹配返回 code=409 请刷新）。**密钥规则**：空串=不修改，掩码=不修改，仅显式 `clearXxx=true` 才清除；同时传新密钥+clear 返回参数错误。endpoint 校验：http/https + host，拒绝 userinfo/query/fragment。**若填写了洛谷/QOJ 用户名，保存前会实测登录**，失败则整页不落库 |
+| GET | `/user/site/admin-config` | 是(站点管理员) | 完整站点配置（SMTP / AI / **又拍云** / **OJ 爬虫账号** 密钥脱敏 + `inactiveDays` + `adminNotifyEmails` + `opsNotifyEmails` + `dataDiskPath` + **`spiderConcurrency` / `problemFetchConcurrency` / `problemAnalyzeConcurrency`** 三类后台任务运行并发 + **`backupEnabled` / `backupTime` / `backupPrefix`** 自动灾备设置 + **`agentEndpoint`** 日报周报 OpenAI 兼容服务地址 + **`configVersion`** 配置乐观版本） |
+| POST | `/user/site/config` | 是(站点管理员) | 更新站点配置。**分区保存 `section`**：`basic`\|`email`\|`ai`\|`upyun`\|`oj`\|`payment`\|`backup`\|`ops`\|`all`（空=`all`）；`ops` 保存 `spiderConcurrency`、`problemFetchConcurrency` 与 `problemAnalyzeConcurrency`（均为 1–32，默认 4，通过 Runtime Redis 热生效）。其他分区字段、乐观版本和密钥规则不变。 |
+| POST | `/user/site/test-proxy` | 是(站点管理员) | 检测 OJ Cloudflare 代理地址是否可访问；body `{ baseUrl }`，不保存配置、不返回密钥。 |
 | POST | `/user/site/test-email` | 是(站点管理员) | 发送测试邮件；body 可临时覆盖 SMTP |
 | POST | `/user/site/visit-ping` | 否（可选 JWT） | 页面访问上报；body `{ path?, visitorId? }`；同 path 约 30s 节流；登录用户计 DAU/MAU；真实 IP（CF-Connecting-IP / X-Real-IP / XFF） |
 | GET | `/user/site/access-stats` | 是(站点管理员) | 访问与用量：`?days=30&ipLimit=200&pathLimit=20` |
@@ -340,7 +341,7 @@
 }
 ```
 
-说明：`smtp` / `agent` / `ai_analyze` / **`upyun`** / **OJ 爬虫账号（洛谷、QOJ）** 原硬编码或 yaml 已迁入站点设置；服务 yaml 仅作启动兜底。保存后写入 DB 并同步 Redis。填写了洛谷/QOJ 用户名时，保存会先实测登录再落库。`footerIcp` 为空时前端页脚使用默认备案号。`adminNotifyEmails` 为审核/举报邮件接收人（逗号或换行分隔）；留空则发给全部站点管理员账号邮箱；**不影响**站内信收件人。`opsNotifyEmails` 为**运维告警**邮件接收人（逗号或换行分隔）；留空则运维告警不发邮件。又拍云 / OJ 密码**不得**写入仓库源码。
+说明：`smtp` / `agent` / `ai_analyze` / **`upyun`** / **OJ 爬虫账号（洛谷、QOJ、VirtualOJ/VJudge）** 原硬编码或 yaml 已迁入站点设置；服务 yaml 仅作启动兜底。保存后写入 DB 并同步 Redis。填写 OJ 用户名和密码后可在站点设置中验证登录。`footerIcp` 为空时前端页脚使用默认备案号。`adminNotifyEmails` 为审核/举报邮件接收人（逗号或换行分隔）；留空则发给全部站点管理员账号邮箱；**不影响**站内信收件人。`opsNotifyEmails` 为**运维告警**邮件接收人（逗号或换行分隔）；留空则运维告警不发邮件。又拍云 / OJ 密码**不得**写入仓库源码。
 
 ### Paste（粘贴板 / Pastebin）
 
@@ -449,6 +450,18 @@ Proto 生成（`cwxu-algo/api/user/v1/blog/blog.proto`）。文章为**单一数
 | GET | `/user/blog/image-upload/status` | 是 | 当前用户：`{ configured, authorized, enabled, pendingRequest, pendingRequestId? }`（站点又拍云已配且已授权时 `enabled=true`） |
 | POST | `/user/blog/image-upload/apply` | 是 | body: `{ reason }`（必填，5–500 字）；提交图片上传权限申请，通知站管；已开通/已有待审幂等返回 |
 | POST | `/user/blog/images/check` | 是 | body `{ urls?: string[], hashes?: string[] }`（合计 ≤200）→ `{ existing, missing, existingHashes, missingHashes }`：批量确认 URL/object key 与 content hash 是否仍在本用户 `blog_image_assets`（插件/编辑器缓存复用；GC 以 hash 为主） |
+| GET | `/user/blog/static-site/list` | 否 | query: `username`；已 pin 到博客导航的静态页（不含文件列表） |
+| GET | `/user/blog/static-site/mine` | 是 | 当前作者全部静态页 |
+| POST | `/user/blog/static-site/upload` | 是（须已开通且已授权图片上传） | multipart：`file`=zip（≤32MB）、`title`、`slug`、可选 `entry`（默认找 `index.html`）、`showInNav`、`navLabel`、`id`（替换已有页）。服务端解压校验后写入又拍云 `/blog-static/{userId}/{id}/` |
+| POST | `/user/blog/static-site/update` | 是 | body: `{ id, title, slug, showInNav, navLabel, navOrder? }`；不改文件 |
+| POST | `/user/blog/static-site/delete` | 是 | body: `{ id }`；删除记录（云上文件保留至下次覆盖） |
+| GET | `/user/blog/static/{username}/{slug}/{path}` | 否 | 公开代读静态文件。无 path 时 302 到入口 html。站点路径为 `/blog/{username}/static/{slug}/` |
+
+**静态页**
+
+- 仅已开通博客且 `image_upload_enabled` 的作者可上传。zip 最多 200 个文件、解压后 ≤64MB、单文件 ≤8MB；拒绝路径穿越与可执行脚本。
+- 访问路径 `slug` 为小写字母、数字、连字符。公开地址：`https://{host}/blog/{username}/static/{slug}/`。
+- `showInNav=true` 时出现在个人博客导航，链到上述地址（新标签打开）。
 
 **文章置顶**
 
@@ -865,23 +878,22 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 | GET | `/core/spider/platform-users` | 是(站点管理员) | 某 OJ 的绑定用户列表，query `platform`、`offset?`、`limit?`（默认 20，最大 100）；返回 `total` + `list[{userId,name,username,ojUsername,rating,hasRating}]`（name 为站内展示名，无则回退站内用户名；ojUsername 为绑定的 OJ 账号） |
 | POST | `/core/spider/refresh` | 是 | 用户手动**增量**刷新自己的 OJ 做题记录（**每日限 2 次**，按上海自然日，Redis 计数）；返回 `{ code, message, remaining }`；超出限额 code=1，message 提示「每个用户每日拥有两次手动刷新做题记录次数，当前还剩下 N 次」且不入队 |
 | GET | `/core/spider/refresh-status` | 是 | 今日手动刷新做题记录状态（只读）：`{ code, message, limit, remaining, nextAvailableAt, syncIntervalMin }`；`limit`=今日有效总配额（已合并订阅/站管覆盖；0=禁止）、`remaining`=今日剩余（0=用完）、`nextAvailableAt`=下次可刷新 unix 秒（0=立即可，5 分钟冷却中为截止时间）、`syncIntervalMin`=当前生效自动同步间隔（min(站管覆盖, 组织 MIN, 订阅档)；失败回落默认 180） |
-| POST | `/core/spider/toggle-platform` | 是(按模块) | 暂停/恢复某 OJ 模块；body `{ platform, enabled, module?: "submit" \| "problem" }`，`submit` 需要 `site.spider.ops`，`problem` 需要 `site.problem.ops`；`module` 为空时兼容为 `submit`。暂停不清空绑定或历史数据 |
+| POST | `/core/spider/toggle-platform` | 是(按模块) | 暂停/恢复提交记录同步；题面是否暂停由官方题面和 VirtualOJ 题面来源开关共同决定（两者均关闭才暂停）。body `{ platform, enabled, module?: "submit" \| "problem", source?: "official" \| "vjudge" }`；题面来源需要 `site.problem.ops`。 |
 | POST | `/core/spider/purge-submits-and-recrawl` | 是(站点管理员) | **硬清**训练数据并全量重爬；body `{ confirm: "PURGE_SUBMITS" }`。删：`submit_logs`（真假全删）、账本、日汇总、AC 预聚合、`contest_logs`、提醒发送日志 + 相关 Redis。**保留**：`platforms`、题库、公告/紧急通知、比赛日历赛程与订阅；用户账号在 user 库不动 |
 | POST | `/core/spider/luogu-sync/start` | 设备令牌 | 手动开始或恢复洛谷本地同步；body 携带客户端预先持久化的 43 位 base64url `requestId`；5 分钟新会话限制，活动会话恢复不消耗冷却；返回 session token、`nextPage`、`pageDelayMs=500`、过期与冷却时间 |
 | GET | `/core/spider/luogu-sync/status` | 同步会话 | 用 `X-GoAlgo-Sync-Session` 恢复已开始会话，返回下一页、累计新增、进度、过期与冷却时间；完成态同时返回 `connected=true`、`done=true` 与 `completionReason`，用于恢复丢失的最终页响应 |
-| POST | `/core/spider/luogu-sync/page` | 同步会话 | 每页最多 20 条；服务端验证 UID、页序、字段、generation 与提交归属，逐页返回 `connected` / `done` / `restart` / 新增数；完成原因仅 `checkpoint` 或 `remote_end` |
+| POST | `/core/spider/luogu-sync/page` | 同步会话 | 洛谷每页最多 20 条；QOJ 使用同一路径，body 可带 `platform=QOJ`、`hasNext`、`verdict`、`languageName`、`submitTimeText`。服务端验证账号、页序、字段、generation 与提交归属，逐页返回 `connected` / `done` / `restart` / 新增数；完成原因仅 `checkpoint` 或 `remote_end`。QOJ 不要求资料页预先绑定，首次同步会按当前授权用户名写入绑定 |
 
 ### 洛谷浏览器插件授权
 
 风险协议版本：`2026-08-28-v1`。设备令牌有效期 90 天，scope 固定为 `luogu.sync`；授权码有效期 2 分钟且只能使用一次。
 
-protobuf `int64` / `uint64` 字段在 HTTP protojson 中按十进制字符串传输，调用方须在 API 边界安全归一化；Kratos 稳定业务错误标识位于错误体 `reason`。
-
 | Method | Path | Auth | 说明 |
 |--------|------|------|------|
-| POST | `/user/plugin/luogu/authorize-code` | 是 | 官网授权页签发一次性授权码；body 含纯数字 `luoguUid`、固定 `clientKind=userscript`、trim 后非空的 `clientVersion`、恰好 43 位 base64url 的 PKCE `codeChallenge`、固定 `codeChallengeMethod=S256` 与 `scope=luogu.sync`、`state`、`riskAccepted=true` 与当前风险版本 |
+| POST | `/user/plugin/luogu/authorize-code` | 是 | 官网授权页签发一次性授权码；body 含 `luoguUid`（洛谷为纯数字 UID，QOJ 为用户名）、可选 `platform`（`LuoGu` 或 `QOJ`，缺省为洛谷）、固定 `clientKind=userscript`、`clientVersion`、PKCE `codeChallenge`、`codeChallengeMethod: "S256"`、`state`、`riskAccepted=true`、当前风险版本与 `scope: "luogu.sync"` |
 | POST | `/user/plugin/luogu/token` | PKCE 授权码 | body `{ code, verifier, state, scope: "luogu.sync" }`，换取只返回一次的设备令牌 |
 | GET | `/user/plugin/luogu/authorizations` | 是 | 查看当前账号已授权的洛谷同步客户端，不返回 token 哈希或明文 |
+| GET | `/user/admin/plugins/authorizations` | 是（`site.user.sync`） | 站管查看插件授权分页列表；query: `pageNum`、`pageSize`、`keyword`、`status`、`platform`；返回 `{ list, total, pageNum, pageSize }`，授权项不含 token hash |
 | POST | `/user/plugin/luogu/revoke` | 是 | body `{ authorizationId }` 撤销单个，或 `{ all: true }` 撤销全部；活动同步会话随即失效 |
 
 同步稳定错误码位于 Kratos HTTP 错误体的 `reason` 字段（兼容显式字符串 `code` envelope）：`LUOGU_LOGIN_REQUIRED`、`GOALGO_CONNECT_REQUIRED`、`TOKEN_EXPIRED`、`RISK_REACCEPT_REQUIRED`、`LUOGU_UID_MISMATCH`、`LUOGU_UID_ALREADY_BOUND`、`SUBMIT_OWNER_CONFLICT`、`SYNC_COOLDOWN`、`SYNC_IN_PROGRESS`、`SESSION_EXPIRED`、`LUOGU_LAYOUT_CHANGED`、`LUOGU_RECORDS_CHANGED`、`LUOGU_BINDING_INVALID_REMOVED`、`SYNC_UNAVAILABLE`。`LUOGU_BINDING_INVALID_REMOVED` 表示同步时发现已保存的洛谷绑定不是有效正整数，后端已删除该绑定及其洛谷提交、比赛、日统计、AC 聚合和修复状态，客户端应提示重新绑定。`SYNC_COOLDOWN` 使用 HTTP 429，真实 Kratos wire 将 `code`、`nextAvailableAt`、`retryAfterSeconds` 放在 `metadata` 容器中，其中后两个值为 protojson 十进制字符串；顶层 `nextAvailableAt` 与 `retryAfterSeconds` 仅为兼容历史扁平错误体，仍接受数字或字符串。protobuf `int64` / `uint64` 字段在 HTTP protojson 中按十进制字符串传输，客户端须在 API 边界安全归一化。
@@ -903,7 +915,7 @@ protobuf `int64` / `uint64` 字段在 HTTP protojson 中按十进制字符串传
 | 牛客 | 竞赛主页 HTML | 显示「暂无」则 hasRating=false |
 | 洛谷 | `/api/user/info/{uid}` 的 `eloValue`（旧 `rating` 已弃用） | 依赖现有登录会话 |
 | 力扣 | `graphql/noj-go` contest ranking | 浮点四舍五入为整数 |
-| QOJ | — | Cloudflare 暂不支持 |
+| QOJ | — | 服务端登录常被 Cloudflare 阻断；用户提交改由浏览器插件同步，站点设置里的 QOJ 密码不再作为保存前置条件 |
 | LOJ | `api.loj.ac` `user/getUserMeta` | 公开 API；rating≤0 视为无 |
 | UOJ | 用户主页 HTML | 公开；**仅同步 AC 题目集 + Rating**（提交列表需登录，不做） |
 | POJ | — | 无现代 Rating；提交走公开 `status?user_id=`（增量首页 / 全量 top 翻页） |
@@ -939,6 +951,14 @@ protobuf `int64` / `uint64` 字段在 HTTP protojson 中按十进制字符串传
 - `submitPaused` / `problemPaused`：提交记录同步与题面获取的独立暂停状态
 - `paused`：兼容字段，值与 `submitPaused` 相同
 - `hasAccount` 仅洛谷/QOJ 为 true（全局账号），`accountStatus` 取 `sitesettings` 登录态（ok/fail/unchecked）
+
+### 插件同步审计
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| GET | `/core/admin/plugins/sync-audits` | 是（`site.user.sync`） | 站管查看插件同步审计摘要分页；query: `pageNum`、`pageSize`、`keyword`、`platform`、`status`、`from`、`to`；返回 `{ list, total, pageNum, pageSize }` |
+
+两个管理列表的 `keyword` 均由服务端执行不区分大小写的子串模糊搜索（`ILIKE '%keyword%'`），并在分页前完成筛选，保证 `total` 与结果一致。`status` 可按后端字段筛选；同步审计支持 `running`、`completed`、`failed`、`terminated`、`expired`。同步日志终态保留 7 天后清理，`running` 日志不清理。`from` / `to` 为 Unix 秒时间范围，protojson 的 `int64` / `uint64` 字段按十进制字符串传输。
 
 ### Backup（PostgreSQL 整实例灾备）
 
@@ -1121,7 +1141,10 @@ protobuf `int64` / `uint64` 字段在 HTTP protojson 中按十进制字符串传
 | GET | `/core/problem/list` | 否 | 题库列表 |
 | GET | `/core/problem/tags` | 否 | 标签聚合 `?limit=`，返回 `{ tag, count }[]` |
 | GET | `/core/problem/hot` | 否 | 全站热题：近 `days` 天（默认 2，1–7）按提交次数/做题人数/AC 综合热度排序；`page`/`pageSize`；项含 `problem` + `submitCount`/`solverCount`/`acCount`/`score`/`lastSubmittedAt`；热度 = submit×1 + solver×3 + ac×2 |
-| GET | `/core/problem/get` | 否 | query: `id`；详情含 `contributors[]`（`userId`/`name`/`username`/`avatar`）：审核通过的内容贡献者，多人全列，按首次通过时间升序；列表接口可不带 |
+| GET | `/core/problem/get` | 否 | query: `id`；详情含 `contributors[]`（`userId`/`name`/`username`/`avatar`）以及题面来源、抓取时间、AI 分析时间和分析模型；列表接口可不带完整题面 |
+| GET | `/core/problem/progress` | 是（管理/报告权限） | query: `failedPage?`、`failedPageSize?`、`inProgressPage?`、`inProgressPageSize?`；题面处理进度、队列、处理中和失败列表分页；`conversations[]` 保存完整 AI 输入 `prompt`、原始推理流 `reasoningOutput` 与最终输出 `latestOutput`，任务结束后保留 1 小时；`recentCompleted[]` 返回最近成功完成的最多 100 道题 |
+| POST | `/core/problem/refetch` | 是 | body `{ problemId }`；具备有效题面爬取权限的用户可重新抓取题面，不消耗额度 |
+| POST | `/core/problem/reanalyze` | 是 | body `{ problemId }`；具备有效 AI 分析权限且有可用 AI 月额度时重新分析，按个人额度扣减；组织无限额度不扣个人次数 |
 | GET | `/core/problem/following-status` | 是 | query: `problemId` → 关注用户对本题 `AC|TRIED|NONE` |
 | GET | `/core/problem/submissions` | 否 | query: `problemId`, `page`, `pageSize`, `userId?`, `followingOnly?`（不受域限制）, `status?`=`AC`；返回 `data` + **`total`**（服务端分页） |
 | GET | `/core/problem/comment/list` | 否（登录可带 liked） | query: `problemId` **或** `solutionId`（可同传）、`page`/`pageSize` → **顶层评论分页** + 嵌套 `replies`；`solutionId` 拉题解评论，仅 `problemId` 拉题目讨论（`solutionId=0`）；项含 `solutionId`/`likeCount`/`liked`/`parentId`/`rootId`/`depth` |
@@ -1195,7 +1218,7 @@ protobuf `int64` / `uint64` 字段在 HTTP protojson 中按十进制字符串传
 | GET | `/core/user/recent-comments` | 否 | query: `userId`, `limit?` → 用户近期评论（资料页） |
 | GET | `/core/user/recent-solutions` | 否 | query: `userId`, `limit?` → 用户近期题解（资料页） |
 | POST | `/core/problem/rebuild-profiles` | 是(**站点管理员**) | 全站**仅重建能力画像**（不重爬 OJ）：刷新题目难度后验，并对有 AC 用户强制入队重算个人首次 AC 过程、标签广度置信度与能力分（评分模型升级后回填用）；返回 `{ code, message, candidates, published }` |
-| GET | `/core/problem/user-profile` | 否 | query: `userId` 做题画像；`radar[].score`=掌握度/能力分（0–100），由题目难度后验、个人首次 AC 过程与标签广度置信度计算；`acCount`=该标签下去重 AC 题数 |
+| GET | `/core/problem/user-profile` | 否 | query: `userId` 做题画像；`radar`=能力分最高的 8 个标签；`tagStats`=全部个人标签；两者的 `score`=掌握度/能力分（0–100），由题目难度后验、全站题目 AC 比、个人首次 AC 的提交次数与耗时、标签广度置信度计算，`acCount`=该标签下去重 AC 题数 |
 | GET | `/core/problem/related-contests` | 否 | query: `problemId` → 本题出现过的比赛（`contest_problems` 反查，含站内 `contestLogId` / 题号 label） |
 | GET | `/core/problem/progress` | 是(管理员) | 爬取/分析进度 |
 | POST | `/core/problem/backfill` | 是(管理员) | 近6月提交回填入队；body: `{ limit }`；**仅组织用户提交**的题才爬题面/跑 AI；纯公共域/散户只入库（前端「题面准备中」） |

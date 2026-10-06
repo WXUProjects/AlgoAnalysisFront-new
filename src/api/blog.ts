@@ -19,6 +19,7 @@ import {
   type BlogPlazaAuthor,
   type BlogPlazaSort,
   type BlogSocialLink,
+  type BlogStaticSite,
   type BlogTagCount,
   type BlogThemeId,
 } from '@shared/api'
@@ -1132,4 +1133,73 @@ export async function moderateBlogArticle(body: {
     recommend:
       data.recommend === undefined ? undefined : Boolean(data.recommend),
   }))
+}
+
+function normalizeStaticSite(raw: Record<string, unknown>): BlogStaticSite {
+  return {
+    id: num(raw.id),
+    title: str(raw.title),
+    slug: str(raw.slug),
+    entry: str(raw.entry) || 'index.html',
+    fileCount: num(raw.fileCount),
+    showInNav: Boolean(raw.showInNav),
+    navLabel: str(raw.navLabel) || str(raw.title),
+    navOrder: num(raw.navOrder),
+    publicPath: str(raw.publicPath),
+    createdAt: num(raw.createdAt) || undefined,
+    updatedAt: num(raw.updatedAt) || undefined,
+  }
+}
+
+function staticListOf(res: ApiResult<unknown>): ApiResult<BlogStaticSite[]> {
+  const raw = (res.raw ?? {}) as Record<string, unknown>
+  const list = (raw.data ?? res.data) as unknown
+  if (!res.success) {
+    return { success: false, message: res.message, data: null, status: res.status }
+  }
+  return {
+    success: true,
+    message: res.message,
+    data: (Array.isArray(list) ? list : []).map((r) =>
+      normalizeStaticSite(r as Record<string, unknown>),
+    ),
+  }
+}
+
+export async function listBlogStaticSites(
+  username: string,
+): Promise<ApiResult<BlogStaticSite[]>> {
+  const res = await get(endpoints.user.blog.staticSiteList, {
+    params: { username },
+  })
+  return staticListOf(res)
+}
+
+export async function listMyBlogStaticSites(): Promise<
+  ApiResult<BlogStaticSite[]>
+> {
+  const res = await get(endpoints.user.blog.staticSiteMine)
+  return staticListOf(res)
+}
+
+export async function updateBlogStaticSite(body: {
+  id: number
+  title: string
+  slug: string
+  showInNav: boolean
+  navLabel?: string
+  navOrder?: number
+}): Promise<ApiResult<BlogStaticSite>> {
+  const res = await post<Record<string, unknown>>(
+    endpoints.user.blog.staticSiteUpdate,
+    body,
+  )
+  return wrapData(res, (data) => normalizeStaticSite(data))
+}
+
+export async function deleteBlogStaticSite(
+  id: number,
+): Promise<ApiResult<null>> {
+  const res = await post(endpoints.user.blog.staticSiteDelete, { id })
+  return { success: res.success, message: res.message, data: null }
 }

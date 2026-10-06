@@ -235,6 +235,16 @@ export const endpoints = {
       imageUploadApply: `${API_PREFIX}/user/blog/image-upload/apply`,
       /** 批量确认图床 URL/hash 是否仍在资产表 { urls?, hashes? } → { existing, missing, existingHashes, missingHashes } */
       imagesCheck: `${API_PREFIX}/user/blog/images/check`,
+      /** 公开：已 pin 到博客导航的静态页 ?username= */
+      staticSiteList: `${API_PREFIX}/user/blog/static-site/list`,
+      /** 登录：我的静态页 */
+      staticSiteMine: `${API_PREFIX}/user/blog/static-site/mine`,
+      /** 登录：上传 zip 创建/替换静态页（multipart） */
+      staticSiteUpload: `${API_PREFIX}/user/blog/static-site/upload`,
+      /** 登录：更新名称、路径、是否 pin */
+      staticSiteUpdate: `${API_PREFIX}/user/blog/static-site/update`,
+      /** 登录：删除静态页记录 */
+      staticSiteDelete: `${API_PREFIX}/user/blog/static-site/delete`,
       report: `${API_PREFIX}/user/blog/report`,
       /** 举报处理台（content.report.handle）：博客举报列表 / 处理 */
       reportList: `${API_PREFIX}/user/blog/report/list`,
@@ -255,6 +265,7 @@ export const endpoints = {
     },
     admin: {
       plugins: {
+        /** 站管：插件授权列表（需要 site.user.sync；不返回 token hash） */
         authorizations: `${API_PREFIX}/user/admin/plugins/authorizations`,
       },
     },
@@ -292,6 +303,7 @@ export const endpoints = {
     },
     admin: {
       plugins: {
+        /** 站管：插件同步审计摘要（需要 site.user.sync） */
         syncAudits: `${API_PREFIX}/core/admin/plugins/sync-audits`,
       },
     },
@@ -480,79 +492,6 @@ export interface TrainingReportJob {
   fileName?: string
 }
 
-export interface AdminListPluginAuthorizationsReq {
-  pageNum: number
-  pageSize: number
-  keyword?: string
-  status?: string
-  platform?: string
-}
-
-export interface AdminPluginAuthorizationInfo {
-  id: number | string
-  userId: number | string
-  username: string
-  name: string
-  provider: string
-  platform: string
-  ojUid: string
-  clientKind: string
-  clientVersion: string
-  acceptedAt: number | string
-  expiresAt: number | string
-  lastUsedAt: number | string
-  revokedAt: number | string
-  status: string
-}
-
-export interface AdminListPluginAuthorizationsRes {
-  list: AdminPluginAuthorizationInfo[]
-  total: number | string
-  pageNum: number
-  pageSize: number
-}
-
-export type ClientSyncAuditStatus = 'running' | 'completed' | 'failed' | 'terminated' | 'expired'
-
-export interface AdminListClientSyncAuditsReq {
-  pageNum: number
-  pageSize: number
-  keyword?: string
-  platform?: string
-  status?: ClientSyncAuditStatus
-  from?: number | string
-  to?: number | string
-}
-
-export interface ClientSyncAuditInfo {
-  sessionId: string
-  authorizationId: number | string
-  userId: number | string
-  platform: string
-  ojUid: string
-  clientKind: string
-  clientVersion: string
-  status: ClientSyncAuditStatus
-  completionReason: string
-  startedAt: number | string
-  updatedAt: number | string
-  terminalAt: number | string
-  processedPages: number
-  remoteCount: number
-  inserted: number | string
-  restartCount: number
-  errorCode: string
-  errorMessage: string
-  username: string
-}
-
-export interface AdminListClientSyncAuditsRes {
-  list: ClientSyncAuditInfo[]
-  total: number | string
-  pageNum: number
-  pageSize: number
-}
-
 export interface HealthBackendServiceItem {
 	/** 后台服务名：user / core-data / agent */
   name: string
@@ -634,6 +573,7 @@ export interface SpiderPlatformStat {
   problemPaused: boolean
   officialStatementEnabled: boolean
   proxyEnabled: boolean
+  /** @deprecated VJudge 已停止使用，旧客户端兼容字段；后端不再读取 */
   vjudgeStatementEnabled: boolean
   /** @deprecated 兼容字段，值与 submitPaused 相同 */
   paused: boolean
@@ -906,6 +846,7 @@ export interface LuoguPluginAuthorizeCodeReq {
 export interface LuoguPluginAuthorizeCodeRes {
   code: string
   state: string
+  /** proto int64：HTTP protojson 传输为十进制字符串 */
   expiresAt: number | string
   scope: 'luogu.sync'
 }
@@ -921,13 +862,13 @@ export interface LuoguPluginTokenRes {
   authorizationId: number | string
   deviceToken: string
   scope: 'luogu.sync'
+  /** proto int64：HTTP protojson 传输为十进制字符串 */
   expiresAt: number | string
 }
 
 export interface LuoguPluginAuthorization {
   id: number | string
   provider: 'luogu' | 'qoj'
-  platform?: 'LuoGu' | 'QOJ'
   clientKind: LuoguPluginClientKind
   clientVersion: string
   luoguUid: string
@@ -938,10 +879,44 @@ export interface LuoguPluginAuthorization {
   revokedAt: number | string
   createdAt: number | string
   scope: 'luogu.sync'
+  platform?: 'LuoGu' | 'QOJ'
 }
 
 export interface LuoguPluginAuthorizationsRes {
   authorizations: LuoguPluginAuthorization[]
+}
+
+export interface AdminListPluginAuthorizationsReq {
+  pageNum: number
+  pageSize: number
+  keyword?: string
+  status?: string
+  platform?: string
+}
+
+/** 站管插件授权摘要；不包含 token hash 或设备令牌。 */
+export interface AdminPluginAuthorizationInfo {
+  id: number | string
+  userId: number | string
+  username: string
+  name: string
+  provider: string
+  platform: string
+  ojUid: string
+  clientKind: string
+  clientVersion: string
+  acceptedAt: number | string
+  expiresAt: number | string
+  lastUsedAt: number | string
+  revokedAt: number | string
+  status: string
+}
+
+export interface AdminListPluginAuthorizationsRes {
+  list: AdminPluginAuthorizationInfo[]
+  total: number | string
+  pageNum: number
+  pageSize: number
 }
 
 export interface LuoguPluginRevokeReq {
@@ -957,6 +932,8 @@ export interface LuoguSyncStartReq {
   clientKind: LuoguPluginClientKind
   clientVersion: string
   requestId: string
+  platform?: 'LuoGu' | 'QOJ'
+  ojUid?: string
 }
 
 export interface LuoguSyncStartRes {
@@ -967,9 +944,9 @@ export interface LuoguSyncStartRes {
   pageDelayMs: number
   expiresAt: number | string
   nextAvailableAt: number | string
+  platform?: 'LuoGu' | 'QOJ'
+  ojUid?: string
 }
-
-export type LuoguSyncCompletionReason = '' | 'checkpoint' | 'remote_end'
 
 export interface LuoguSyncStatusRes {
   sessionId: string
@@ -982,6 +959,8 @@ export interface LuoguSyncStatusRes {
   connected: boolean
   done: boolean
   completionReason: LuoguSyncCompletionReason
+  platform?: 'LuoGu' | 'QOJ'
+  ojUid?: string
 }
 
 export interface LuoguSyncProblem {
@@ -995,6 +974,9 @@ export interface LuoguSyncRecord {
   submitTime: number | string
   status: number
   language: number
+  verdict?: string
+  languageName?: string
+  submitTimeText?: string
   problem: LuoguSyncProblem
 }
 
@@ -1004,6 +986,51 @@ export interface LuoguSyncPageReq {
   remoteCount: number
   perPage: number
   records: LuoguSyncRecord[]
+  platform?: 'LuoGu' | 'QOJ'
+  hasNext?: boolean
+}
+
+export type LuoguSyncCompletionReason = '' | 'checkpoint' | 'remote_end'
+
+export interface AdminListClientSyncAuditsReq {
+  pageNum: number
+  pageSize: number
+  keyword?: string
+  platform?: string
+  status?: ClientSyncAuditStatus
+  from?: number | string
+  to?: number | string
+}
+
+export type ClientSyncAuditStatus = 'running' | 'completed' | 'failed' | 'terminated' | 'expired'
+
+export interface ClientSyncAuditInfo {
+  sessionId: string
+  authorizationId: number | string
+  userId: number | string
+  platform: string
+  ojUid: string
+  clientKind: string
+  clientVersion: string
+  status: ClientSyncAuditStatus
+  completionReason: string
+  startedAt: number | string
+  updatedAt: number | string
+  terminalAt: number | string
+  processedPages: number
+  remoteCount: number
+  inserted: number | string
+  restartCount: number
+  errorCode: string
+  errorMessage: string
+  username: string
+}
+
+export interface AdminListClientSyncAuditsRes {
+  list: ClientSyncAuditInfo[]
+  total: number | string
+  pageNum: number
+  pageSize: number
 }
 
 export interface LuoguSyncPageRes {
@@ -1033,6 +1060,11 @@ export type LuoguSyncErrorCode =
   | 'LUOGU_LAYOUT_CHANGED'
   | 'LUOGU_RECORDS_CHANGED'
   | 'LUOGU_BINDING_INVALID_REMOVED'
+  | 'QOJ_LOGIN_REQUIRED'
+  | 'QOJ_ACCOUNT_MISMATCH'
+  | 'QOJ_LAYOUT_CHANGED'
+  | 'QOJ_PAGE_UNAVAILABLE'
+  | 'QOJ_RECORDS_CHANGED'
   | 'SYNC_UNAVAILABLE'
 
 export interface LuoguSyncErrorMetadata {
@@ -1042,10 +1074,14 @@ export interface LuoguSyncErrorMetadata {
 }
 
 export interface LuoguSyncErrorRes {
+  /** Kratos HTTP error code（通常为数字 HTTP 状态）；兼容显式字符串 envelope。 */
   code: number | LuoguSyncErrorCode
+  /** Kratos 稳定业务错误标识。 */
   reason?: LuoguSyncErrorCode
   message: string
+  /** Kratos metadata 中的真实 wire 字段；int64 protojson 值为十进制字符串。 */
   metadata?: LuoguSyncErrorMetadata
+  /** 兼容历史扁平错误体；真实 Kratos cooldown 优先使用 metadata。 */
   nextAvailableAt?: number | string
   retryAfterSeconds?: number | string
 }
@@ -1076,8 +1112,6 @@ export interface UserProfile {
   emailWeeklyEnabled?: boolean
   emailAllowedByOrg?: boolean
   emailWeeklyAllowedByOrg?: boolean
-  problemFetchEnabled?: boolean
-  problemAiEnabled?: boolean
   roleId?: number
   spiders: SpiderBinding[]
   /** 最近一次 OJ 数据同步成功时间（unix 秒；0/缺省=尚无记录） */
@@ -1853,6 +1887,37 @@ export interface ProblemListRes {
   pageSize: number
 }
 
+export interface ProblemProgressRes {
+  recentFailedTotal: number
+  recentFailedPermTotal: number
+  failedPage: number
+  failedPageSize: number
+  inProgressTotal: number
+  inProgressPage: number
+  inProgressPageSize: number
+  conversations: {
+    problemId: number
+    platform: string
+    externalId: string
+    title: string
+    stage: string
+    startedAt: number
+    prompt: string
+    reasoningOutput: string
+    latestOutput: string
+    state: string
+    endedAt: number
+  }[]
+  recentCompleted: {
+    id: number
+    platform: string
+    externalId: string
+    title: string
+    updatedAt: number
+    status: string
+  }[]
+}
+
 /** 全站热题一项：题库信息 + 近窗统计 */
 export interface HotProblemItem {
   problem: ProblemInfo
@@ -2208,6 +2273,22 @@ export interface BlogImageUploadStatus {
   pendingRequestId?: number
 }
 
+/** 个人博客静态 HTML 页（zip 解压后存又拍云） */
+export interface BlogStaticSite {
+  id: number
+  title: string
+  slug: string
+  entry: string
+  fileCount: number
+  showInNav: boolean
+  navLabel: string
+  navOrder: number
+  /** 如 /blog/sanenchen/static/hello/ */
+  publicPath: string
+  createdAt?: number
+  updatedAt?: number
+}
+
 export type BlogAdminImageMode = 'all' | 'cleanup'
 
 /** 站点管理员看到的全站图片资产 */
@@ -2488,6 +2569,13 @@ export interface SiteBackupSettings {
   backupEnabled: boolean
   backupTime: string
   backupPrefix: string
+}
+
+/** 每个 core-data 实例的运行并发设置。 */
+export interface SiteOpsSettings {
+  spiderConcurrency: number
+  problemFetchConcurrency: number
+  problemAnalyzeConcurrency: number
 }
 
 /** 分队 */

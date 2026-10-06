@@ -16,6 +16,7 @@ import {
   BlogManage,
   BlogPinnedPage,
   BlogSettingsPage,
+  BlogStaticSitesPage,
 } from '@/routes/lazy-pages'
 
 /** 博客管理壳 + 公开阅读壳 */
@@ -79,6 +80,14 @@ export const blogRoutes: RouteObject[] = [
             element: (
               <Lazy>
                 <BlogCategoriesPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'static',
+            element: (
+              <Lazy>
+                <BlogStaticSitesPage />
               </Lazy>
             ),
           },

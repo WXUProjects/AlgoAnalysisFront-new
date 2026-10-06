@@ -75,6 +75,7 @@ export function resolvePageTitle(pathname: string): string {
     if (path.includes('/manage/edit/')) return '编辑文章'
     if (path.includes('/manage/analytics')) return '博客数据'
     if (path.includes('/manage/categories')) return '分类管理'
+    if (path.includes('/manage/static')) return '静态页管理'
     if (path.includes('/manage/settings')) return '博客设置'
     return '博客管理'
   }

@@ -21,6 +21,7 @@ import {
   XIcon,
 } from 'lucide-react'
 import { listBlogByUsername } from '@/api/blog'
+import { StaticNavAnchors, usePinnedStaticSites } from '@/components/blog/static-nav-links'
 import { SocialIcon, socialAriaLabel } from '@/components/blog/blog-social-icons'
 import { BlogSiteFooter } from '@/components/blog/blog-site-footer'
 import { BlogSubsiteBar } from '@/components/blog/blog-subsite-bar'
@@ -125,6 +126,7 @@ export function MizukiShell({
 
   const base = `/blog/${username}`
   const showFriends = Boolean(friendsMd.trim())
+  const staticSites = usePinnedStaticSites(username)
   const navItems = useMemo(
     () => [
       { to: base, end: true, label: '首页', icon: HomeIcon },
@@ -191,6 +193,7 @@ export function MizukiShell({
                   {item.label}
                 </NavLink>
               ))}
+              <StaticNavAnchors sites={staticSites} linkClassName="mz-nav-link" />
               {isOwner && (
                 <a
                   href={manageHref}
@@ -264,6 +267,11 @@ export function MizukiShell({
                 {item.label}
               </NavLink>
             ))}
+            <StaticNavAnchors
+              sites={staticSites}
+              linkClassName="mz-nav-link"
+              onClick={() => setMenuOpen(false)}
+            />
             {isOwner && (
               <a
                 href={manageHref}

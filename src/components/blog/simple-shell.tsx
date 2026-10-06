@@ -6,6 +6,7 @@ import {
   NewspaperIcon,
   SettingsIcon,
 } from 'lucide-react'
+import { StaticNavAnchors, usePinnedStaticSites } from '@/components/blog/static-nav-links'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { BlogSiteFooter } from '@/components/blog/blog-site-footer'
@@ -31,6 +32,7 @@ export function SimpleShell({
 }: Props) {
   const manageHref = `/blog/${username}/manage`
   const showFriends = Boolean(friendsMd.trim())
+  const staticSites = usePinnedStaticSites(username)
 
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
@@ -69,6 +71,10 @@ export function SimpleShell({
             <SimpleTab to={`/blog/${username}/friends`}>友链</SimpleTab>
           ) : null}
           <SimpleTab to={`/blog/${username}/about`}>关于</SimpleTab>
+          <StaticNavAnchors
+            sites={staticSites}
+            linkClassName="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          />
           {isOwner && (
             <a
               href={manageHref}

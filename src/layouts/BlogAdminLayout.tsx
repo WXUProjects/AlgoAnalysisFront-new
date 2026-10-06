@@ -11,6 +11,7 @@ import {
   ArrowLeftIcon,
   BarChart3Icon,
   FolderOpenIcon,
+  FileCodeIcon,
   LayoutListIcon,
   PenLineIcon,
   PinIcon,
@@ -133,6 +134,7 @@ export function BlogAdminLayout() {
     { to: `${manage}/pinned`, label: '文章置顶', icon: PinIcon },
     { to: `${manage}/analytics`, label: '数据', icon: BarChart3Icon },
     { to: `${manage}/categories`, label: '分类', icon: FolderOpenIcon },
+    { to: `${manage}/static`, label: '静态页管理', icon: FileCodeIcon },
     { to: `${manage}/settings`, label: '外观', icon: SettingsIcon },
   ]
 

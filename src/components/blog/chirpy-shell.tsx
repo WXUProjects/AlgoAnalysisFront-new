@@ -21,6 +21,7 @@ import {
   UsersIcon,
 } from 'lucide-react'
 import { listBlogByUsername } from '@/api/blog'
+import { usePinnedStaticSites } from '@/components/blog/static-nav-links'
 import { SocialIcon, socialAriaLabel } from '@/components/blog/blog-social-icons'
 import { BlogSiteFooter } from '@/components/blog/blog-site-footer'
 import { BlogSubsiteBar } from '@/components/blog/blog-subsite-bar'
@@ -129,6 +130,7 @@ export function ChirpyShell({
 
   const base = `/blog/${username}`
   const showFriends = Boolean(friendsMd.trim())
+  const staticSites = usePinnedStaticSites(username)
   const navItems = useMemo(
     () => [
       { to: base, end: true, label: '首页', icon: HomeIcon },
@@ -217,6 +219,22 @@ export function ChirpyShell({
                   <span>{item.label}</span>
                 </span>
               </NavLink>
+            ))}
+            {staticSites.map((site) => (
+              <a
+                key={site.id}
+                href={site.publicPath}
+                {...BLOG_NEW_TAB_PROPS}
+                className="chirpy-nav-item block"
+                onClick={() => {
+                  setSidebarOpen(false)
+                  closeSearch()
+                }}
+              >
+                <span className="chirpy-nav-link">
+                  <span>{site.navLabel || site.title}</span>
+                </span>
+              </a>
             ))}
             {isOwner && (
               <a

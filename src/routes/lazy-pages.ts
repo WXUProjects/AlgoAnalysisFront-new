@@ -239,6 +239,11 @@ export const BlogCategoriesPage = lazy(() =>
     default: m.BlogCategoriesPage,
   })),
 )
+export const BlogStaticSitesPage = lazy(() =>
+  import('@/pages/blog/BlogStaticSites').then((m) => ({
+    default: m.BlogStaticSitesPage,
+  })),
+)
 export const BlogSettingsPage = lazy(() =>
   import('@/pages/blog/BlogSettings').then((m) => ({
     default: m.BlogSettingsPage,
