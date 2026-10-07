@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   CloudIcon,
+  GiftIcon,
   HeartHandshakeIcon,
   ReceiptTextIcon,
   ShieldCheckIcon,
@@ -22,19 +23,31 @@ import {
   type Expense,
   type SponsorOverview,
 } from '@/api/sponsor'
+import { listPlans } from '@/api/subscription'
 import { useAuth } from '@/auth/AuthContext'
 import { MarkdownBody } from '@/components/markdown-body'
+import { MembershipPlansTable } from '@/components/membership-plans-table'
 import { PageShell } from '@/components/page-shell'
 import { Pagination } from '@/components/pagination'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import type { SubscriptionPlan } from '@shared/api'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -104,6 +117,11 @@ export function Sponsor() {
   const [orderNo, setOrderNo] = useState('')
   const [checking, setChecking] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [giftEnabled, setGiftEnabled] = useState(false)
+  const [giftDialogOpen, setGiftDialogOpen] = useState(false)
+  const [giftCountdown, setGiftCountdown] = useState(5)
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([])
+  const giftConfirmingRef = useRef(false)
 
   const loadStats = useCallback(async () => {
     const [ov, ex] = await Promise.all([getSponsorOverview(), listExpenses()])
@@ -200,6 +218,15 @@ export function Sponsor() {
     [checkPaid, stopPoll],
   )
 
+  useEffect(() => {
+    if (!giftDialogOpen) return
+    setGiftCountdown(5)
+    const t = window.setInterval(() => {
+      setGiftCountdown((c) => (c > 0 ? c - 1 : 0))
+    }, 1000)
+    return () => window.clearInterval(t)
+  }, [giftDialogOpen])
+
   if (enabled === null) {
     return (
       <PageShell>
@@ -228,6 +255,39 @@ export function Sponsor() {
       ? Math.round(Number(otherYuan) * 100)
       : Number(selected)
 
+  const giftTierLabel = amountCents > 1000 ? 'Pro 会员' : 'Plus 会员'
+
+  function handleGiftToggle(checked: boolean) {
+    if (!checked) {
+      setGiftEnabled(false)
+      return
+    }
+    giftConfirmingRef.current = false
+    setGiftCountdown(5)
+    setGiftDialogOpen(true)
+    if (plans.length === 0) {
+      void listPlans().then((res) => {
+        if (res.success && res.data) setPlans(res.data)
+      })
+    }
+  }
+
+  function handleGiftDialogOpenChange(open: boolean) {
+    if (open) {
+      setGiftDialogOpen(true)
+      return
+    }
+    setGiftDialogOpen(false)
+    if (!giftConfirmingRef.current) setGiftEnabled(false)
+    giftConfirmingRef.current = false
+  }
+
+  function confirmGift() {
+    giftConfirmingRef.current = true
+    setGiftEnabled(true)
+    setGiftDialogOpen(false)
+  }
+
   async function handleDonate() {
     if (!isLogin) return
     if (!Number.isFinite(amountCents) || amountCents < 100) {
@@ -235,7 +295,7 @@ export function Sponsor() {
       return
     }
     setSubmitting(true)
-    const res = await donate(amountCents, message)
+    const res = await donate(amountCents, message, giftEnabled)
     setSubmitting(false)
     if (!res.success || !res.data) {
       toast.error(res.message || '下单失败，请稍后再试')
@@ -280,7 +340,7 @@ export function Sponsor() {
           />
           <p className="flex items-center gap-1.5 text-foreground">
             <ShieldCheckIcon className="size-4 shrink-0" />
-            赞助是纯粹的打赏支持，不附带任何特殊权益。
+            赞助用于服务器、CDN 等必要开支；是否接受回赠会员由你选择。
           </p>
         </CardContent>
       </Card>
@@ -368,6 +428,24 @@ export function Sponsor() {
               maxLength={60}
               rows={2}
             />
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  <GiftIcon className="size-4 text-muted-foreground" />
+                  获赠 1 个月会员
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  赞助满 ¥10 赠 Pro，否则赠 Plus
+                </p>
+              </div>
+              <Switch
+                checked={giftEnabled}
+                disabled={isLogin ? Boolean(payUrl) : true}
+                onCheckedChange={handleGiftToggle}
+                aria-label="获赠 1 个月会员"
+              />
+            </div>
 
             {payUrl ? (
               <div className="flex flex-col items-center gap-3">
@@ -524,6 +602,41 @@ export function Sponsor() {
           />
         </CardContent>
       </Card>
+
+      <Dialog open={giftDialogOpen} onOpenChange={handleGiftDialogOpenChange}>
+        <DialogContent className="max-h-[min(90vh,46rem)] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>赞助回赠会员</DialogTitle>
+            <DialogDescription>
+              勾选后，本次赞助将获赠 1 个月会员：赞助满 ¥10 赠 Pro，否则赠 Plus。
+              会员为赞助的赠送，一经赞助恕不退款。
+            </DialogDescription>
+          </DialogHeader>
+          <MembershipPlansTable plans={plans} />
+          <DialogFooter className="flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              本次赞助将获赠：
+              <span className="font-medium text-foreground">{giftTierLabel}</span>（1 个月）
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleGiftDialogOpenChange(false)}
+              >
+                取消
+              </Button>
+              <Button
+                type="button"
+                disabled={giftCountdown > 0}
+                onClick={confirmGift}
+              >
+                {giftCountdown > 0 ? `请等待 ${giftCountdown} 秒` : '确认获赠'}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   )
 }

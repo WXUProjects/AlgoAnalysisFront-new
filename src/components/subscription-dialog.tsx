@@ -23,22 +23,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TableCell, TableRow } from '@/components/ui/table'
+import { MembershipPlansTable } from '@/components/membership-plans-table'
 import { cn } from '@/lib/utils'
 
 /** 支付回流轮询间隔 / 上限 */
 const POLL_INTERVAL_MS = 3000
 const POLL_MAX_MS = 120_000
-
-/** 套餐档位行（对比表顺序） */
-const PLAN_ORDER = ['free', 'plus', 'pro'] as const
 
 /** 可选购月数（线性定价：月费 × 月数） */
 const MONTH_OPTIONS = [1, 3, 6, 12] as const
@@ -49,20 +40,6 @@ interface Props {
   /** 支付成功后回调（刷新我的订阅） */
   onSubscribed?: () => void
 }
-
-/** 功能行 × 档位对比（值与 plan 字段映射；free/plus 无该能力显示 —） */
-const FEATURE_ROWS: {
-  label: string
-  get: (p: SubscriptionPlan) => string
-}[] = [
-  { label: '价格', get: (p) => (p.priceCents > 0 ? `¥${(p.priceCents / 100).toFixed(2)}/月` : '免费') },
-  { label: '手动刷新做题记录', get: (p) => `${p.manualRefreshDaily} 次/日` },
-  { label: '自动同步间隔', get: (p) => `${p.syncIntervalMin} 分钟` },
-  { label: '爬取题面', get: (p) => (p.enableFetchProblem ? '✓' : '—') },
-  { label: 'AI 分析题目', get: (p) => (p.aiAnalyzeMonth > 0 ? `${p.aiAnalyzeMonth} 题/月` : '—') },
-  { label: 'AI 日报', get: (p) => (p.enableAiDaily ? '✓（默认关）' : '—') },
-  { label: '常规日报', get: (p) => (p.enableRegularDaily ? '✓' : '—') },
-]
 
 export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
@@ -227,39 +204,7 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
           </DialogDescription>
         </DialogHeader>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[9rem]">功能</TableHead>
-              {PLAN_ORDER.map((plan) => {
-                const p = planOf(plan)
-                return (
-                  <TableHead key={plan} className="text-center">
-                    {plan === 'free' ? '免费' : plan === 'plus' ? 'Plus' : 'Pro'}
-                    {p && p.priceCents > 0 && (
-                      <div className="text-xs font-normal text-muted-foreground">
-                        ¥{(p.priceCents / 100).toFixed(2)}/月
-                      </div>
-                    )}
-                  </TableHead>
-                )
-              })}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {FEATURE_ROWS.map((row) => (
-              <TableRow key={row.label}>
-                <TableCell className="text-sm">{row.label}</TableCell>
-                {PLAN_ORDER.map((plan) => {
-                  const p = planOf(plan)
-                  return (
-                    <TableCell key={plan} className="text-center text-sm">
-                      {p ? row.get(p) : '—'}
-                    </TableCell>
-                  )
-                })}
-              </TableRow>
-            ))}
+        <MembershipPlansTable plans={plans}>
             {mySub?.tier || refreshStatus ? (
               <TableRow>
                 <TableCell className="text-sm">当前状态</TableCell>
@@ -294,8 +239,7 @@ export function SubscriptionDialog({ open, onOpenChange, onSubscribed }: Props) 
                 </TableCell>
               </TableRow>
             ) : null}
-          </TableBody>
-        </Table>
+        </MembershipPlansTable>
 
         <p className="text-center text-xs leading-relaxed text-muted-foreground">
           AI 分析题目，可以让画像更精准。

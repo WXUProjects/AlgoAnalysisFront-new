@@ -148,14 +148,16 @@ export async function getMonthlyRows(count = 6): Promise<ApiResult<SponsorMonthl
   return { ...res, data: list }
 }
 
-/** 登录：打赏下单（支付FM，返回支付链接） */
+/** 登录：打赏下单（支付FM，返回支付链接）；giftMembership=true 时支付后回赠 1 个月会员 */
 export async function donate(
   amountCents: number,
   message: string,
+  giftMembership = false,
 ): Promise<ApiResult<SponsorDonateOrder | null>> {
   const res = await post<Record<string, unknown>>(endpoints.user.sponsor.donate, {
     amountCents,
     message,
+    giftMembership,
   })
   if (!res.success || !res.data) return { ...res, data: null }
   return {

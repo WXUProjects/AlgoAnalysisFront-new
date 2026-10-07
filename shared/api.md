@@ -775,13 +775,13 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 | GET | `/user/sponsor/donations` | 否 | query: `page`, `pageSize`, `keyword`（**模糊** nickname/message，服务端过滤与 total 一致）；已支付、`paid_at` 倒序 → `{ list: Donation[], total }` |
 | GET | `/user/sponsor/expenses` | 否 | 全部开支，`spent_at` 倒序 → `{ list: Expense[] }` |
 | GET | `/user/sponsor/monthly` | 否 | query: `count`（默认 6，上限 24）；近 N 月收支倒序 → `{ list: MonthlyRow[] }` |
-| POST | `/user/sponsor/donate` | 是 | body: `{ amountCents, message? }`；金额 ¥1–¥10000（100–1000000 分），留言 ≤60 字；支付FM下单 → `{ orderNo, payUrl, amountCents, expireAt }`；未配置支付时报「支付未配置」 |
+| POST | `/user/sponsor/donate` | 是 | body: `{ amountCents, message?, giftMembership? }`；金额 ¥1–¥10000（100–1000000 分），留言 ≤60 字；`giftMembership=true` 时支付成功后回赠 1 个月会员（金额 > ¥10 回赠 Pro，否则 Plus，来源记 `payfm`）；支付FM下单 → `{ orderNo, payUrl, amountCents, expireAt }`；未配置支付时报「支付未配置」 |
 | GET | `/user/sponsor/donation` | 是 | query: `orderNo`（本人或站管）→ `{ orderNo, status: pending\|paid\|closed, paidAt }` |
 | POST | `/user/sponsor/admin/record-expense` | 是(站点管理员) | body: `{ amountCents, note, spentAt? }`（note 必填；spentAt unix 秒，0=当前）；记一笔日常开支 |
 | POST | `/user/sponsor/admin/adjust-balance` | 是(站点管理员) | body: `{ amountCents, note }`（note 必填）；扣减可用金额（`kind=adjust`） |
 | POST | `/user/sponsor/admin/settings` | 是(站点管理员) | body: `{ membershipSponsorEnabled, donationEnabled, introMarkdown }`；整体覆盖更新（intro ≤2000 字） |
 
-**打赏支付回调**：`GET/POST /v1/payment/sponsor-notify`（网关免 JWT，MD5 验签同会员支付，state=1；金额相等；行锁幂等置 `paid`；回调地址常量由 `/v1/payment/notify` 同源替换为 `/v1/payment/sponsor-notify`）。pending 超 5 分钟由后台关单置 `closed`（回调仍可入账）。
+**打赏支付回调**：`GET/POST /v1/payment/sponsor-notify`（网关免 JWT，MD5 验签同会员支付，state=1；金额相等；行锁幂等置 `paid`；回调地址常量由 `/v1/payment/notify` 同源替换为 `/v1/payment/sponsor-notify`）。pending 超 5 分钟由后台关单置 `closed`（回调仍可入账）。若订单带 `giftMembership`，入账同一事务内发放 1 个月会员（`sponsor_orders.gift_tier` 记录档位）。
 
 ### Ticket（工单，对接外部客户中心）
 
