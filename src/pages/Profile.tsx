@@ -563,7 +563,7 @@ export function Profile() {
               <Button type="button" asChild>
                 <Link to="/change-profile">编辑个人资料</Link>
               </Button>
-              {siteConfig.payfmConfigured ? (
+              {siteConfig.payfmConfigured && membershipSponsorEnabled ? (
                 mySub?.tier ? (
                   <Button
                     type="button"
