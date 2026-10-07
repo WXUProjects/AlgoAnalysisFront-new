@@ -36,6 +36,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { formatTime } from '@/lib/format'
+import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 10
 const EXPENSE_PAGE_SIZE = 5
@@ -50,11 +51,13 @@ function StatCard({
   label,
   value,
   hint,
+  danger,
 }: {
   icon: LucideIcon
   label: string
   value: string
   hint?: string
+  danger?: boolean
 }) {
   return (
     <Card className="gap-1 py-4">
@@ -65,7 +68,14 @@ function StatCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4">
-        <p className="text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
+        <p
+          className={cn(
+            'text-2xl font-semibold tabular-nums tracking-tight',
+            danger && 'text-destructive',
+          )}
+        >
+          {value}
+        </p>
         {hint ? <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p> : null}
       </CardContent>
     </Card>
@@ -278,7 +288,7 @@ export function Sponsor() {
       {overview?.loss ? (
         <Alert variant="destructive">
           <TrendingDownIcon />
-          <AlertTitle>本月支出已超过当前可用赞助收入余额</AlertTitle>
+          <AlertTitle>当前支出已超过当前可用赞助收入余额</AlertTitle>
           <AlertDescription>
             如果长期处于亏本状态，这个站点可能就要和大家说再见了。每一份支持都会让它可以走得更久。
           </AlertDescription>
@@ -298,6 +308,7 @@ export function Sponsor() {
               label="当前可用金额"
               value={fmtMoney(overview.balanceCents)}
               hint="赞助收入减去全部开支"
+              danger={overview.balanceCents < 0}
             />
             <StatCard
               icon={ReceiptTextIcon}
