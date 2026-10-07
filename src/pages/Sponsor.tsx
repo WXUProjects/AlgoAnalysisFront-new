@@ -255,7 +255,7 @@ export function Sponsor() {
       ? Math.round(Number(otherYuan) * 100)
       : Number(selected)
 
-  const giftTierLabel = amountCents > 1000 ? 'Pro 会员' : 'Plus 会员'
+  const giftTierLabel = amountCents >= 1000 ? 'Pro 会员' : 'Plus 会员'
 
   function handleGiftToggle(checked: boolean) {
     if (!checked) {
