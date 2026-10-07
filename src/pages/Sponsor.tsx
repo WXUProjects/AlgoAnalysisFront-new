@@ -609,12 +609,10 @@ export function Sponsor() {
             <DialogTitle>赞助回赠会员</DialogTitle>
             <DialogDescription>
               勾选后，本次赞助将获赠 1 个月会员：赞助满 ¥10 赠 Pro，否则赠 Plus。
+              会员为赞助的赠送，一经赞助恕不退款。
             </DialogDescription>
           </DialogHeader>
           <MembershipPlansTable plans={plans} />
-          <p className="rounded-lg border bg-muted/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-            本项目为非营利性开源 / 公益性质，赞助资金即时用于当月服务器与基础设施开支。若因不可抗力或资金不济导致项目终止，未消耗的结余资金将用于结算最终服务器账单，恕不作现金退还，敬请谅解。
-          </p>
           <DialogFooter className="flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               本次赞助将获赠：
