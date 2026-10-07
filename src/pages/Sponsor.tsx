@@ -436,7 +436,9 @@ export function Sponsor() {
                   获赠 1 个月会员
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  赞助满 ¥10 赠 Pro，否则赠 Plus
+                  {amountCents < 100
+                    ? '赞助满 ¥1 起，满 ¥10 赠 Pro，否则赠 Plus'
+                    : `当前可获赠：${giftTierLabel}（1 个月）`}
                 </p>
               </div>
               <Switch
