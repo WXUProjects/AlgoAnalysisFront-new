@@ -36,6 +36,7 @@ import {
   Register,
   ServicePage,
   Social,
+  Sponsor,
   ToolsHub,
 } from '@/routes/lazy-pages'
 
@@ -332,6 +333,14 @@ export const mainRouteChildren: RouteObject[] = [
         element: (
           <Lazy>
             <About />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'sponsor',
+        element: (
+          <Lazy>
+            <Sponsor />
           </Lazy>
         ),
       },

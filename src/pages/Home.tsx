@@ -25,6 +25,7 @@ import { AlgoProfileChart } from '@/components/charts/algo-profile-chart'
 import { HeatmapSimple } from '@/components/heatmap-simple'
 import { PageShell } from '@/components/page-shell'
 import { HomeSetupCards } from '@/components/home-setup-cards'
+import { SponsorFab } from '@/components/sponsor-fab'
 import { Badge } from '@/components/ui/badge'
 import {
   Card,
@@ -517,6 +518,7 @@ export function Home() {
           <QuickLinks />
         </div>
       </div>
+      <SponsorFab />
     </PageShell>
   )
 }

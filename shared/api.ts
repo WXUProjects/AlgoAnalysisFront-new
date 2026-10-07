@@ -77,6 +77,29 @@ export const endpoints = {
       /** 站管：更新套餐配额模板 */
       updatePlans: `${API_PREFIX}/user/subscription/admin/plans`,
     },
+    /** 打赏赞助（纯打赏，无特殊权益；展示公开，下单需登录，管理需站管） */
+    sponsor: {
+      /** 公开：打赏页设置（入口开关 + 说明 Markdown） */
+      settings: `${API_PREFIX}/user/sponsor/settings`,
+      /** 公开：资金概览 */
+      overview: `${API_PREFIX}/user/sponsor/overview`,
+      /** 公开：赞助名单（时间倒序 + 分页） */
+      donations: `${API_PREFIX}/user/sponsor/donations`,
+      /** 公开：开支明细 */
+      expenses: `${API_PREFIX}/user/sponsor/expenses`,
+      /** 公开：月度收支 */
+      monthly: `${API_PREFIX}/user/sponsor/monthly`,
+      /** 登录：打赏下单（支付FM） */
+      donate: `${API_PREFIX}/user/sponsor/donate`,
+      /** 登录：查打赏订单状态 */
+      donation: `${API_PREFIX}/user/sponsor/donation`,
+      /** 站管：记录开支 */
+      recordExpense: `${API_PREFIX}/user/sponsor/admin/record-expense`,
+      /** 站管：扣减可用金额 */
+      adjustBalance: `${API_PREFIX}/user/sponsor/admin/adjust-balance`,
+      /** 站管：更新打赏页设置 */
+      updateSettings: `${API_PREFIX}/user/sponsor/admin/settings`,
+    },
     privacy: {
       get: `${API_PREFIX}/user/privacy/get`,
       update: `${API_PREFIX}/user/privacy/update`,
@@ -1334,6 +1357,74 @@ export interface SubUser {
   pendingTier?: string
   /** 排队档剩余/购买天数 */
   pendingDays?: number
+}
+
+/** 打赏页设置（GET /user/sponsor/settings） */
+export interface SponsorSettings {
+  /** 会员赞助入口开关 */
+  membershipSponsorEnabled: boolean
+  /** 打赏赞助入口开关 */
+  donationEnabled: boolean
+  /** 打赏页说明（Markdown，站管可改） */
+  introMarkdown: string
+}
+
+/** 打赏资金概览（GET /user/sponsor/overview） */
+export interface SponsorOverview {
+  /** 当前可用金额（分） */
+  balanceCents: number
+  /** 累计赞助（分） */
+  totalIncomeCents: number
+  /** 累计开支（分） */
+  totalExpenseCents: number
+  /** 累计赞助人数 */
+  donationCount: number
+  /** 本月赞助（分） */
+  monthIncomeCents: number
+  /** 本月开支（分） */
+  monthExpenseCents: number
+  /** 本月是否亏本（支出 > 收入） */
+  loss: boolean
+}
+
+/** 赞助名单项 */
+export interface SponsorDonation {
+  id: number
+  nickname: string
+  amountCents: number
+  message: string
+  /** 支付 unix 秒 */
+  createdAt: number
+}
+
+/** 打赏开支项 */
+export interface SponsorExpense {
+  id: number
+  amountCents: number
+  note: string
+  /** expense=日常开支；adjust=余额调整 */
+  kind: string
+  /** 发生 unix 秒 */
+  spentAt: number
+}
+
+/** 月度收支行 */
+export interface SponsorMonthlyRow {
+  /** YYYY-MM */
+  month: string
+  incomeCents: number
+  expenseCents: number
+  netCents: number
+}
+
+/** 打赏下单返回 */
+export interface SponsorDonateOrder {
+  orderNo: string
+  /** 支付FM支付链接 */
+  payUrl: string
+  amountCents: number
+  /** 订单失效 unix 秒 */
+  expireAt: number
 }
 
 export interface GroupInfo {

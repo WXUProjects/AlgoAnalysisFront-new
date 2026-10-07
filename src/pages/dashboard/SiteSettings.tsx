@@ -8,6 +8,7 @@ import {
   testOjProxy,
 } from '@/api/site'
 import { uploadImage } from '@/api/upload'
+import { getSponsorSettings, updateSponsorSettings } from '@/api/sponsor'
 import { useAuth } from '@/auth/AuthContext'
 import { useSiteConfig } from '@/site/SiteConfigContext'
 import { ImageUploadTile } from '@/components/image-upload-tile'
@@ -258,6 +259,8 @@ export function DashboardSiteSettings() {
   const [clearPayfmSecret, setClearPayfmSecret] = useState(false)
   const [payfmPayType, setPayfmPayType] = useState('')
   const [payfmNotifyUrl, setPayfmNotifyUrl] = useState('')
+  const [membershipSponsorEnabled, setMembershipSponsorEnabled] = useState(true)
+  const [donationEnabled, setDonationEnabled] = useState(true)
   const [backupEnabled, setBackupEnabled] = useState(false)
   const [backupTime, setBackupTime] = useState('02:00')
   const [backupPrefix, setBackupPrefix] = useState('')
@@ -380,6 +383,20 @@ export function DashboardSiteSettings() {
       setConfigVersion(d.configVersion || 0)
       setPristine(buildPristineFromAdmin(d))
     })()
+    return () => {
+      cancelled = true
+    }
+  }, [canRead])
+
+  // 赞助 / 打赏开关（草稿：本地 mock，切换即时生效）
+  useEffect(() => {
+    if (!canRead) return
+    let cancelled = false
+    void getSponsorSettings().then((res) => {
+      if (cancelled || !res.success || !res.data) return
+      setMembershipSponsorEnabled(res.data.membershipSponsorEnabled)
+      setDonationEnabled(res.data.donationEnabled)
+    })
     return () => {
       cancelled = true
     }
@@ -1274,6 +1291,34 @@ export function DashboardSiteSettings() {
           footer={<CardSaveButton section="payment" />}
         >
           <FieldGroup className="gap-3">
+            <Field orientation="horizontal">
+              <FieldLabel className="flex-1" htmlFor="membership-sponsor-enabled">
+                会员赞助入口
+              </FieldLabel>
+              <Switch
+                id="membership-sponsor-enabled"
+                checked={membershipSponsorEnabled}
+                disabled={!canWrite}
+                onCheckedChange={(checked) => {
+                  setMembershipSponsorEnabled(checked)
+                  void updateSponsorSettings({ membershipSponsorEnabled: checked })
+                }}
+              />
+            </Field>
+            <Field orientation="horizontal">
+              <FieldLabel className="flex-1" htmlFor="donation-enabled">
+                打赏赞助入口
+              </FieldLabel>
+              <Switch
+                id="donation-enabled"
+                checked={donationEnabled}
+                disabled={!canWrite}
+                onCheckedChange={(checked) => {
+                  setDonationEnabled(checked)
+                  void updateSponsorSettings({ donationEnabled: checked })
+                }}
+              />
+            </Field>
             <div className="flex items-center gap-1.5 text-xs">
               <span
                 className={`inline-block size-2 rounded-full ${

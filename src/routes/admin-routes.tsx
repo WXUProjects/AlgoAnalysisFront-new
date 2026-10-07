@@ -2,6 +2,7 @@ import { Navigate, Outlet, type RouteObject } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthContext'
 import { RequireCoach } from '@/auth/RequireCoach'
 import { RequirePerm } from '@/auth/RequirePerm'
+import { RequireSiteAdmin } from '@/auth/RequireSiteAdmin'
 import { RouteErrorFallback } from '@/components/error-boundary'
 import { Perm } from '@/lib/permissions'
 import { Lazy } from '@/routes/lazy'
@@ -22,6 +23,7 @@ import {
   DashboardSiteNotices,
   DashboardSiteSettings,
   DashboardSiteUser,
+  DashboardSponsors,
   DashboardSubscriptions,
   DashboardPluginsManage,
 } from '@/routes/lazy-pages'
@@ -154,6 +156,14 @@ export const adminRoutes: RouteObject = {
         <RequirePerm anyOf={[Perm.SiteUserSync]}>
           <Lazy><DashboardPluginsManage /></Lazy>
         </RequirePerm>
+      ),
+    },
+    {
+      path: 'sponsors',
+      element: (
+        <RequireSiteAdmin>
+          <Lazy><DashboardSponsors /></Lazy>
+        </RequireSiteAdmin>
       ),
     },
     {

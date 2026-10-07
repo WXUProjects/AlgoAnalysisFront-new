@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { listBlogByUsername } from '@/api/blog'
 import { getProfileById, getProfileByUsername } from '@/api/profile'
 import { getMySubscription } from '@/api/subscription'
+import { getSponsorSettings } from '@/api/sponsor'
 import { getRefreshStatus, refreshSpider } from '@/api/spider'
 import {
   followUser,
@@ -144,6 +145,20 @@ export function Profile() {
   const [denied, setDenied] = useState(false)
   /** 对方是否已开通个人博客（用于是否展示「访问博客」） */
   const [blogActivated, setBlogActivated] = useState(false)
+  /** 会员赞助入口开关（站点设置） */
+  const [membershipSponsorEnabled, setMembershipSponsorEnabled] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    void getSponsorSettings().then((res) => {
+      if (!cancelled && res.success && res.data) {
+        setMembershipSponsorEnabled(res.data.membershipSponsorEnabled)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const isSelf = Boolean(
     isLogin &&
@@ -762,7 +777,7 @@ export function Profile() {
                     ) : null}
                     {isSelf ? (
                       <>
-                        {siteConfig.payfmConfigured ? (
+              {siteConfig.payfmConfigured && membershipSponsorEnabled ? (
                           mySub?.tier ? (
                             <Button
                               type="button"

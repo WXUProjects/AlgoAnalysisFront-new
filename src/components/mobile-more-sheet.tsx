@@ -381,6 +381,8 @@ export type BuildMobileMoreOptions = {
   serviceBadge?: boolean
   /** 可进管理后台：内置角色 / 持有任意管理权限（自定义角色） */
   canAccessAdmin: boolean
+  /** 站点管理员：用于过滤仅站管可见的管理条目 */
+  isSiteAdmin?: boolean
   /** 细粒度权限判定（useAuth().can） */
   can: (code: string) => boolean
   /** 当前组织名，用于管理分组标题 */
@@ -440,7 +442,7 @@ export function buildMobileMoreSections(
   }
 
   if (opts.canAccessAdmin) {
-    const entries = adminNavEntries(opts.can)
+    const entries = adminNavEntries(opts.can, opts.isSiteAdmin)
     const toLink = (e: AdminNavEntry): MobileMoreLink => ({
       to: e.to,
       label: e.label,

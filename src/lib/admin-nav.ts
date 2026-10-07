@@ -3,6 +3,7 @@ import {
   Building2Icon,
   ClipboardCheckIcon,
   CrownIcon,
+  HeartHandshakeIcon,
   PlugIcon,
   FlagIcon,
   MegaphoneIcon,
@@ -36,6 +37,8 @@ export type AdminNavEntry = {
   icon: LucideIcon
   /** 命中任一权限即显示（与路由守卫保持一致） */
   anyOf: string[]
+  /** 仅站点管理员可见（与 RequireSiteAdmin 一致） */
+  siteAdminOnly?: boolean
   section: AdminNavSection
   isActive: (pathname: string) => boolean
 }
@@ -58,7 +61,10 @@ function pathActive(
 }
 
 /** 按权限过滤后的管理导航条目（顺序即展示顺序） */
-export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[] {
+export function adminNavEntries(
+  can: (code: string) => boolean,
+  isSiteAdmin = false,
+): AdminNavEntry[] {
   // 训练报告挂在「组织数据」页（#training-report），不再与「组织设置」共用 /admin/org
   const entries: AdminNavEntry[] = [
     // —— 组织管理（当前组织范围） ——
@@ -169,6 +175,15 @@ export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[]
       isActive: (p) => pathActive(p, '/admin/plugins'),
     },
     {
+      to: '/admin/sponsors',
+      label: '打赏管理',
+      icon: HeartHandshakeIcon,
+      anyOf: [Perm.SiteUserSync],
+      siteAdminOnly: true,
+      section: 'site',
+      isActive: (p) => pathActive(p, '/admin/sponsors'),
+    },
+    {
       to: '/admin/orgs',
       label: '全站组织',
       icon: Building2Icon,
@@ -222,5 +237,7 @@ export function adminNavEntries(can: (code: string) => boolean): AdminNavEntry[]
       isActive: (p) => pathActive(p, '/admin/ops'),
     },
   ]
-  return entries.filter((e) => e.anyOf.some(can))
+  return entries.filter(
+    (e) => (!e.siteAdminOnly || isSiteAdmin) && e.anyOf.some(can),
+  )
 }

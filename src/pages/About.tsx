@@ -1,6 +1,9 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { HeartHandshakeIcon } from 'lucide-react'
+import { getSponsorSettings } from '@/api/sponsor'
 import { PageShell } from '@/components/page-shell'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -61,6 +64,20 @@ const personLinkClass =
   'font-medium text-foreground underline-offset-4 hover:underline'
 
 export function About() {
+  const [sponsorEnabled, setSponsorEnabled] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void getSponsorSettings().then((res) => {
+      if (!cancelled && res.success && res.data) {
+        setSponsorEnabled(res.data.donationEnabled)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   return (
     <PageShell className="mx-auto max-w-2xl gap-6">
       <div>
@@ -244,6 +261,27 @@ export function About() {
             联系时请注明学校或团队名称、人数与主要需求。
           </p>        </CardContent>
       </Card>
+
+      {sponsorEnabled ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">赞助支持</CardTitle>
+            <CardDescription>支持服务器与开发费用</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              GoAlgo 目前没有其他收入来源，服务器、CDN
+              等开销都靠赞助维持。欢迎支持这个项目继续做下去。
+            </p>
+            <Button asChild className="self-start">
+              <Link to="/sponsor">
+                <HeartHandshakeIcon data-icon="inline-start" />
+                去赞助支持
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

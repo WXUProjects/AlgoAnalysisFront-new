@@ -192,6 +192,14 @@ export const OrgHub = lazy(() =>
 export const About = lazy(() =>
   import('@/pages/About').then((m) => ({ default: m.About })),
 )
+export const Sponsor = lazy(() =>
+  import('@/pages/Sponsor').then((m) => ({ default: m.Sponsor })),
+)
+export const DashboardSponsors = lazy(() =>
+  import('@/pages/dashboard/Sponsors').then((m) => ({
+    default: m.DashboardSponsors,
+  })),
+)
 export const ToolsHub = lazy(() =>
   import('@/pages/tools/ToolsHub').then((m) => ({ default: m.ToolsHub })),
 )

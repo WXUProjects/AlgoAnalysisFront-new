@@ -764,6 +764,25 @@ Proto 生成（`cwxu-algo/api/user/v1/org/org.proto`）。JWT 含 `isSiteAdmin` 
 
 **间隔/配额合并语义**：自动同步间隔 = min(站管覆盖, 组织 MIN, 订阅档, 免费默认 180)；每日手动刷新 = 覆盖 0 永久禁止、正覆盖与订阅档取最大、无覆盖订阅档优先否则默认 2。
 
+### Sponsor（打赏赞助）
+
+纯打赏赞助：**不附带任何特殊权益**；赞助收入用于服务器、CDN、域名等必要开支。可用金额 = 已支付赞助 − 全部开支。展示类接口公开，下单需登录，开支管理仅**站点管理员**。数据表：`sponsor_orders`（打赏订单，`paid` 计入收入）、`sponsor_expenses`（开支/余额调整，`note` 必填）、`sponsor_settings`（单行：两个入口开关 + 说明 Markdown，默认说明见 `model.DefaultSponsorIntro`）。
+
+| Method | Path | Auth | 说明 |
+|--------|------|------|------|
+| GET | `/user/sponsor/settings` | 否 | 打赏页设置 → `{ code, message, membershipSponsorEnabled, donationEnabled, introMarkdown }` |
+| GET | `/user/sponsor/overview` | 否 | 资金概览 → `{ balanceCents, totalIncomeCents, totalExpenseCents, donationCount, monthIncomeCents, monthExpenseCents, loss }` |
+| GET | `/user/sponsor/donations` | 否 | query: `page`, `pageSize`, `keyword`（**模糊** nickname/message，服务端过滤与 total 一致）；已支付、`paid_at` 倒序 → `{ list: Donation[], total }` |
+| GET | `/user/sponsor/expenses` | 否 | 全部开支，`spent_at` 倒序 → `{ list: Expense[] }` |
+| GET | `/user/sponsor/monthly` | 否 | query: `count`（默认 6，上限 24）；近 N 月收支倒序 → `{ list: MonthlyRow[] }` |
+| POST | `/user/sponsor/donate` | 是 | body: `{ amountCents, message? }`；金额 ¥1–¥10000（100–1000000 分），留言 ≤60 字；支付FM下单 → `{ orderNo, payUrl, amountCents, expireAt }`；未配置支付时报「支付未配置」 |
+| GET | `/user/sponsor/donation` | 是 | query: `orderNo`（本人或站管）→ `{ orderNo, status: pending\|paid\|closed, paidAt }` |
+| POST | `/user/sponsor/admin/record-expense` | 是(站点管理员) | body: `{ amountCents, note, spentAt? }`（note 必填；spentAt unix 秒，0=当前）；记一笔日常开支 |
+| POST | `/user/sponsor/admin/adjust-balance` | 是(站点管理员) | body: `{ amountCents, note }`（note 必填）；扣减可用金额（`kind=adjust`） |
+| POST | `/user/sponsor/admin/settings` | 是(站点管理员) | body: `{ membershipSponsorEnabled, donationEnabled, introMarkdown }`；整体覆盖更新（intro ≤2000 字） |
+
+**打赏支付回调**：`GET/POST /v1/payment/sponsor-notify`（网关免 JWT，MD5 验签同会员支付，state=1；金额相等；行锁幂等置 `paid`；回调地址常量由 `/v1/payment/notify` 同源替换为 `/v1/payment/sponsor-notify`）。pending 超 5 分钟由后台关单置 `closed`（回调仍可入账）。
+
 ### Ticket（工单，对接外部客户中心）
 
 工单数据**不本地缓存**，客户中心（support-service）是唯一事实来源；本服务为透传 facade + webhook 回调。依赖配置 `support_center.base_url/product_id/sign_key`（user 服务 config.yaml，占位空值时全部接口返回 `success:false` + 「支持中心未配置，请稍后再试」）。用户身份：透传当前 RS256 JWT（客户中心按产品注册的 issuer/audience/公钥验签），写操作自动带 `Idempotency-Key`。时间字段统一 unix 秒。状态：`pending_agent`（待处理）/ `pending_customer`（待你回复）/ `resolved`（已解决）/ `closed`（已关闭）。

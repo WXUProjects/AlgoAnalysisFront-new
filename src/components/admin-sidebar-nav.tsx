@@ -76,10 +76,10 @@ function SubSectionLabel({ children }: { children: string }) {
  * 显隐完全由权限驱动，与路由守卫一致（自定义角色也能看到对应入口）。
  */
 export function AdminSidebarNavGroups() {
-  const { can, user } = useAuth()
+  const { can, user, isSiteAdmin } = useAuth()
   const { pathname } = useLocation()
   const title = staffNavLabel(user)
-  const items = useMemo(() => adminNavEntries(can), [can])
+  const items = useMemo(() => adminNavEntries(can, isSiteAdmin), [can, isSiteAdmin])
   const childActive = items.some((i) => i.isActive(pathname))
   const [open, setOpen] = useState(childActive)
 
