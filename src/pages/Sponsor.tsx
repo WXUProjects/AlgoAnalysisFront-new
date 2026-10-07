@@ -230,7 +230,7 @@ export function Sponsor() {
 
   async function handleDonate() {
     if (!isLogin) return
-    if (!Number.isFinite(amountCents) || amountCents <= 0) {
+    if (!Number.isFinite(amountCents) || amountCents < 100) {
       toast.error('请选择或填写赞助金额')
       return
     }
@@ -351,7 +351,6 @@ export function Sponsor() {
                   <span className="text-sm text-muted-foreground">¥</span>
                   <Input
                     type="number"
-                    min={1}
                     step="1"
                     value={otherYuan}
                     onChange={(e) => setOtherYuan(e.target.value)}
